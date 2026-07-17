@@ -2,12 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { doctorId } = await getSessionData();
-    // Resolve params for Next.js 15+ if needed, but since this is 14/15 transition, we await params.
-    const resolvedParams = await Promise.resolve(params);
-    const invoiceId = resolvedParams.id;
+    const { id: invoiceId } = await params;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId, doctorId },
@@ -31,11 +29,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { doctorId } = await getSessionData();
-    const resolvedParams = await Promise.resolve(params);
-    const invoiceId = resolvedParams.id;
+    const { id: invoiceId } = await params;
 
     await prisma.invoice.delete({
       where: { id: invoiceId, doctorId }

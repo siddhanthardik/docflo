@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { doctorId } = await getSessionData();
-    const resolvedParams = await Promise.resolve(params);
-    const invoiceId = resolvedParams.id;
+    const { id: invoiceId } = await params;
     
     const body = await req.json();
     const { amount, paymentMethod, referenceId } = body;

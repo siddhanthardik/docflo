@@ -24,13 +24,12 @@ export default function CreateInvoicePage() {
   ]);
 
   useEffect(() => {
-    // Fetch patients for dropdown
     const fetchPatients = async () => {
       try {
-        const res = await fetch("/api/patients");
+        const res = await fetch("/api/patients?limit=100");
         if (res.ok) {
           const data = await res.json();
-          setPatients(data);
+          setPatients(data.patients);
         }
       } catch (err) {
         console.error("Failed to fetch patients", err);

@@ -13,9 +13,10 @@ async function getDoctor(doctorId: string) {
 export default async function BookingPage({
   params,
 }: {
-  params: { doctorId: string }
+  params: Promise<{ doctorId: string }>
 }) {
-  const doctor = await getDoctor(params.doctorId)
+  const { doctorId } = await params
+  const doctor = await getDoctor(doctorId)
   if (!doctor) notFound()
 
   return (

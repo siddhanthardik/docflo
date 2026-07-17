@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { format } from "date-fns";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { doctorId } = await getSessionData();
-    const resolvedParams = await Promise.resolve(params);
-    const invoiceId = resolvedParams.id;
+    const { id: invoiceId } = await params;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId, doctorId },

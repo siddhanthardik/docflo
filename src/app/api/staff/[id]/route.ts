@@ -3,14 +3,15 @@ import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
+    const { id } = await params;
     // Only the doctor who owns this staff member can edit them
     const existingStaff = await prisma.staffMember.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingStaff || existingStaff.doctorId !== session.user.id) {
@@ -33,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 
     const updatedMember = await prisma.staffMember.update({
-      where: { id: params.id },
+      where: { id },
       data: dataToUpdate,
     })
 
@@ -44,13 +45,14 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
+    const { id } = await params;
     const existingStaff = await prisma.staffMember.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingStaff || existingStaff.doctorId !== session.user.id) {
@@ -58,7 +60,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.staffMember.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true }, { status: 200 })
