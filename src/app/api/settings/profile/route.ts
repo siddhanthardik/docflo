@@ -29,6 +29,10 @@ export async function GET() {
       },
     });
 
+    if (!doctor) {
+      return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+    }
+
     const response = { ...doctor, subscriptionPlan: doctor.package?.name || "FREE" };
     
     return NextResponse.json(response);

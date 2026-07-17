@@ -41,7 +41,7 @@ export async function GET(req: Request) {
         if (shouldPublish) {
           // 3. Publish to Google
           try {
-            const gbpService = new GBPService(gbpAccount.accessToken, gbpAccount.refreshToken, gbpAccount.tokenExpiry, gbpAccount.doctorId);
+            const gbpService = new GBPService(gbpAccount.accessToken, gbpAccount.doctorId);
             // Wait, we need the review's real GBP ID. Let's assume we have it.
             // await gbpService.replyToReview(gbpAccount.locationName, review.id, aiReply);
             

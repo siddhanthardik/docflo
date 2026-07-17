@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { WhatsAppService } from "@/services/whatsapp.service";
+import { whatsappManager } from "@/lib/whatsapp-manager";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -56,20 +57,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
   }
 
-  const whatsappConfig = await prisma.whatsAppConfig.findUnique({ where: { doctorId } });
-  if (whatsappConfig?.isActive) {
-    const whatsappService = new WhatsAppService(
-      whatsappConfig.accessToken!,
-      whatsappConfig.phoneNumberId!,
-      doctorId
-    );
-
+  if (whatsappManager.isConnected(doctorId)) {
     for (const patient of patients) {
       const personalizedMsg = campaign.message
         .replace("{{firstName}}", patient.firstName)
         .replace("{{lastName}}", patient.lastName);
       try {
-        await whatsappService.sendTextMessage(patient.phone, personalizedMsg);
+        await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
         await prisma.campaignRecipient.updateMany({
           where: { campaignId: campaign.id, patientPhone: patient.phone },
           data: { status: "SENT", sentAt: new Date() },

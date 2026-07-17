@@ -20,11 +20,14 @@ export async function POST() {
     const locationName = tokenData.account.locationName;
     const fullReviewLocationName = accountName ? `${accountName}/${locationName}` : locationName;
 
+    const today = new Date();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
     const gbpService = new GBPService(tokenData.accessToken, doctorId);
     const [insightsResult, reviewsResult, keywordsResult] = await Promise.allSettled([
-      gbpService.getInsights(locationName),
+      gbpService.getInsights(locationName, thirtyDaysAgo, today),
       gbpService.getReviews(fullReviewLocationName, tokenData.account.id),
-      gbpService.getSearchKeywords(locationName),
+      gbpService.getSearchKeywords(locationName, thirtyDaysAgo, today),
     ]);
 
     if (insightsResult.status === "rejected") {

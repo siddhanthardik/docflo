@@ -85,7 +85,7 @@ export function PostScheduler() {
 
     setIsSubmitting(true)
     try {
-      const payload = { ...form }
+      const payload: any = { ...form }
       if (!isScheduled) {
         delete payload.scheduledDate
       }
@@ -99,7 +99,6 @@ export function PostScheduler() {
       if (res.ok) {
         toast({ 
           title: isScheduled ? "Post Scheduled!" : "Post Published to Google!",
-          className: "bg-emerald-50 border-emerald-200 text-emerald-800"
         })
         setForm({
           title: "", content: "", postType: "STANDARD", scheduledDate: "", imageUrl: "", ctaType: "NONE", ctaLink: ""

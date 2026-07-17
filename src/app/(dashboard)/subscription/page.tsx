@@ -32,7 +32,7 @@ export default async function BillingPage() {
 
       <BillingClient 
         currentPackage={doctor?.package} 
-        subscriptionStatus={doctor?.subscriptionStatus}
+        subscriptionStatus={doctor?.subscriptionStatus || "ACTIVE"}
         availablePackages={packages} 
       />
     </div>

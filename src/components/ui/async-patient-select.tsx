@@ -46,6 +46,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export function AsyncPatientSelect({
   value,
   onValueChange,
+  onPatientChange,
   placeholder = "Select patient...",
   className,
   initialPatients = [],

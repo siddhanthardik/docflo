@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Tag, CalendarDays, Ticket, Edit, Trash2 } from "lucide-react";
+import { Plus, Tag, CalendarDays, Ticket, Edit, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";

@@ -95,9 +95,12 @@ export async function POST(req: Request) {
         },
       });
 
+      const today = new Date();
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
       syncPromises.push(
-        gbpService.getInsights(discovered.location.name).catch((e) => console.warn("Sync warning (insights):", e)),
-        gbpService.getSearchKeywords(discovered.location.name).catch((e) => console.warn("Sync warning (keywords):", e)),
+        gbpService.getInsights(discovered.location.name, thirtyDaysAgo, today).catch((e) => console.warn("Sync warning (insights):", e)),
+        gbpService.getSearchKeywords(discovered.location.name, thirtyDaysAgo, today).catch((e) => console.warn("Sync warning (keywords):", e)),
         gbpService.getReviews(`${discovered.account.name}/${discovered.location.name}`, gbpAccount.id).catch((e) => console.warn("Sync warning (reviews):", e))
       );
     }

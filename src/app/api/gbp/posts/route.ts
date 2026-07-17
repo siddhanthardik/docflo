@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       
       if (locationName) {
          try {
-           const gbpService = new GBPService(account.accessToken);
+           const gbpService = new GBPService(account.accessToken, account.doctorId);
            const res = await gbpService.createPost(
              locationName,
              content, // GBP API uses 'summary' for the actual text content

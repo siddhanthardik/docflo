@@ -70,7 +70,7 @@ export async function PUT(
     // Fetch clinic settings for validation
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      select: { timezone: true, workingHoursStart: true, workingHoursEnd: true, daysOff: true },
+      select: { timezone: true, workingHoursStart: true, workingHoursEnd: true, daysOff: true, clinicName: true },
     });
 
     const timezone = doctor?.timezone || "UTC";

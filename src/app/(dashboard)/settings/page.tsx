@@ -55,6 +55,7 @@ export default function SettingsPage() {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    subscriptionPlan: "",
   });
 
   // WhatsApp state
