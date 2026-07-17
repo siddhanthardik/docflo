@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { ClinicDetailsClient } from "./ClinicDetailsClient";
 
-export default async function ClinicDetailsPage({ params }: { params: { id: string } }) {
+export default async function ClinicDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
 
   if (!session || !["SUPERADMIN", "ADMIN", "SALES", "MARKETING", "SUPPORT"].includes(session.user?.role || "")) {
     redirect("/");
   }
 
-  const clinicId = params.id;
+  const { id: clinicId } = await params;
 
   const clinic = await prisma.doctor.findUnique({
     where: { id: clinicId },

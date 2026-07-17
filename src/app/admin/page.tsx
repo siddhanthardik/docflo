@@ -21,8 +21,12 @@ async function getMetrics(endpoint: string) {
   const headersList = await headers();
   const host = headersList.get('host') || 'localhost:3000';
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  const cookie = headersList.get('cookie') || '';
   
   const res = await fetch(`${protocol}://${host}/api/admin/metrics/${endpoint}`, {
+    headers: {
+      cookie
+    },
     next: { revalidate: 60 }
   });
   

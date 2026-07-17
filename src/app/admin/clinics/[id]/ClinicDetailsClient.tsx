@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 export function ClinicDetailsClient({ 
   initialClinic, 
@@ -165,7 +166,7 @@ export function ClinicDetailsClient({
                 <Calendar className="h-5 w-5 text-gray-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">Joined Date</p>
-                  <p className="text-sm text-gray-500">{new Date(clinic.createdAt).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-500">{format(new Date(clinic.createdAt), "MMM d, yyyy")}</p>
                 </div>
               </div>
             </div>
@@ -223,7 +224,7 @@ export function ClinicDetailsClient({
               {clinic.paymentTransactions?.map((tx: any) => (
                 <tr key={tx.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(tx.createdAt).toLocaleString()}
+                    {format(new Date(tx.createdAt), "MMM d, yyyy h:mm a")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ${tx.amount}
