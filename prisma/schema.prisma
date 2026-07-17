@@ -1,0 +1,566 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id                String          @id @default(cuid())
+  email             String          @unique
+  password          String
+  name              String
+  phone             String?
+  specialty         String?
+  clinicName        String?
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  role              UserRole        @default(DOCTOR)
+  emailVerified     DateTime?
+  image             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  daysOff           String[]        @default([])
+  timezone          String?         @default("UTC")
+  workingHoursEnd   String?         @default("17:00")
+  workingHoursStart String?         @default("09:00")
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  razorpayCustomerId String?
+  razorpaySubscriptionId String?
+  packageId         String?
+  package           Package?        @relation(fields: [packageId], references: [id])
+  salesRepId        String?         // ID of the SALES user who onboarded this customer
+  appointments      Appointment[]
+  campaigns         Campaign[]
+  aiAgentConfigs    AIAgentConfig[]
+  conversations     Conversation[]
+  gbpAccounts       GbpAccount[]
+  gbpPosts          GBPPost[]
+  patients          Patient[]
+  reviews           Review[]
+  serviceTypes      ServiceType[]
+  staffMembers      StaffMember[]
+  waitlistEntries   WaitlistEntry[]
+  paymentTransactions PaymentTransaction[]
+  invoices          Invoice[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  doctorId      String
+  firstName     String
+  lastName      String
+  phone         String
+  email         String?
+  dateOfBirth   DateTime?
+  gender        String?
+  bloodGroup    String?
+  address       String?
+  medicalNotes  String?
+  tags          String[]
+  patientType   PatientType    @default(LEAD)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  gbpAccountId  String?
+  appointments  Appointment[]
+  conversations Conversation[]
+  invoices      Invoice[]
+  doctor        Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount    GbpAccount?    @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([doctorId])
+  @@index([gbpAccountId])
+  @@map("patients")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String
+  doctorId        String
+  date            DateTime
+  startTime       DateTime
+  endTime         DateTime
+  reason          String?
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?
+  reminderSent    Boolean           @default(false)
+  reviewRequested Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  gbpAccountId    String?
+  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount      GbpAccount?       @relation(fields: [gbpAccountId], references: [id])
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, date])
+  @@index([patientId])
+  @@index([gbpAccountId])
+  @@map("appointments")
+}
+
+model GbpAccount {
+  id           String          @id @default(cuid())
+  doctorId     String
+  accessToken  String
+  refreshToken String
+  tokenExpiry  DateTime
+  locationId   String?
+  locationName String?
+  insightsData Json?
+  lastSyncAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  appointments Appointment[]
+  campaigns    Campaign[]
+  doctor       Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpPosts     GBPPost[]
+  patients     Patient[]
+  reviews      Review[]
+  waitlist     WaitlistEntry[]
+
+  @@unique([doctorId, locationName])
+  @@map("gbp_accounts")
+}
+
+model Review {
+  id           String       @id @default(cuid())
+  doctorId     String
+  reviewerName String
+  rating       Int
+  comment      String?
+  reply        String?
+  source       ReviewSource @default(GOOGLE)
+  reviewDate   DateTime
+  responded    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  gbpAccountId String?
+  doctor       Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount   GbpAccount?  @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([doctorId])
+  @@index([gbpAccountId])
+  @@map("reviews")
+}
+
+model WhatsAppTemplate {
+  id         String   @id @default(cuid())
+  doctorId   String
+  name       String
+  language   String   @default("en")
+  category   String
+  components Json
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([doctorId, name])
+  @@map("whatsapp_templates")
+}
+
+model WhatsAppMessage {
+  id           String    @id @default(cuid())
+  doctorId     String
+  patientPhone String
+  patientName  String?
+  templateName String?
+  messageType  String
+  content      Json
+  status       String    @default("SENT")
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([doctorId, patientPhone])
+  @@map("whatsapp_messages")
+}
+
+model StaffMember {
+  id            String         @id @default(cuid())
+  doctorId      String
+  email         String         @unique
+  password      String
+  name          String
+  role          StaffRole      @default(RECEPTIONIST)
+  phone         String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assignedChats Conversation[]
+  doctor        Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("staff_members")
+}
+
+model Conversation {
+  id            String        @id @default(cuid())
+  doctorId      String
+  patientPhone  String
+  patientName   String?
+  patientId     String?
+  status        ChatStatus    @default(OPEN)
+  assignedToId  String?
+  lastMessageAt DateTime      @default(now())
+  unreadCount   Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  messages      ChatMessage[]
+  assignedTo    StaffMember?  @relation(fields: [assignedToId], references: [id])
+  doctor        Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient       Patient?      @relation(fields: [patientId], references: [id])
+
+  @@unique([doctorId, patientPhone])
+  @@map("conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  direction      MessageDirection
+  messageType    String           @default("text")
+  content        String
+  mediaUrl       String?
+  senderName     String?
+  createdAt      DateTime         @default(now())
+  readAt         DateTime?
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model ServiceType {
+  id          String   @id @default(cuid())
+  doctorId    String
+  name        String
+  duration    Int
+  price       Float?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("service_types")
+}
+
+model WaitlistEntry {
+  id                     String         @id @default(cuid())
+  doctorId               String
+  patientId              String?
+  patientName            String
+  patientPhone           String
+  serviceType            String?
+  preferredDate          DateTime?
+  priority               Int            @default(0)
+  status                 WaitlistStatus @default(WAITING)
+  notifiedAt             DateTime?
+  convertedAppointmentId String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  gbpAccountId           String?
+  doctor                 Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount             GbpAccount?    @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([doctorId])
+  @@index([gbpAccountId])
+  @@map("waitlist_entries")
+}
+
+model GBPPost {
+  id           String      @id @default(cuid())
+  doctorId     String
+  title        String
+  content      String
+  postType     String
+  imageUrl     String?
+  ctaType      String?
+  ctaLink      String?
+  status       PostStatus  @default(DRAFT)
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  gbpPostId    String?
+  metrics      Json?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  gbpAccountId String?
+  doctor       Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount   GbpAccount? @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([doctorId])
+  @@index([gbpAccountId])
+  @@map("gbp_posts")
+}
+
+model Campaign {
+  id           String              @id @default(cuid())
+  doctorId     String
+  name         String
+  message      String
+  segmentType  String
+  segmentValue String?
+  status       CampaignStatus      @default(DRAFT)
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  gbpAccountId String?
+  recipients   CampaignRecipient[]
+  doctor       Doctor              @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount   GbpAccount?         @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([doctorId])
+  @@index([gbpAccountId])
+  @@map("campaigns")
+}
+
+model CampaignRecipient {
+  id           String          @id @default(cuid())
+  campaignId   String
+  patientId    String?
+  patientPhone String
+  patientName  String?
+  status       RecipientStatus @default(PENDING)
+  sentAt       DateTime?
+  error        String?
+  createdAt    DateTime        @default(now())
+  campaign     Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_recipients")
+}
+
+model AIAgentConfig {
+  id          String   @id @default(cuid())
+  doctorId    String
+  agentType   String   // "APPOINTMENT", "REVIEW", "PROFILE", "RANKING"
+  enabled     Boolean  @default(false)
+  config      Json     @default("{}") // Stores agent-specific settings (tone, constraints, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, agentType])
+  @@map("ai_agent_configs")
+}
+
+enum UserRole {
+  DOCTOR
+  ADMIN
+  SUPERADMIN
+  SALES
+  ACCOUNTS
+  MARKETING
+}
+
+model Package {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  price             Float
+  billingPeriod     String    @default("monthly") // monthly, yearly
+  razorpayPlanId    String?   // ID from Razorpay Dashboard
+  features          Json      @default("{}") // e.g. { maxLocations: 1, hasWhatsapp: false }
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  doctors           Doctor[]
+  paymentTransactions PaymentTransaction[]
+
+  @@map("packages")
+}
+
+model Promotion {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  description       String?
+  discountPercent   Float
+  razorpayOfferId   String?
+  expiresAt         DateTime?
+  usageLimit        Int?
+  usageCount        Int       @default(0)
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+
+  @@map("promotions")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ReviewSource {
+  GOOGLE
+  MANUAL
+}
+
+enum StaffRole {
+  RECEPTIONIST
+  STAFF
+  NURSE
+  MANAGER
+  ADMIN
+}
+
+enum ChatStatus {
+  OPEN
+  ASSIGNED
+  RESOLVED
+  CLOSED
+}
+
+enum MessageDirection {
+  INCOMING
+  OUTGOING
+  INTERNAL_NOTE
+}
+
+enum WaitlistStatus {
+  WAITING
+  NOTIFIED
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum RecipientStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+model PaymentTransaction {
+  id              String   @id @default(cuid())
+  doctorId        String
+  packageId       String
+  amount          Float
+  currency        String   @default("USD")
+  status          String   @default("SUCCESS") // SUCCESS, FAILED
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  promoCode       String?
+  createdAt       DateTime @default(now())
+
+  doctor          Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  package         Package  @relation(fields: [packageId], references: [id])
+
+  @@map("payment_transactions")
+}
+
+enum PatientType {
+  LEAD
+  ACTIVE
+  INACTIVE
+  LOST
+}
+
+model Invoice {
+  id              String         @id @default(cuid())
+  invoiceNumber   String
+  doctorId        String
+  patientId       String
+  appointmentId   String?
+  status          InvoiceStatus  @default(DRAFT)
+  issueDate       DateTime       @default(now())
+  dueDate         DateTime?
+  paidAt          DateTime?
+  
+  subtotal        Float
+  discountAmount  Float          @default(0)
+  totalAmount     Float
+  
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  doctor          Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  items           InvoiceItem[]
+  payments        PatientPayment[]
+
+  @@unique([doctorId, invoiceNumber])
+  @@index([doctorId])
+  @@index([patientId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String       @id @default(cuid())
+  invoiceId       String
+  serviceTypeId   String?
+  description     String
+  quantity        Int          @default(1)
+  unitPrice       Float
+  total           Float
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model PatientPayment {
+  id              String       @id @default(cuid())
+  invoiceId       String
+  doctorId        String
+  amount          Float
+  paymentMethod   PaymentMethod
+  paymentDate     DateTime     @default(now())
+  referenceId     String?
+  createdAt       DateTime     @default(now())
+
+  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([doctorId])
+  @@map("patient_payments")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  UNPAID
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  OTHER
+}
