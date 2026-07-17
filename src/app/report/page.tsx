@@ -169,8 +169,8 @@ function ReportPageContent() {
               Report #DF-{Math.floor(Math.random() * 900000 + 100000)}
             </span>
             <Link href="/register">
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg h-9 px-4 text-sm font-semibold">
-                Fix My Profile
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg h-9 px-4 text-sm font-semibold shadow-sm shadow-blue-500/20">
+                Start 14-Day Free Trial
               </Button>
             </Link>
           </div>
@@ -378,21 +378,21 @@ function ReportPageContent() {
 
               {/* Pricing CTA */}
               <div className="bg-slate-900 rounded-2xl overflow-hidden text-white shadow-xl">
-                <div className="py-2.5 text-center text-xs font-black uppercase tracking-widest bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-900">
-                  🚀 Limited Launch Offer
+                <div className="py-2.5 text-center text-xs font-black uppercase tracking-widest bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
+                  🚀 Start Your Free Trial
                 </div>
                 <div className="p-6">
-                  <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Zap className="h-6 w-6 text-teal-400" />
+                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Zap className="h-6 w-6 text-blue-400" />
                   </div>
                   <h3 className="text-lg font-bold text-center mb-1">Docflo AI</h3>
                   <p className="text-slate-400 text-center text-xs mb-5">Fix all 5 issues. Automate your growth.</p>
 
                   <div className="text-center mb-5">
                     <p className="text-slate-500 text-xs line-through">₹30,000 / year</p>
-                    <p className="text-4xl font-black mt-1">₹9,999<span className="text-lg font-medium text-slate-400">/yr</span></p>
-                    <div className="inline-block bg-teal-500/20 text-teal-400 text-xs font-bold px-3 py-1 rounded-full mt-2">
-                      Save ₹20,001 · Just ₹833/mo
+                    <p className="text-4xl font-black mt-1">Free<span className="text-lg font-medium text-slate-400"> for 14 days</span></p>
+                    <div className="inline-block bg-blue-500/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full mt-2">
+                      Then just ₹833/mo
                     </div>
                   </div>
 
@@ -407,8 +407,8 @@ function ReportPageContent() {
                       "Patient CRM & Appointment Manager",
                     ].map((f) => (
                       <div key={f} className="flex items-center gap-2.5">
-                        <div className="w-4 h-4 rounded-full bg-teal-500/20 flex items-center justify-center flex-shrink-0">
-                          <Check className="h-2.5 w-2.5 text-teal-400" />
+                        <div className="w-4 h-4 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                          <Check className="h-2.5 w-2.5 text-blue-400" />
                         </div>
                         <span className="text-xs text-slate-300">{f}</span>
                       </div>
@@ -416,8 +416,8 @@ function ReportPageContent() {
                   </div>
 
                   <Link href="/register">
-                    <Button className="w-full h-12 bg-teal-500 hover:bg-teal-400 text-slate-900 font-black rounded-xl text-sm shadow-lg shadow-teal-500/30">
-                      Start Fixing Now <ChevronRight className="h-4 w-4 ml-1" />
+                    <Button className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-sm shadow-lg shadow-blue-600/30">
+                      Start 14-Day Free Trial <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
                   <p className="text-center text-xs text-slate-600 mt-3">No contracts · Cancel anytime</p>

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           data: {
             doctorId: session.user.id,
             packageId: packageId,
-            amount: updatedDoctor.package.price,
+            amount: updatedDoctor.package.priceMonthly || 0,
             currency: "USD",
             status: "SUCCESS",
             razorpayOrderId: razorpay_order_id,

@@ -5,12 +5,19 @@ import { PackagesClient } from "./PackagesClient";
 export default async function PackagesPage() {
   const session = await auth();
   const packages = await prisma.package.findMany({
-    orderBy: { price: "asc" }
+    orderBy: { priceMonthly: "asc" },
+    include: {
+      packageFeatures: true
+    }
+  });
+
+  const featureFlags = await prisma.featureFlag.findMany({
+    orderBy: { createdAt: "asc" }
   });
 
   return (
     <div className="space-y-6">
-      <PackagesClient initialPackages={packages} />
+      <PackagesClient initialPackages={packages} featureFlags={featureFlags} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isPlatformRole } from "@/lib/permissions";
 
 export async function proxy(req: NextRequest) {
   const session = await auth();
@@ -13,7 +14,7 @@ export async function proxy(req: NextRequest) {
   // If user is authenticated and hitting the root "/" public landing page, redirect to their portal
   if (session?.user && pathname === "/") {
     const role = session.user.role;
-    if (role === "SUPERADMIN" || role === "ADMIN" || role === "SALES" || role === "ACCOUNTS" || role === "MARKETING") {
+    if (isPlatformRole(role)) {
       return NextResponse.redirect(new URL("/admin", req.url));
     }
     // DOCTOR or staff → dashboard

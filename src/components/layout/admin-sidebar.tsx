@@ -12,14 +12,18 @@ import {
   Tag,
   ShieldAlert,
   Building,
+  UserPlus,
+  Layers,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Packages", href: "/admin/packages", icon: Package },
+  { name: "Features", href: "/admin/features", icon: Layers },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
-  { name: "Customers", href: "/admin/customers", icon: Building },
+  { name: "Clinics", href: "/admin/clinics", icon: Building },
+  { name: "Leads", href: "/admin/leads", icon: UserPlus },
   { name: "Team", href: "/admin/team", icon: Users },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isFeatureEnabled } from "@/lib/features";
 
 export async function GET() {
   try {
@@ -21,14 +22,7 @@ export async function GET() {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    // Default to paid/premium for now unless package explicitly blocks it
-    let hasAIAgentsAccess = true;
-    if (doctor.package && doctor.package.features) {
-      const features = doctor.package.features as any;
-      if (features.aiAgentsEnabled === false) {
-        hasAIAgentsAccess = false;
-      }
-    }
+    const hasAIAgentsAccess = await isFeatureEnabled(doctorId, "has_ai_agents");
 
     // Initialize default agents if they don't exist
     const agentTypes = ["APPOINTMENT", "REVIEW", "PROFILE", "RANKING"];

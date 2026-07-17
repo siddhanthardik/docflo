@@ -20,7 +20,14 @@ export default async function BillingPage() {
   // Get all active packages
   const packages = await prisma.package.findMany({
     where: { isActive: true },
-    orderBy: { price: "asc" }
+    orderBy: { priceMonthly: "asc" },
+    include: {
+      packageFeatures: true
+    }
+  });
+
+  const featureFlags = await prisma.featureFlag.findMany({
+    orderBy: { createdAt: "asc" }
   });
 
   return (
@@ -34,6 +41,7 @@ export default async function BillingPage() {
         currentPackage={doctor?.package} 
         subscriptionStatus={doctor?.subscriptionStatus || "ACTIVE"}
         availablePackages={packages} 
+        featureFlags={featureFlags}
       />
     </div>
   );

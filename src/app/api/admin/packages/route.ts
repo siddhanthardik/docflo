@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, description, price, features, isActive } = body;
+    const { name, description, priceMonthly, priceQuarterly, priceYearly, features, isActive } = body;
 
-    if (!name || typeof price !== 'number') {
+    if (!name || typeof priceMonthly !== 'number') {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -20,9 +20,17 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         description,
-        price,
-        features,
+        priceMonthly,
+        priceQuarterly,
+        priceYearly,
         isActive: isActive !== undefined ? isActive : true,
+        packageFeatures: features ? {
+          create: features.map((f: any) => ({
+            featureId: f.featureId,
+            isEnabled: f.isEnabled,
+            limit: f.limit || null
+          }))
+        } : undefined
       },
     });
 

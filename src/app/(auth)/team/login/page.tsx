@@ -46,11 +46,13 @@ export default function TeamLoginPage() {
         const res = await fetch("/api/auth/session");
         const session = await res.json();
         
-        if (session?.user?.role === "SUPERADMIN" || session?.user?.role === "ADMIN" || session?.user?.role === "SALES" || session?.user?.role === "ACCOUNTS" || session?.user?.role === "MARKETING") {
-          window.location.href = "/admin";
-        } else {
-          window.location.href = "/";
-        }
+        import("@/lib/permissions").then(({ isPlatformRole }) => {
+          if (session?.user?.role && isPlatformRole(session.user.role)) {
+            window.location.href = "/admin";
+          } else {
+            window.location.href = "/";
+          }
+        });
       }
     } catch (error) {
       toast({

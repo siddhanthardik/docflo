@@ -29,6 +29,10 @@ model Doctor {
   workingHoursEnd   String?         @default("17:00")
   workingHoursStart String?         @default("09:00")
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  subscriptionExpiry DateTime?
+  billingPeriod      String?         @default("monthly") // monthly, quarterly, yearly
+  isSuspended        Boolean         @default(false)
+  stripeCustomerId   String?
   razorpayCustomerId String?
   razorpaySubscriptionId String?
   packageId         String?
@@ -37,6 +41,7 @@ model Doctor {
   appointments      Appointment[]
   campaigns         Campaign[]
   aiAgentConfigs    AIAgentConfig[]
+  featureOverrides  ClinicFeatureOverride[]
   conversations     Conversation[]
   gbpAccounts       GbpAccount[]
   gbpPosts          GBPPost[]
@@ -361,10 +366,14 @@ model Package {
   id                String    @id @default(cuid())
   name              String
   description       String?
-  price             Float
-  billingPeriod     String    @default("monthly") // monthly, yearly
+  price             Float?    // Deprecated: keeping temporarily for migration
+  billingPeriod     String?   // Deprecated: keeping temporarily for migration
+  priceMonthly      Float     @default(0)
+  priceQuarterly    Float     @default(0)
+  priceYearly       Float     @default(0)
   razorpayPlanId    String?   // ID from Razorpay Dashboard
-  features          Json      @default("{}") // e.g. { maxLocations: 1, hasWhatsapp: false }
+  features          Json      @default("{}") // Deprecated: keeping temporarily for migration
+  packageFeatures   PackageFeature[]
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -563,4 +572,121 @@ enum PaymentMethod {
   CARD
   BANK_TRANSFER
   OTHER
+}
+
+model PlatformLead {
+  id          String     @id @default(cuid())
+  name        String?
+  email       String?
+  phone       String?
+  clinicName  String?
+  source      String     // e.g. "AUDIT_REPORT", "HOME_PAGE", "CONTACT_US"
+  status      LeadStatus @default(NEW)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("platform_leads")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}
+
+// ==========================================
+// RBAC & PLATFORM SAAS MODELS
+// ==========================================
+
+enum PlatformRole {
+  SUPERADMIN
+  SUPERVISOR
+  SUPPORT
+  SALES
+  MARKETING
+  ACCOUNTS
+}
+
+enum ClinicRole {
+  DOCTOR
+  ADMIN
+  STAFF
+  RECEPTIONIST
+}
+
+model PlatformUser {
+  id        String       @id @default(cuid())
+  name      String
+  email     String       @unique
+  password  String
+  role      PlatformRole @default(SUPPORT)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("platform_users")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userType  String   // "PLATFORM" or "CLINIC"
+  action    String   // e.g. "LOGIN", "SUBSCRIPTION_CHANGE"
+  details   Json     @default("{}")
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// FEATURE FLAG ENGINE
+// ==========================================
+
+model FeatureFlag {
+  id           String   @id @default(cuid())
+  name         String
+  key          String   @unique
+  description  String?
+  type         String   // "BOOLEAN" or "NUMBER"
+  defaultValue String   // "true", "false", or "10"
+  
+  packageFeatures PackageFeature[]
+  clinicOverrides ClinicFeatureOverride[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+model PackageFeature {
+  id          String   @id @default(cuid())
+  packageId   String
+  featureId   String
+  isEnabled   Boolean  @default(false)
+  limit       Int?     // For NUMBER type features
+  
+  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  feature     FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  
+  @@unique([packageId, featureId])
+  @@map("package_features")
+}
+
+model ClinicFeatureOverride {
+  id          String   @id @default(cuid())
+  doctorId    String
+  featureId   String
+  isEnabled   Boolean  @default(false)
+  limit       Int?
+  
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  feature     FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  
+  @@unique([doctorId, featureId])
+  @@map("clinic_feature_overrides")
 }

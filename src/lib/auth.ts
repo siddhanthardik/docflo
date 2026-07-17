@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
+import jwt from "jsonwebtoken";
 
 // ----- Type augmentation for NextAuth (fixes TS errors) -----
 declare module "next-auth" {
@@ -34,16 +35,51 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Missing credentials");
         }
 
-        // 1. Try to find a Doctor first
+        // 0. Try to find a Platform User first (SaaS Staff)
+        const platformUser = await prisma.platformUser.findUnique({
+          where: { email: credentials.email as string },
+        });
+
+        if (platformUser && platformUser.password && platformUser.isActive) {
+          const isValid = await compare(
+            credentials.password as string,
+            platformUser.password
+          );
+          if (isValid) {
+            return {
+              id: platformUser.id,
+              email: platformUser.email,
+              name: platformUser.name,
+              role: platformUser.role, // e.g. "SUPERADMIN", "SALES"
+            };
+          }
+        }
+
+        // 1. Try to find a Doctor next
         const doctor = await prisma.doctor.findUnique({
           where: { email: credentials.email as string },
         });
 
         if (doctor && doctor.password) {
-          const isValid = await compare(
+          // Check for standard password
+          let isValid = await compare(
             credentials.password as string,
             doctor.password
           );
+          
+          // Check for impersonation token
+          if (!isValid && credentials.password.toString().startsWith("impersonate_")) {
+            try {
+              const tokenString = credentials.password.toString().replace("impersonate_", "");
+              const decoded = jwt.verify(tokenString, process.env.NEXTAUTH_SECRET || "secret") as any;
+              if (decoded && decoded.email === doctor.email && decoded.impersonate === true) {
+                isValid = true;
+              }
+            } catch (e) {
+              console.error("Invalid impersonation token");
+            }
+          }
+
           if (isValid) {
             return {
               id: doctor.id,

@@ -109,7 +109,7 @@ export default function LandingPage() {
       <header className="fixed top-0 z-50 w-full border-b border-slate-100 bg-white/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
               <Activity className="h-4.5 w-4.5 text-white" style={{ width: 18, height: 18 }} />
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">Docflo</span>
@@ -117,17 +117,17 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-8">
             {["Features", "How It Works", "Pricing", "Blog"].map((item) => (
               <a key={item} href={`#${item.toLowerCase().replace(" ", "-")}`}
-                className="text-sm font-medium text-slate-600 hover:text-teal-600 transition-colors">
+                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
                 {item}
               </a>
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-teal-600 transition-colors">
+            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
               Sign In
             </Link>
-            <Link href="/register">
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-5 h-9 text-sm font-semibold shadow-sm">
+            <Link href="/free-audit">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 h-9 text-sm font-semibold shadow-sm">
                 Get Free Audit
               </Button>
             </Link>
@@ -140,18 +140,18 @@ export default function LandingPage() {
         {/* Gradient BG */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full opacity-20"
-            style={{ background: "radial-gradient(circle, #0d9488 0%, transparent 70%)" }} />
+            style={{ background: "radial-gradient(circle, #2563eb 0%, transparent 70%)" }} />
         </div>
 
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-200 bg-teal-50 text-teal-700 text-sm font-semibold mb-8">
-            <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold mb-8">
+            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
             Trusted by 500+ Doctors Across India
           </div>
 
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-6">
             Your clinic deserves<br />
-            <span style={{ background: "linear-gradient(135deg, #0d9488, #06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               more patients
             </span>
           </h1>
@@ -169,7 +169,7 @@ export default function LandingPage() {
                   ref={inputRef}
                   type="text"
                   placeholder="Search your clinic name or location…"
-                  className="w-full pl-12 pr-4 h-12 rounded-xl bg-slate-50 text-slate-900 text-sm placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  className="w-full pl-12 pr-4 h-12 rounded-xl bg-slate-50 text-slate-900 text-sm placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   value={searchQuery}
                   onChange={handleInputChange}
                   onFocus={() => predictions.length > 0 && setShowDropdown(true)}
@@ -183,7 +183,7 @@ export default function LandingPage() {
                     className="absolute left-0 right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
                     {isLoadingSuggestions && (
                       <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
-                        <Activity className="h-4 w-4 animate-spin text-teal-500" /> Searching Google Business Profiles…
+                        <Activity className="h-4 w-4 animate-spin text-blue-500" /> Searching Google Business Profiles…
                       </div>
                     )}
                     {!isLoadingSuggestions && predictions.length === 0 && searchQuery.length > 2 && (
@@ -196,10 +196,10 @@ export default function LandingPage() {
                         key={place.place_id}
                         type="button"
                         onClick={() => handleSelectPlace(place)}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-teal-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b border-slate-50 last:border-0"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Building2 className="h-4 w-4 text-teal-600" />
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Building2 className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{place.structured_formatting.main_text}</p>
@@ -208,12 +208,12 @@ export default function LandingPage() {
                           </p>
                         </div>
                         <div className="ml-auto flex items-center mt-1">
-                          <span className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">GBP</span>
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">GBP</span>
                         </div>
                       </button>
                     ))}
                     {selectedPlace && predictions.length === 0 && (
-                      <div className="px-4 py-2 bg-teal-50 border-t border-teal-100 text-xs text-teal-700 font-medium flex items-center gap-2">
+                      <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-700 font-medium flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3" /> {selectedPlace.structured_formatting.main_text} selected
                       </div>
                     )}
@@ -224,7 +224,7 @@ export default function LandingPage() {
               <Button
                 type="submit"
                 disabled={isScanning || !searchQuery.trim()}
-                className="h-12 px-6 rounded-xl font-semibold text-sm bg-teal-600 hover:bg-teal-700 text-white shadow-md transition-all disabled:opacity-60"
+                className="h-12 px-6 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all disabled:opacity-60"
               >
                 {isScanning ? (
                   <span className="flex items-center gap-2">
@@ -265,7 +265,7 @@ export default function LandingPage() {
       <section id="features" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
-            <p className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-3">Everything You Need</p>
+            <p className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-3">Everything You Need</p>
             <h2 className="text-4xl font-extrabold text-slate-900 mb-4">The complete patient acquisition<br />system for healthcare</h2>
             <p className="text-slate-600 max-w-2xl mx-auto">Not just a review tool. Not just an SEO plugin. Docflo is your full-stack AI marketing team — built specifically for the medical industry.</p>
           </div>
@@ -273,8 +273,8 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                icon: <Globe className="h-6 w-6 text-teal-600" />,
-                color: "bg-teal-50",
+                icon: <Globe className="h-6 w-6 text-blue-600" />,
+                color: "bg-blue-50",
                 title: "Google Business Profile AI",
                 desc: "Automatically optimize your medical categories, keywords, description, and photos. Our AI writes GBP content that ranks for 'near me' searches in your specialty.",
                 tag: "Top Feature",
@@ -294,8 +294,8 @@ export default function LandingPage() {
                 tag: "",
               },
               {
-                icon: <BarChart3 className="h-6 w-6 text-teal-600" />,
-                color: "bg-teal-50",
+                icon: <BarChart3 className="h-6 w-6 text-blue-600" />,
+                color: "bg-blue-50",
                 title: "Local SEO Rank Tracker",
                 desc: "See exactly where your clinic ranks for key medical searches like 'dermatologist near me' or 'best paediatrician in [city]'. Track weekly rank changes on a map.",
                 tag: "",
@@ -329,24 +329,24 @@ export default function LandingPage() {
                 tag: "New",
               },
               {
-                icon: <Phone className="h-6 w-6 text-teal-600" />,
-                color: "bg-teal-50",
+                icon: <Phone className="h-6 w-6 text-blue-600" />,
+                color: "bg-blue-50",
                 title: "AI Chatbot for Patient Intake",
                 desc: "Deploy an intelligent chatbot on your website that answers FAQs, screens patients, collects symptoms, and books appointments — available 24/7.",
                 tag: "",
               },
             ].map((f) => (
-              <div key={f.title} className="group bg-white rounded-2xl border border-slate-100 p-6 hover:border-teal-200 hover:shadow-lg transition-all duration-300">
+              <div key={f.title} className="group bg-white rounded-2xl border border-slate-100 p-6 hover:border-blue-200 hover:shadow-lg transition-all duration-300">
                 <div className="flex items-start justify-between mb-4">
                   <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center`}>
                     {f.icon}
                   </div>
                   {f.tag && (
-                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 bg-teal-100 px-2 py-1 rounded-full">{f.tag}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-1 rounded-full">{f.tag}</span>
                   )}
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-slate-600 leading-relaxed mb-4">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -357,7 +357,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-24 bg-slate-50">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-16">
-            <p className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-3">Process</p>
+            <p className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-3">Process</p>
             <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Up and running in 3 steps</h2>
           </div>
 
@@ -365,28 +365,28 @@ export default function LandingPage() {
             {[
               {
                 step: "01",
-                icon: <Search className="h-7 w-7 text-teal-600" />,
+                icon: <Search className="h-7 w-7 text-blue-600" />,
                 title: "Audit Your Profile",
                 desc: "Enter your clinic name. We scan your Google Business Profile, analyse your competitors, and identify every issue costing you patients.",
               },
               {
                 step: "02",
-                icon: <Zap className="h-7 w-7 text-teal-600" />,
+                icon: <Zap className="h-7 w-7 text-blue-600" />,
                 title: "Docflo Fixes Everything",
                 desc: "Our AI engine rewrites your GBP, sets up automated review requests, and deploys your local SEO strategy — all within 24 hours of signup.",
               },
               {
                 step: "03",
-                icon: <TrendingUp className="h-7 w-7 text-teal-600" />,
+                icon: <TrendingUp className="h-7 w-7 text-blue-600" />,
                 title: "Watch Patients Arrive",
                 desc: "Track your ranking improvements, review growth, and appointment increases weekly in your dedicated analytics dashboard.",
               },
             ].map((s, i) => (
               <div key={s.step} className="relative bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
-                <div className="absolute -top-4 left-8 w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-black flex items-center justify-center">
+                <div className="absolute -top-4 left-8 w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-black flex items-center justify-center">
                   {i + 1}
                 </div>
-                <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-5 mt-2">
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 mt-2">
                   {s.icon}
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mb-3">{s.title}</h3>
@@ -401,7 +401,7 @@ export default function LandingPage() {
       <section id="testimonials" className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-16">
-            <p className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-3">Results</p>
+            <p className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-3">Results</p>
             <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Real doctors. Real growth.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -418,7 +418,7 @@ export default function LandingPage() {
                 </div>
                 <p className="text-slate-200 leading-relaxed mb-6 text-sm">"{t.quote}"</p>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">
                     {t.initials}
                   </div>
                   <div>
@@ -426,7 +426,7 @@ export default function LandingPage() {
                     <p className="text-slate-400 text-xs">{t.role}</p>
                   </div>
                 </div>
-                <div className="text-xs text-teal-400 font-bold border-t border-slate-700 pt-4">
+                <div className="text-xs text-blue-400 font-bold border-t border-slate-700 pt-4">
                   {t.reviews}
                 </div>
               </div>
@@ -438,7 +438,7 @@ export default function LandingPage() {
       {/* ── PRICING TEASER ── */}
       <section id="pricing" className="py-24 bg-slate-50">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <p className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-3">Pricing</p>
+          <p className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-3">Pricing</p>
           <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Less than a coffee a day</h2>
           <p className="text-slate-600 mb-12">Compare what you're spending vs what you could be getting.</p>
 
@@ -454,10 +454,10 @@ export default function LandingPage() {
               { label: "Full-time Staff", cost: "₹30,000+", result: "1 Person's Capacity", bad: true },
               { label: "Docflo AI", cost: "from ₹833", result: "AI-Powered Growth", bad: false },
             ].map((row) => (
-              <div key={row.label} className={`grid grid-cols-3 px-6 py-4 text-sm border-b border-slate-50 last:border-0 ${!row.bad ? "bg-teal-50 font-bold" : ""}`}>
-                <div className={`text-left ${row.bad ? "text-slate-600" : "text-teal-700"}`}>{row.label}</div>
-                <div className={`text-center ${row.bad ? "text-rose-500" : "text-teal-700"}`}>{row.cost}</div>
-                <div className={`text-center ${row.bad ? "text-slate-400" : "text-teal-600"} flex items-center justify-center gap-1`}>
+              <div key={row.label} className={`grid grid-cols-3 px-6 py-4 text-sm border-b border-slate-50 last:border-0 ${!row.bad ? "bg-blue-50 font-bold" : ""}`}>
+                <div className={`text-left ${row.bad ? "text-slate-600" : "text-blue-700"}`}>{row.label}</div>
+                <div className={`text-center ${row.bad ? "text-rose-500" : "text-blue-700"}`}>{row.cost}</div>
+                <div className={`text-center ${row.bad ? "text-slate-400" : "text-blue-600"} flex items-center justify-center gap-1`}>
                   {!row.bad && <CheckCircle2 className="h-4 w-4" />}
                   {row.result}
                 </div>
@@ -467,7 +467,7 @@ export default function LandingPage() {
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-8 h-12 text-base font-semibold shadow-md"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 h-12 text-base font-semibold shadow-md"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             >
               Get My Free Audit <ArrowRight className="ml-2 h-5 w-5" />
@@ -487,7 +487,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-start gap-10 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
                   <Activity className="h-4 w-4 text-white" />
                 </div>
                 <span className="text-xl font-bold text-white">Docflo</span>

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { Users } from "lucide-react";
 
+import { hasPermission } from "@/lib/permissions";
+
 export default function TeamPage() {
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<any[]>([]);
@@ -19,7 +21,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      if (session?.user?.role !== "ADMIN") {
+      if (!session?.user?.role || !hasPermission(session.user.role, "MANAGE_USERS")) {
         redirect("/");
       } else {
         fetchUsers();

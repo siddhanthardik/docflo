@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function PackagesClient({ initialPackages }: { initialPackages: any[] }) {
+export function PackagesClient({ initialPackages, featureFlags }: { initialPackages: any[], featureFlags: any[] }) {
   const { toast } = useToast();
   const router = useRouter();
   const [packages, setPackages] = useState<any[]>(initialPackages);
@@ -28,13 +28,11 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: 0,
+    priceMonthly: 0,
+    priceQuarterly: 0,
+    priceYearly: 0,
     isActive: true,
-    maxKeywords: 0,
-    whatsappIntegration: false,
-    geoGrid: false,
-    prioritySupport: false,
-    customIntegrations: false,
+    features: [] as { featureId: string, isEnabled: boolean, limit: number | null }[],
   });
 
   const openCreateModal = () => {
@@ -42,32 +40,53 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
     setFormData({
       name: "",
       description: "",
-      price: 0,
+      priceMonthly: 0,
+      priceQuarterly: 0,
+      priceYearly: 0,
       isActive: true,
-      maxKeywords: 0,
-      whatsappIntegration: false,
-      geoGrid: false,
-      prioritySupport: false,
-      customIntegrations: false,
+      features: featureFlags.map(f => ({
+        featureId: f.id,
+        isEnabled: false,
+        limit: f.type === "NUMBER" ? 0 : null
+      })),
     });
     setIsModalOpen(true);
   };
 
   const openEditModal = (pkg: any) => {
     setEditingPkg(pkg);
-    const features = pkg.features || {};
+    const existingFeatures = pkg.packageFeatures || [];
+    
     setFormData({
       name: pkg.name,
       description: pkg.description || "",
-      price: pkg.price,
+      priceMonthly: pkg.priceMonthly || 0,
+      priceQuarterly: pkg.priceQuarterly || 0,
+      priceYearly: pkg.priceYearly || 0,
       isActive: pkg.isActive,
-      maxKeywords: features.maxKeywords || 0,
-      whatsappIntegration: !!features.whatsappIntegration,
-      geoGrid: !!features.geoGrid,
-      prioritySupport: !!features.prioritySupport,
-      customIntegrations: !!features.customIntegrations,
+      features: featureFlags.map(f => {
+        const existing = existingFeatures.find((ef: any) => ef.featureId === f.id);
+        if (existing) {
+          return { featureId: f.id, isEnabled: existing.isEnabled, limit: existing.limit };
+        }
+        return { featureId: f.id, isEnabled: false, limit: f.type === "NUMBER" ? 0 : null };
+      }),
     });
     setIsModalOpen(true);
+  };
+
+  const handleFeatureToggle = (featureId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.map(f => f.featureId === featureId ? { ...f, isEnabled: checked } : f)
+    }));
+  };
+
+  const handleFeatureLimit = (featureId: string, limit: number) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.map(f => f.featureId === featureId ? { ...f, limit } : f)
+    }));
   };
 
   const handleDisable = async (id: string) => {
@@ -92,17 +111,10 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
     setLoading(true);
 
     const payload = {
-      name: formData.name,
-      description: formData.description,
-      price: Number(formData.price),
-      isActive: formData.isActive,
-      features: {
-        maxKeywords: Number(formData.maxKeywords),
-        whatsappIntegration: formData.whatsappIntegration,
-        geoGrid: formData.geoGrid,
-        prioritySupport: formData.prioritySupport,
-        customIntegrations: formData.customIntegrations,
-      }
+      ...formData,
+      priceMonthly: Number(formData.priceMonthly),
+      priceQuarterly: Number(formData.priceQuarterly),
+      priceYearly: Number(formData.priceYearly),
     };
 
     try {
@@ -128,7 +140,7 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
         if (res.ok) {
           toast({ title: "Success", description: "Package created successfully." });
           const created = await res.json();
-          setPackages([...packages, created].sort((a,b) => a.price - b.price));
+          setPackages([...packages, created].sort((a,b) => a.priceMonthly - b.priceMonthly));
           setIsModalOpen(false);
           router.refresh();
         }
@@ -157,7 +169,6 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {packages.map((pkg) => {
-          const features = pkg.features as any || {};
           return (
             <div key={pkg.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col relative">
               {!pkg.isActive && (
@@ -168,45 +179,41 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
               <div className="p-6 border-b border-gray-100 bg-gray-50/50">
                 <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wider">{pkg.name}</h3>
                 <p className="text-sm text-gray-500 mt-1 h-10">{pkg.description}</p>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-gray-900">${pkg.price}</span>
-                  <span className="text-sm font-medium text-gray-500">/mo</span>
+                <div className="mt-4 flex flex-col gap-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
+                    <span className="text-sm font-medium text-gray-500">/mo</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Quarterly: ${pkg.priceQuarterly} / Yearly: ${pkg.priceYearly}
+                  </div>
                 </div>
               </div>
               <div className="p-6 flex-1 flex flex-col">
                 <ul className="space-y-3 mb-6 flex-1 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    <span>{features.maxKeywords === 0 ? "No" : features.maxKeywords > 1000 ? "Unlimited" : features.maxKeywords} Local SEO Keywords</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    {features.whatsappIntegration ? (
-                      <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    ) : (
-                      <X className="h-4 w-4 text-rose-500 flex-shrink-0" />
-                    )}
-                    <span>WhatsApp Integration</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    {features.geoGrid ? (
-                      <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    ) : (
-                      <X className="h-4 w-4 text-rose-500 flex-shrink-0" />
-                    )}
-                    <span>Geo-grid Rank Tracking</span>
-                  </li>
-                  {features.prioritySupport && (
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      <span>Priority Support</span>
-                    </li>
-                  )}
-                  {features.customIntegrations && (
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      <span>Custom Integrations</span>
-                    </li>
-                  )}
+                  {featureFlags.map(ff => {
+                    const feat = pkg.packageFeatures?.find((pf: any) => pf.featureId === ff.id);
+                    const isEnabled = feat?.isEnabled || false;
+                    const limit = feat?.limit;
+
+                    return (
+                      <li key={ff.id} className="flex items-center gap-2">
+                        {isEnabled ? (
+                          <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                        ) : (
+                          <X className="h-4 w-4 text-rose-500 flex-shrink-0" />
+                        )}
+                        <span>
+                          {ff.name} 
+                          {ff.type === "NUMBER" && isEnabled && (
+                            <span className="text-xs font-bold ml-1 bg-gray-100 px-2 py-0.5 rounded">
+                              {limit === 0 ? "Unlimited" : limit}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
                 
                 <div className="grid grid-cols-2 gap-2 mt-auto">
@@ -233,7 +240,7 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
 
       {/* CREATE/EDIT MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPkg ? "Edit Package" : "Create New Package"}</DialogTitle>
           </DialogHeader>
@@ -249,19 +256,17 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Monthly Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                  required
+              <div className="flex items-center gap-2 mt-8">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5"
                 />
+                <span className="text-sm font-medium">Package is Active</span>
               </div>
             </div>
-
+            
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -272,71 +277,81 @@ export function PackagesClient({ initialPackages }: { initialPackages: any[] }) 
               />
             </div>
 
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold text-gray-900">Features & Quotas</h3>
-              
+            <div className="grid grid-cols-3 gap-4 border-t pt-4">
               <div className="space-y-2">
-                <Label htmlFor="maxKeywords">Max SEO Keywords (9999 for unlimited)</Label>
+                <Label htmlFor="priceMonthly">Monthly Price ($)</Label>
                 <Input
-                  id="maxKeywords"
+                  id="priceMonthly"
                   type="number"
                   min="0"
-                  value={formData.maxKeywords}
-                  onChange={(e) => setFormData({ ...formData, maxKeywords: Number(e.target.value) })}
+                  value={formData.priceMonthly}
+                  onChange={(e) => setFormData({ ...formData, priceMonthly: Number(e.target.value) })}
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="priceQuarterly">Quarterly Price ($)</Label>
+                <Input
+                  id="priceQuarterly"
+                  type="number"
+                  min="0"
+                  value={formData.priceQuarterly}
+                  onChange={(e) => setFormData({ ...formData, priceQuarterly: Number(e.target.value) })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priceYearly">Yearly Price ($)</Label>
+                <Input
+                  id="priceYearly"
+                  type="number"
+                  min="0"
+                  value={formData.priceYearly}
+                  onChange={(e) => setFormData({ ...formData, priceYearly: Number(e.target.value) })}
+                  required
+                />
+              </div>
+            </div>
 
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="font-semibold text-gray-900">Features Mapping</h3>
+              <p className="text-xs text-gray-500">Toggle which features are available in this package.</p>
+              
               <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center gap-2 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.whatsappIntegration}
-                    onChange={(e) => setFormData({ ...formData, whatsappIntegration: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium">WhatsApp Integration</span>
-                </label>
-                
-                <label className="flex items-center gap-2 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.geoGrid}
-                    onChange={(e) => setFormData({ ...formData, geoGrid: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium">Geo-Grid Tracking</span>
-                </label>
-                
-                <label className="flex items-center gap-2 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.prioritySupport}
-                    onChange={(e) => setFormData({ ...formData, prioritySupport: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium">Priority Support</span>
-                </label>
+                {featureFlags.map(ff => {
+                  const val = formData.features.find(f => f.featureId === ff.id);
+                  const isChecked = val?.isEnabled || false;
 
-                <label className="flex items-center gap-2 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.customIntegrations}
-                    onChange={(e) => setFormData({ ...formData, customIntegrations: e.target.checked })}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium">Custom Integrations</span>
-                </label>
-                
-                <label className="flex items-center gap-2 border p-3 rounded-lg cursor-pointer hover:bg-gray-50 col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm font-medium">Package is Active</span>
-                </label>
+                  return (
+                    <div key={ff.id} className="border p-3 rounded-lg flex flex-col gap-2 hover:bg-gray-50 transition-colors">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleFeatureToggle(ff.id, e.target.checked)}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                        />
+                        <span className="text-sm font-medium">{ff.name}</span>
+                        <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded uppercase ml-auto">
+                          {ff.type}
+                        </span>
+                      </label>
+                      {ff.type === "NUMBER" && (
+                        <div className="pl-6 pt-2">
+                          <Label className="text-xs text-gray-500 mb-1 block">Limit (0 for unlimited)</Label>
+                          <Input 
+                            type="number"
+                            min="0"
+                            disabled={!isChecked}
+                            value={val?.limit || 0}
+                            onChange={(e) => handleFeatureLimit(ff.id, Number(e.target.value))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

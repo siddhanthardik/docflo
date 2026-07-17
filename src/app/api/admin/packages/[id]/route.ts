@@ -11,18 +11,47 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await req.json();
-    const { name, description, price, features, isActive } = body;
+    const { name, description, priceMonthly, priceQuarterly, priceYearly, features, isActive } = body;
 
-    const updatedPackage = await prisma.package.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(price !== undefined && { price }),
-        ...(features && { features }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    });
+    let updatedPackage;
+    
+    if (features) {
+      // Use transaction to clear old features and set new ones
+      const [_, pkg] = await prisma.$transaction([
+        prisma.packageFeature.deleteMany({ where: { packageId: id } }),
+        prisma.package.update({
+          where: { id },
+          data: {
+            ...(name && { name }),
+            ...(description !== undefined && { description }),
+            ...(priceMonthly !== undefined && { priceMonthly }),
+            ...(priceQuarterly !== undefined && { priceQuarterly }),
+            ...(priceYearly !== undefined && { priceYearly }),
+            ...(isActive !== undefined && { isActive }),
+            packageFeatures: {
+              create: features.map((f: any) => ({
+                featureId: f.featureId,
+                isEnabled: f.isEnabled,
+                limit: f.limit || null
+              }))
+            }
+          },
+        })
+      ]);
+      updatedPackage = pkg;
+    } else {
+      updatedPackage = await prisma.package.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(priceMonthly !== undefined && { priceMonthly }),
+          ...(priceQuarterly !== undefined && { priceQuarterly }),
+          ...(priceYearly !== undefined && { priceYearly }),
+          ...(isActive !== undefined && { isActive }),
+        },
+      });
+    }
 
     return NextResponse.json(updatedPackage);
   } catch (error: any) {

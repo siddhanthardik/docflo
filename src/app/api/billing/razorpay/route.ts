@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or inactive package" }, { status: 400 });
     }
 
+    let finalAmount = selectedPackage.priceMonthly;
     let discountPercent = 0;
     let appliedPromoCode = null;
 
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const priceAfterDiscount = selectedPackage.price * (1 - discountPercent / 100);
+    const priceAfterDiscount = finalAmount * (1 - discountPercent / 100);
     const amountInCents = Math.round(priceAfterDiscount * 100);
 
     if (amountInCents <= 0) {

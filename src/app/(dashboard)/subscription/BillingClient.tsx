@@ -9,11 +9,13 @@ import { useRouter } from "next/navigation";
 export function BillingClient({ 
   currentPackage, 
   subscriptionStatus, 
-  availablePackages 
+  availablePackages,
+  featureFlags
 }: { 
   currentPackage: any; 
   subscriptionStatus: string; 
   availablePackages: any[]; 
+  featureFlags: any[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -130,7 +132,7 @@ export function BillingClient({
               </p>
             </div>
             <div className="mt-4 md:mt-0 text-right">
-              <div className="text-2xl font-bold text-gray-900">${currentPackage.price}<span className="text-sm text-gray-500 font-medium">/mo</span></div>
+              <div className="text-2xl font-bold text-gray-900">${currentPackage.priceMonthly}<span className="text-sm text-gray-500 font-medium">/mo</span></div>
             </div>
           </div>
         ) : (
@@ -173,44 +175,40 @@ export function BillingClient({
                   <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wider">{pkg.name}</h3>
                   <p className="text-sm text-gray-500 mt-1 h-10">{pkg.description}</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-gray-900">${pkg.price}</span>
+                    <span className="text-4xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
                     <span className="text-sm font-medium text-gray-500">/mo</span>
                   </div>
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
                   <ul className="space-y-3 mb-6 flex-1 text-sm text-gray-600">
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      <span>{features.maxKeywords === 0 ? "No" : features.maxKeywords > 1000 ? "Unlimited" : features.maxKeywords} Local SEO Keywords</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      {features.whatsappIntegration ? (
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                      )}
-                      <span className={!features.whatsappIntegration ? "text-gray-400" : ""}>WhatsApp Integration</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      {features.geoGrid ? (
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                      )}
-                      <span className={!features.geoGrid ? "text-gray-400" : ""}>Geo-grid Rank Tracking</span>
-                    </li>
-                    {features.prioritySupport && (
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                        <span>Priority Support</span>
-                      </li>
-                    )}
-                    {features.customIntegrations && (
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                        <span>Custom Integrations</span>
-                      </li>
-                    )}
+                    {featureFlags.map(ff => {
+                      const feat = pkg.packageFeatures?.find((pf: any) => pf.featureId === ff.id);
+                      const isEnabled = feat?.isEnabled || false;
+                      const limit = feat?.limit;
+                      
+                      if (!isEnabled) {
+                         return (
+                           <li key={ff.id} className="flex items-center gap-2">
+                             <X className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                             <span className="text-gray-400">{ff.name}</span>
+                           </li>
+                         );
+                      }
+
+                      return (
+                        <li key={ff.id} className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                          <span>
+                            {ff.name}
+                            {ff.type === "NUMBER" && limit !== null && (
+                              <span className="font-bold ml-1 text-xs uppercase text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                {limit === 0 ? "Unlimited" : limit}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                   
                   <div className="mt-auto">
@@ -224,7 +222,7 @@ export function BillingClient({
                         className={`w-full ${pkg.name === "GROWTH" ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-900 hover:bg-gray-800'}`}
                         disabled={loadingPkgId === pkg.id}
                       >
-                        {loadingPkgId === pkg.id ? "Processing..." : (pkg.price === 0 ? "Get Started" : "Upgrade")}
+                        {loadingPkgId === pkg.id ? "Processing..." : (pkg.priceMonthly === 0 ? "Get Started" : "Upgrade")}
                       </Button>
                     )}
                   </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { isPlatformRole } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Users,
@@ -104,11 +105,11 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto overflow-x-hidden no-scrollbar">
-        {session?.user?.role === "ADMIN" && (
-          <Link
-            href="/admin"
-            className={cn(
-              "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 mb-2 border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100",
+        {session?.user?.role && isPlatformRole(session.user.role) && (
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 mb-2 border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100",
               isCollapsed ? "justify-center" : "gap-3",
               pathname === "/admin" && "bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm shadow-purple-200"
             )}
