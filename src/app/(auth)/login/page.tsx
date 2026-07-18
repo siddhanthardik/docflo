@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Activity, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function LoginPage() {
+function LoginContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const isSetup = searchParams.get("setup") === "1";
@@ -184,5 +184,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Activity className="w-6 h-6 animate-spin text-indigo-600" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

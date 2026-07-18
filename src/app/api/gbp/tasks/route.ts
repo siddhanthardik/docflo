@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSessionData } from "@/lib/session";
 import { runSeoEngine } from "@/lib/seo-engine/engine";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
+    let session;
+    try {
+      session = await getSessionData();
+    } catch (e) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!session || !session.doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -13,7 +13,7 @@ export async function createSnapshotFromAccount(
   if (!account) throw new Error("Account not found");
 
   const startMs = Date.now();
-  let scanStatus = ScanStatus.SUCCESS;
+  let scanStatus: ScanStatus = ScanStatus.SUCCESS;
   let apiErrors: any = null;
   let apiLatencyMs = 0;
 
