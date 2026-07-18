@@ -25,40 +25,8 @@ export async function GET(request: Request) {
     let keywords = insightsData.localSeoKeywords || [];
     const competitors = insightsData.competitors || [];
 
-    // Auto-seed keywords from real GBP data if empty
-    if (keywords.length === 0) {
-      const category = insightsData.categories?.primaryCategory?.displayName || "Service";
-      
-      keywords = [
-        {
-          query: `${category} near me`,
-          volume: Math.floor(Math.random() * 500) + 150, // simulated metric
-          difficulty: 45,
-          rank: 3,
-          previousRank: 5,
-          comp1Rank: 2,
-          comp2Rank: 6
-        },
-        {
-          query: `Best ${category}`,
-          volume: Math.floor(Math.random() * 300) + 100, // simulated metric
-          difficulty: 60,
-          rank: 7,
-          previousRank: 7,
-          comp1Rank: 3,
-          comp2Rank: 9
-        }
-      ];
-
-      // Persist seeds
-      insightsData.localSeoKeywords = keywords;
-      const updatedData = JSON.parse(JSON.stringify(insightsData));
-      
-      await prisma.gbpAccount.update({
-        where: { id: account.id },
-        data: { insightsData: updatedData }
-      });
-    }
+    // Auto-seeding of fake keywords has been removed as part of Phase 7 (Cleansing).
+    // Keywords will now only be present if explicitly tracked by the user and scanned by the real engine.
 
     return NextResponse.json({
       keywords,

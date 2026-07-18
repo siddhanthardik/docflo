@@ -128,6 +128,10 @@ model GbpAccount {
   patients     Patient[]
   reviews      Review[]
   waitlist     WaitlistEntry[]
+  gbpSnapshots GbpSnapshot[]
+  competitorSnapshots CompetitorSnapshot[]
+  seoTasks     SeoTask[]
+  engineRuns   EngineRun[]
 
   @@unique([doctorId, locationName])
   @@map("gbp_accounts")
@@ -689,4 +693,275 @@ model ClinicFeatureOverride {
   
   @@unique([doctorId, featureId])
   @@map("clinic_feature_overrides")
+}
+
+// ==========================================
+// FREE AI LOCAL SEO AUDIT MODELS
+// ==========================================
+
+model AuditRequest {
+  id              String       @id @default(cuid())
+  placeId         String?
+  searchQuery     String
+  status          String       @default("PENDING") // PENDING, SCANNING, COMPLETED, FAILED
+  progress        Int          @default(0) // 0 to 100
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  report          AuditReport?
+  lead            AuditLead?
+  
+  @@map("audit_requests")
+}
+
+model AuditReport {
+  id              String       @id @default(cuid())
+  requestId       String       @unique
+  businessName    String
+  speciality      String?
+  address         String?
+  websiteUrl      String?
+  
+  // Exact API metrics
+  primaryCategory String?
+  secondaryCategories String[] @default([])
+  businessType    String?
+  rating          Float?
+  reviewCount     Int?
+
+  // Version 3 Diagnostic Report Sections (Premium Consultant Framework)
+  businessOverview       Json?
+  businessSnapshot       Json?
+  visibilityIssues       Json?
+  competitorIntelligence Json?
+  profileCompleteness    Json?
+  competitorGapAnalysis  Json?
+  healthcareIntelligence Json?
+  priorityActionPlan     Json?
+  growthOpportunities    Json?
+  aiActionPlan           Json?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  request         AuditRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  competitors     AuditCompetitor[]
+  recommendations AuditRecommendation[]
+
+  @@map("audit_reports")
+}
+
+model AuditCompetitor {
+  id              String       @id @default(cuid())
+  reportId        String
+  name            String
+  speciality      String?      // Used for strictly matching Speciality-to-Speciality
+  distance        Float?
+  rating          Float?
+  reviewCount     Int?
+  
+  report          AuditReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("audit_competitors")
+}
+
+model AuditRecommendation {
+  id              String       @id @default(cuid())
+  reportId        String
+  category        String       // GBP, WEBSITE, REVIEWS
+  title           String
+  description     String       // AI-driven Action Plan (Locked)
+  priority        String       // HIGH, MEDIUM, LOW
+  impact          Int          // 1-10
+  currentStatus   String?
+  estimatedOpp    String?      // E.g., "+$5,000/mo"
+  aiAutomatable   Boolean      @default(false)
+  
+  report          AuditReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("audit_recommendations")
+}
+
+model AuditLead {
+  id              String       @id @default(cuid())
+  requestId       String       @unique
+  name            String
+  email           String
+  phone           String?
+  clinicName      String?
+  status          String       @default("NEW") // NEW, CONTACTED, CONVERTED
+  createdAt       DateTime     @default(now())
+  
+  request         AuditRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("audit_leads")
+}
+
+// ==========================================
+// DOCFLO LOCAL SEO ENGINE MODELS
+// ==========================================
+
+enum ScanStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DISMISSED
+  EXPIRED
+}
+
+enum TaskPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model EngineRun {
+  id               String       @id @default(cuid())
+  gbpAccountId     String
+  status           ScanStatus
+  idempotencyKey   String?
+  
+  startedAt        DateTime     @default(now())
+  completedAt      DateTime?
+  durationMs       Int?
+  
+  gbpAccount       GbpAccount   @relation(fields: [gbpAccountId], references: [id])
+  logs             SeoEngineLog[]
+  snapshots        GbpSnapshot[]
+  
+  @@unique([gbpAccountId, idempotencyKey])
+  @@map("engine_runs")
+}
+
+model SeoEngineLog {
+  id               String       @id @default(cuid())
+  engineRunId      String
+  eventType        String
+  message          String
+  metadata         Json?
+  createdAt        DateTime     @default(now())
+  
+  engineRun        EngineRun    @relation(fields: [engineRunId], references: [id], onDelete: Cascade)
+  
+  @@map("seo_engine_logs")
+}
+
+model GbpSnapshot {
+  id                  String      @id @default(cuid())
+  gbpAccountId        String
+  engineRunId         String?
+  scannedAt           DateTime    @default(now())
+  
+  scanStatus          ScanStatus  @default(SUCCESS)
+  apiErrors           Json?
+  scanDurationMs      Int?
+  apiLatencyMs        Int?
+  
+  // Provenance Metadata
+  engineVersion       String?
+  connectorVersion    String?
+  googleApiVersion    String?
+  
+  // Typed Columns for Analytics (Nullable)
+  reviewCount         Int?
+  averageRating       Float?
+  photoCount          Int?
+  postCount           Int?
+  primaryCategory     String?
+  unansweredReviews   Int?
+  unansweredQA        Int?
+  hasAppointmentUrl   Boolean?
+  hasWebsite          Boolean?
+  hasMessaging        Boolean?
+  
+  rawGoogleResponse   Json?
+  
+  gbpAccount          GbpAccount  @relation(fields: [gbpAccountId], references: [id])
+  engineRun           EngineRun?  @relation(fields: [engineRunId], references: [id])
+  observations        SeoObservation[]
+  
+  @@index([gbpAccountId, scannedAt])
+  @@map("gbp_snapshots")
+}
+
+model CompetitorSnapshot {
+  id                  String      @id @default(cuid())
+  gbpAccountId        String
+  scannedAt           DateTime    @default(now())
+  
+  scanStatus          ScanStatus  @default(SUCCESS)
+  benchmarkFreshness  DateTime    @default(now())
+  
+  competitorName      String
+  placeId             String?
+  reviewCount         Int?
+  rating              Float?
+  photoCount          Int?
+  postCount           Int?
+  primaryCategory     String?
+  distance            Float?
+  hasWebsite          Boolean?
+  
+  gbpAccount          GbpAccount  @relation(fields: [gbpAccountId], references: [id])
+
+  @@index([gbpAccountId, scannedAt])
+  @@map("competitor_snapshots")
+}
+
+model SeoObservation {
+  id               String       @id @default(cuid())
+  gbpSnapshotId    String
+  
+  ruleId           String
+  ruleVersion      String
+  category         String
+  
+  detectedValue    String?
+  createdAt        DateTime     @default(now())
+  
+  snapshot         GbpSnapshot  @relation(fields: [gbpSnapshotId], references: [id], onDelete: Cascade)
+  tasks            SeoTask[]
+  
+  @@map("seo_observations")
+}
+
+model SeoTask {
+  id               String          @id @default(cuid())
+  gbpAccountId     String
+  observationId    String?
+  
+  // Provenance
+  engineVersion    String?
+  ruleId           String?
+  ruleVersion      String?
+  apiSource        String?
+  fieldMapping     String?
+  
+  // Core Evidence
+  observationText  String
+  evidence         String
+  reason           String
+  
+  // Actionability
+  title            String
+  priority         TaskPriority
+  estimatedEffort  String
+  expectedImpact   String
+  confidenceScore  Int             @default(100) // 0-100
+  
+  status           TaskStatus      @default(PENDING)
+  createdAt        DateTime        @default(now())
+  completedAt      DateTime?
+  
+  gbpAccount       GbpAccount      @relation(fields: [gbpAccountId], references: [id])
+  observationRecord SeoObservation? @relation(fields: [observationId], references: [id])
+  
+  @@map("seo_tasks")
 }

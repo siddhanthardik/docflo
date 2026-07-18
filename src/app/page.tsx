@@ -126,7 +126,7 @@ export default function LandingPage() {
             <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
               Sign In
             </Link>
-            <Link href="/free-audit">
+            <Link href="/local-seo/free-audit">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 h-9 text-sm font-semibold shadow-sm">
                 Get Free Audit
               </Button>
@@ -159,9 +159,9 @@ export default function LandingPage() {
             Docflo is the AI-powered patient acquisition platform built exclusively for doctors, clinics, and healthcare professionals. Get discovered. Get chosen. Grow.
           </p>
 
-          {/* Search Box with Autocomplete */}
+          {/* Search Box - redirects to dedicated free audit page */}
           <div className="max-w-2xl mx-auto">
-            <form onSubmit={handleScan}
+            <form onSubmit={(e) => { e.preventDefault(); if (searchQuery.trim()) { const params = new URLSearchParams(); params.set('q', searchQuery); if (selectedPlace?.place_id) params.set('placeId', selectedPlace.place_id); window.location.href = `/local-seo/free-audit?${params.toString()}`; } else { window.location.href = '/local-seo/free-audit'; } }}
               className="relative bg-white rounded-2xl shadow-xl border border-slate-200 p-2 flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
@@ -173,7 +173,6 @@ export default function LandingPage() {
                   value={searchQuery}
                   onChange={handleInputChange}
                   onFocus={() => predictions.length > 0 && setShowDropdown(true)}
-                  disabled={isScanning}
                   autoComplete="off"
                 />
 
@@ -223,18 +222,11 @@ export default function LandingPage() {
 
               <Button
                 type="submit"
-                disabled={isScanning || !searchQuery.trim()}
-                className="h-12 px-6 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all disabled:opacity-60"
+                className="h-12 px-6 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all"
               >
-                {isScanning ? (
-                  <span className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 animate-spin" /> Analysing…
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Get Free Report <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
+                <span className="flex items-center gap-2">
+                  Get Free Report <ArrowRight className="h-4 w-4" />
+                </span>
               </Button>
             </form>
             <p className="text-xs text-slate-400 mt-3">
@@ -466,12 +458,13 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 h-12 text-base font-semibold shadow-md"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            >
-              Get My Free Audit <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <Link href="/local-seo/free-audit">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 h-12 text-base font-semibold shadow-md"
+              >
+                Get My Free Audit <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
             <Link href="/register">
               <Button variant="outline" className="rounded-xl px-8 h-12 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50">
                 View Plans

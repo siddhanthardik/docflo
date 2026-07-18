@@ -18,6 +18,10 @@ export default function LocalSeoPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  const [actionTasks, setActionTasks] = useState<any[]>([]);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  
   const [seoData, setSeoData] = useState<{ keywords: any[]; competitors: string[] }>({ keywords: [], competitors: [] });
   const [newKeyword, setNewKeyword] = useState("");
   const [newCompetitor, setNewCompetitor] = useState("");
@@ -38,6 +42,7 @@ export default function LocalSeoPage() {
         const activeAcc = json.accounts.find((acc: any) => acc.id === activeLocationId) || json.accounts[0];
         if (activeAcc) {
           fetchLocalSeoData(activeAcc.id);
+          fetchEngineTasks(activeAcc.id);
         } else {
           setLoading(false);
         }
@@ -63,6 +68,22 @@ export default function LocalSeoPage() {
     }
   };
 
+  const fetchEngineTasks = async (locId: string) => {
+    setTasksLoading(true);
+    try {
+      const res = await fetch(`/api/gbp/tasks?locationId=${locId}`);
+      const json = await res.json();
+      if (res.ok && json.tasks) {
+        setActionTasks(json.tasks);
+        setHealthScore(json.healthScore);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
   useEffect(() => { loadProfiles(); }, [activeLocationId]);
 
   const activeAccount = data?.accounts?.find((acc: any) => acc.id === activeLocationId) || data?.accounts?.[0];
@@ -70,104 +91,7 @@ export default function LocalSeoPage() {
   const primaryCategory = insights.categories?.primaryCategory?.displayName || "Service";
   const city = insights.location?.city || "your city";
 
-  // ACTION PLAN GENERATOR (AI Task Engine)
-  const generateActionPlan = () => {
-    if (!activeAccount) return { tasks: [], healthScore: 0 };
-    
-    const description = (insights.description || "").toLowerCase();
-    const reviewCount = insights.totalReviews || 0;
-    const avgRating = insights.averageRating || 0;
-    const recentReviews = activeAccount.recentReviews || [];
-    
-    const tasks = [];
-    let healthScore = 100;
-    
-    // 1. Description Optimization
-    let keywordsInDesc = 0;
-    seoData.keywords.forEach(kw => {
-      if (description.includes(kw.query.toLowerCase().split(" ")[0])) keywordsInDesc++;
-    });
-    
-    if (description.length < 200 || keywordsInDesc === 0) {
-      healthScore -= 15;
-      tasks.push({
-        id: "desc-opt",
-        priority: "high",
-        title: "Optimize Your GBP Description",
-        desc: `Your profile description is missing key tracked terms like "${primaryCategory}". Adding these keywords naturally will immediately boost your Relevance score.`,
-        icon: <ShieldCheck className="h-5 w-5 text-indigo-500" />,
-        actionText: "Edit Profile",
-        actionLink: "/gbp/audit",
-        metric: "Relevance Signal"
-      });
-    }
-
-    // 2. Review Velocity
-    if (reviewCount < 50 || avgRating < 4.5) {
-      healthScore -= 20;
-      tasks.push({
-        id: "rev-vel",
-        priority: "critical",
-        title: "Increase Review Velocity",
-        desc: "You need more consistent 5-star reviews to break into the top 3 of the map pack. Top competitors typically get 5-10 reviews a month.",
-        icon: <Star className="h-5 w-5 text-amber-500" />,
-        actionText: "Send Campaign",
-        actionLink: "/campaigns",
-        metric: "Prominence Signal"
-      });
-    }
-
-    // 3. Review Response Rate
-    const repliedReviews = recentReviews.filter((r: any) => r.replied).length;
-    const replyRate = recentReviews.length > 0 ? (repliedReviews / recentReviews.length) : 0;
-    
-    if (replyRate < 0.8 && recentReviews.length > 0) {
-      healthScore -= 15;
-      tasks.push({
-        id: "rev-reply",
-        priority: "high",
-        title: "Reply to Pending Reviews",
-        desc: "Google actively penalizes profiles that ignore reviews. You have unanswered reviews waiting. Our AI can draft replies for you in seconds.",
-        icon: <MessageSquare className="h-5 w-5 text-emerald-500" />,
-        actionText: "Reply Now",
-        actionLink: "/reviews",
-        metric: "Engagement Signal"
-      });
-    }
-
-    // 4. Content Freshness (Simulated check)
-    const daysSinceLastPost = 14; // Mocked
-    if (daysSinceLastPost > 7) {
-      healthScore -= 10;
-      tasks.push({
-        id: "post-fresh",
-        priority: "medium",
-        title: "Publish a Weekly Update",
-        desc: `It's been ${daysSinceLastPost} days since your last post. Fresh content signals to Google that your clinic is active. Post a tip about ${primaryCategory} today.`,
-        icon: <RefreshCw className="h-5 w-5 text-blue-500" />,
-        actionText: "Draft AI Post",
-        actionLink: "/gbp/posts",
-        metric: "Activity Signal"
-      });
-    }
-
-    if (tasks.length === 0) {
-      tasks.push({
-        id: "all-good",
-        priority: "low",
-        title: "You are dominating!",
-        desc: "You have completed all high-priority SEO tasks for this week. Keep monitoring your Geo-Grid to ensure your competitors don't catch up.",
-        icon: <Trophy className="h-5 w-5 text-yellow-500" />,
-        actionText: "View Geo-Grid",
-        actionLink: "#",
-        metric: "All Signals"
-      });
-    }
-
-    return { tasks, healthScore };
-  };
-
-  const { tasks: actionTasks, healthScore } = generateActionPlan();
+  // The Action Plan generates dynamically via fetchEngineTasks now.
 
   const handleAddKeyword = async () => {
     if (!newKeyword || !activeAccount) return;
@@ -176,12 +100,12 @@ export default function LocalSeoPage() {
     
     const newKw = {
       query: newKeyword,
-      volume: Math.floor(Math.random() * 500) + 50,
-      difficulty: Math.floor(Math.random() * 60) + 20,
-      rank: Math.floor(Math.random() * 10) + 1,
-      previousRank: Math.floor(Math.random() * 15) + 1,
-      comp1Rank: Math.floor(Math.random() * 15) + 1,
-      comp2Rank: Math.floor(Math.random() * 20) + 1,
+      volume: null,
+      difficulty: null,
+      rank: null,
+      previousRank: null,
+      comp1Rank: null,
+      comp2Rank: null,
     };
 
     const updatedKeywords = [...seoData.keywords, newKw];
@@ -482,38 +406,15 @@ export default function LocalSeoPage() {
                     </tr>
                   ) : (
                     seoData.keywords.map((kw, i) => {
-                      const rankChange = kw.previousRank - kw.rank;
                       return (
                         <tr key={i} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 font-medium text-gray-900">{kw.query}</td>
-                          <td className="px-6 py-4 text-gray-600">{kw.volume} / mo</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              kw.difficulty > 55 ? 'bg-red-50 text-red-700' : kw.difficulty > 35 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
-                            }`}>
-                              {kw.difficulty}/100
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${kw.rank <= 3 ? 'bg-emerald-100 text-emerald-700' : kw.rank <= 10 ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}>
-                                {kw.rank}
-                              </div>
-                              {rankChange !== 0 && (
-                                <span className={`text-[10px] font-bold ${rankChange > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                  {rankChange > 0 ? '▲' : '▼'} {Math.abs(rankChange)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          {/* Competitor Ranks - Mocked based on tracked competitors */}
-                          {seoData.competitors.map((comp, cIdx) => {
-                            // Stable mock generation using index math to simulate competitor ranks
-                            const mockCompRank = (kw.rank + (cIdx * 2) + Math.floor(kw.difficulty / 10)) % 15 + 1;
-                            return (
-                              <td key={cIdx} className="px-6 py-4 text-gray-500 font-medium">#{mockCompRank}</td>
-                            );
-                          })}
+                          <td className="px-6 py-4 text-gray-400 italic text-xs">Pending scan</td>
+                          <td className="px-6 py-4 text-gray-400 italic text-xs">Pending scan</td>
+                          <td className="px-6 py-4 text-gray-400 italic text-xs">Pending scan</td>
+                          {seoData.competitors.map((comp, cIdx) => (
+                            <td key={cIdx} className="px-6 py-4 text-gray-400 italic text-xs">Pending scan</td>
+                          ))}
                         </tr>
                       );
                     })
@@ -537,11 +438,11 @@ export default function LocalSeoPage() {
                   <div className="bg-white/20 p-2 rounded-lg">
                     <Activity className="h-6 w-6 text-white" />
                   </div>
-                  <h2 className="text-xl font-semibold">SEO Health Score: {healthScore}/100</h2>
+                  <h2 className="text-xl font-semibold">SEO Health Score: {healthScore !== null ? `${healthScore}/100` : 'Pending Scan'}</h2>
                 </div>
                 <h1 className="text-3xl font-bold mb-3 tracking-tight">Your Priority Action Plan</h1>
                 <p className="text-indigo-100 text-lg">
-                  Complete these tasks this week to boost your ranking signals and outrank your local competitors.
+                  Tasks will appear here once the Signal Engine completes its weekly snapshot and diff analysis.
                 </p>
               </div>
             </div>
@@ -554,52 +455,68 @@ export default function LocalSeoPage() {
               </div>
               
               <div className="divide-y divide-gray-50">
-                {actionTasks.map((task, i) => (
-                  <div key={i} className="p-6 flex flex-col md:flex-row md:items-start gap-5 hover:bg-gray-50/50 transition-colors group">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className={`p-3 rounded-xl border ${
-                        task.priority === "critical" ? "bg-red-50 border-red-100" : 
-                        task.priority === "high" ? "bg-amber-50 border-amber-100" : 
-                        task.priority === "medium" ? "bg-blue-50 border-blue-100" :
-                        "bg-emerald-50 border-emerald-100"
-                      }`}>
-                        {task.icon}
+                {tasksLoading ? (
+                  <div className="p-12 text-center">
+                    <Activity className="h-10 w-10 text-gray-300 mx-auto mb-3 animate-pulse" />
+                    <h4 className="text-lg font-semibold text-gray-900">Analyzing Signals...</h4>
+                    <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                      Running deterministic algorithms against your latest Google Business Profile snapshot.
+                    </p>
+                  </div>
+                ) : actionTasks.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <CheckCircle className="h-10 w-10 text-emerald-300 mx-auto mb-3" />
+                    <h4 className="text-lg font-semibold text-gray-900">All Caught Up!</h4>
+                    <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                      No high-priority tasks right now. We will notify you if your rankings drop or competitors push updates.
+                    </p>
+                  </div>
+                ) : (
+                  actionTasks.map((task, i) => (
+                    <div key={i} className="p-6 flex flex-col md:flex-row md:items-start gap-5 hover:bg-gray-50/50 transition-colors group border-b border-gray-50 last:border-0">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className={`p-3 rounded-xl border ${
+                          task.priority === "HIGH" ? "bg-red-50 border-red-100 text-red-600" : 
+                          task.priority === "MEDIUM" ? "bg-amber-50 border-amber-100 text-amber-600" : 
+                          "bg-blue-50 border-blue-100 text-blue-600"
+                        }`}>
+                          <Target className="h-5 w-5" />
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <h4 className="text-base font-bold text-gray-900">{task.title}</h4>
-                        {task.priority !== "low" && (
+                      
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <h4 className="text-base font-bold text-gray-900">{task.title}</h4>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            task.priority === "critical" ? "bg-red-100 text-red-700" :
-                            task.priority === "high" ? "bg-amber-100 text-amber-700" :
+                            task.priority === "HIGH" ? "bg-red-100 text-red-700" :
+                            task.priority === "MEDIUM" ? "bg-amber-100 text-amber-700" :
                             "bg-blue-100 text-blue-700"
                           }`}>
                             {task.priority} Priority
                           </span>
-                        )}
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider ml-auto">
-                          Impacts: {task.metric}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 max-w-3xl leading-relaxed mb-4">{task.desc}</p>
-                      
-                      {task.actionLink !== "#" && (
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider ml-auto">
+                            Effort: {task.estimatedEffort}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 max-w-3xl leading-relaxed mb-4 space-y-2">
+                          <p><strong>Observation:</strong> {task.observationText}</p>
+                          <p><strong>Evidence:</strong> {task.evidence}</p>
+                          <p><strong>Impact:</strong> {task.reason}</p>
+                        </div>
+                        
                         <Button 
                           className={`font-semibold shadow-sm ${
-                            task.priority === "critical" ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""
+                            task.priority === "HIGH" ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""
                           }`}
-                          variant={task.priority === "critical" ? "default" : "outline"}
+                          variant={task.priority === "HIGH" ? "default" : "outline"}
                           size="sm" 
-                          asChild
                         >
-                          <a href={task.actionLink}>{task.actionText}</a>
+                          Resolve Issue
                         </Button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -641,10 +558,9 @@ export default function LocalSeoPage() {
                       <tr className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-5 font-medium text-gray-900">Total Reviews</td>
                         <td className="px-6 py-5 font-bold text-indigo-700 bg-indigo-50/30">{insights.totalReviews || 0}</td>
-                        {seoData.competitors.map((comp, i) => {
-                          const mockRev = Math.floor((insights.totalReviews || 50) * (1 + (i * 0.4)));
-                          return <td key={i} className="px-6 py-5 text-gray-600 font-medium">{mockRev}</td>;
-                        })}
+                        {seoData.competitors.map((comp, i) => (
+                          <td key={i} className="px-6 py-5 text-gray-400 italic text-xs">Pending scan</td>
+                        ))}
                       </tr>
                       <tr className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-5 font-medium text-gray-900">Average Rating</td>
@@ -654,11 +570,7 @@ export default function LocalSeoPage() {
                           </div>
                         </td>
                         {seoData.competitors.map((comp, i) => (
-                          <td key={i} className="px-6 py-5 text-gray-600 font-medium">
-                            <div className="flex items-center gap-1">
-                              {4 + (i * 0.2)} <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                            </div>
-                          </td>
+                          <td key={i} className="px-6 py-5 text-gray-400 italic text-xs">Pending scan</td>
                         ))}
                       </tr>
                       <tr className="hover:bg-gray-50 transition-colors">
@@ -667,9 +579,7 @@ export default function LocalSeoPage() {
                           {activeAccount?.recentReviews?.length || 0} <span className="text-xs text-gray-400 font-normal">/ mo</span>
                         </td>
                         {seoData.competitors.map((comp, i) => (
-                          <td key={i} className="px-6 py-5 text-gray-600 font-medium">
-                            {3 + i * 2} <span className="text-xs text-gray-400 font-normal">/ mo</span>
-                          </td>
+                          <td key={i} className="px-6 py-5 text-gray-400 italic text-xs">Pending scan</td>
                         ))}
                       </tr>
                       <tr className="hover:bg-gray-50 transition-colors">
@@ -678,13 +588,7 @@ export default function LocalSeoPage() {
                           <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs">Exact Match</span>
                         </td>
                         {seoData.competitors.map((comp, i) => (
-                          <td key={i} className="px-6 py-5 text-gray-600 font-medium">
-                            {i === 0 ? (
-                              <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs">Exact Match</span>
-                            ) : (
-                              <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Partial Match</span>
-                            )}
-                          </td>
+                          <td key={i} className="px-6 py-5 text-gray-400 italic text-xs">Pending scan</td>
                         ))}
                       </tr>
                     </tbody>

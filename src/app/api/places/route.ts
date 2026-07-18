@@ -1,52 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const HEALTH_TYPES = [
-  "doctor", "hospital", "pharmacy", "dentist", "physiotherapist",
-  "health", "clinic", "medical", "hospital_ward", "veterinary_care",
-];
+// ── Attempt 1: Classic Places API Autocomplete ─────────────────────────────────
+async function searchWithGoogleClassic(input: string, apiKey: string) {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/autocomplete/json");
+  url.searchParams.set("input", input);
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("components", "country:in");
 
-// ── Attempt 1: Places API (New) ─────────────────────────────────
-async function searchWithGoogleNew(input: string, apiKey: string) {
-  const body = JSON.stringify({
-    input,
-    includedRegionCodes: ["in"],
+  const res = await fetch(url.toString(), {
+    headers: { "Accept": "application/json" }
   });
 
-  const fieldMask = [
-    "suggestions.placePrediction.placeId",
-    "suggestions.placePrediction.text",
-    "suggestions.placePrediction.structuredFormat",
-    "suggestions.placePrediction.types",
-  ].join(",");
-
-  const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-      // Pass the origin to satisfy key HTTP-referrer restrictions
-      "Origin": process.env.NEXTAUTH_URL || "http://localhost:3000",
-      "Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
-    },
-    body,
-  });
-
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("[Places] Classic API Error Response:", errorText);
+    return null;
+  }
   const data = await res.json();
-  const suggestions = data.suggestions || [];
+  
+  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+    console.error("[Places] Classic API Status Error:", data.status, data.error_message);
+    return null;
+  }
 
-  return suggestions.map((s: any) => {
-    const p = s.placePrediction || {};
-    return {
-      place_id: p.placeId || "",
-      structured_formatting: {
-        main_text: p.structuredFormat?.mainText?.text || p.text?.text || "",
-        secondary_text: p.structuredFormat?.secondaryText?.text || "",
-      },
-      types: p.types || [],
-    };
-  });
+  const predictions = data.predictions || [];
+
+  return predictions.map((p: any) => ({
+    place_id: p.place_id || "",
+    structured_formatting: {
+      main_text: p.structured_formatting?.main_text || "",
+      secondary_text: p.structured_formatting?.secondary_text || "",
+    },
+    types: p.types || [],
+  }));
 }
 
 // ── Attempt 2: Nominatim (OpenStreetMap) — no key, always works ──
@@ -133,10 +119,10 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   let predictions: any[] = [];
 
-  // Try Google Places API (New) first
+  // Try Google Places API first
   if (apiKey) {
     try {
-      const googleResults = await searchWithGoogleNew(input, apiKey);
+      const googleResults = await searchWithGoogleClassic(input, apiKey);
       if (googleResults && googleResults.length > 0) {
         predictions = googleResults;
       }
