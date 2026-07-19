@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { patientSchema } from "@/lib/validators";
 import { getSessionData, isDoctor } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(req: Request) {
   try {
@@ -78,25 +79,40 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { doctorId, locationId } = await getSessionData();
+
     const body = await req.json();
     const validatedData = patientSchema.parse(body);
 
-    // Allowed multiple patients with the same phone number for family members
+    const patient = await prisma.$transaction(async (tx) => {
+      // 1. Lock the Doctor row to prevent concurrent creations from exceeding limits
+      await tx.$queryRaw`SELECT 1 FROM "Doctor" WHERE id = ${doctorId} FOR UPDATE`;
 
-    const patient = await prisma.patient.create({
-      data: {
-        ...validatedData,
-        dateOfBirth: validatedData.dateOfBirth
-          ? new Date(validatedData.dateOfBirth)
-          : null,
-        doctorId,
-        gbpAccountId: locationId || undefined,
-        tags: validatedData.tags || [],
-      },
+      // 2. Enforce MAX_PATIENTS under CLINIC_CORE
+      // (This uses global prisma inside, which is safe because the lock ensures serialized execution)
+      const block = await entitlementGuard(doctorId, req, { module: "CLINIC_CORE", limit: "MAX_PATIENTS" });
+      if (block) {
+        throw block;
+      }
+
+      // 3. Create the patient
+      return await tx.patient.create({
+        data: {
+          ...validatedData,
+          dateOfBirth: validatedData.dateOfBirth
+            ? new Date(validatedData.dateOfBirth)
+            : null,
+          doctorId,
+          gbpAccountId: locationId || undefined,
+          tags: validatedData.tags || [],
+        },
+      });
     });
 
     return NextResponse.json(patient, { status: 201 });
   } catch (error: any) {
+    if (error instanceof NextResponse) {
+      return error; // Return the block response from entitlementGuard
+    }
     console.error("Error creating patient:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

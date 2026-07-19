@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +37,8 @@ export async function POST(req: NextRequest) {
         },
         include: { package: true }
       });
+
+      revalidateTag(`doctor-package-${session.user.id}`, "default");
 
       // Log the payment transaction
       if (updatedDoctor.package) {

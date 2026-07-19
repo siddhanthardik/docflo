@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isFeatureEnabled } from "@/lib/features";
+import { entitlementGuard } from "@/lib/withEntitlements";
+import { EntitlementService } from "@/services/entitlement.service";
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    const hasAIAgentsAccess = await isFeatureEnabled(doctorId, "has_ai_agents");
+    const hasAIAgentsAccess = await EntitlementService.hasModule(doctorId, "AI_ASSISTANT");
 
     // Initialize default agents if they don't exist
     const agentTypes = ["APPOINTMENT", "REVIEW", "PROFILE", "RANKING"];
@@ -54,6 +55,10 @@ export async function PUT(req: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Enforce AI_ASSISTANT module for AI agent configuration
+    const blockPut = await entitlementGuard(session.user.id, req, { module: "AI_ASSISTANT" });
+    if (blockPut) return blockPut;
 
     const body = await req.json();
     const { agentType, enabled, config } = body;

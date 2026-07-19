@@ -6,7 +6,9 @@ export default async function AdminAuditsPage() {
   const leads = await prisma.auditLead.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      request: {
+      requests: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
         include: {
           report: true
         }
@@ -64,43 +66,58 @@ export default async function AdminAuditsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {leads.map((lead: any) => (
+            {leads.map((lead: any) => {
+              const latestRequest = lead.requests && lead.requests.length > 0 ? lead.requests[0] : null;
+              
+              return (
               <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
                 <td className="p-4">
                   <div className="font-semibold text-slate-900">{lead.name}</div>
-                  <div className="text-sm text-slate-500">{lead.email}</div>
-                  <div className="text-sm text-slate-500">{lead.phone}</div>
+                  <div className="text-sm text-slate-500">{lead.email || "No email"}</div>
+                  <div className="text-sm text-slate-500">{lead.phone || "No phone"}</div>
                 </td>
                 <td className="p-4">
                   <div className="font-semibold text-slate-900">{lead.clinicName}</div>
-                  <div className="text-sm text-slate-500">{lead.request.report?.speciality || "General"}</div>
+                  <div className="text-sm text-slate-500">{latestRequest?.report?.speciality || "General"}</div>
+                  <div className="text-xs text-slate-400 mt-1">{lead.requests?.length || 0} audits</div>
                 </td>
                 <td className="p-4">
-                  {lead.request.report ? (
+                  {latestRequest?.report ? (
                     <div className="flex items-center gap-2">
-                      <div className="font-bold text-slate-900">{lead.request.report.overallScore}/100</div>
+                      <div className="font-bold text-slate-900">{latestRequest.report.overallScore}/100</div>
                     </div>
                   ) : (
-                    <span className="text-slate-400">N/A</span>
+                    <span className="text-slate-400">
+                      {latestRequest?.status === "FAILED" ? "Failed" : latestRequest?.status === "SCANNING" ? "Scanning..." : "N/A"}
+                    </span>
                   )}
                 </td>
                 <td className="p-4">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 uppercase">
-                    {lead.status}
+                    CRM: {lead.status}
                   </span>
+                  {latestRequest && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 uppercase ml-2">
+                      Audit: {latestRequest.status}
+                    </span>
+                  )}
                 </td>
                 <td className="p-4 text-right">
-                  <a 
-                    href={`/local-seo/free-audit/report/${lead.requestId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
-                  >
-                    View Audit
-                  </a>
+                  {latestRequest ? (
+                    <a 
+                      href={`/local-seo/free-audit/report/${latestRequest.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                    >
+                      View Latest
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 text-sm">No Request</span>
+                  )}
                 </td>
               </tr>
-            ))}
+            )})}
             {leads.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-slate-500">

@@ -3,10 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { WhatsAppService } from "@/services/whatsapp.service";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { doctorId } = await getSessionData();
+
+  const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+  if (block) return block;
 
   const campaign = await prisma.campaign.findFirst({
     where: { id, doctorId },

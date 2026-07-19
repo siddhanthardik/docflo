@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { GBPService } from "@/services/gbp.service";
 import { cookies } from "next/headers";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(req: Request) {
   try {
@@ -9,6 +10,9 @@ export async function GET(req: Request) {
     if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     const cookieStore = await cookies();
     const tempAuthCookie = cookieStore.get("gbp_temp_auth");

@@ -1,105 +1,69 @@
 import { prisma } from "@/lib/prisma";
-import { format } from "date-fns";
-import { Mail, Phone } from "lucide-react";
+import LeadDataGrid from "./lead-data-grid";
+import { Users, UserPlus, Activity, CheckCircle, XCircle, TrendingUp, Briefcase } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  const leads = await prisma.platformLead.findMany({
+  const leads = await prisma.auditLead.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      requests: {
+        orderBy: { createdAt: "desc" },
+        take: 1
+      },
+      assignedTo: true
+    }
   });
 
+  // Calculate Metrics
+  const totalLeads = leads.length;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todaysLeads = leads.filter(l => new Date(l.createdAt) >= today).length;
+  
+  const qualifiedLeads = leads.filter(l => l.status === "QUALIFIED").length;
+  const customers = leads.filter(l => l.status === "CUSTOMER").length;
+
+  const auditsRunning = leads.filter(l => l.requests[0]?.status === "SCANNING").length;
+  const auditsCompleted = leads.filter(l => l.requests[0]?.status === "COMPLETED").length;
+  const auditsFailed = leads.filter(l => l.requests[0]?.status === "FAILED").length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Platform Leads</h1>
-        <div className="flex gap-2">
-          <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600">
-            Total: {leads.length}
-          </span>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">CRM Leads Pipeline</h1>
+        <p className="text-sm text-slate-500 mt-1">Manage, track, and assign inbound local SEO audit leads.</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Contact Info
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Clinic
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Source
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
-            {leads.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                  No leads found.
-                </td>
-              </tr>
-            ) : (
-              leads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                    {format(new Date(lead.createdAt), "MMM d, yyyy h:mm a")}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-slate-900">
-                      {lead.name || "Unknown"}
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                      {lead.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {lead.email}
-                        </span>
-                      )}
-                      {lead.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {lead.phone}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                    {lead.clinicName || "-"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
-                      {lead.source}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        lead.status === "NEW"
-                          ? "bg-blue-100 text-blue-700"
-                          : lead.status === "CONTACTED"
-                          ? "bg-amber-100 text-amber-700"
-                          : lead.status === "CONVERTED"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {lead.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Metrics Dashboard */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        <MetricCard icon={<Users className="w-5 h-5 text-blue-600" />} label="Total Leads" value={totalLeads} />
+        <MetricCard icon={<UserPlus className="w-5 h-5 text-indigo-600" />} label="Today's Leads" value={todaysLeads} />
+        <MetricCard icon={<Activity className="w-5 h-5 text-amber-600" />} label="Running Audits" value={auditsRunning} />
+        <MetricCard icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} label="Completed Audits" value={auditsCompleted} />
+        <MetricCard icon={<XCircle className="w-5 h-5 text-red-600" />} label="Failed Audits" value={auditsFailed} />
+        <MetricCard icon={<TrendingUp className="w-5 h-5 text-purple-600" />} label="Qualified Leads" value={qualifiedLeads} />
+        <MetricCard icon={<Briefcase className="w-5 h-5 text-emerald-600" />} label="Customers" value={customers} />
       </div>
+
+      {/* Data Grid Component */}
+      <LeadDataGrid leads={leads} />
+    </div>
+  );
+}
+
+function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <div className="p-2 bg-slate-50 rounded-lg">
+          {icon}
+        </div>
+        <div className="text-xs font-medium text-slate-500">{label}</div>
+      </div>
+      <div className="text-2xl font-bold text-slate-900 mt-auto">{value}</div>
     </div>
   );
 }

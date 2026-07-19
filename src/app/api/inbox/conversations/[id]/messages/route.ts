@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function POST(
   req: Request,
@@ -12,6 +13,9 @@ export async function POST(
     if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+    if (block) return block;
 
     const { content } = await req.json();
 

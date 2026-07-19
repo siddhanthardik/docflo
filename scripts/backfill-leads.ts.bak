@@ -1,0 +1,72 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('Starting backfill for Audit Leads and Requests...');
+
+  // 1. Find all AuditRequests that have no leadId
+  const orphanedRequests = await prisma.auditRequest.findMany({
+    // @ts-expect-error: leadId was made required in schema, so null check is invalid in types
+    where: { leadId: null }
+  });
+  console.log(`Found ${orphanedRequests.length} orphaned AuditRequests.`);
+
+  for (const req of orphanedRequests) {
+    // Check if an AuditLead already exists for this requestId
+    let lead = await prisma.auditLead.findFirst({
+      where: { requestId: req.id }
+    });
+
+    if (!lead) {
+      console.log(`No existing lead for request ${req.id}. Creating a dummy lead...`);
+      // Extract data from the report if available
+      const report = await prisma.auditReport.findUnique({
+        where: { requestId: req.id }
+      });
+      
+      const clinicName = report?.businessName || req.searchQuery || 'Unknown Clinic';
+      const name = 'Legacy User';
+      const phone = `0000000000-${req.id.slice(-4)}`; // Dummy phone to satisfy unique constraints
+      
+      lead = await prisma.auditLead.create({
+        data: {
+          name,
+          phone,
+          clinicName,
+          placeId: req.placeId,
+          status: 'NEW',
+          requestId: req.id, // Keep the link
+          activities: {
+            create: {
+              eventType: 'LEAD_BACKFILLED',
+              message: 'Lead created via backfill migration script.',
+              metadata: { originalRequestId: req.id }
+            }
+          }
+        }
+      });
+      console.log(`Created new lead ${lead.id} for request ${req.id}.`);
+    } else {
+      console.log(`Found existing lead ${lead.id} for request ${req.id}.`);
+    }
+
+    // Link the AuditRequest to the Lead
+    await prisma.auditRequest.update({
+      where: { id: req.id },
+      data: { leadId: lead.id }
+    });
+    console.log(`Linked request ${req.id} to lead ${lead.id}.`);
+  }
+
+  console.log('Backfill completed successfully.');
+}
+
+main()
+  .catch(e => {
+    console.error('Backfill failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

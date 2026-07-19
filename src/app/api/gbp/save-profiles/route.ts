@@ -3,6 +3,7 @@ import { getSessionData } from "@/lib/session";
 import { GBPService } from "@/services/gbp.service";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { shadowCheck } from "@/lib/shadowCheck";
 
 function formatAddress(location: any) {
   const address = location.storefrontAddress;
@@ -24,6 +25,9 @@ export async function POST(req: Request) {
     if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Shadow Mode: Connecting GBP profiles requires GROWTH_SEO module and MAX_GBP_LOCATIONS limit
+    shadowCheck(doctorId, { module: "GROWTH_SEO", limit: "MAX_GBP_LOCATIONS" }, req);
 
     const { selectedLocations } = await req.json(); // array of location.name strings
     if (!Array.isArray(selectedLocations) || selectedLocations.length === 0) {

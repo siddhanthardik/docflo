@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(request: Request) {
   try {
@@ -8,6 +9,9 @@ export async function GET(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const block = await entitlementGuard(session.user.id, request, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     const { searchParams } = new URL(request.url);
     const monthParam = searchParams.get("month"); // e.g. "2026-07"

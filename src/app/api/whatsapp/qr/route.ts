@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import QRCode from "qrcode";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -10,6 +11,9 @@ export async function GET(req: Request) {
   }
 
   const doctorId = session.user.id;
+
+  const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+  if (block) return block;
 
   try {
     // If not connected and no QR, start connection process

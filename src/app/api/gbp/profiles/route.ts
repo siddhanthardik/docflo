@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     const accounts = await prisma.gbpAccount.findMany({
       where: { doctorId },

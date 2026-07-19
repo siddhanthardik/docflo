@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(req: Request) {
   try {
@@ -13,6 +14,9 @@ export async function GET(req: Request) {
     if (!startDate || !endDate) {
       return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 });
     }
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     const start = startOfDay(parseISO(startDate));
     const end = endOfDay(parseISO(endDate));

@@ -52,6 +52,12 @@ model Doctor {
   waitlistEntries   WaitlistEntry[]
   paymentTransactions PaymentTransaction[]
   invoices          Invoice[]
+  auditLead         AuditLead?
+  subscriptionHistories SubscriptionHistory[]
+  
+  // Usage tracking
+  currentAiCredits  Int             @default(0)
+  currentPatients   Int             @default(0)
 
   @@map("doctors")
 }
@@ -368,6 +374,7 @@ enum UserRole {
 
 model Package {
   id                String    @id @default(cuid())
+  slug              String?   @unique // Idempotency key; backfilled after initial push
   name              String
   description       String?
   price             Float?    // Deprecated: keeping temporarily for migration
@@ -378,13 +385,71 @@ model Package {
   razorpayPlanId    String?   // ID from Razorpay Dashboard
   features          Json      @default("{}") // Deprecated: keeping temporarily for migration
   packageFeatures   PackageFeature[]
+  modules           PackageModule[]
+  limits            PackageLimit[]
   isActive          Boolean   @default(true)
+  isArchived        Boolean   @default(false) // Soft archive; archived packages cannot be assigned to new doctors
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   doctors           Doctor[]
   paymentTransactions PaymentTransaction[]
 
   @@map("packages")
+}
+
+enum ModuleName {
+  CLINIC_CORE
+  GROWTH_SEO
+  WHATSAPP_CRM
+  AI_ASSISTANT
+}
+
+enum LimitName {
+  MAX_STAFF_SEATS
+  MAX_PATIENTS
+  MAX_GBP_LOCATIONS
+  MAX_TRACKED_KEYWORDS
+  MAX_SCHEDULED_POSTS
+  AI_CREDITS_PER_MONTH
+}
+
+model PackageModule {
+  id              String      @id @default(cuid())
+  packageId       String
+  moduleName      ModuleName
+  
+  package         Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, moduleName])
+  @@map("package_modules")
+}
+
+model PackageLimit {
+  id              String      @id @default(cuid())
+  packageId       String
+  limitName       LimitName
+  limitValue      Int?        // Null implies Unlimited
+  
+  package         Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, limitName])
+  @@map("package_limits")
+}
+
+// Immutable record created every time a doctor's package changes
+model SubscriptionHistory {
+  id              String    @id @default(cuid())
+  doctorId        String
+  previousPackageId String?
+  newPackageId    String
+  changedById     String    // ID of the admin/staff who made the change
+  changedByRole   String    // Role of changer at time of change (SUPERADMIN, ADMIN, etc.)
+  reason          String?   // Optional reason for the change
+  createdAt       DateTime  @default(now())
+
+  doctor          Doctor    @relation(fields: [doctorId], references: [id])
+
+  @@map("subscription_history")
 }
 
 model Promotion {
@@ -629,6 +694,8 @@ model PlatformUser {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  assignedLeads AuditLead[]
+
   @@map("platform_users")
 }
 
@@ -699,6 +766,13 @@ model ClinicFeatureOverride {
 // FREE AI LOCAL SEO AUDIT MODELS
 // ==========================================
 
+enum AuditLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CUSTOMER
+}
+
 model AuditRequest {
   id              String       @id @default(cuid())
   placeId         String?
@@ -709,7 +783,9 @@ model AuditRequest {
   updatedAt       DateTime     @updatedAt
 
   report          AuditReport?
-  lead            AuditLead?
+  
+  leadId          String
+  lead            AuditLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
   
   @@map("audit_requests")
 }
@@ -784,17 +860,52 @@ model AuditRecommendation {
 
 model AuditLead {
   id              String       @id @default(cuid())
-  requestId       String       @unique
+  legacyRequestId String?      @map("requestId")
   name            String
-  email           String
+  email           String?
   phone           String?
   clinicName      String?
-  status          String       @default("NEW") // NEW, CONTACTED, CONVERTED
-  createdAt       DateTime     @default(now())
+  placeId         String?      // Used for deduplication alongside phone
   
-  request         AuditRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status          AuditLeadStatus   @default(NEW)
+  
+  // Marketing & Attribution
+  leadSource      String?
+  landingPage     String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  gclid           String?
+  fbclid          String?
 
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+  
+  requests        AuditRequest[]
+  activities      LeadActivity[]
+
+  assignedToId    String?
+  assignedTo      PlatformUser? @relation(fields: [assignedToId], references: [id])
+
+  convertedDoctorId String?     @unique
+  convertedDoctor   Doctor?     @relation(fields: [convertedDoctorId], references: [id])
+
+  // Gracefully handle duplicate submissions for the same physical location & phone
+  @@unique([phone, placeId])
   @@map("audit_leads")
+}
+
+model LeadActivity {
+  id              String       @id @default(cuid())
+  leadId          String
+  eventType       String       // e.g., "LEAD_CREATED", "AUDIT_STARTED", "AUDIT_COMPLETED", "AUDIT_FAILED", "SALES_CONTACTED"
+  message         String
+  metadata        Json?        // Any contextual metadata (e.g., audit ID, error message)
+  createdAt       DateTime     @default(now())
+
+  lead            AuditLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_activities")
 }
 
 // ==========================================
@@ -964,4 +1075,29 @@ model SeoTask {
   observationRecord SeoObservation? @relation(fields: [observationId], references: [id])
   
   @@map("seo_tasks")
+}
+
+model ShadowEntitlementLog {
+  id           String   @id @default(cuid())
+  doctorId     String
+  packageId    String?
+  module       String?
+  limit        String?
+  currentUsage Int?
+  allowedUsage Int?
+  route        String?
+  method       String?
+  timestamp    DateTime @default(now())
+  reason       String?
+  evalTimeMs   Int?
+  cacheHit     Boolean  @default(false)
+  clinicId     String?
+  requestId    String?
+  // SHADOW_FAIL = observed in shadow mode; ENFORCED_BLOCK = hard blocked in enforce mode
+  eventType    String   @default("SHADOW_FAIL")
+
+  @@index([doctorId])
+  @@index([timestamp])
+  @@index([eventType])
+  @@map("shadow_entitlement_logs")
 }

@@ -1,0 +1,31 @@
+﻿
+[+] Added enums
+  - AuditLeadStatus
+
+[+] Added tables
+  - lead_activities
+
+[*] Changed the `audit_leads` table
+  [-] Removed foreign key on columns (requestId)
+  [-] Removed unique index on columns (requestId)
+  [-] Removed column `requestId`
+  [+] Added column `fbclid`
+  [+] Added column `gclid`
+  [+] Added column `landingPage`
+  [+] Added column `leadSource`
+  [+] Added column `placeId`
+  [+] Added column `updatedAt`
+  [+] Added column `utmCampaign`
+  [+] Added column `utmMedium`
+  [+] Added column `utmSource`
+  [*] Altered column `email` (changed from Required to Nullable)
+  [*] Column `status` would be dropped and recreated (type changed)
+  [+] Added unique index on columns (phone, placeId)
+
+[*] Changed the `audit_requests` table
+  [+] Added column `leadId`
+  [+] Added foreign key on columns (leadId)
+
+[*] Changed the `lead_activities` table
+  [+] Added foreign key on columns (leadId)
+

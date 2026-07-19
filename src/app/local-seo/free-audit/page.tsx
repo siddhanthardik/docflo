@@ -120,16 +120,34 @@ export default function FreeAuditPage() {
 
     setIsScanning(true);
     try {
+      // 1. Create Lead first
+      const leadRes = await fetch("/api/audit/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          placeId: selectedPlace?.place_id,
+          clinicName: selectedPlace?.structured_formatting.main_text,
+        }),
+      });
+      const leadData = await leadRes.json();
+      if (!leadRes.ok || !leadData.lead?.id) {
+        setFormError("Failed to capture lead. Please try again.");
+        setIsScanning(false);
+        return;
+      }
+
+      // 2. Start Scan linked to Lead
       const res = await fetch("/api/audit/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          leadId: leadData.lead.id,
           searchQuery,
           placeId: selectedPlace?.place_id,
           name: selectedPlace?.structured_formatting.main_text,
           address: selectedPlace?.structured_formatting.secondary_text,
-          leadName: name,
-          leadPhone: phone,
         }),
       });
       const data = await res.json();

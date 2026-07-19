@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { format } from "date-fns";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { doctorId } = await getSessionData();
     const { id: invoiceId } = await params;
+
+    const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+    if (block) return block;
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId, doctorId },

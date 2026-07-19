@@ -2,10 +2,28 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { GBPService } from "@/services/gbp.service"
+import { EntitlementService } from "@/services/entitlement.service"
+import crypto from "crypto"
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const requestId = crypto.randomUUID();
+  const context = { route: "/api/gbp/posts", method: "POST", requestId };
+
+  try {
+    await EntitlementService.requireModule(session.user.id, "GROWTH_SEO", context);
+    await EntitlementService.requireLimit(session.user.id, "MAX_SCHEDULED_POSTS", context);
+  } catch (error: any) {
+    if (error.status === 403) {
+      return NextResponse.json({ success: false, error: "MODULE_NOT_INCLUDED", message: error.message }, { status: 403 });
+    }
+    if (error.status === 409) {
+      return NextResponse.json({ success: false, error: "LIMIT_EXCEEDED", message: error.message }, { status: 409 });
+    }
+    throw error;
+  }
 
   try {
     const body = await req.json()
@@ -33,16 +51,15 @@ export async function POST(req: Request) {
            const gbpService = new GBPService(account.accessToken, account.doctorId);
            const res = await gbpService.createPost(
              locationName,
-             content, // GBP API uses 'summary' for the actual text content
+             content,
              postType,
              imageUrl,
              ctaType,
              ctaLink
            );
-           gbpPostId = res.name; // Google API returns the resource name
+           gbpPostId = res.name;
          } catch(e) {
            console.error("GBP API error:", e);
-           // Fallback to DRAFT if API fails
            status = "DRAFT";
            publishedAt = null;
          }
@@ -76,6 +93,18 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const requestId = crypto.randomUUID();
+  const context = { route: "/api/gbp/posts", method: "GET", requestId };
+
+  try {
+    await EntitlementService.requireModule(session.user.id, "GROWTH_SEO", context);
+  } catch (error: any) {
+    if (error.status === 403) {
+      return NextResponse.json({ success: false, error: "MODULE_NOT_INCLUDED", message: error.message }, { status: 403 });
+    }
+    throw error;
+  }
   
   const posts = await prisma.gBPPost.findMany({
     where: { doctorId: session.user.id },

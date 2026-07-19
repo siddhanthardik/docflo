@@ -6,19 +6,39 @@ import { fetchPlaceDetails, searchCompetitors } from "@/lib/audit/google-places"
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { placeId, searchQuery, name, address } = body;
+    const { leadId, placeId, searchQuery, name, address } = body;
 
+    if (!leadId) {
+      return NextResponse.json({ error: "Missing leadId" }, { status: 400 });
+    }
     if (!searchQuery && !placeId) {
       return NextResponse.json({ error: "Missing search parameters" }, { status: 400 });
     }
 
-    // Create the AuditRequest record (Status: PENDING)
+    // Verify lead exists
+    const lead = await prisma.auditLead.findUnique({ where: { id: leadId } });
+    if (!lead) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+
+    // Create the AuditRequest record linked to the lead
     const auditRequest = await prisma.auditRequest.create({
       data: {
+        leadId,
         placeId,
         searchQuery: name ? `${name} ${address}` : searchQuery,
         status: "SCANNING",
         progress: 10
+      }
+    });
+
+    // Log Activity
+    await prisma.leadActivity.create({
+      data: {
+        leadId,
+        eventType: "AUDIT_STARTED",
+        message: "A new GBP audit scan has been initiated.",
+        metadata: { auditId: auditRequest.id }
       }
     });
 
@@ -298,11 +318,35 @@ async function processAuditAsync(auditId: string, data: any) {
       data: { progress: 100, status: "COMPLETED" } 
     });
 
+    const completedReq = await prisma.auditRequest.findUnique({ where: { id: auditId } });
+    if (completedReq?.leadId) {
+      await prisma.leadActivity.create({
+        data: {
+          leadId: completedReq.leadId,
+          eventType: "AUDIT_COMPLETED",
+          message: "Audit report generated successfully.",
+          metadata: { auditId }
+        }
+      });
+    }
+
   } catch (error) {
     console.error("Background Audit Failed:", error);
     await prisma.auditRequest.update({ 
       where: { id: auditId }, 
       data: { status: "FAILED" } 
     });
+
+    const failedReq = await prisma.auditRequest.findUnique({ where: { id: auditId } });
+    if (failedReq?.leadId) {
+      await prisma.leadActivity.create({
+        data: {
+          leadId: failedReq.leadId,
+          eventType: "AUDIT_FAILED",
+          message: "Failed to generate audit report.",
+          metadata: { auditId, error: error instanceof Error ? error.message : "Unknown error" }
+        }
+      });
+    }
   }
 }

@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(request: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, request, { module: "GROWTH_SEO" });
+    if (block) return block;
+
     const { searchParams } = new URL(request.url);
     const locationId = searchParams.get("locationId");
 

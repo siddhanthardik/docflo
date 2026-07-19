@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
-export async function GET() {
+export async function GET(req: Request) {
   const { doctorId, locationId } = await getSessionData();
+
+  const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+  if (block) return block;
   
   const where: any = { doctorId };
   if (locationId) {
@@ -19,6 +23,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const { doctorId, locationId } = await getSessionData();
+
+  // Enforce WHATSAPP_CRM module for campaign creation
+  const blockPost = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
+  if (blockPost) return blockPost;
+
   const body = await req.json();
   const { name, message, segmentType, segmentValue } = body;
 

@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 const GBP_OAUTH_STATE_COOKIE = "gbp_oauth_state";
 const GBP_SCOPE = "https://www.googleapis.com/auth/business.manage";
@@ -23,6 +24,9 @@ export async function GET(req: Request) {
     }
 
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
     const nonce = randomBytes(24).toString("base64url");
     const state = encodeState({ doctorId, nonce });
     const appUrl = getAppUrl(req);

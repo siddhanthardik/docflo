@@ -1,0 +1,170 @@
+[
+  {
+    "Route": "ai-agents/route.ts",
+    "Required Module": "AI_ASSISTANT",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "campaigns/route.ts",
+    "Required Module": "WHATSAPP_CRM",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "campaigns/[id]/send/route.ts",
+    "Required Module": "WHATSAPP_CRM",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/audit/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/callback/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/connect/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/discover-locations/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/insights/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/local-seo/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/posts/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/profiles/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/recommendations/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/reviews/reply/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/reviews/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/save-profiles/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/sync/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/tasks/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "gbp/update-profile/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "patients/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_PATIENTS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "patients/[id]/convert/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_PATIENTS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "patients/[id]/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_PATIENTS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "patients/[id]/status/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_PATIENTS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "reports/growth/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "reports/keywords/route.ts",
+    "Required Module": "GROWTH_SEO",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "staff/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_STAFF_SEATS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "staff/[id]/route.ts",
+    "Required Module": "CLINIC_CORE",
+    "Required Usage Limit": "MAX_STAFF_SEATS",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "whatsapp/qr/route.ts",
+    "Required Module": "WHATSAPP_CRM",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  },
+  {
+    "Route": "whatsapp/status/route.ts",
+    "Required Module": "WHATSAPP_CRM",
+    "Required Usage Limit": "None",
+    "Protection Status": "Missing"
+  }
+]

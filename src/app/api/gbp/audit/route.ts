@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     // Fetch GBP account if connected
     const gbpAccount = await prisma.gbpAccount.findFirst({
