@@ -558,6 +558,7 @@ model Promotion {
 }
 
 enum AppointmentStatus {
+  SCHEDULED
   CONFIRMED
   CHECKED_IN
   COMPLETED
