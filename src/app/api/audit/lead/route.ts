@@ -21,45 +21,70 @@ export async function POST(req: Request) {
     // Fallback if placeId is not provided
     const safePlaceId = placeId || "UNKNOWN_LOCATION";
 
-    const lead = await prisma.auditLead.upsert({
-      where: {
-        phone_placeId: {
+    let lead: any;
+    try {
+      lead = await prisma.auditLead.upsert({
+        where: {
+          phone_placeId: {
+            phone,
+            placeId: safePlaceId
+          }
+        },
+        update: {
+          name,
+          email: email || undefined,
+          clinicName: clinicName || undefined,
+          updatedAt: new Date()
+        },
+        create: {
+          name,
+          email,
           phone,
-          placeId: safePlaceId
+          clinicName,
+          placeId: safePlaceId,
+          status: "NEW",
+          leadSource,
+          landingPage,
+          utmSource,
+          utmMedium,
+          utmCampaign,
+          gclid,
+          fbclid
         }
-      },
-      update: {
-        name,
-        email: email || undefined,
-        clinicName: clinicName || undefined,
-        updatedAt: new Date()
-      },
-      create: {
-        name,
-        email,
-        phone,
-        clinicName,
-        placeId: safePlaceId,
-        status: "NEW",
-        leadSource,
-        landingPage,
-        utmSource,
-        utmMedium,
-        utmCampaign,
-        gclid,
-        fbclid
+      });
+    } catch (upsertError) {
+      // Fallback for unmigrated database without phone_placeId unique index
+      const existing = await prisma.auditLead.findFirst({ where: { phone } });
+      if (existing) {
+        lead = await prisma.auditLead.update({
+          where: { id: existing.id },
+          data: { name, email: email || undefined, clinicName: clinicName || undefined }
+        });
+      } else {
+        lead = await prisma.auditLead.create({
+          data: {
+            name,
+            email,
+            phone,
+            clinicName,
+            placeId: safePlaceId,
+            status: "NEW",
+            leadSource,
+            landingPage
+          }
+        });
       }
-    });
+    }
 
-    // Log the creation activity if it's new (createdAt == updatedAt)
-    // Actually upsert updates updatedAt automatically, so we can just log a touch event
-    await prisma.leadActivity.create({
-      data: {
-        leadId: lead.id,
-        eventType: "LEAD_CAPTURED",
-        message: "Lead information captured or updated from form.",
-      }
-    });
+    try {
+      await prisma.leadActivity.create({
+        data: {
+          leadId: lead.id,
+          eventType: "LEAD_CAPTURED",
+          message: "Lead information captured or updated from form.",
+        }
+      });
+    } catch (e) {}
 
     return NextResponse.json({ success: true, lead });
   } catch (error) {

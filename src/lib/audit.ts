@@ -22,8 +22,18 @@ export async function logActivity(payload: AuditLogPayload) {
       },
     });
   } catch (error) {
-    console.error("Failed to write audit log:", error);
-    // We don't throw here to avoid breaking the main application flow
-    // if the audit log fails to write.
+    // If table is missing optional columns during migration, try fallback without optional columns
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: payload.userId,
+          userType: payload.userType,
+          action: payload.action,
+          details: payload.details || {},
+        },
+      });
+    } catch (fallbackError) {
+      console.error("Failed to write audit log:", fallbackError);
+    }
   }
 }
