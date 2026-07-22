@@ -130,7 +130,7 @@ export default function LandingPage() {
 
         {/* ── MOBILE MENU OVERLAY ── */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-[100] bg-white flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
+          <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
             <div className="flex items-center justify-between mb-8">
               <GyrexLogo size="md" />
               <button 
