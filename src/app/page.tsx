@@ -128,9 +128,11 @@ export default function LandingPage() {
           </div>
         </div>
 
+      </header>
+
         {/* ── MOBILE MENU OVERLAY ── */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
+          <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
             <div className="flex items-center justify-between mb-8">
               <GyrexLogo size="md" />
               <button 
@@ -156,7 +158,7 @@ export default function LandingPage() {
 
             <div className="mt-auto pb-8 pt-8 border-t border-slate-100 flex flex-col gap-4">
               <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full rounded-xl h-12 text-base font-semibold border-slate-300">
+                <Button variant="outline" className="w-full rounded-xl h-12 text-base font-semibold border-slate-300 bg-white">
                   Sign In
                 </Button>
               </Link>
@@ -168,7 +170,6 @@ export default function LandingPage() {
             </div>
           </div>
         )}
-      </header>
 
       {/* ── HERO SECTION ── */}
       <section id="overview" className="relative pt-28 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
