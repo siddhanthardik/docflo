@@ -124,7 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: platformUser.name, 
                 role: platformUser.role,
                 createdAt: platformUser.createdAt,
-                emailVerified: platformUser.emailVerified,
+                emailVerified: (platformUser as any).emailVerified ?? null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -150,7 +150,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: doctor.name, 
                 role: doctor.role,
                 createdAt: doctor.createdAt,
-                emailVerified: doctor.emailVerified,
+                emailVerified: (doctor as any).emailVerified ?? null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -177,7 +177,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: staff.role, 
                 doctorId: staff.doctorId,
                 createdAt: staff.createdAt,
-                emailVerified: staff.emailVerified,
+                emailVerified: (staff as any).emailVerified ?? null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
