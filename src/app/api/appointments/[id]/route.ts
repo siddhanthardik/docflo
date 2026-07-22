@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData, isDoctor } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { syncAppointmentToGCal, deleteGCalAppointmentEvent } from "@/lib/gcal";
 
 // Helper to check if a date is in the past (using clinic timezone)
 function isPast(date: Date, timezone: string): boolean {
@@ -124,7 +125,7 @@ export async function PUT(
             gte: new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate()),
             lt: new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate() + 1),
           },
-          status: "SCHEDULED",
+          status: { in: ["CONFIRMED", "CHECKED_IN"] },
           OR: [
             { startTime: { lt: newEndTime }, endTime: { gt: newStartTime } },
           ],
@@ -152,19 +153,37 @@ export async function PUT(
       },
     });
 
-    // --- Automated Review Survey ---
-    if (body.status === "COMPLETED" && existing.status !== "COMPLETED" && !existing.reviewRequested) {
-      try {
-        if (whatsappManager.isConnected(doctorId) && updated.patient.phone) {
+    // Removed Automated Review Survey logic. Review requests are now dispatched asynchronously
+    // via the ReviewDispatcherService to respect cooldown and delay rules.
+
+    // --- WhatsApp Notification Logic for Reschedule / Cancel ---
+    try {
+      if (whatsappManager.isConnected(doctorId) && updated.patient.phone) {
+        const clinicName = doctor?.clinicName || "our clinic";
+        let messageText = "";
+
+        // Check if Cancelled
+        if (body.status === "CANCELLED" && existing.status !== "CANCELLED") {
+          messageText = `Hi ${updated.patient.firstName}, this is ${clinicName}. We are writing to let you know that your appointment on ${updated.date.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric' })} has been cancelled.\n\nIf you would like to reschedule for another day, simply reply to this message and we'll be happy to assist you!`;
+        } 
+        // Check if Rescheduled (Date or time changed, and not completed/cancelled/checked in)
+        else if (
+          updated.status === "CONFIRMED" &&
+          (existing.date.getTime() !== updated.date.getTime() || existing.startTime.getTime() !== updated.startTime.getTime())
+        ) {
+          const formattedDate = updated.date.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric' });
+          const formattedTime = updated.startTime.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+          messageText = `Hi ${updated.patient.firstName}, this is an update regarding your appointment at ${clinicName}. Your visit has been successfully rescheduled to ${formattedDate} at ${formattedTime}.\n\nPlease reply 'CONFIRM' to lock in this new time. Let us know if you have any questions!`;
+        }
+
+        if (messageText) {
           const patientPhone = updated.patient.phone;
-          const clinicName = doctor?.clinicName || "our clinic";
-          const surveyMessage = `Hi ${updated.patient.firstName}, thank you for visiting ${clinicName} today! \n\nWere you happy with today's consultation? Please reply YES or NO.`;
-          
-          const normalizedPhone = await whatsappManager.sendMessage(doctorId, patientPhone, surveyMessage);
+          const normalizedPhone = await whatsappManager.sendMessage(doctorId, patientPhone, messageText);
 
           let conversation = await prisma.conversation.findUnique({
             where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
           });
+
           if (!conversation) {
             conversation = await prisma.conversation.create({
               data: {
@@ -176,24 +195,31 @@ export async function PUT(
               }
             });
           }
+
           await prisma.chatMessage.create({
             data: {
               conversationId: conversation.id,
               direction: "OUTGOING",
               messageType: "text",
-              content: surveyMessage,
+              content: messageText,
               senderName: "Clinic",
             }
           });
+
           await prisma.conversation.update({
             where: { id: conversation.id },
             data: { lastMessageAt: new Date() }
           });
         }
-      } catch (err) {
-        console.error("Failed to send review survey:", err);
       }
+    } catch (waError) {
+      console.error("Failed to send WhatsApp notification for update:", waError);
     }
+
+    // Sync with Google Calendar on update
+    syncAppointmentToGCal(updated.id).catch((err) =>
+      console.error("Failed to sync updated appointment to GCal:", err)
+    );
 
     return NextResponse.json(updated);
   } catch (error: any) {
@@ -216,6 +242,12 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
     }
+
+    // Delete Google Calendar Event
+    await deleteGCalAppointmentEvent(id).catch((err) =>
+      console.error("Failed to delete GCal event:", err)
+    );
+
     await prisma.appointment.delete({ where: { id } });
     return NextResponse.json({ message: "Appointment deleted" });
   } catch (error) {

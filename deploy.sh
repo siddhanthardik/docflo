@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Docflo VPS Deployment Script
+# Gyrex VPS Deployment Script
 # Run this script on your Hostinger VPS after pulling your code.
 
-echo "🚀 Starting Docflo Deployment..."
+echo "🚀 Starting Gyrex Deployment..."
 
 # 1. Install Dependencies
 echo "📦 Installing Node modules..."
@@ -18,10 +18,10 @@ echo "🏗️ Building the Next.js App for Production..."
 npm run build
 
 # 4. Start/Restart with PM2
-echo "🔄 Starting PM2 process named 'docflo' on port 3007..."
-# Check if PM2 has docflo running already
-if pm2 list | grep -q "docflo"; then
-  pm2 reload docflo
+echo "🔄 Starting PM2 process named 'gyrex' on port 3007..."
+# Check if PM2 has gyrex running already
+if pm2 list | grep -q "gyrex"; then
+  pm2 reload gyrex
 else
   pm2 start ecosystem.config.cjs
   pm2 save

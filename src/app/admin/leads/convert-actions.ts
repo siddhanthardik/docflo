@@ -30,7 +30,7 @@ export async function convertToCustomer(
     // If no password is provided by the sales rep, generate a random one
     const plainPassword = temporaryPassword || Math.random().toString(36).slice(-8) + "Aa1!";
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
-    const email = lead.email || `temp-${lead.id}@docflo.local`;
+    const email = lead.email || `temp-${lead.id}@gyrex.local`;
 
     // We must execute this in a transaction to ensure atomic conversion
     const result = await prisma.$transaction(async (tx) => {

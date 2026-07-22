@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# WhatsApp session data
+/auth_info
+
+# Temporary scratch & test artifacts
+*.txt
+*.pdf
+ scratch/

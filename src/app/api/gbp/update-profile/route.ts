@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
-    const body = await request.json();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
+    const body = await req.json();
     const { locationId, description, category, hours } = body;
 
     if (!locationId) {

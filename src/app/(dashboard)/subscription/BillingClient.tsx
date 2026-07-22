@@ -59,7 +59,7 @@ export function BillingClient({
         key: data.key,
         amount: data.amount,
         currency: data.currency,
-        name: "Docflo",
+        name: "Gyrex",
         description: `Upgrade to ${pkg.name}`,
         image: "https://via.placeholder.com/150", // replace with actual logo
         order_id: data.orderId,
@@ -90,7 +90,7 @@ export function BillingClient({
           }
         },
         prefill: {
-          name: "Docflo User",
+          name: "Gyrex User",
           email: "user@example.com",
         },
         theme: {

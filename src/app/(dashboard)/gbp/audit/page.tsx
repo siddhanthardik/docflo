@@ -19,8 +19,7 @@ import {
 import { useLocationContext } from "@/contexts/LocationContext";
 
 export default function RecommendationsPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { connected, activeLocation: activeAccount, isLoading: contextLoading } = useLocationContext();
   
   // Modals state
   const [editingModal, setEditingModal] = useState<"description" | "category" | "hours" | "photos" | null>(null);
@@ -29,25 +28,7 @@ export default function RecommendationsPage() {
   // Form states
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  
-  const { activeLocationId } = useLocationContext();
 
-  const loadProfiles = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/gbp/profiles");
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { loadProfiles(); }, [activeLocationId]);
-
-  const activeAccount = data?.accounts?.find((acc: any) => acc.id === activeLocationId) || data?.accounts?.[0];
   const insights = activeAccount?.insights || {};
 
   const handleUpdate = async (payload: any) => {
@@ -63,8 +44,7 @@ export default function RecommendationsPage() {
         })
       });
       if (res.ok) {
-        setEditingModal(null);
-        loadProfiles(); // reload to reflect changes
+        window.location.reload();
       }
     } catch (e) {
       console.error(e);
@@ -73,31 +53,49 @@ export default function RecommendationsPage() {
     }
   };
 
-  if (loading) {
+  if (contextLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-20 w-full rounded-2xl" />
-        <div className="grid grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+        <Skeleton className="h-[200px] w-full rounded-2xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[400px] w-full rounded-2xl" />
+          <Skeleton className="h-[400px] w-full rounded-2xl" />
         </div>
-        <Skeleton className="h-[400px] w-full rounded-xl" />
       </div>
     );
   }
 
-  if (!data?.connected || !activeAccount) {
+  if (!connected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center mb-6">
-          <Lightbulb className="h-10 w-10 text-amber-400" />
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <BarChart3 className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Profile Audit</h2>
+          <p className="text-gray-500 mb-8 max-w-lg mx-auto leading-relaxed">
+            Connect your Google Business Profile to receive a comprehensive audit of your profile completeness and local SEO performance.
+          </p>
+          <Button onClick={() => window.location.href = '/gbp'} size="lg" className="bg-blue-600 hover:bg-blue-700">
+            Connect Profile
+          </Button>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">Recommendations</h2>
-        <p className="text-gray-500 mb-8 max-w-md leading-relaxed">
-          Connect your Google Business Profile to unlock automated audits and actionable recommendations for local SEO growth.
-        </p>
-        <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-          <a href="/gbp">Connect Profile</a>
-        </Button>
+      </div>
+    );
+  }
+
+  if (!activeAccount) {
+    return (
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="h-8 w-8 text-blue-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Select a Location</h2>
+          <p className="text-gray-500 mb-8 max-w-lg mx-auto leading-relaxed">
+            Please select a location from the dropdown in the navigation bar to view its Profile Audit.
+          </p>
+        </div>
       </div>
     );
   }
@@ -151,7 +149,7 @@ export default function RecommendationsPage() {
       title: "Respond to all recent reviews", 
       description: "Reply to every review - positive or negative. It shows you care and boosts your local ranking.",
       priority: "medium",
-      completed: activeAccount.recentReviews?.every((r: any) => r.replied),
+      completed: activeAccount.recentReviews?.every((r) => r.replied),
       actionLabel: "Go to Reviews",
       actionHref: "/reviews"
     }
@@ -282,7 +280,7 @@ export default function RecommendationsPage() {
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: "Recent Posts", value: "3", icon: BarChart3, color: "text-indigo-600", bg: "bg-indigo-50" },
-                { label: "Review Replies", value: activeAccount.recentReviews?.filter((r:any) => r.replied).length || 0, icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { label: "Review Replies", value: activeAccount.recentReviews?.filter((r) => r.replied).length || 0, icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <div className={`${item.bg} p-2.5 rounded-xl`}>
@@ -326,7 +324,7 @@ export default function RecommendationsPage() {
                     maxLength={750}
                     rows={6}
                     className="w-full text-sm p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., Docflo Dental is a premier family dentistry clinic located in..."
+                    placeholder="e.g., Gyrex Dental is a premier family dentistry clinic located in..."
                   />
                   <div className="text-right text-xs font-medium text-gray-400">
                     {description.length}/750

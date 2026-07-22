@@ -9,6 +9,8 @@ import {
   Check, X, Users, Zap, Clock, ChevronRight, Phone, Globe, Camera, Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 // ── Scoring helper ──────────────────────────────────────────────
 function ScoreRing({ score, size = 120 }: { score: number; size?: number }) {
@@ -159,10 +161,7 @@ function ReportPageContent() {
       <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Activity className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-slate-900">Docflo</span>
+            <GyrexLogo size="lg" />
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden md:block text-xs text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full font-mono">
@@ -385,7 +384,7 @@ function ReportPageContent() {
                   <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
                     <Zap className="h-6 w-6 text-blue-400" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-1">Docflo AI</h3>
+                  <h3 className="text-lg font-bold text-center mb-1">Gyrex AI</h3>
                   <p className="text-slate-400 text-center text-xs mb-5">Fix all 5 issues. Automate your growth.</p>
 
                   <div className="text-center mb-5">

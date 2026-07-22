@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AIAgentsService } from "@/services/ai-agents.service";
 import { GBPService } from "@/services/gbp.service";
+import { ReviewDispatcherService } from "@/services/review-dispatcher.service";
 
 export async function GET(req: Request) {
-  // In a real production app, verify a CRON secret here
+  if (process.env.CRON_SECRET && req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
   try {
     console.log("[CRON] Starting Review Manager Agent...");
+    console.log("[CRON] Starting Review Manager Agent...");
     
+    // Evaluate appointments for review requests (surveys)
+    await ReviewDispatcherService.evaluateAppointments();
+
     // Find all active Review agents
     const activeConfigs = await prisma.aIAgentConfig.findMany({
       where: { agentType: "REVIEW", enabled: true },

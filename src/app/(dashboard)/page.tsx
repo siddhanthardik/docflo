@@ -5,9 +5,8 @@ import Link from "next/link"
 import { formatTime } from "@/lib/utils"
 
 import { unstable_cache } from "next/cache";
-
 const getCachedDashboardStats = unstable_cache(
-  async (doctorId: string) => {
+  async (doctorId: string, practitionerId?: string) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
@@ -17,33 +16,41 @@ const getCachedDashboardStats = unstable_cache(
     const monthAgo = new Date(today)
     monthAgo.setDate(monthAgo.getDate() - 30)
 
+    const appointmentWhere = practitionerId
+      ? { doctorId, practitionerId }
+      : { doctorId };
+
     const [
       totalPatients,
       todayAppointments,
       totalReviews,
       upcomingAppointments,
-      newPatientsThisWeek,
+      patientsThisWeekList,
       appointmentsThisWeek,
       completedThisWeek,
       gbpAccount,
       recentReviews,
+      reviewsThisWeekList,
     ] = await Promise.all([
-      prisma.patient.count({ where: { doctorId } }),
-      prisma.appointment.count({ where: { doctorId, date: { gte: today, lt: tomorrow } } }),
+      prisma.patient.count({ where: { doctorId, ...(practitionerId ? { primaryPractitionerId: practitionerId } : {}) } }),
+      prisma.appointment.count({ where: { ...appointmentWhere, date: { gte: today, lt: tomorrow } } }),
       prisma.review.count({ where: { doctorId } }),
       prisma.appointment.findMany({
-        where: { doctorId, date: { gte: today, lt: tomorrow }, status: "SCHEDULED" },
+        where: { ...appointmentWhere, date: { gte: today, lt: tomorrow }, status: { in: ["CONFIRMED", "CHECKED_IN"] } },
         include: { patient: { select: { firstName: true, lastName: true } } },
         orderBy: { startTime: "asc" },
         take: 6,
       }),
-      prisma.patient.count({ where: { doctorId, createdAt: { gte: weekAgo } } }),
+      prisma.patient.findMany({ 
+        where: { doctorId, createdAt: { gte: weekAgo }, ...(practitionerId ? { primaryPractitionerId: practitionerId } : {}) },
+        select: { createdAt: true }
+      }),
       prisma.appointment.findMany({
-        where: { doctorId, date: { gte: weekAgo } },
+        where: { ...appointmentWhere, date: { gte: weekAgo } },
         orderBy: { date: "asc" },
       }),
       prisma.appointment.count({
-        where: { doctorId, date: { gte: weekAgo }, status: "COMPLETED" },
+        where: { ...appointmentWhere, date: { gte: weekAgo }, status: "COMPLETED" },
       }),
       prisma.gbpAccount.findFirst({
         where: { doctorId },
@@ -54,6 +61,10 @@ const getCachedDashboardStats = unstable_cache(
         orderBy: { reviewDate: "desc" },
         take: 4,
       }),
+      prisma.review.findMany({
+        where: { doctorId, reviewDate: { gte: weekAgo } },
+        select: { reviewDate: true }
+      }),
     ])
 
     return {
@@ -61,19 +72,21 @@ const getCachedDashboardStats = unstable_cache(
       todayAppointments,
       totalReviews,
       upcomingAppointments,
-      newPatientsThisWeek,
+      newPatientsThisWeek: patientsThisWeekList.length,
+      patientsThisWeekList,
       appointmentsThisWeek,
       completedThisWeek,
       gbpAccount,
       recentReviews,
+      reviewsThisWeekList,
     }
   },
   ["dashboard-stats"],
   { revalidate: 60 } // Cache for 60 seconds
 )
 
-async function getDashboardStats(doctorId: string) {
-  return getCachedDashboardStats(doctorId);
+async function getDashboardStats(doctorId: string, practitionerId?: string) {
+  return getCachedDashboardStats(doctorId, practitionerId);
 }
 
 function MiniSparkline({ color, values }: { color: string; values: number[] }) {
@@ -131,20 +144,19 @@ function avatarColor(name: string) {
   return colors[name.charCodeAt(0) % colors.length]
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: { searchParams?: Promise<{ practitionerId?: string }> }) {
+  const searchParams = await props.searchParams;
   const session = await auth()
+  const doctorId = session?.user?.id as string
   const doctorName = session?.user?.name || "Doctor"
-  const stats = await getDashboardStats(session?.user?.id as string)
-
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
-  const emoji = hour < 12 ? "🌅" : hour < 17 ? "☀️" : "🌙"
+  
+  const stats = await getDashboardStats(doctorId, searchParams?.practitionerId === "all" ? undefined : searchParams?.practitionerId)
 
   const gbpInsights = (stats.gbpAccount?.insightsData as any) || {}
   const avgRating = gbpInsights.rating ? Number(gbpInsights.rating).toFixed(1) : null
   const totalRatings = gbpInsights.user_ratings_total || stats.totalReviews
 
-  // Build 7-day sparkline values (appointments per day)
+  // Build 7-day sparkline values
   const sparkData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
@@ -152,6 +164,33 @@ export default async function DashboardPage() {
       new Date(apt.date).toDateString() === d.toDateString()
     ).length
   })
+
+  // Total Patients Sparkline (Cumulative over 7 days)
+  let patientsBeforeWeek = stats.totalPatients - stats.newPatientsThisWeek;
+  const totalPatientsSpark = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const addedThatDay = stats.patientsThisWeekList.filter(p => new Date(p.createdAt).toDateString() === d.toDateString()).length;
+    patientsBeforeWeek += addedThatDay;
+    return patientsBeforeWeek;
+  });
+
+  // New Patients Sparkline (Added per day over 7 days)
+  const newPatientsSpark = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return stats.patientsThisWeekList.filter(p => new Date(p.createdAt).toDateString() === d.toDateString()).length;
+  });
+
+  // Google Reviews Sparkline (Cumulative over 7 days)
+  let reviewsBeforeWeek = totalRatings - stats.reviewsThisWeekList.length;
+  const reviewsSpark = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const addedThatDay = stats.reviewsThisWeekList.filter(r => new Date(r.reviewDate).toDateString() === d.toDateString()).length;
+    reviewsBeforeWeek += addedThatDay;
+    return reviewsBeforeWeek;
+  });
 
   const statCards = [
     {
@@ -163,7 +202,7 @@ export default async function DashboardPage() {
       bg: "bg-violet-50",
       iconBg: "bg-violet-100",
       href: "/patients",
-      spark: [2, 3, 2, 5, 4, 3, stats.totalPatients > 0 ? stats.totalPatients : 1],
+      spark: totalPatientsSpark,
     },
     {
       title: "Today's Appointments",
@@ -185,7 +224,7 @@ export default async function DashboardPage() {
       bg: "bg-emerald-50",
       iconBg: "bg-emerald-100",
       href: "/patients",
-      spark: [1, 0, 2, 1, 3, 0, stats.newPatientsThisWeek > 0 ? stats.newPatientsThisWeek : 0],
+      spark: newPatientsSpark,
     },
     {
       title: "Google Reviews",
@@ -196,56 +235,12 @@ export default async function DashboardPage() {
       bg: "bg-amber-50",
       iconBg: "bg-amber-100",
       href: "/gbp",
-      spark: [30, 35, 38, 40, 42, 45, stats.totalReviews > 0 ? stats.totalReviews : 0],
+      spark: reviewsSpark,
     },
   ]
 
   return (
     <div className="space-y-6 pb-8">
-      {/* ── HERO BANNER ── */}
-      <div
-        className="rounded-2xl p-6 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #3730a3 55%, #4f46e5 100%)" }}
-      >
-        <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full opacity-10 bg-white" />
-        <div className="absolute bottom-0 right-24 w-36 h-36 rounded-full opacity-10 bg-white" />
-        <div className="absolute top-4 right-64 w-20 h-20 rounded-full opacity-5 bg-white" />
-
-        <div className="flex items-start justify-between relative z-10">
-          <div>
-            <p className="text-indigo-200 text-sm mb-1">{greeting} {emoji}</p>
-            <h1 className="text-white text-2xl font-bold mb-0.5">{doctorName}</h1>
-            {gbpInsights.formattedAddress && (
-              <p className="text-indigo-200 text-sm mb-4">{gbpInsights.formattedAddress}</p>
-            )}
-            {!gbpInsights.formattedAddress && (
-              <p className="text-indigo-300 text-sm mb-4">Overview of your practice performance</p>
-            )}
-
-          </div>
-
-          {avgRating && (
-            <div className="text-right">
-              <p className="text-indigo-200 text-xs mb-1">Average Rating</p>
-              <div className="flex items-end gap-1 justify-end">
-                <Star className="h-6 w-6 fill-amber-300 text-amber-300 mb-1" />
-                <span className="text-white text-5xl font-extrabold leading-none">{avgRating}</span>
-              </div>
-              <p className="text-indigo-200 text-xs mt-1">{totalRatings} total reviews</p>
-            </div>
-          )}
-
-          {!avgRating && (
-            <Link
-              href="/gbp"
-              className="bg-white/15 hover:bg-white/25 border border-white/30 text-white text-sm px-4 py-2 rounded-xl transition-all font-medium"
-            >
-              Connect Google Profile →
-            </Link>
-          )}
-        </div>
-      </div>
-
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
@@ -323,8 +318,10 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                    Scheduled
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                    apt.status === "CHECKED_IN" ? "text-sky-600 bg-sky-50" : "text-indigo-600 bg-indigo-50"
+                  }`}>
+                    {apt.status === "CHECKED_IN" ? "Checked In" : "Confirmed"}
                   </span>
                 </div>
               ))}

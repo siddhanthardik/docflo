@@ -7,7 +7,7 @@ async function main() {
   console.log('🌱 Seeding database...')
 
   // 1. Create a test doctor (skip if exists)
-  const doctorEmail = 'doctor@docflo.com'
+  const doctorEmail = 'siddhant.elantis@gmail.com'
   let doctor = await prisma.doctor.findUnique({ where: { email: doctorEmail } })
 
   if (!doctor) {
@@ -18,7 +18,7 @@ async function main() {
         name: 'Dr. Test',
         phone: '+15551234567',
         specialty: 'General Medicine',
-        clinicName: 'Docflo Clinic',
+        clinicName: 'Gyrex Clinic',
         address: '123 Health Street',
         city: 'New York',
         state: 'NY',
@@ -107,7 +107,7 @@ async function main() {
         startTime: setTime(tomorrow, 10, 0),
         endTime: setTime(tomorrow, 10, 30),
         reason: 'General checkup',
-        status: 'SCHEDULED' as AppointmentStatus,
+        status: 'CONFIRMED' as AppointmentStatus,
       },
       {
         patientId: patients[1].id,
@@ -116,7 +116,7 @@ async function main() {
         startTime: setTime(tomorrow, 11, 0),
         endTime: setTime(tomorrow, 11, 30),
         reason: 'Blood pressure review',
-        status: 'SCHEDULED' as AppointmentStatus,
+        status: 'CONFIRMED' as AppointmentStatus,
       },
       {
         patientId: patients[0].id,

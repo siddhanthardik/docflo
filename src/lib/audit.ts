@@ -2,10 +2,11 @@ import { prisma } from "./prisma";
 
 interface AuditLogPayload {
   userId: string;
-  userType: "PLATFORM" | "CLINIC";
+  userType: "PLATFORM" | "CLINIC" | "STAFF" | "SYSTEM" | "UNKNOWN";
   action: string;
   details?: Record<string, any>;
   ipAddress?: string;
+  userAgent?: string;
 }
 
 export async function logActivity(payload: AuditLogPayload) {
@@ -17,6 +18,7 @@ export async function logActivity(payload: AuditLogPayload) {
         action: payload.action,
         details: payload.details || {},
         ipAddress: payload.ipAddress || null,
+        userAgent: payload.userAgent || null,
       },
     });
   } catch (error) {

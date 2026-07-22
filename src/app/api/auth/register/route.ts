@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
+import { logActivity } from "@/lib/audit";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -9,47 +12,88 @@ export async function POST(req: Request) {
     console.log("Register body received:", body);
 
     const validatedData = registerSchema.parse(body);
-    console.log("Validation passed:", validatedData);
-
-    // Check if user exists
-    const existingDoctor = await prisma.doctor.findUnique({
-      where: { email: validatedData.email },
-    });
-
-    if (existingDoctor) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 400 }
-      );
-    }
 
     // Hash password
     const hashedPassword = await hash(validatedData.password, 12);
 
-    // Create doctor
-    const doctor = await prisma.doctor.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        password: hashedPassword,
-        phone: validatedData.phone,
-        specialty: validatedData.specialty,
-        clinicName: validatedData.clinicName,
-        address: validatedData.address,
-      },
-    });
+    try {
+      // Create doctor atomically
+      const doctor = await prisma.doctor.create({
+        data: {
+          name: validatedData.name,
+          email: validatedData.email,
+          password: hashedPassword,
+          phone: validatedData.phone,
+          specialty: validatedData.specialty,
+          clinicName: validatedData.clinicName,
+          address: validatedData.address,
+          practitioners: {
+            create: {
+              name: validatedData.name,
+              email: validatedData.email,
+              phone: validatedData.phone,
+              specialty: validatedData.specialty,
+              isOwner: true,
+              isActive: true,
+              displayOrder: 0,
+              workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              workingHoursStart: "09:00",
+              workingHoursEnd: "17:00"
+            }
+          }
+        },
+      });
 
-    const { password, ...doctorWithoutPassword } = doctor;
+      // Generate Verification Email Token
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours
 
-    return NextResponse.json(
-      { message: "Registration successful", doctor: doctorWithoutPassword },
-      { status: 201 }
-    );
+      await prisma.emailVerificationToken.create({
+        data: {
+          email: validatedData.email,
+          token: hashedToken,
+          expiresAt,
+        },
+      });
+
+      // Send Verification Email via Resend asynchronously
+      sendVerificationEmail(validatedData.email, rawToken, validatedData.name).catch((err) =>
+        console.error("Failed to send verification email on register:", err)
+      );
+
+      const { password, ...doctorWithoutPassword } = doctor;
+
+      await logActivity({
+        userId: doctor.id,
+        userType: "CLINIC",
+        action: "SIGNUP_SUCCESS",
+        details: { email: validatedData.email }
+      });
+
+      return NextResponse.json(
+        { message: "Registration successful. Please check your email to verify your account.", doctor: doctorWithoutPassword },
+        { status: 201 }
+      );
+    } catch (dbError: any) {
+      if (dbError.code === "P2002") {
+        return NextResponse.json(
+          { error: "This email is already registered. Please sign in or use a different email." },
+          { status: 400 }
+        );
+      }
+      throw dbError;
+    }
   } catch (error: any) {
     console.error("REGISTER ERROR:", error);
-    // Send the error details back so we can see it in the browser if needed
+    
+    let errorMessage = "An unexpected error occurred during registration. Please try again later.";
+    if (error.name === "ZodError") {
+      errorMessage = "Invalid registration data provided.";
+    }
+
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

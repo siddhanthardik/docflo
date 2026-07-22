@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, Phone } from "lucide-react"
+import { Send, MessageSquare, Phone, ArrowLeft } from "lucide-react"
 import { format } from "date-fns"
 
 interface Message {
@@ -25,11 +25,13 @@ export function ChatWindow({
   messages,
   onSendMessage,
   onUpdatePatientStatus,
+  onBack,
 }: {
   conversation: Conversation | null
   messages: Message[]
   onSendMessage: (content: string) => Promise<void>
   onUpdatePatientStatus?: (type: string) => void
+  onBack?: () => void
 }) {
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
@@ -53,7 +55,7 @@ export function ChatWindow({
       <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-8">
         <MessageSquare className="w-12 h-12 text-gray-200" />
         <p className="text-sm font-medium text-gray-500">Select a conversation</p>
-        <p className="text-xs text-gray-400">Choose a conversation from the sidebar to start chatting</p>
+        <p className="text-xs text-gray-400">Choose a conversation from the list to start chatting</p>
       </div>
     )
   }
@@ -63,8 +65,18 @@ export function ChatWindow({
   return (
     <div className="h-full flex flex-col">
       {/* Chat Header */}
-      <div className="px-5 py-3.5 border-b border-gray-100 bg-white flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+              title="Back to conversations"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700 flex-shrink-0">
             {name
               .split(" ")

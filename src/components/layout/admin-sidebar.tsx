@@ -39,7 +39,7 @@ export function AdminSidebar() {
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
           <ShieldAlert className="h-4 w-4 text-white" />
         </div>
-        <span className="text-lg font-bold text-white tracking-tight">Docflo Admin</span>
+        <span className="text-lg font-bold text-white tracking-tight">Gyrex Admin</span>
       </div>
 
       {/* Navigation */}

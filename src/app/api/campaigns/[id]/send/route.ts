@@ -4,6 +4,8 @@ import { getSessionData } from "@/lib/session";
 import { WhatsAppService } from "@/services/whatsapp.service";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { entitlementGuard } from "@/lib/withEntitlements";
+import fs from "fs";
+import path from "path";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -62,26 +64,63 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   if (whatsappManager.isConnected(doctorId)) {
-    for (const patient of patients) {
-      const personalizedMsg = campaign.message
-        .replace("{{firstName}}", patient.firstName)
-        .replace("{{lastName}}", patient.lastName);
-      try {
-        await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
-        await prisma.campaignRecipient.updateMany({
-          where: { campaignId: campaign.id, patientPhone: patient.phone },
-          data: { status: "SENT", sentAt: new Date() },
-        });
-      } catch (err) {
-        console.error(`Failed to send to ${patient.phone}:`, err);
-        await prisma.campaignRecipient.updateMany({
-          where: { campaignId: campaign.id, patientPhone: patient.phone },
-          data: { status: "FAILED", error: String(err) },
-        });
+    // Run sending in background to avoid request timeout and enforce rate limit
+    (async () => {
+      for (const patient of patients) {
+        // RATE LIMIT: Wait 6 seconds between messages (max 10 msgs / minute)
+        // This is crucial to prevent the WhatsApp number from getting banned.
+        await new Promise((resolve) => setTimeout(resolve, 6000));
+
+        let personalizedMsg = campaign.message
+          .replace("{{firstName}}", patient.firstName)
+          .replace("{{lastName}}", patient.lastName);
+          
+        if (campaign.ctaLink) {
+          const btnText = campaign.ctaText || "Click Here";
+          personalizedMsg += `\n\n👉 *${btnText}*: ${campaign.ctaLink}`;
+        }
+        
+        try {
+          if (campaign.mediaUrl) {
+            let buffer: Buffer;
+            if (campaign.mediaUrl.startsWith("/")) {
+               const filePath = path.join(process.cwd(), "public", campaign.mediaUrl);
+               buffer = fs.readFileSync(filePath);
+            } else {
+               const res = await fetch(campaign.mediaUrl);
+               const arrayBuffer = await res.arrayBuffer();
+               buffer = Buffer.from(arrayBuffer);
+            }
+            
+            if (campaign.mediaType === "IMAGE") {
+              await whatsappManager.sendImage(doctorId, patient.phone, buffer, personalizedMsg);
+            } else if (campaign.mediaType === "PDF") {
+              await whatsappManager.sendDocument(doctorId, patient.phone, buffer, "Document.pdf", personalizedMsg);
+            } else {
+              // Fallback
+              await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
+            }
+          } else {
+            await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
+          }
+          
+          await prisma.campaignRecipient.updateMany({
+            where: { campaignId: campaign.id, patientPhone: patient.phone },
+            data: { status: "SENT", sentAt: new Date() },
+          });
+        } catch (err) {
+          console.error(`Failed to send to ${patient.phone}:`, err);
+          await prisma.campaignRecipient.updateMany({
+            where: { campaignId: campaign.id, patientPhone: patient.phone },
+            data: { status: "FAILED", error: String(err) },
+          });
+        }
       }
-    }
+      // Update campaign status when all done
+      await prisma.campaign.update({ where: { id: campaign.id }, data: { status: "SENT", sentAt: new Date() } });
+    })();
   }
 
-  await prisma.campaign.update({ where: { id: campaign.id }, data: { status: "SENT", sentAt: new Date() } });
-  return NextResponse.json({ success: true });
+  // We return immediately. The background task handles sending safely.
+  return NextResponse.json({ success: true, message: "Announcement scheduled for safe delivery" });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export async function GET(req: Request) {
   try {
@@ -34,11 +35,21 @@ export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
     const body = await req.json();
-    const { patientId, appointmentId, dueDate, discountAmount = 0, notes, items } = body;
+    const { patientId, appointmentId, dueDate, notes, items, discountType = "FLAT", discountValue = 0, taxAmount = 0 } = body;
 
     if (!patientId || !items || !items.length) {
       return NextResponse.json({ error: "Patient and at least one item are required" }, { status: 400 });
     }
+
+    // Fetch Doctor to get base currency
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { currency: true }
+    });
+    
+    // Default to USD if currency is missing
+    const currencyCode = doctor?.currency || "USD";
+    const currencySymbol = getCurrencySymbol(currencyCode);
 
     // Generate Invoice Number
     const year = new Date().getFullYear();
@@ -59,30 +70,68 @@ export async function POST(req: Request) {
     }
     const invoiceNumber = `INV-${year}-${nextNum.toString().padStart(4, '0')}`;
 
-    // Calculate totals
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.unitPrice * item.quantity), 0);
-    const totalAmount = Math.max(0, subtotal - discountAmount);
+    // Calculate totals securely on the backend
+    const subtotal = items.reduce((sum: number, item: any) => {
+      // Validate inputs
+      const price = Math.max(0, parseFloat(item.unitPrice) || 0);
+      const qty = Math.max(1, parseInt(item.quantity) || 1);
+      return sum + (price * qty);
+    }, 0);
+
+    // Apply Discount
+    let calculatedDiscountAmount = 0;
+    const validatedDiscountValue = Math.max(0, parseFloat(discountValue) || 0);
+
+    if (discountType === "PERCENTAGE") {
+      // Cap at 100%
+      const percentage = Math.min(100, validatedDiscountValue);
+      calculatedDiscountAmount = (subtotal * percentage) / 100;
+    } else {
+      // FLAT discount
+      calculatedDiscountAmount = validatedDiscountValue;
+    }
+
+    // Discount cannot exceed subtotal
+    calculatedDiscountAmount = Math.min(subtotal, calculatedDiscountAmount);
+
+    // Apply Tax (Tax is applied after discount)
+    const validatedTaxAmount = Math.max(0, parseFloat(taxAmount) || 0);
+    
+    // Calculate final total
+    const totalAmount = Math.max(0, subtotal - calculatedDiscountAmount + validatedTaxAmount);
+
+    // Rounding to 2 decimal places to prevent floating point anomalies
+    const roundToTwo = (num: number) => Math.round(num * 100) / 100;
 
     const invoice = await prisma.invoice.create({
       data: {
         doctorId,
         patientId,
-        appointmentId,
+        appointmentId: appointmentId || null,
         invoiceNumber,
         status: "UNPAID",
         dueDate: dueDate ? new Date(dueDate) : null,
-        subtotal,
-        discountAmount,
-        totalAmount,
+        subtotal: roundToTwo(subtotal),
+        discountType,
+        discountValue: validatedDiscountValue,
+        discountAmount: roundToTwo(calculatedDiscountAmount),
+        taxAmount: roundToTwo(validatedTaxAmount),
+        totalAmount: roundToTwo(totalAmount),
+        currencyCode,
+        currencySymbol,
         notes,
         items: {
-          create: items.map((item: any) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.unitPrice * item.quantity,
-            serviceTypeId: item.serviceTypeId || null
-          }))
+          create: items.map((item: any) => {
+            const price = Math.max(0, parseFloat(item.unitPrice) || 0);
+            const qty = Math.max(1, parseInt(item.quantity) || 1);
+            return {
+              description: item.description,
+              quantity: qty,
+              unitPrice: price,
+              total: price * qty,
+              serviceTypeId: item.serviceTypeId || null
+            };
+          })
         }
       },
       include: {

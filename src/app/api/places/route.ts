@@ -48,7 +48,7 @@ async function searchWithNominatim(input: string) {
   const res = await fetch(url.toString(), {
     headers: {
       // Nominatim requires a descriptive User-Agent
-      "User-Agent": "Docflo/1.0 (healthcare-platform; contact@docflo.in)",
+      "User-Agent": "Gyrex/1.0 (healthcare-platform; contact@gyrex.in)",
       "Accept-Language": "en",
     },
     next: { revalidate: 0 },

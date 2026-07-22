@@ -187,7 +187,9 @@ export class EntitlementService {
   static async getCurrentUsage(doctorId: string, limit: LimitName): Promise<number> {
     switch (limit) {
       case 'MAX_STAFF_SEATS':
-        return prisma.staffMember.count({ where: { doctorId } });
+        return prisma.staffMember.count({ where: { doctorId, isActive: true } });
+      case 'MAX_PRACTITIONERS':
+        return prisma.practitioner.count({ where: { doctorId, isActive: true } });
       case 'MAX_PATIENTS':
         return prisma.patient.count({ where: { doctorId } });
       case 'MAX_GBP_LOCATIONS':

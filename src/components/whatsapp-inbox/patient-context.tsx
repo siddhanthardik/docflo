@@ -17,7 +17,8 @@ interface Patient {
 
 function AppointmentStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string }> = {
-    SCHEDULED: { bg: "bg-blue-50", text: "text-blue-700" },
+    CONFIRMED: { bg: "bg-blue-50", text: "text-blue-700" },
+    CHECKED_IN: { bg: "bg-sky-50", text: "text-sky-700" },
     COMPLETED: { bg: "bg-green-50", text: "text-green-700" },
     CANCELLED: { bg: "bg-red-50", text: "text-red-700" },
     NO_SHOW: { bg: "bg-amber-50", text: "text-amber-700" },

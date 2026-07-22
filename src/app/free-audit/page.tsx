@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Activity, MapPin, Building2, CheckCircle2, ArrowRight, ShieldAlert, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GyrexLogo } from "@/components/ui/GyrexLogo";
+
 
 interface PlacePrediction {
   place_id: string;
@@ -93,11 +95,8 @@ export default function FreeAuditPage() {
       {/* Simple Header */}
       <header className="absolute top-0 w-full p-6 flex justify-between items-center z-20">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Activity className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-xl font-black tracking-tight text-slate-900">Docflo</span>
-        </Link>
+            <GyrexLogo size="lg" />
+          </Link>
       </header>
 
       {/* Main Content */}

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   if (blockPost) return blockPost;
 
   const body = await req.json();
-  const { name, message, segmentType, segmentValue } = body;
+  const { name, message, segmentType, segmentValue, mediaUrl, mediaType, ctaText, ctaLink } = body;
 
   if (!name || !message || !segmentType) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -44,6 +44,10 @@ export async function POST(req: Request) {
       segmentType,
       segmentValue,
       status: "DRAFT",
+      mediaUrl,
+      mediaType,
+      ctaText,
+      ctaLink,
     },
   });
 

@@ -17,6 +17,14 @@ interface Patient {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  doctorId: string;
+  primaryPractitionerId?: string | null;
+  patientType?: string;
+  primaryPractitioner?: {
+    id: string;
+    name: string;
+  };
+  activityTimeline?: any[];
   appointments?: any[];
 }
 
@@ -206,5 +214,26 @@ export function usePatient(id: string) {
     }
   }, [id, fetchPatient]);
 
-  return { patient, loading, error, refetch: fetchPatient };
+  const updatePatient = async (patientData: Partial<Patient>) => {
+    try {
+      const response = await fetch(`/api/patients/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patientData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update patient");
+      }
+
+      const updated = await response.json();
+      setPatient(updated);
+      return updated;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+  return { patient, loading, error, refetch: fetchPatient, updatePatient };
 }

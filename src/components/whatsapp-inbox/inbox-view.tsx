@@ -12,9 +12,10 @@ export function InboxView() {
   const { conversation, messages, sendMessage, assignToStaff, updateStatus, updatePatientStatus } = useConversation(selectedId || "")
 
   return (
-    <div className="flex h-[calc(100vh-13rem)] bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-100">
+    <div className="flex h-[calc(100vh-12rem)] md:h-[calc(100vh-13rem)] bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      
+      {/* Conversation Sidebar List */}
+      <div className={`w-full md:w-80 flex-shrink-0 border-r border-gray-100 ${selectedId ? "hidden md:block" : "block"}`}>
         <ConversationList
           conversations={conversations}
           loading={loading}
@@ -23,19 +24,20 @@ export function InboxView() {
         />
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 min-w-0">
+      {/* Main Chat Area */}
+      <div className={`flex-1 min-w-0 ${selectedId ? "block" : "hidden md:block"}`}>
         <ChatWindow
           conversation={conversation}
           messages={messages}
           onSendMessage={sendMessage}
           onUpdatePatientStatus={updatePatientStatus}
+          onBack={() => setSelectedId(null)}
         />
       </div>
 
-      {/* Patient Context Panel */}
+      {/* Patient Context Panel (Desktop view) */}
       {conversation?.patient && (
-        <div className="w-72 flex-shrink-0 border-l border-gray-100 overflow-y-auto">
+        <div className="hidden lg:block w-72 flex-shrink-0 border-l border-gray-100 overflow-y-auto">
           <PatientContext patient={conversation.patient} />
         </div>
       )}

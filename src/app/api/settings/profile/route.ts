@@ -23,6 +23,20 @@ export async function GET() {
         city: true,
         state: true,
         country: true,
+        image: true,
+        currency: true,
+        isCurrencyLocked: true,
+        role: true,
+        invoicePrefix: true,
+        taxGstNumber: true,
+        invoiceFooter: true,
+        language: true,
+        dateFormat: true,
+        firstDayOfWeek: true,
+        timezone: true,
+        workingHoursStart: true,
+        workingHoursEnd: true,
+        daysOff: true,
         createdAt: true,
         package: { select: { name: true } },
         subscriptionStatus: true,
@@ -52,30 +66,52 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, password: true, currency: true, isCurrencyLocked: true, role: true },
+    });
+
+    if (!doctor) {
+      return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+    }
+
     const body = await req.json();
-    const { name, phone, specialty, clinicName, address, city, state, country, currentPassword, newPassword } = body;
+    const { 
+      name, phone, specialty, 
+      clinicName, address, city, state, country, image, 
+      currentPassword, newPassword,
+      currency, invoicePrefix, taxGstNumber, invoiceFooter,
+      language, dateFormat, firstDayOfWeek,
+      timezone, workingHoursStart, workingHoursEnd, daysOff
+    } = body;
 
     const updateData: any = {
-      name,
-      phone,
-      specialty,
-      clinicName,
-      address,
-      city,
-      state,
-      country,
+      name, phone, specialty,
+      clinicName, address, city, state, country, image,
+      invoicePrefix, taxGstNumber, invoiceFooter,
+      language, dateFormat, 
+      firstDayOfWeek: firstDayOfWeek === "Sunday" ? 0 : (firstDayOfWeek === "Monday" ? 1 : Number(firstDayOfWeek) || 0),
+      timezone, workingHoursStart, workingHoursEnd, daysOff
     };
+
+    // Currency locking logic
+    const isAdmin = doctor.role === "ADMIN" || doctor.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
+
+    if (currency) {
+      if (doctor.isCurrencyLocked && !isAdmin) {
+        // If locked and user is not admin, keep existing currency
+        updateData.currency = doctor.currency;
+      } else {
+        // Allow update and lock if set for the first time
+        updateData.currency = currency;
+        if (!isAdmin) {
+          updateData.isCurrencyLocked = true;
+        }
+      }
+    }
 
     // Handle password change
     if (newPassword && currentPassword) {
-      const doctor = await prisma.doctor.findUnique({
-        where: { id: session.user.id },
-      });
-
-      if (!doctor) {
-        return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
-      }
-
       const { compare } = await import("bcryptjs");
       const isValid = await compare(currentPassword, doctor.password);
 
@@ -103,6 +139,9 @@ export async function PUT(req: Request) {
         city: true,
         state: true,
         country: true,
+        image: true,
+        currency: true,
+        isCurrencyLocked: true,
       },
     });
 

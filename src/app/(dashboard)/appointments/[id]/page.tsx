@@ -15,7 +15,8 @@ import { format } from "date-fns";
 
 function getStatusBadge(status: string) {
   const styles: Record<string, string> = {
-    SCHEDULED: "bg-indigo-50 text-indigo-700",
+    CONFIRMED: "bg-indigo-50 text-indigo-700",
+    CHECKED_IN: "bg-sky-50 text-sky-700",
     COMPLETED: "bg-emerald-50 text-emerald-700",
     CANCELLED: "bg-red-50 text-red-700",
     NO_SHOW: "bg-amber-50 text-amber-700",

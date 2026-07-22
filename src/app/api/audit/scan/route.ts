@@ -203,22 +203,20 @@ async function processAuditAsync(auditId: string, data: any) {
           ]
         },
 
-        // 3. Why You're Losing Visibility
+        // 3. Why You're Losing Visibility (Action Items)
         visibilityIssues: {
           issues: !isUnknown && hasData ? [
             (placeData?.reviewCount || 0) < compAvgReviews 
-              ? { issue: `Only ${reviewCountStr} reviews found.`, evidence: `Nearby competitors average ${compAvgReviews} reviews.`, impact: "High" }
+              ? { issue: `Review Deficit: Only ${reviewCountStr} reviews found.`, evidence: `Nearby competitors average ${compAvgReviews} reviews on Google Maps.`, impact: "High" }
               : null,
             !placeData?.website 
-              ? { issue: "No website link found.", evidence: "Google relies on your website to verify medical authority and services.", impact: "High" }
+              ? { issue: "No website link found on Google Maps.", evidence: "Google relies on website structure and EEAT signals to verify medical authority.", impact: "High" }
               : null,
             (placeData?.types?.length || 0) <= 1
-              ? { issue: "Only one category detected.", evidence: "Nearby competitors average 3 categories to capture more search terms.", impact: "High" }
+              ? { issue: "Secondary medical categories missing.", evidence: "Nearby competitors use an average of 3 categories to capture multi-specialty patient searches.", impact: "High" }
               : null,
-            isUnknown 
-              ? { issue: "Generic primary category.", evidence: "Your category does not reflect a specialized medical practice.", impact: "High" }
-              : null,
-            { issue: "No recent Google Posts verified.", evidence: "Profile may appear inactive to Google's freshness algorithm.", impact: "Medium" }
+            { issue: "No recent Google Posts verified.", evidence: "Profiles without weekly posts appear inactive to Google's freshness ranking algorithm.", impact: "Medium" },
+            { issue: "Native medical services catalog unverified.", evidence: "Listing individual treatments natively on Google increases rank for treatment-specific searches.", impact: "Medium" }
           ].filter(Boolean) : [
             { issue: "Insufficient Google Data.", evidence: "We could not verify your clinic details on Google Maps.", impact: "Critical" }
           ]

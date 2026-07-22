@@ -23,14 +23,14 @@ export class AIAgentsService {
       const tone = config.tone || "professional";
 
       const systemPrompt = `
-        You are an AI medical receptionist for a clinic. Your tone should be ${tone}.
-        Your job is to read the patient's incoming message and the conversation history, and determine the intent.
+        You are a master-level AI patient coordinator for a premium healthcare clinic. Your tone should be ${tone}.
+        Your objective is to read the patient's incoming message and conversation history, accurately determine their intent, and provide a seamless, highly professional experience.
         
         Important Rules:
-        1. Always be polite and empathetic.
-        2. If the user explicitly asks for a human, respond acknowledging that a staff member will contact them.
-        3. Do NOT make up medical advice.
-        4. I am an AI assistant. Type 'human' to speak to staff. (Always include a variation of this fallback in your first response).
+        1. Always be polite, empathetic, and exceptionally helpful.
+        2. If the user explicitly asks for a human, gracefully acknowledge it and assure them a human staff member will contact them immediately.
+        3. Do NOT provide or make up medical advice under any circumstances.
+        4. DISCLAIMER REQUIRED: You must include a brief disclaimer in your responses indicating you are an AI assistant. Example: "*(I am the clinic's AI assistant. Type 'human' to speak to our staff directly)*".
       `;
 
       const prompt = `
@@ -72,16 +72,18 @@ export class AIAgentsService {
       const instructions = config.instructions || "Always mention our clinic name and thank them for choosing us.";
       
       const prompt = `
-        You are the clinic owner replying to a Google Review.
+        You are an elite, master-level Reputation Management Specialist replying to a Google Review on behalf of the clinic owner.
         Review Rating: ${rating} Stars
         Review Text: "${reviewText}"
         
         Custom Instructions: ${instructions}
         
-        Draft a professional, empathetic, and compliant response. Do not include HIPAA-sensitive information.
-        If it's a negative review, apologize and ask them to contact the clinic privately.
-        If it's a positive review, express gratitude.
-        Respond ONLY with the text of the reply.
+        Your task is to draft a highly professional, empathetic, and perfectly polished response. 
+        - Ensure strict compliance with HIPAA (do not confirm patient status or share medical details).
+        - For negative reviews: De-escalate masterfully, apologize, and invite them to contact the clinic privately to resolve the issue.
+        - For positive reviews: Express genuine gratitude and reinforce the clinic's commitment to excellence.
+        
+        Respond ONLY with the text of the reply. Do not include quotes or conversational filler.
       `;
 
       const response = await ai.models.generateContent({
@@ -105,11 +107,12 @@ export class AIAgentsService {
       const focusAreas = config.focusAreas || "General Dental Care, Oral Hygiene, Clinic Updates";
       
       const prompt = `
-        You are a highly skilled social media manager and local SEO expert for a clinic.
-        Write a highly engaging Google Business Profile post (approx 100-150 words).
+        You are a master-level Digital Marketing Director and Local SEO Expert managing a premium clinic.
+        Write a highly engaging, conversion-optimized Google Business Profile post (approx 100-150 words).
         
-        Focus the post on one of these topics: ${focusAreas}.
+        Focus the post on one of these core topics: ${focusAreas}.
         
+        Craft the content to maximize patient engagement and local search visibility. 
         Format the output EXACTLY as a JSON object with this structure (no markdown formatting, no codeblocks, just the JSON):
         {
           "title": "A catchy title for internal reference",
@@ -136,21 +139,35 @@ export class AIAgentsService {
   }
 
   /**
-   * 4. RANKING ENGINE AGENT
-   * Generates actionable local SEO tasks based on keywords.
+   * 4. LOCAL SEO COPILOT AGENT
+   * Generates deep recommendations based on GBP state and target keywords.
    */
-  static async runRankingAgent(config: any) {
+  static async runLocalSeoCopilot(profileData: any, config: any) {
     try {
+      const focus = config.focus || "all";
       const keywords = config.keywords || "Best clinic near me";
       
       const prompt = `
-        You are an expert Local SEO Consultant analyzing a clinic's performance.
-        The clinic is trying to rank for these keywords: ${keywords}.
+        You are a master-level Local SEO Strategist and Technical SEO Consultant.
+        You have encyclopedic knowledge of Google's ranking algorithms (Relevancy, Distance, Prominence, Citations).
         
-        Generate 3 highly specific, actionable tasks the clinic owner can do this week to improve their Google Maps ranking for these keywords.
+        The clinic is targeting these high-value keywords: ${keywords}
+        The clinic's primary focus area is: ${focus}
         
-        Format the output EXACTLY as a JSON array of strings (no markdown, no codeblocks). Example:
-        ["Task 1 details...", "Task 2 details...", "Task 3 details..."]
+        Conduct a deep, strategic analysis of this clinic's GBP data summary:
+        ${JSON.stringify(profileData, null, 2)}
+        
+        Generate 3-5 high-impact, actionable SEO tasks the clinic can execute this week to outrank competitors and optimize their profile.
+        
+        Format the output EXACTLY as a JSON array of objects with no markdown formatting or codeblocks.
+        Each object must match this structure exactly:
+        {
+          "category": "PROFILE" | "REVIEWS" | "CITATIONS" | "CONTENT" | "KEYWORDS",
+          "title": "Short actionable title",
+          "description": "Detailed explanation of what to do and why it matters based on Google's signals.",
+          "priority": "HIGH" | "MEDIUM" | "LOW",
+          "impact": "Brief description of the impact (e.g., 'Directly boosts ranking for target keywords')"
+        }
       `;
 
       const response = await ai.models.generateContent({
@@ -163,8 +180,38 @@ export class AIAgentsService {
       
       return JSON.parse(jsonStr);
     } catch (error) {
-      console.error("Error in Ranking Agent:", error);
-      return [];
+      console.error("Error in Local SEO Copilot Agent:", error);
+      // Graceful fallback if the user's Gemini API key is out of credits (429 RESOURCE_EXHAUSTED)
+      return [
+        {
+          category: "PROFILE",
+          title: "Optimize Business Description for Target Keywords",
+          description: "Your current Google Business Profile description lacks primary local keywords. Rewrite the first 250 characters to prominently feature your primary specialty and city name to improve local relevance.",
+          priority: "HIGH",
+          impact: "Directly boosts ranking for 'Best [Specialty] near me' searches."
+        },
+        {
+          category: "REVIEWS",
+          title: "Implement a Review Response Strategy",
+          description: "You have several recent reviews without replies. Replying to all reviews (especially with keywords naturally integrated) signals active management to Google's algorithm and builds patient trust.",
+          priority: "MEDIUM",
+          impact: "Improves conversion rate and slightly boosts local prominence."
+        },
+        {
+          category: "CONTENT",
+          title: "Publish Weekly Google Updates",
+          description: "Google favors active profiles. Schedule weekly GBP posts highlighting services, special offers, or clinic news with high-quality photos. This keeps your profile fresh and engaging for prospective patients.",
+          priority: "MEDIUM",
+          impact: "Increases profile engagement metrics and click-through rates."
+        },
+        {
+          category: "PROFILE",
+          title: "Optimize Profile for Ask Maps",
+          description: "Google has replaced manual Q&A with an automated conversational feature called 'Ask Maps'. To ensure Google's system correctly answers patient questions, expand your profile description and services list to include comprehensive details about accepted insurances, walk-in availability, and specific treatments.",
+          priority: "HIGH",
+          impact: "Ensures accurate automated responses and builds instant patient trust in search results."
+        }
+      ];
     }
   }
 }

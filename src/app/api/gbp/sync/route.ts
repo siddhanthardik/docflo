@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { GBPService } from "@/services/gbp.service";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
     const tokenData = await getValidGbpAccessToken(doctorId);
 
     if (!tokenData?.account.locationName) {

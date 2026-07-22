@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { format } from "date-fns";
 import { entitlementGuard } from "@/lib/withEntitlements";
+import { whatsappManager } from "@/lib/whatsapp-manager";
+import { generateInvoicePDF } from "@/lib/pdf";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,31 +32,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const balanceDue = Math.max(0, invoice.totalAmount - totalPaid);
 
-    const invoiceDetails = invoice.items.map(item => `- ${item.description}: ₹${item.total}`).join('\n');
+    // Generate PDF
+    const pdfBuffer = await generateInvoicePDF(invoice as any);
+    const fileName = `Invoice_${invoice.invoiceNumber}.pdf`;
     
-    // Construct WhatsApp Message
-    const message = `Hello ${invoice.patient.firstName},
+    // Construct WhatsApp Caption
+    const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
+    let caption = `Hi ${invoice.patient.firstName},\n\nAttached is your invoice (#${invoice.invoiceNumber}) from ${invoice.doctor.clinicName || invoice.doctor.name} for ${sym}${invoice.totalAmount}.\n\n`;
 
-Here is your invoice summary from ${invoice.doctor.clinicName || invoice.doctor.name}:
-*Invoice Number:* ${invoice.invoiceNumber}
-*Date:* ${format(invoice.issueDate, 'dd MMM yyyy')}
+    if (balanceDue > 0) {
+      caption += `You have a remaining balance of ${sym}${balanceDue}. You can pay this securely via UPI or cash at the clinic.\n\n`;
+    } else {
+      caption += `This invoice has been paid in full.\n\n`;
+    }
+    
+    caption += `Please let us know if you have any questions. Thank you! 📄`;
 
-*Items:*
-${invoiceDetails}
-
-*Subtotal:* ₹${invoice.subtotal}
-*Discount:* ₹${invoice.discountAmount}
-*Total Amount:* ₹${invoice.totalAmount}
-*Amount Paid:* ₹${totalPaid}
-*Balance Due:* ₹${balanceDue}
-
-You can pay the balance due via UPI or cash at the clinic. Please let us know if you have any questions!
-
-Thank you,
-${invoice.doctor.clinicName || invoice.doctor.name}`;
-
-    // Note: Here we would use the Evolution API to send the message in production.
-    // We can also create a conversation entry if we haven't already.
+    // Send Document via Baileys
+    await whatsappManager.sendDocument(doctorId, invoice.patient.phone, pdfBuffer, fileName, caption);
 
     // Let's create an outgoing ChatMessage
     let conversation = await prisma.conversation.findUnique({
@@ -75,8 +71,8 @@ ${invoice.doctor.clinicName || invoice.doctor.name}`;
       data: {
         conversationId: conversation.id,
         direction: "OUTGOING",
-        messageType: "text",
-        content: message,
+        messageType: "document",
+        content: caption,
         senderName: "Clinic Staff"
       }
     });
@@ -84,6 +80,6 @@ ${invoice.doctor.clinicName || invoice.doctor.name}`;
     return NextResponse.json({ success: true, message: "Invoice sent via WhatsApp" });
   } catch (error: any) {
     console.error("Error sending invoice:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
 }

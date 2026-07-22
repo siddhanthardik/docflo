@@ -98,7 +98,7 @@ export default function AIAgentsHubPage() {
       icon: Calendar,
       color: "text-blue-600",
       bg: "bg-blue-50",
-      desc: "Autonomously handles WhatsApp inquiries to book, reschedule, and cancel appointments.",
+      desc: "Manages incoming WhatsApp communications to seamlessly schedule, modify, and cancel patient appointments.",
       metrics: "Ready to deploy",
     },
     {
@@ -107,7 +107,7 @@ export default function AIAgentsHubPage() {
       icon: MessageSquare,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
-      desc: "Reads incoming Google Reviews and drafts professional, context-aware replies.",
+      desc: "Analyzes incoming Google Reviews and drafts contextual, professional responses to enhance patient engagement.",
       metrics: "Monitors 24/7",
     },
     {
@@ -116,17 +116,17 @@ export default function AIAgentsHubPage() {
       icon: Megaphone,
       color: "text-purple-600",
       bg: "bg-purple-50",
-      desc: "Generates weekly Google Business Profile posts to keep your clinic active and visible.",
+      desc: "Automates the generation and scheduling of Google Business Profile posts to maintain local search visibility.",
       metrics: "Posts on schedule",
     },
     {
-      type: "RANKING",
-      name: "Ranking Engine",
+      type: "LOCAL_SEO_COPILOT",
+      name: "Local SEO Copilot",
       icon: TrendingUp,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-      desc: "Continuously audits competitors and generates actionable SEO tasks to outrank them.",
-      metrics: "Weekly analysis",
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      desc: "Conducts continuous competitive keyword analysis and GBP audits to provide a centralized, high-impact Local SEO Action Plan.",
+      metrics: "Weekly optimization ready",
     }
   ];
 
@@ -138,33 +138,6 @@ export default function AIAgentsHubPage() {
     );
   }
 
-  if (hasAccess === false) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
-        <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-indigo-100">
-          <Lock className="h-10 w-10 text-indigo-600" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">AI Agents Hub</h1>
-        <p className="text-gray-500 max-w-lg mb-8 text-lg">
-          Unlock the power of autonomous AI employees. Let them handle your bookings, reply to reviews, and manage your SEO while you focus on patients.
-        </p>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl max-w-md w-full mb-8 text-left space-y-4">
-           <h3 className="font-semibold text-gray-900 flex items-center gap-2"><Bot className="h-5 w-5 text-indigo-600"/> Pro Features Included:</h3>
-           <ul className="space-y-3 text-sm text-gray-600">
-             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Autonomous WhatsApp Booking</li>
-             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Smart Review Replies</li>
-             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Automated GBP Updates</li>
-             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Continuous Local SEO Audits</li>
-           </ul>
-        </div>
-        <a href="/billing">
-          <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-8 font-semibold shadow-lg hover:shadow-xl transition-all">
-            Upgrade to Pro Plan
-          </Button>
-        </a>
-      </div>
-    );
-  }
 
   return (
     <div className="pb-12">
@@ -345,7 +318,7 @@ export default function AIAgentsHubPage() {
               </>
             )}
 
-            {activeAgent?.type === "RANKING" && (
+            {activeAgent?.type === "LOCAL_SEO_COPILOT" && (
               <>
                 <div className="space-y-2">
                   <Label>Target Keywords</Label>
@@ -357,6 +330,21 @@ export default function AIAgentsHubPage() {
                     rows={3}
                   />
                   <p className="text-xs text-gray-500">Comma-separated keywords to monitor against competitors.</p>
+                </div>
+                <div className="space-y-2 mt-4">
+                  <Label>Core Focus Area</Label>
+                  <Select 
+                    value={configDraft.focus || "all"} 
+                    onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Balanced (Relevancy, Prominence, Citations)</SelectItem>
+                      <SelectItem value="relevancy">Focus on Relevancy & Content</SelectItem>
+                      <SelectItem value="prominence">Focus on Prominence & Reviews</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">Determine what areas the expert should prioritize during weekly scans.</p>
                 </div>
               </>
             )}

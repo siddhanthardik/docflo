@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePractitioners } from "@/hooks/use-practitioners";
 
 interface PatientFormProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function PatientForm({
   mode,
 }: PatientFormProps) {
   const [loading, setLoading] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -49,14 +51,34 @@ export function PatientForm({
     medicalNotes: "",
     tags: [] as string[],
     patientType: "LEAD",
+    primaryPractitionerId: "",
   });
+
+  const { practitioners } = usePractitioners();
 
   useEffect(() => {
     if (initialData) {
+      let cCode = "+91";
+      let num = initialData.phone || "";
+      if (num.startsWith("+")) {
+        const match = num.match(/^(\+\d{1,4})\s*(.*)$/);
+        if (match) {
+          cCode = match[1];
+          num = match[2];
+        } else if (num.startsWith("+91")) {
+          cCode = "+91";
+          num = num.substring(3);
+        } else if (num.startsWith("+1")) {
+          cCode = "+1";
+          num = num.substring(2);
+        }
+      }
+      setCountryCode(cCode);
+
       setFormData({
         firstName: initialData.firstName || "",
         lastName: initialData.lastName || "",
-        phone: initialData.phone || "",
+        phone: num,
         email: initialData.email || "",
         dateOfBirth: initialData.dateOfBirth
           ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
@@ -67,8 +89,10 @@ export function PatientForm({
         medicalNotes: initialData.medicalNotes || "",
         tags: initialData.tags || [],
         patientType: initialData.patientType || "LEAD",
+        primaryPractitionerId: initialData.primaryPractitionerId || "",
       });
     } else {
+      setCountryCode("+91");
       setFormData({
         firstName: "",
         lastName: "",
@@ -81,6 +105,7 @@ export function PatientForm({
         medicalNotes: "",
         tags: [],
         patientType: "LEAD",
+        primaryPractitionerId: "",
       });
     }
   }, [initialData, open]);
@@ -90,7 +115,10 @@ export function PatientForm({
     setLoading(true);
 
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        phone: `${countryCode}${formData.phone.trim()}`,
+      });
       onOpenChange(false);
     } catch (error) {
       // Error handled in parent
@@ -115,7 +143,11 @@ export function PatientForm({
               : "Update patient information"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSubmit(e);
+        }}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -147,16 +179,31 @@ export function PatientForm({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="+1234567890"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Select value={countryCode} onValueChange={setCountryCode}>
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue placeholder="Code" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="+1">+1 (US)</SelectItem>
+                      <SelectItem value="+44">+44 (UK)</SelectItem>
+                      <SelectItem value="+91">+91 (IN)</SelectItem>
+                      <SelectItem value="+61">+61 (AU)</SelectItem>
+                      <SelectItem value="+971">+971 (AE)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    placeholder="9876543210"
+                    required
+                    className="flex-1"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -242,6 +289,28 @@ export function PatientForm({
                   <SelectItem value="ACTIVE">Active</SelectItem>
                   <SelectItem value="INACTIVE">Inactive</SelectItem>
                   <SelectItem value="LOST">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="primaryPractitioner">Primary Practitioner</Label>
+              <Select
+                value={formData.primaryPractitionerId || "NONE"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, primaryPractitionerId: value === "NONE" ? "" : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Practitioner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">None (Clinic)</SelectItem>
+                  {practitioners.map((practitioner) => (
+                    <SelectItem key={practitioner.id} value={practitioner.id}>
+                      {practitioner.name} {practitioner.specialty ? `(${practitioner.specialty})` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -47,11 +47,21 @@ export default function SelectProfilePage() {
   }, []);
 
   const toggleSelection = (name: string) => {
-    setSelectedLocations(prev => 
-      prev.includes(name) 
-        ? prev.filter(n => n !== name)
-        : [...prev, name]
-    );
+    setSelectedLocations(prev => {
+      if (prev.includes(name)) {
+        return prev.filter(n => n !== name);
+      } else {
+        if (prev.length >= 1) {
+          toast({
+            title: "Selection Limit Reached",
+            description: "You can select only one Google Business Profile.",
+            variant: "destructive",
+          });
+          return prev;
+        }
+        return [...prev, name];
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -135,7 +145,7 @@ export default function SelectProfilePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Select Profiles to Connect</h1>
         <p className="text-gray-500 mt-2">
-          We found {locations.length} location{locations.length !== 1 ? 's' : ''} in your Google account. Select the ones you want to manage in Docflo.
+          We found {locations.length} location{locations.length !== 1 ? 's' : ''} in your Google account. Select the ones you want to manage in Gyrex.
         </p>
       </div>
 
@@ -180,7 +190,7 @@ export default function SelectProfilePage() {
           {saving ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</>
           ) : (
-            `Connect ${selectedLocations.length} Profile${selectedLocations.length !== 1 ? 's' : ''}`
+            `Connect Profile`
           )}
         </Button>
       </div>

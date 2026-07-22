@@ -79,7 +79,20 @@ export function AppointmentForm({
     duration: 30,
     reason: "",
     notes: "",
+    practitionerId: "",
   });
+
+  const [practitioners, setPractitioners] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/practitioners").then(res => res.ok ? res.json() : []).then(data => {
+      const active = data.filter((p: any) => p.isActive);
+      setPractitioners(active);
+      if (active.length === 1) {
+        setFormData(prev => ({ ...prev, practitionerId: active[0].id }));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (initialData && mode === "edit") {
@@ -92,16 +105,18 @@ export function AppointmentForm({
         duration: 30,
         reason: initialData.reason || "",
         notes: initialData.notes || "",
+        practitionerId: initialData.practitionerId || "",
       });
     } else {
-      setFormData({
+      setFormData(prev => ({
         patientId: "",
         date: new Date(),
         startTime: "09:00",
         duration: 30,
         reason: "",
         notes: "",
-      });
+        practitionerId: prev.practitionerId, // preserve if it was auto-set
+      }));
       setSelectedPatientObj(null);
     }
   }, [initialData, mode, open]);
@@ -144,6 +159,7 @@ export function AppointmentForm({
         endTime,
         reason: formData.reason,
         notes: formData.notes,
+        practitionerId: formData.practitionerId,
       });
       onOpenChange(false);
     } catch (error) {
@@ -197,6 +213,28 @@ export function AppointmentForm({
                 </div>
               )}
             </div>
+
+            {practitioners.length > 1 && (
+              <div className="space-y-2">
+                <Label>Doctor / Practitioner *</Label>
+                <Select
+                  value={formData.practitionerId}
+                  onValueChange={(value) => setFormData({ ...formData, practitionerId: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select doctor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {practitioners.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} {p.specialty ? `(${p.specialty})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Date *</Label>

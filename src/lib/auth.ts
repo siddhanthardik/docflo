@@ -3,12 +3,16 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
 import jwt from "jsonwebtoken";
+import { logActivity } from "./audit";
 
 // ----- Type augmentation for NextAuth (fixes TS errors) -----
 declare module "next-auth" {
   interface User {
     role?: string;
     doctorId?: string;
+    createdAt?: Date;
+    emailVerified?: Date | null;
+    rememberMe?: boolean;
   }
   interface Session {
     user: {
@@ -18,6 +22,8 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       doctorId?: string;
+      createdAt?: string;
+      emailVerified?: string | null;
     };
   }
 }
@@ -29,92 +35,158 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing credentials");
+          throw new Error("Invalid credentials");
         }
+        
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+
+        // Retrieve IP and UserAgent
+        // In NextAuth v5, req is the NextRequest or standard Request object
+        let ipAddress = "0.0.0.0";
+        let userAgent = "NextAuth/Login";
+        
+        if (req && req.headers) {
+          // If req is a Request or NextRequest, we can extract headers using get() if available
+          const getHeader = (name: string) => {
+            if (typeof (req.headers as any).get === "function") {
+              return (req.headers as any).get(name);
+            }
+            // Fallback for raw object if it exists
+            return (req.headers as any)[name];
+          };
+
+          const forwardedFor = getHeader("x-forwarded-for");
+          if (forwardedFor) {
+             ipAddress = forwardedFor.split(',')[0].trim();
+          } else {
+             const realIp = getHeader("x-real-ip");
+             if (realIp) ipAddress = realIp;
+          }
+          
+          const ua = getHeader("user-agent");
+          if (ua) userAgent = ua;
+        }
+
+        // Helper to check lockout
+        const checkLockout = async (user: any, userType: any) => {
+          if (user.lockedUntil && user.lockedUntil > new Date()) {
+            await logActivity({
+              userId: user.id,
+              userType,
+              action: "LOGIN_FAILED_LOCKED",
+              ipAddress,
+              userAgent
+            });
+            throw new Error("Invalid credentials"); // Generic message
+          }
+        };
+
+        // Helper to handle failed login
+        const handleFailedLogin = async (user: any, model: any, userType: any) => {
+          const attempts = (user.failedLoginAttempts || 0) + 1;
+          const lockedUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+          
+          await model.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: attempts, lockedUntil }
+          });
+
+          await logActivity({
+            userId: user.id,
+            userType,
+            action: lockedUntil ? "ACCOUNT_LOCKOUT" : "LOGIN_FAILED",
+            details: { attempts },
+            ipAddress,
+            userAgent
+          });
+        };
 
         // 0. Try to find a Platform User first (SaaS Staff)
         const platformUser = await prisma.platformUser.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
-        if (platformUser && platformUser.password && platformUser.isActive) {
-          const isValid = await compare(
-            credentials.password as string,
-            platformUser.password
-          );
-          if (isValid) {
-            return {
-              id: platformUser.id,
-              email: platformUser.email,
-              name: platformUser.name,
-              role: platformUser.role, // e.g. "SUPERADMIN", "SALES"
-            };
+        if (platformUser && platformUser.isActive) {
+          await checkLockout(platformUser, "PLATFORM");
+          if (platformUser.password) {
+            const isValid = await compare(password, platformUser.password);
+            if (isValid) {
+              await prisma.platformUser.update({ where: { id: platformUser.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              await logActivity({ userId: platformUser.id, userType: "PLATFORM", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              return { 
+                id: platformUser.id, 
+                email: platformUser.email, 
+                name: platformUser.name, 
+                role: platformUser.role,
+                createdAt: platformUser.createdAt,
+                emailVerified: platformUser.emailVerified,
+                rememberMe: credentials.rememberMe === "true"
+              };
+            }
           }
+          await handleFailedLogin(platformUser, prisma.platformUser, "PLATFORM");
         }
 
         // 1. Try to find a Doctor next
         const doctor = await prisma.doctor.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
-        if (doctor && doctor.password) {
-          // Check for standard password
-          let isValid = await compare(
-            credentials.password as string,
-            doctor.password
-          );
-          
-          // Check for impersonation token
-          if (!isValid && credentials.password.toString().startsWith("impersonate_")) {
-            try {
-              const tokenString = credentials.password.toString().replace("impersonate_", "");
-              const decoded = jwt.verify(tokenString, process.env.NEXTAUTH_SECRET || "secret") as any;
-              if (decoded && decoded.email === doctor.email && decoded.impersonate === true) {
-                isValid = true;
-              }
-            } catch (e) {
-              console.error("Invalid impersonation token");
+        if (doctor) {
+          await checkLockout(doctor, "CLINIC");
+          if (doctor.password) {
+            const isValid = await compare(password, doctor.password);
+            if (isValid) {
+              await prisma.doctor.update({ where: { id: doctor.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              await logActivity({ userId: doctor.id, userType: "CLINIC", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              return { 
+                id: doctor.id, 
+                email: doctor.email, 
+                name: doctor.name, 
+                role: doctor.role,
+                createdAt: doctor.createdAt,
+                emailVerified: doctor.emailVerified,
+                rememberMe: credentials.rememberMe === "true"
+              };
             }
           }
-
-          if (isValid) {
-            return {
-              id: doctor.id,
-              email: doctor.email,
-              name: doctor.name,
-              role: doctor.role, // "DOCTOR" or "ADMIN"
-            };
-          }
+          await handleFailedLogin(doctor, prisma.doctor, "CLINIC");
         }
 
         // 2. If not a doctor, try to find a Staff member
         const staff = await prisma.staffMember.findFirst({
-          where: {
-            email: credentials.email as string,
-            isActive: true,
-          },
+          where: { email, isActive: true },
         });
 
-        if (staff && staff.password) {
-          const isValid = await compare(
-            credentials.password as string,
-            staff.password
-          );
-          if (isValid) {
-            return {
-              id: staff.id,
-              email: staff.email,
-              name: staff.name,
-              role: staff.role,           // "RECEPTIONIST", "STAFF", etc.
-              doctorId: staff.doctorId,   // so we know which doctor they belong to
-            };
+        if (staff) {
+          await checkLockout(staff, "STAFF");
+          if (staff.password) {
+            const isValid = await compare(password, staff.password);
+            if (isValid) {
+              await prisma.staffMember.update({ where: { id: staff.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              await logActivity({ userId: staff.id, userType: "STAFF", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              return { 
+                id: staff.id, 
+                email: staff.email, 
+                name: staff.name, 
+                role: staff.role, 
+                doctorId: staff.doctorId,
+                createdAt: staff.createdAt,
+                emailVerified: staff.emailVerified,
+                rememberMe: credentials.rememberMe === "true"
+              };
+            }
           }
+          await handleFailedLogin(staff, prisma.staffMember, "STAFF");
         }
 
         // If nothing matched
+        await logActivity({ userId: email, userType: "UNKNOWN", action: "LOGIN_FAILED_NOT_FOUND", ipAddress, userAgent });
         throw new Error("Invalid credentials");
       },
     }),
@@ -122,26 +194,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
         token.role = user.role;
-        // If the user has a doctorId (staff), store it
-        if ("doctorId" in user) {
-          token.doctorId = user.doctorId;
-        }
+        token.doctorId = user.doctorId;
+        token.createdAt = user.createdAt?.toISOString();
+        token.emailVerified = user.emailVerified?.toISOString() || null;
+        
+        // 8 hours if not rememberMe, 30 days if rememberMe
+        const isRemember = user.rememberMe;
+        token.strictExp = Math.floor(Date.now() / 1000) + (isRemember ? 30 * 24 * 60 * 60 : 8 * 60 * 60);
+      }
+      
+      if (token.strictExp && Math.floor(Date.now() / 1000) > (token.strictExp as number)) {
+        return {}; // Clear token if strict expiry passed
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
+      if (token.sub && Object.keys(token).length > 1) { // ensure token is valid
+        session.user.id = token.sub;
         session.user.role = token.role as string;
-        session.user.name = token.name as string;
-        // For staff: attach doctorId to session
-        if (token.doctorId) {
-          session.user.doctorId = token.doctorId as string;
-        }
+        session.user.doctorId = token.doctorId as string | undefined;
+        (session.user as any).createdAt = token.createdAt as string;
+        (session.user as any).emailVerified = token.emailVerified as string | null;
       }
       return session;
     },
@@ -153,4 +227,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
 });

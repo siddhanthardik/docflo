@@ -25,7 +25,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   reason?: string;
-  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+  status: "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 }
 
 interface AppointmentCalendarProps {
@@ -51,8 +51,10 @@ export function AppointmentCalendar({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "SCHEDULED":
+      case "CONFIRMED":
         return "bg-blue-100 text-blue-700";
+      case "CHECKED_IN":
+        return "bg-sky-100 text-sky-700";
       case "COMPLETED":
         return "bg-green-100 text-green-700";
       case "CANCELLED":
@@ -171,7 +173,7 @@ export function AppointmentCalendar({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {appointment.status === "SCHEDULED" && (
+                      {(appointment.status === "CONFIRMED" || appointment.status === "CHECKED_IN") && (
                         <>
                           <DropdownMenuItem
                             onClick={() =>

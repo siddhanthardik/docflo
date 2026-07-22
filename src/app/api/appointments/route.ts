@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { syncAppointmentToGCal } from "@/lib/gcal";
 
 // ---------- Helper functions ----------
 
@@ -41,10 +42,15 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
     const patientId = searchParams.get("patientId");
     const future = searchParams.get("future");
+    const practitionerId = searchParams.get("practitionerId");
 
     const where: any = {
       doctorId,
     };
+    
+    if (practitionerId) {
+      where.practitionerId = practitionerId;
+    }
     
     if (locationId) {
       where.gbpAccountId = locationId;
@@ -72,7 +78,13 @@ export async function GET(req: Request) {
       where.date = { gte: startDate, lte: endDate };
     }
 
-    if (status) where.status = status;
+    if (status) {
+      if (status.includes(",")) {
+        where.status = { in: status.split(",") };
+      } else {
+        where.status = status;
+      }
+    }
     if (patientId) where.patientId = patientId;
 
     const appointments = await prisma.appointment.findMany({
@@ -84,6 +96,12 @@ export async function GET(req: Request) {
             firstName: true,
             lastName: true,
             phone: true,
+          },
+        },
+        practitioner: {
+          select: {
+            name: true,
+            calendarColor: true,
           },
         },
       },
@@ -101,7 +119,7 @@ export async function POST(req: Request) {
   try {
     const { doctorId, locationId } = await getSessionData();
     const body = await req.json();
-    const { patientId, date, startTime, endTime, reason, notes } = body;
+    const { patientId, date, startTime, endTime, reason, notes, practitionerId, status = "CONFIRMED" } = body;
 
     if (!patientId || !date || !startTime || !endTime) {
       return NextResponse.json(
@@ -180,7 +198,7 @@ export async function POST(req: Request) {
           gte: new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate()),
           lt: new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate() + 1),
         },
-        status: "SCHEDULED",
+        status: { in: ["CONFIRMED", "CHECKED_IN"] },
         OR: [
           { startTime: { lt: endDateTime }, endTime: { gt: startDateTime } },
         ],
@@ -194,17 +212,26 @@ export async function POST(req: Request) {
       );
     }
 
+    let targetPractitionerId = practitionerId;
+    if (!targetPractitionerId) {
+      const ownerPractitioner = await prisma.practitioner.findFirst({
+        where: { doctorId, isOwner: true }
+      });
+      targetPractitionerId = ownerPractitioner?.id;
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         patientId,
         doctorId,
+        practitionerId: targetPractitionerId || undefined,
         gbpAccountId: locationId || undefined,
         date: appointmentDate,
         startTime: startDateTime,
         endTime: endDateTime,
         reason: reason || "",
         notes: notes || "",
-        status: "SCHEDULED",
+        status: status,
       },
       include: {
         patient: {
@@ -215,12 +242,23 @@ export async function POST(req: Request) {
             phone: true,
           },
         },
+        practitioner: {
+          select: {
+            name: true,
+            calendarColor: true,
+          },
+        },
       },
     });
 
+    // --- Google Calendar Real-Time Sync ---
+    syncAppointmentToGCal(appointment.id).catch((err) =>
+      console.error("Failed to sync appointment to GCal:", err)
+    );
+
     // --- WhatsApp Notification Logic ---
     try {
-      if (whatsappManager.isConnected(doctorId) && appointment.patient.phone) {
+      if (whatsappManager.isConnected(doctorId) && appointment.patient.phone && status === "CONFIRMED") {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -235,10 +273,10 @@ export async function POST(req: Request) {
 
         if (appointmentDate.getTime() === today.getTime()) {
           // Same Day
-          messageText = `Hello ${appointment.patient.firstName}, your appointment with ${clinicName} is confirmed for today at ${startTime}${locationString}.\n\nPlease reply with 'YES' to confirm your arrival, or let us know if you need to reschedule. This helps us serve all patients better!`;
+          messageText = `Hi ${appointment.patient.firstName}, this is a quick message from ${clinicName}. Your appointment is confirmed for today at ${startTime}${locationString}.\n\nCould you please reply with 'CONFIRM' to let us know you're still coming? If you need to reschedule, just let us know. We look forward to seeing you! 🌟`;
         } else {
           // Future
-          messageText = `Hello ${appointment.patient.firstName}, your appointment with ${clinicName} has been scheduled for ${formattedDate} at ${startTime}${locationString}.\n\nPlease reply with 'CONFIRM' to confirm your visit, or let us know if you have any questions before your appointment.`;
+          messageText = `Hi ${appointment.patient.firstName}! Your upcoming appointment with ${clinicName} is scheduled for ${formattedDate} at ${startTime}${locationString}.\n\nPlease reply 'CONFIRM' to secure your slot, or let us know if you need to make any changes. Have a wonderful day! ✨`;
         }
 
         const patientPhone = appointment.patient.phone;
@@ -287,9 +325,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json(appointment, { status: 201 });
   } catch (error: any) {
+    if (error instanceof NextResponse) {
+      return error;
+    }
+    if (error.name === "ZodError") {
+      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+    }
     console.error("Error creating appointment:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -52,7 +52,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
 
   const handleCopyCredentials = () => {
     if (!result) return;
-    const text = `Welcome to DocFlo!\nLogin URL: https://docflo.com/login\nEmail: ${result.email}\nPassword: ${result.password}\n\nPlease change your password upon logging in.`;
+    const text = `Welcome to Gyrex!\nLogin URL: https://gyrex.in/login\nEmail: ${result.email}\nPassword: ${result.password}\n\nPlease change your password upon logging in.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -72,7 +72,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
         <DialogHeader>
           <DialogTitle>Convert to Customer</DialogTitle>
           <DialogDescription>
-            Provision a new DocFlo account for {lead.name || lead.clinicName}.
+            Provision a new Gyrex account for {lead.name || lead.clinicName}.
           </DialogDescription>
         </DialogHeader>
 

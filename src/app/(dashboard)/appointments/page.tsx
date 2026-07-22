@@ -39,7 +39,8 @@ function getAvatarColor(name: string) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    SCHEDULED: "bg-indigo-50 text-indigo-700",
+    CONFIRMED: "bg-indigo-50 text-indigo-700",
+    CHECKED_IN: "bg-sky-50 text-sky-700",
     COMPLETED: "bg-emerald-50 text-emerald-700",
     CANCELLED: "bg-red-50 text-red-700",
     NO_SHOW: "bg-amber-50 text-amber-700",
@@ -59,6 +60,8 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [patients, setPatients] = useState<any[]>([]);
+  const [practitioners, setPractitioners] = useState<any[]>([]);
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState<string>("all");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -67,7 +70,7 @@ export default function AppointmentsPage() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/appointments?future=true&status=SCHEDULED");
+      const res = await fetch("/api/appointments?future=true&status=CONFIRMED,CHECKED_IN");
       if (res.ok) {
         const data = await res.json();
         setAppointments(data.appointments);
@@ -92,30 +95,57 @@ export default function AppointmentsPage() {
     }
   };
 
+  // Fetch practitioners
+  const fetchPractitioners = async () => {
+    try {
+      const res = await fetch("/api/practitioners");
+      if (res.ok) {
+        const data = await res.json();
+        setPractitioners(data.filter((p: any) => p.isActive));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
     fetchPatients();
+    fetchPractitioners();
   }, []);
 
-  // Dates that have at least one appointment (used to mark calendar)
+  // Filter appointments by selected date & practitioner
+  const filteredAppointments = useMemo(() => {
+    let result = appointments;
+    if (selectedPractitionerId !== "all") {
+      result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
+    }
+    if (selectedDate) {
+      result = result.filter((apt) => isSameDay(new Date(apt.date), selectedDate));
+    }
+    return result;
+  }, [appointments, selectedDate, selectedPractitionerId]);
+
   const appointmentDates = useMemo(() => {
-    return appointments.map((apt) => {
+    let result = appointments;
+    if (selectedPractitionerId !== "all") {
+      result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
+    }
+    return result.map((apt) => {
       const d = new Date(apt.date);
       return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     });
-  }, [appointments]);
-
-  // Filter appointments by selected date (if any)
-  const filteredAppointments = useMemo(() => {
-    if (!selectedDate) return appointments;
-    return appointments.filter((apt) =>
-      isSameDay(new Date(apt.date), selectedDate)
-    );
-  }, [appointments, selectedDate]);
+  }, [appointments, selectedPractitionerId]);
 
   const todayCount = useMemo(
-    () => appointments.filter((a) => isToday(new Date(a.date))).length,
-    [appointments]
+    () => {
+      let result = appointments;
+      if (selectedPractitionerId !== "all") {
+        result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
+      }
+      return result.filter((a) => isToday(new Date(a.date))).length;
+    },
+    [appointments, selectedPractitionerId]
   );
 
   const handleCreate = () => {
@@ -138,6 +168,7 @@ export default function AppointmentsPage() {
       endTime: data.endTime,
       reason: data.reason,
       notes: data.notes,
+      practitionerId: data.practitionerId,
     };
 
     const url =
@@ -185,25 +216,39 @@ export default function AppointmentsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 shadow-md shadow-indigo-200">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 shadow-md shadow-indigo-200 shrink-0">
             <CalendarDays className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Appointments</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
               Manage upcoming patient appointments
             </p>
           </div>
         </div>
-        <button
-          onClick={handleCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Appointment
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+          {practitioners.length > 1 && (
+            <select
+              value={selectedPractitionerId}
+              onChange={(e) => setSelectedPractitionerId(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">All Practitioners</option>
+              {practitioners.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            New Appointment
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -370,6 +415,7 @@ export default function AppointmentsPage() {
                           ? "border-amber-200 bg-amber-50/40"
                           : "border-gray-100 bg-white"
                       }`}
+                      style={apt.practitioner?.calendarColor && !todayHighlight ? { borderLeft: `4px solid ${apt.practitioner.calendarColor}` } : {}}
                     >
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
@@ -396,12 +442,20 @@ export default function AppointmentsPage() {
                           </div>
 
                           {/* Patient name */}
-                          <div className="flex items-center gap-1.5 mb-0.5">
+                          <div className="flex items-center gap-1.5 mb-0.5 mt-1">
                             <User className="h-3.5 w-3.5 text-gray-400" />
                             <span className="text-sm font-semibold text-gray-900">
                               {apt.patient.firstName} {apt.patient.lastName}
                             </span>
                           </div>
+
+                          {/* Practitioner name */}
+                          {practitioners.length > 1 && apt.practitioner && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                              <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: apt.practitioner.calendarColor }}></span>
+                              {apt.practitioner.name}
+                            </div>
+                          )}
 
                           {/* Phone */}
                           <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -429,7 +483,7 @@ export default function AppointmentsPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
-                          {apt.status === "SCHEDULED" && (
+                          {(apt.status === "CONFIRMED" || apt.status === "CHECKED_IN") && (
                             <>
                               <DropdownMenuItem
                                 onClick={() =>

@@ -41,6 +41,11 @@ export async function GET(req: Request) {
       where.patientType = type;
     }
 
+    const primaryPractitionerId = searchParams.get("primaryPractitionerId");
+    if (primaryPractitionerId) {
+      where.primaryPractitionerId = primaryPractitionerId;
+    }
+
     const [patients, totalCount] = await Promise.all([
       prisma.patient.findMany({
         where,
@@ -53,6 +58,9 @@ export async function GET(req: Request) {
             orderBy: { date: "desc" },
             select: { date: true, status: true },
           },
+          primaryPractitioner: {
+            select: { id: true, name: true }
+          }
         },
       }),
       prisma.patient.count({ where }),
@@ -85,7 +93,11 @@ export async function POST(req: Request) {
 
     const patient = await prisma.$transaction(async (tx) => {
       // 1. Lock the Doctor row to prevent concurrent creations from exceeding limits
-      await tx.$queryRaw`SELECT 1 FROM "Doctor" WHERE id = ${doctorId} FOR UPDATE`;
+      // Using an update instead of raw SQL to avoid relation not found errors
+      await tx.doctor.update({
+        where: { id: doctorId },
+        data: { updatedAt: new Date() }
+      });
 
       // 2. Enforce MAX_PATIENTS under CLINIC_CORE
       // (This uses global prisma inside, which is safe because the lock ensures serialized execution)
@@ -102,6 +114,7 @@ export async function POST(req: Request) {
             ? new Date(validatedData.dateOfBirth)
             : null,
           doctorId,
+          primaryPractitionerId: validatedData.primaryPractitionerId || undefined,
           gbpAccountId: locationId || undefined,
           tags: validatedData.tags || [],
         },
@@ -112,6 +125,9 @@ export async function POST(req: Request) {
   } catch (error: any) {
     if (error instanceof NextResponse) {
       return error; // Return the block response from entitlementGuard
+    }
+    if (error.name === "ZodError") {
+      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
     }
     console.error("Error creating patient:", error);
     return NextResponse.json(

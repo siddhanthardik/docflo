@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { AIAgentsService } from "@/services/ai-agents.service";
 
 export async function GET(req: Request) {
+  if (process.env.CRON_SECRET && req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
   try {
     console.log("[CRON] Starting Profile Updater Agent...");
     

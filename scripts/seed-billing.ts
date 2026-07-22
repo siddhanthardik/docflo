@@ -45,21 +45,21 @@ async function main() {
 
   console.log("Creating SUPERADMIN user...");
   const existingSuperadmin = await prisma.doctor.findUnique({
-    where: { email: "superadmin@docflo.com" }
+    where: { email: "superadmin@gyrex.in" }
   });
 
   if (!existingSuperadmin) {
     const hashedPassword = await bcrypt.hash("SuperAdmin123!", 10);
     await prisma.doctor.create({
       data: {
-        email: "superadmin@docflo.com",
+        email: "superadmin@gyrex.in",
         password: hashedPassword,
-        name: "Docflo Superadmin",
+        name: "Gyrex Superadmin",
         role: UserRole.SUPERADMIN,
         packageId: enterprise.id,
       }
     });
-    console.log("Superadmin created: superadmin@docflo.com / SuperAdmin123!");
+    console.log("Superadmin created: superadmin@gyrex.in / SuperAdmin123!");
   } else {
     console.log("Superadmin already exists.");
   }

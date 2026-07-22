@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye } from "lucide-react"
+import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye, Sparkles } from "lucide-react"
 import { format } from "date-fns"
 
 export function PostScheduler() {
@@ -28,6 +28,11 @@ export function PostScheduler() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeAccount, setActiveAccount] = useState<any>(null)
   const [postHistory, setPostHistory] = useState<any[]>([])
+
+  // Live Preview & Animation State
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
+  const [publishedPostData, setPublishedPostData] = useState<any>(null)
+  const [overlayMessage, setOverlayMessage] = useState("")
 
   useEffect(() => {
     // Fetch account info for the preview header
@@ -97,13 +102,25 @@ export function PostScheduler() {
       })
       
       if (res.ok) {
-        toast({ 
-          title: isScheduled ? "Post Scheduled!" : "Post Published to Google!",
-        })
+        const msg = isScheduled ? "Post Scheduled Successfully!" : "Live on Google Search & Maps"
+        toast({ title: isScheduled ? "Post Scheduled!" : "Post Published to Google!" })
+        
+        // Trigger Success Overlay on the Mobile Preview
+        setPublishedPostData({ ...form })
+        setOverlayMessage(msg)
+        setShowSuccessOverlay(true)
+
+        // Clear Composer
         setForm({
           title: "", content: "", postType: "STANDARD", scheduledDate: "", imageUrl: "", ctaType: "NONE", ctaLink: ""
         })
         fetchHistory()
+
+        // Reset overlay after 3s
+        setTimeout(() => {
+          setShowSuccessOverlay(false)
+          setTimeout(() => setPublishedPostData(null), 300) // slight delay to prevent flicker during fade out
+        }, 3000)
       } else {
         toast({ title: "Error saving post", variant: "destructive" })
       }
@@ -127,12 +144,15 @@ export function PostScheduler() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
         {/* COMPOSER (LEFT) */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <h2 className="font-bold text-gray-900 text-lg">Create Post</h2>
-            <div className="text-xs font-semibold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full ring-1 ring-black/5">
+          <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 text-xl flex items-center gap-2">
+              <Globe className="h-5 w-5 text-indigo-600" />
+              Create Post
+            </h2>
+            <div className="text-xs font-semibold text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
               {form.content.length} / 1500
             </div>
           </div>
@@ -159,13 +179,13 @@ export function PostScheduler() {
               {!form.imageUrl ? (
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 hover:border-indigo-300 transition-colors group"
+                  className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center cursor-pointer hover:bg-gray-50 hover:border-indigo-400 transition-all duration-300 group shadow-sm"
                 >
-                  <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-100 transition-colors">
-                    <Upload className="h-5 w-5 text-indigo-600" />
+                  <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4 group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                    <Upload className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">Click to upload image</p>
-                  <p className="text-xs text-gray-500">JPG or PNG. Max 5MB.</p>
+                  <p className="text-sm font-bold text-gray-900 mb-1">Click to upload high-quality media</p>
+                  <p className="text-xs text-gray-500">JPG or PNG. Max 5MB for best results.</p>
                   <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -173,7 +193,7 @@ export function PostScheduler() {
                     accept="image/jpeg, image/png"
                     onChange={handleImageUpload}
                   />
-                  {isUploading && <p className="text-xs text-indigo-600 font-bold mt-2 animate-pulse">Uploading...</p>}
+                  {isUploading && <p className="text-xs text-indigo-600 font-bold mt-3 flex items-center justify-center gap-1"><Sparkles className="h-3 w-3 animate-spin"/> Uploading...</p>}
                 </div>
               ) : (
                 <div className="relative rounded-xl overflow-hidden border border-gray-200 w-full sm:w-1/2 group">
@@ -231,49 +251,64 @@ export function PostScheduler() {
             </div>
 
             {/* Scheduler */}
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex-1 w-full">
-                <Label className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-indigo-600" /> Schedule (Optional)
+            <div className="bg-gradient-to-r from-gray-50 to-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
+              <div className="flex-1 w-full relative">
+                <Label className="text-gray-900 font-bold mb-2 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-indigo-600" /> Schedule (Optional)
                 </Label>
+                <p className="text-xs text-gray-500 mb-3">Set a future date to automatically publish this post.</p>
                 <Input 
                   type="datetime-local" 
                   value={form.scheduledDate} 
                   onChange={(e) => setForm({...form, scheduledDate: e.target.value})} 
-                  className="bg-white"
+                  className="bg-white border border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 rounded-xl px-4 py-6 font-medium text-gray-700 w-full hover:border-gray-300 transition-colors"
                 />
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3">
+          <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center justify-end gap-4">
             {form.scheduledDate ? (
               <Button 
                 onClick={() => handleSubmit(true)} 
                 disabled={isSubmitting || !form.content}
-                className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto shadow-md"
+                className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto shadow-lg rounded-full px-8 py-6 text-base font-bold transition-all hover:shadow-xl hover:scale-105"
               >
-                <Calendar className="h-4 w-4 mr-2" /> Schedule for Later
+                <Calendar className="h-5 w-5 mr-2" /> Schedule for Later
               </Button>
             ) : (
               <Button 
                 onClick={() => handleSubmit(false)} 
                 disabled={isSubmitting || !form.content}
-                className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto shadow-md font-bold"
+                className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto shadow-lg font-bold rounded-full px-8 py-6 text-base transition-all hover:shadow-xl hover:scale-105"
               >
-                <Globe className="h-4 w-4 mr-2" /> Publish Now to Google
+                <Globe className="h-5 w-5 mr-2" /> Publish Now to Google
               </Button>
             )}
           </div>
         </div>
 
         {/* LIVE PREVIEW (RIGHT) */}
-        <div className="sticky top-6">
-          <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Eye className="h-5 w-5 text-gray-400" /> Live Mobile Preview
+        <div className="sticky top-6 flex flex-col items-center">
+          <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2 text-xl bg-white px-6 py-2 rounded-full shadow-sm border border-gray-100">
+            <Eye className="h-5 w-5 text-indigo-500" /> Live Mobile Preview
           </h3>
-          <div className="bg-white rounded-[2.5rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden w-full max-w-[375px] mx-auto relative h-[650px] flex flex-col">
+          
+          <div className="bg-white rounded-[2.5rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden w-full max-w-[375px] mx-auto relative h-[700px] flex flex-col ring-4 ring-gray-100">
             
+            {/* SUCCESS OVERLAY */}
+            {showSuccessOverlay && (
+              <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 transition-all">
+                <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center transform animate-in zoom-in-90 duration-500 border border-gray-100 max-w-[80%] text-center">
+                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-emerald-50/50">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                  </div>
+                  <h4 className="font-extrabold text-gray-900 text-xl">{overlayMessage}</h4>
+                  <p className="text-sm text-gray-500 mt-2 font-medium">Successfully synced with your profile.</p>
+                </div>
+              </div>
+            )}
+
             {/* Fake Mobile Header */}
             <div className="bg-gray-100 px-6 pt-3 pb-2 flex justify-between items-center text-[10px] font-medium text-gray-900 sticky top-0 z-20">
               <span>9:41</span>
@@ -306,35 +341,35 @@ export function PostScheduler() {
                   </div>
 
                   {/* Post Image */}
-                  {form.imageUrl ? (
-                    <img src={form.imageUrl} alt="Post image" className="w-full h-[200px] object-cover" />
+                  {(publishedPostData || form).imageUrl ? (
+                    <img src={(publishedPostData || form).imageUrl} alt="Post image" className="w-full h-[220px] object-cover" />
                   ) : (
-                    <div className="w-full h-[200px] bg-gray-50 flex items-center justify-center border-y border-gray-100">
-                      <ImageIcon className="h-8 w-8 text-gray-300" />
+                    <div className="w-full h-[220px] bg-gray-50 flex items-center justify-center border-y border-gray-100">
+                      <ImageIcon className="h-10 w-10 text-gray-300" />
                     </div>
                   )}
 
                   {/* Post Content */}
                   <div className="p-4">
-                    {form.postType === "OFFER" && (
-                      <span className="inline-block px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold uppercase rounded mb-2">Offer</span>
+                    {(publishedPostData || form).postType === "OFFER" && (
+                      <span className="inline-block px-2.5 py-1 bg-amber-100 text-amber-800 text-[10px] font-extrabold uppercase rounded-full mb-3 tracking-wide">Offer</span>
                     )}
-                    {form.postType === "EVENT" && (
-                      <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-[10px] font-bold uppercase rounded mb-2">Event</span>
+                    {(publishedPostData || form).postType === "EVENT" && (
+                      <span className="inline-block px-2.5 py-1 bg-purple-100 text-purple-800 text-[10px] font-extrabold uppercase rounded-full mb-3 tracking-wide">Event</span>
                     )}
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed line-clamp-3">
-                      {form.content || "Your post description will appear here. Start typing to see the preview..."}
+                    <p className="text-[15px] text-gray-800 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                      {(publishedPostData || form).content || "Your post description will appear here. Start typing to see the preview..."}
                     </p>
                     
-                    {form.content.length > 100 && (
-                      <button className="text-indigo-600 text-sm font-medium mt-1">Read more</button>
+                    {(publishedPostData || form).content.length > 120 && (
+                      <button className="text-indigo-600 text-sm font-semibold mt-1">Read more</button>
                     )}
 
                     {/* CTA Button */}
-                    {form.ctaType !== "NONE" && (
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="w-full py-2 px-4 rounded-full border border-blue-600 text-blue-600 font-medium text-sm text-center flex items-center justify-center gap-1">
-                          {getCtaLabel(form.ctaType)}
+                    {(publishedPostData || form).ctaType !== "NONE" && (
+                      <div className="mt-5 pt-4 border-t border-gray-100">
+                        <div className="w-full py-2.5 px-4 rounded-full border border-blue-600 text-blue-600 font-bold text-sm text-center flex items-center justify-center gap-1 hover:bg-blue-50 transition-colors">
+                          {getCtaLabel((publishedPostData || form).ctaType)}
                         </div>
                       </div>
                     )}
@@ -362,13 +397,16 @@ export function PostScheduler() {
       </div>
 
       {/* HISTORY TABLE */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-12">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-lg">Post History</h3>
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden mt-16 ring-1 ring-black/5">
+        <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 text-xl flex items-center gap-2">
+            <Clock className="h-5 w-5 text-indigo-600" />
+            Post History
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
+            <thead className="bg-white border-b border-gray-100 text-gray-500">
               <tr>
                 <th className="font-semibold px-6 py-4 w-[40%]">Post Content</th>
                 <th className="font-semibold px-6 py-4">Status</th>

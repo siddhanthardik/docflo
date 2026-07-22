@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, AlertCircle, IndianRupee, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export default function InvoiceDetailsPage() {
   const params = useParams();
@@ -112,11 +113,12 @@ export default function InvoiceDetailsPage() {
 
   const totalPaid = invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
   const balanceDue = Math.max(0, invoice.totalAmount - totalPaid);
+  const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12 animate-in fade-in zoom-in-95 duration-500">
+    <div className="min-h-screen bg-[#F8FAFC] pb-12 animate-in fade-in zoom-in-95 duration-500 print:bg-white print:min-h-0 print:pb-0">
       {/* Header & Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/billing" className="p-2 bg-white rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -133,6 +135,13 @@ export default function InvoiceDetailsPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={() => window.open(`/api/billing/invoices/${invoice.id}/pdf`, '_blank')}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            Download PDF
+          </button>
+          
           <button 
             onClick={() => window.print()}
             className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -172,7 +181,7 @@ export default function InvoiceDetailsPage() {
             </div>
             <div className="text-right">
               <p className="text-sm font-bold text-gray-900">Amount Due</p>
-              <p className="text-3xl font-black text-indigo-600">₹{balanceDue.toFixed(2)}</p>
+              <p className="text-3xl font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</p>
             </div>
           </div>
 
@@ -206,8 +215,8 @@ export default function InvoiceDetailsPage() {
                 <tr key={item.id}>
                   <td className="py-4 font-medium text-gray-900">{item.description}</td>
                   <td className="py-4 text-center text-gray-600">{item.quantity}</td>
-                  <td className="py-4 text-right text-gray-600">₹{item.unitPrice.toFixed(2)}</td>
-                  <td className="py-4 text-right font-bold text-gray-900">₹{item.total.toFixed(2)}</td>
+                  <td className="py-4 text-right text-gray-600">{sym}{item.unitPrice.toFixed(2)}</td>
+                  <td className="py-4 text-right font-bold text-gray-900">{sym}{item.total.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -216,29 +225,35 @@ export default function InvoiceDetailsPage() {
           {/* Totals */}
           <div className="flex justify-end">
             <div className="w-full sm:w-1/2 space-y-3 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 print:text-gray-900">
                 <span>Subtotal</span>
-                <span className="font-medium">₹{invoice.subtotal.toFixed(2)}</span>
+                <span className="font-medium">{sym}{invoice.subtotal.toFixed(2)}</span>
               </div>
               {invoice.discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600">
+                <div className="flex justify-between text-emerald-600 print:text-gray-900">
                   <span>Discount</span>
-                  <span className="font-medium">-₹{invoice.discountAmount.toFixed(2)}</span>
+                  <span className="font-medium">-{sym}{invoice.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {(invoice.taxAmount || 0) > 0 && (
+                <div className="flex justify-between text-gray-600 print:text-gray-900">
+                  <span>Tax</span>
+                  <span className="font-medium">{sym}{invoice.taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <hr className="border-gray-100 my-2" />
               <div className="flex justify-between text-base">
                 <span className="font-bold text-gray-900">Total</span>
-                <span className="font-black text-gray-900">₹{invoice.totalAmount.toFixed(2)}</span>
+                <span className="font-black text-gray-900">{sym}{invoice.totalAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 print:text-gray-900">
                 <span>Amount Paid</span>
-                <span className="font-medium text-emerald-600">₹{totalPaid.toFixed(2)}</span>
+                <span className="font-medium text-emerald-600 print:text-gray-900">{sym}{totalPaid.toFixed(2)}</span>
               </div>
               <hr className="border-gray-200 my-2 border-dashed" />
               <div className="flex justify-between text-lg">
                 <span className="font-bold text-gray-900">Balance Due</span>
-                <span className="font-black text-indigo-600">₹{balanceDue.toFixed(2)}</span>
+                <span className="font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -256,7 +271,7 @@ export default function InvoiceDetailsPage() {
           {/* Payment History */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-emerald-500" /> Payment History
+              <CreditCard className="w-4 h-4 text-emerald-500" /> Payment History
             </h3>
             
             {invoice.payments.length === 0 ? (
@@ -266,7 +281,7 @@ export default function InvoiceDetailsPage() {
                 {invoice.payments.map((payment: any) => (
                   <div key={payment.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                     <div>
-                      <p className="text-sm font-bold text-gray-900">₹{payment.amount.toFixed(2)}</p>
+                      <p className="text-sm font-bold text-gray-900">{sym}{payment.amount.toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{format(new Date(payment.paymentDate), "MMM dd, yyyy h:mm a")}</p>
                     </div>
                     <div className="text-right">

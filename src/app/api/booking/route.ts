@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         startTime,
         endTime,
         reason: service.name,
-        status: "SCHEDULED",
+        status: "CONFIRMED",
       },
     })
 

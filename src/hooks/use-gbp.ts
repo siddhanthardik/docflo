@@ -2,31 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
-
-interface GBPInsights {
-  locationName: string;
-  totalSearches: number;
-  directSearches: number;
-  discoverySearches: number;
-  totalViews: number;
-  searchViews: number;
-  mapsViews: number;
-  totalActions: number;
-  websiteClicks: number;
-  phoneCalls: number;
-  directionRequests: number;
-}
-
-interface GBPReview {
-  id: string;
-  reviewerName: string;
-  rating: number;
-  comment: string;
-  reply?: string;
-  reviewDate: string;
-  responded: boolean;
-  source: string;
-}
+import type { GbpAccountInsights as GBPInsights, GbpDbReview as GBPReview } from "@/types/gbp";
 
 export function useGBP() {
   const [insights, setInsights] = useState<GBPInsights | null>(null);

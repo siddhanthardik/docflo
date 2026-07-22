@@ -1,21 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Plus, Trash2, IndianRupee, User, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function CreateInvoicePage() {
+function CreateInvoiceForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentId = searchParams.get("appointmentId");
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     patientId: "",
+    appointmentId: appointmentId || "",
+    practitionerId: "",
     dueDate: "",
-    discountAmount: 0,
+    discountType: "FLAT",
+    discountValue: 0,
+    taxAmount: 0,
     notes: ""
   });
 
@@ -38,6 +44,36 @@ export default function CreateInvoicePage() {
     fetchPatients();
   }, []);
 
+  useEffect(() => {
+    const fetchAppointmentContext = async () => {
+      if (!appointmentId) return;
+      try {
+        const res = await fetch(`/api/appointments/${appointmentId}`);
+        if (res.ok) {
+          const appointment = await res.json();
+          setFormData(prev => ({
+            ...prev,
+            patientId: appointment.patientId || "",
+            practitionerId: appointment.practitionerId || "",
+          }));
+          
+          if (appointment.reason || appointment.practitionerId) {
+            setItems([
+              { 
+                description: `Consultation - ${appointment.reason || 'General'}`, 
+                quantity: 1, 
+                unitPrice: 500 // Default consultation fee, can be edited
+              }
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch appointment context", err);
+      }
+    };
+    fetchAppointmentContext();
+  }, [appointmentId]);
+
   const handleAddItem = () => {
     setItems([...items, { description: "", quantity: 1, unitPrice: 0 }]);
   };
@@ -53,7 +89,16 @@ export default function CreateInvoicePage() {
   };
 
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const totalAmount = Math.max(0, subtotal - formData.discountAmount);
+  
+  let calculatedDiscount = 0;
+  if (formData.discountType === "PERCENTAGE") {
+    calculatedDiscount = (subtotal * Math.min(100, formData.discountValue)) / 100;
+  } else {
+    calculatedDiscount = formData.discountValue;
+  }
+  calculatedDiscount = Math.min(subtotal, calculatedDiscount);
+  
+  const totalAmount = Math.max(0, subtotal - calculatedDiscount + formData.taxAmount);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +280,28 @@ export default function CreateInvoicePage() {
 
             <div className="flex justify-between items-center text-sm font-medium text-gray-600">
               <span>Discount</span>
+              <div className="flex gap-2 w-48">
+                <select
+                  className={`${inputClass} py-1.5 px-2 w-1/3`}
+                  value={formData.discountType}
+                  onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                >
+                  <option value="FLAT">₹</option>
+                  <option value="PERCENTAGE">%</option>
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={`${inputClass} py-1.5 px-3 w-2/3 text-right`}
+                  value={formData.discountValue}
+                  onChange={(e) => setFormData({ ...formData, discountValue: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center text-sm font-medium text-gray-600">
+              <span>Tax (₹)</span>
               <div className="relative w-32">
                 <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                 <input
@@ -242,8 +309,8 @@ export default function CreateInvoicePage() {
                   min="0"
                   step="0.01"
                   className={`${inputClass} py-1.5 pl-8 text-right`}
-                  value={formData.discountAmount}
-                  onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
+                  value={formData.taxAmount}
+                  onChange={(e) => setFormData({ ...formData, taxAmount: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
@@ -267,5 +334,13 @@ export default function CreateInvoicePage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function CreateInvoicePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>}>
+      <CreateInvoiceForm />
+    </Suspense>
   );
 }

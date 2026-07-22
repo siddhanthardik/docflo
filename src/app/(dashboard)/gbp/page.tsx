@@ -205,23 +205,12 @@ function formatNum(n: number) {
 }
 
 export default function GBPProfilePage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { connected, activeLocation: activeAccount, isLoading: contextLoading } = useLocationContext();
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const { activeLocationId } = useLocationContext();
-
-  const loadProfiles = () => {
-    setLoading(true);
-    fetch("/api/gbp/profiles")
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => { loadProfiles(); }, []);
+  // We rely on LocationContext to load profiles automatically
 
   const handleConnect = async () => {
     try {
@@ -241,7 +230,9 @@ export default function GBPProfilePage() {
     setSyncing(true);
     try {
       await fetch("/api/gbp/sync", { method: "POST" });
-      loadProfiles();
+      // If we need to refetch context, we would need to reload window or expose a fetch method on Context.
+      // For now, reload window so context pulls fresh state
+      window.location.reload();
     } catch (e) { /* silent */ }
     finally { setSyncing(false); }
   };
@@ -249,7 +240,7 @@ export default function GBPProfilePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  if (loading) {
+  if (contextLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-44 w-full rounded-2xl" />
@@ -264,7 +255,7 @@ export default function GBPProfilePage() {
     );
   }
 
-  if (!data?.connected || !data.accounts || data.accounts.length === 0) {
+  if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6">
@@ -273,7 +264,7 @@ export default function GBPProfilePage() {
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Connect Google Business Profile</h2>
         <p className="text-gray-500 mb-8 max-w-md leading-relaxed">
           Sign in with the Gmail account that manages your Google Business Profile.
-          Docflo will sync your reviews, insights, and rankings automatically.
+          Gyrex will sync your reviews, insights, and rankings automatically.
         </p>
         <div className="flex gap-3">
           <Button onClick={handleConnect} disabled={connecting} size="lg" className="bg-blue-600 hover:bg-blue-700">
@@ -286,7 +277,20 @@ export default function GBPProfilePage() {
     );
   }
 
-  const activeAccount = data.accounts.find((acc: any) => acc.id === activeLocationId) || data.accounts[0];
+  if (!activeAccount) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6">
+          <Search className="h-10 w-10 text-blue-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Select a Location</h2>
+        <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+          Please select a location from the dropdown in the navigation bar to view its GBP Profile details.
+        </p>
+      </div>
+    );
+  }
+
   const insights = activeAccount?.insights || {};
   const reviews = activeAccount?.recentReviews || [];
   const keywords: any[] = insights.searchKeywords || [];
@@ -388,8 +392,9 @@ export default function GBPProfilePage() {
               <Button
                 size="sm"
                 onClick={handleConnect}
-                disabled={connecting}
-                className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs border"
+                disabled={true}
+                title="Only one profile can be connected per plan"
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs border disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="h-3 w-3 mr-1" />
                 Add Profile
@@ -413,26 +418,7 @@ export default function GBPProfilePage() {
       </div>
 
       {/* ── ACTIONS & INFO ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Deep Insights Link */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-white opacity-50 z-0"></div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Deep Business Insights</h3>
-            <p className="text-sm text-gray-600 leading-relaxed mb-5">
-              We've moved all your advanced analytics, traffic reports, and keyword rankings to a dedicated dashboard. 
-              Track your exact ROI and Google search performance there.
-            </p>
-            <Button asChild className="w-full bg-indigo-600 hover:bg-indigo-700 font-semibold shadow-sm">
-              <Link href="/insights">
-                Open Business Insights Dashboard <TrendingUp className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-6">
 
         {/* Business Categories */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
@@ -446,11 +432,11 @@ export default function GBPProfilePage() {
               <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:bg-blue-50">Edit</Button>
             </div>
             
-            {insights.categories?.additionalCategories?.length > 0 && (
+            {(insights.categories?.additionalCategories?.length ?? 0) > 0 && (
               <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Additional Services</p>
                 <div className="flex flex-wrap gap-2">
-                  {insights.categories.additionalCategories.slice(0, 6).map((cat: any, i: number) => (
+                  {insights.categories?.additionalCategories?.slice(0, 6).map((cat, i) => (
                     <span key={i} className="text-xs font-medium bg-white border border-gray-200 text-gray-700 px-2.5 py-1 rounded-md shadow-sm">
                       {cat.displayName}
                     </span>

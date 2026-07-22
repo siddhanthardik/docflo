@@ -76,7 +76,7 @@ export default function TeamLoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Team Portal</CardTitle>
           <CardDescription>
-            Sign in to your Docflo staff account
+            Sign in to your Gyrex staff account
           </CardDescription>
         </CardHeader>
         <CardContent>

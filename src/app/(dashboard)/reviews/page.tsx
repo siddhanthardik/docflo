@@ -45,79 +45,114 @@ function formatTimeAgo(dateStr: string) {
   return months === 1 ? "1 Month ago" : `${months} Months ago`;
 }
 
-export default function ReviewsManagerPage() {
-  const [data, setData] = useState<any>(null);
+export default function ReviewsPage() {
+  const { connected, activeLocation, activeLocationId, isLoading: contextLoading } = useLocationContext();
+  const [reviews, setReviews] = useState<any[]>(null as any);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "needs_reply" | "replied">("all");
   const [starFilter, setStarFilter] = useState<number | null>(null);
   const [draftingReplyFor, setDraftingReplyFor] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [pipelineMetrics, setPipelineMetrics] = useState<any>(null);
 
-  const { activeLocationId } = useLocationContext();
+  const fetchReviews = async () => {
+    if (contextLoading) return;
+    
+    if (!connected || !activeLocationId) {
+      setLoading(false);
+      return;
+    }
 
-  const loadProfiles = () => {
     setLoading(true);
-    fetch("/api/gbp/profiles")
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); })
-      .catch(() => setLoading(false));
+    try {
+      const [reviewsRes, metricsRes] = await Promise.all([
+        fetch(`/api/gbp/reviews?locationId=${activeLocationId}`),
+        fetch("/api/reviews/metrics")
+      ]);
+      const reviewsData = await reviewsRes.json();
+      const metricsData = await metricsRes.json();
+      
+      if (reviewsRes.ok) {
+        setReviews(reviewsData.reviews || []);
+        setStats(reviewsData.stats);
+      }
+      if (metricsRes.ok) {
+        setPipelineMetrics(metricsData);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadProfiles(); }, [activeLocationId]);
+  useEffect(() => {
+    fetchReviews();
+  }, [connected, activeLocationId, contextLoading]);
 
-  if (loading) {
+  if (contextLoading || loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-44 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-screen rounded-xl col-span-2" />
-          <Skeleton className="h-[600px] rounded-xl" />
-        </div>
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
       </div>
     );
   }
 
-  if (!data?.connected || !data.accounts || data.accounts.length === 0) {
+  if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mb-6">
-          <MessageSquare className="h-10 w-10 text-indigo-400" />
+        <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6">
+          <Star className="h-10 w-10 text-blue-400" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">Reviews Manager</h2>
-        <p className="text-gray-500 mb-8 max-w-md leading-relaxed">
-          Connect your Google Business Profile to view, filter, and reply to all your reviews with AI assistance.
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Google Reviews</h2>
+        <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+          Connect your Google Business Profile to view, track, and respond to your patient reviews directly from Gyrex.
         </p>
-        <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-          <a href="/gbp">Connect Profile First</a>
+        <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
+          <a href="/gbp">Connect Profile</a>
         </Button>
       </div>
     );
   }
 
-  const activeAccount = data.accounts.find((acc: any) => acc.id === activeLocationId) || data.accounts[0];
-  const insights = activeAccount?.insights || {};
-  let reviews = activeAccount?.recentReviews || [];
+  if (!activeLocationId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6">
+          <Search className="h-10 w-10 text-blue-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Select a Location</h2>
+        <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+          Please select a location from the dropdown in the navigation bar to manage its reviews.
+        </p>
+      </div>
+    );
+  }
+
+  const insights = activeLocation?.insights || {};
 
   // Sort by newest first
-  reviews = reviews.sort((a: any, b: any) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+  const sortedReviews = reviews ? [...reviews].sort((a: any, b: any) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime()) : [];
 
-  const totalReviews = reviews.length;
-  const repliedCount = reviews.filter((r: any) => r.replied).length;
+  const totalReviews = sortedReviews.length;
+  const repliedCount = sortedReviews.filter((r: any) => r.replied).length;
   const needsReplyCount = totalReviews - repliedCount;
   const responseRate = totalReviews > 0 ? Math.round((repliedCount / totalReviews) * 100) : 0;
   
   // Calculate average rating strictly from fetched reviews
-  const avgRating = totalReviews > 0 ? (reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / totalReviews).toFixed(1) : "0.0";
+  const avgRating = totalReviews > 0 ? (sortedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / totalReviews).toFixed(1) : "0.0";
   
   const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
     stars,
-    count: reviews.filter((r: any) => r.rating === stars).length,
-    percentage: totalReviews > 0 ? Math.round((reviews.filter((r: any) => r.rating === stars).length / totalReviews) * 100) : 0
+    count: sortedReviews.filter((r: any) => r.rating === stars).length,
+    percentage: totalReviews > 0 ? Math.round((sortedReviews.filter((r: any) => r.rating === stars).length / totalReviews) * 100) : 0
   }));
 
   // Apply filters
-  let filteredReviews = reviews;
+  let filteredReviews = sortedReviews;
   if (filter === "needs_reply") filteredReviews = filteredReviews.filter((r: any) => !r.replied);
   if (filter === "replied") filteredReviews = filteredReviews.filter((r: any) => r.replied);
   if (starFilter) filteredReviews = filteredReviews.filter((r: any) => r.rating === starFilter);
@@ -131,11 +166,18 @@ export default function ReviewsManagerPage() {
       let availableKeywords: string[] = [];
       
       if (insights.searchKeywords && insights.searchKeywords.length > 0) {
-        availableKeywords = [...insights.searchKeywords];
+        availableKeywords = insights.searchKeywords.map((k) => typeof k === "string" ? k : k.keyword);
       } 
       
-      if (insights.categories && insights.categories.length > 0) {
-        availableKeywords = [...availableKeywords, ...insights.categories];
+      if (insights.categories) {
+        if (insights.categories.primaryCategory?.displayName) {
+          availableKeywords.push(insights.categories.primaryCategory.displayName);
+        }
+        if (Array.isArray(insights.categories.additionalCategories)) {
+          insights.categories.additionalCategories.forEach(c => {
+            if (c.displayName) availableKeywords.push(c.displayName);
+          });
+        }
       }
 
       // Smart Fallback if no insights data is available
@@ -199,14 +241,14 @@ export default function ReviewsManagerPage() {
         body: JSON.stringify({
           reviewId: reviewId,
           replyText: replyText,
-          locationId: activeAccount.id,
+          locationId: activeLocationId,
         })
       });
       if (res.ok) {
         toast.success("Reply posted successfully to Google!");
         setDraftingReplyFor(null);
         setReplyText("");
-        loadProfiles(); // Reload to reflect changes
+        window.location.reload(); // Reload to reflect changes
       } else {
         const errorData = await res.json().catch(() => null);
         toast.error(`Failed to post: ${errorData?.error || res.statusText}`);
@@ -238,6 +280,38 @@ export default function ReviewsManagerPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* TOP PANEL - WHATSAPP PIPELINE METRICS */}
+        {pipelineMetrics && (
+          <div className="col-span-1 lg:col-span-3 bg-white rounded-xl border border-gray-100 p-6 shadow-sm mb-2">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-indigo-500" />
+              Automated Review Request Pipeline
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-500 font-medium mb-1">Surveys Sent</p>
+                <p className="text-xl font-bold text-gray-900">{pipelineMetrics.surveySent}</p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
+                <p className="text-xs text-emerald-600 font-medium mb-1">Positive Replies</p>
+                <p className="text-xl font-bold text-emerald-700">{pipelineMetrics.positiveResponses}</p>
+              </div>
+              <div className="bg-rose-50 rounded-lg p-3 text-center border border-rose-100">
+                <p className="text-xs text-rose-600 font-medium mb-1">Negative Replies</p>
+                <p className="text-xl font-bold text-rose-700">{pipelineMetrics.negativeResponses}</p>
+              </div>
+              <div className="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-100">
+                <p className="text-xs text-indigo-600 font-medium mb-1">Google Links Sent</p>
+                <p className="text-xl font-bold text-indigo-700">{pipelineMetrics.linkSent}</p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
+                <p className="text-xs text-amber-600 font-medium mb-1">Cooldown Skipped</p>
+                <p className="text-xl font-bold text-amber-700">{pipelineMetrics.cooldownSkipped}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* LEFT PANEL - STATS & FILTERS */}
         <div className="space-y-6">
           {/* Stats Summary */}

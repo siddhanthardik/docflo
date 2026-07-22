@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
+import { EntitlementService } from "@/services/entitlement.service";
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
     const { doctorId } = await getSessionData();
 
-    const block = await entitlementGuard(doctorId, request, { module: "GROWTH_SEO" });
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
     if (block) return block;
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const locationId = searchParams.get("locationId");
 
     if (!locationId) {
@@ -43,11 +44,14 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
-    const body = await request.json();
+    const body = await req.json();
     const { locationId, keywords, competitors } = body;
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
 
     if (!locationId) {
       return NextResponse.json({ error: "Missing locationId" }, { status: 400 });
@@ -64,19 +68,15 @@ export async function POST(request: Request) {
     const insightsData = (account.insightsData as any) || {};
 
     if (keywords !== undefined) {
-      // Check Subscription Quotas
-      const doctor = await prisma.doctor.findUnique({ where: { id: doctorId }, include: { package: true } });
-      if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
-
-      const plan = doctor.package?.name || "FREE";
-      const maxKeywords = plan === "ENTERPRISE" ? Infinity : plan === "GROWTH" ? 20 : plan === "STARTER" ? 5 : 0;
-
-      if (keywords.length > maxKeywords) {
+      // Use existing Usage Limit infrastructure for keyword tracking limits
+      const limitCheck = await EntitlementService.checkLimit(doctorId, "MAX_TRACKED_KEYWORDS");
+      if (limitCheck.max !== null && keywords.length > limitCheck.max) {
         return NextResponse.json({ error: "Quota exceeded" }, { status: 403 });
       }
 
       insightsData.localSeoKeywords = keywords;
     }
+    
     if (competitors !== undefined) {
       insightsData.competitors = competitors;
     }

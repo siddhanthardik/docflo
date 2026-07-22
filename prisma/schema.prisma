@@ -8,136 +8,217 @@ datasource db {
 }
 
 model Doctor {
-  id                String          @id @default(cuid())
-  email             String          @unique
-  password          String
-  name              String
-  phone             String?
-  specialty         String?
-  clinicName        String?
-  address           String?
-  city              String?
-  state             String?
-  country           String?
-  role              UserRole        @default(DOCTOR)
-  emailVerified     DateTime?
-  image             String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  daysOff           String[]        @default([])
-  timezone          String?         @default("UTC")
-  workingHoursEnd   String?         @default("17:00")
-  workingHoursStart String?         @default("09:00")
-  subscriptionStatus SubscriptionStatus @default(ACTIVE)
-  subscriptionExpiry DateTime?
-  billingPeriod      String?         @default("monthly") // monthly, quarterly, yearly
-  isSuspended        Boolean         @default(false)
-  stripeCustomerId   String?
-  razorpayCustomerId String?
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  password               String
+  name                   String
+  phone                  String?
+  specialty              String?
+  clinicName             String?
+  address                String?
+  city                   String?
+  state                  String?
+  country                String?
+  role                   UserRole                @default(DOCTOR)
+  emailVerified          DateTime?
+  image                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  daysOff                String[]                @default([])
+  timezone               String?                 @default("UTC")
+  currency               String?                 @default("USD")
+  isCurrencyLocked       Boolean                 @default(false)
+  dateFormat             String?                 @default("MM/DD/YYYY")
+  firstDayOfWeek         Int?                    @default(0)
+  invoiceFooter          String?
+  invoicePrefix          String?                 @default("INV-")
+  language               String?                 @default("en")
+  taxGstNumber           String?
+  workingHoursEnd        String?                 @default("17:00")
+  workingHoursStart      String?                 @default("09:00")
+  subscriptionStatus     SubscriptionStatus      @default(ACTIVE)
+  subscriptionExpiry     DateTime?
+  billingPeriod          String?                 @default("monthly") // monthly, quarterly, yearly
+  isSuspended            Boolean                 @default(false)
+  failedLoginAttempts    Int                     @default(0)
+  lockedUntil            DateTime?
+  stripeCustomerId       String?
+  razorpayCustomerId     String?
   razorpaySubscriptionId String?
-  packageId         String?
-  package           Package?        @relation(fields: [packageId], references: [id])
-  salesRepId        String?         // ID of the SALES user who onboarded this customer
-  appointments      Appointment[]
-  campaigns         Campaign[]
-  aiAgentConfigs    AIAgentConfig[]
-  featureOverrides  ClinicFeatureOverride[]
-  conversations     Conversation[]
-  gbpAccounts       GbpAccount[]
-  gbpPosts          GBPPost[]
-  patients          Patient[]
-  reviews           Review[]
-  serviceTypes      ServiceType[]
-  staffMembers      StaffMember[]
-  waitlistEntries   WaitlistEntry[]
-  paymentTransactions PaymentTransaction[]
-  invoices          Invoice[]
-  auditLead         AuditLead?
-  subscriptionHistories SubscriptionHistory[]
-  
+  packageId              String?
+  package                Package?                @relation(fields: [packageId], references: [id])
+  gcalAccessToken        String?
+  gcalRefreshToken       String?
+  gcalCalendarId         String?                 @default("primary")
+  gcalConnectedAt        DateTime?
+  salesRepId             String? // ID of the SALES user who onboarded this customer
+  appointments           Appointment[]
+  practitioners          Practitioner[]
+  campaigns              Campaign[]
+  aiAgentConfigs         AIAgentConfig[]
+  featureOverrides       ClinicFeatureOverride[]
+  conversations          Conversation[]
+  gbpAccounts            GbpAccount[]
+  gbpPosts               GBPPost[]
+  patients               Patient[]
+  reviews                Review[]
+  serviceTypes           ServiceType[]
+  staffMembers           StaffMember[]
+  waitlistEntries        WaitlistEntry[]
+  paymentTransactions    PaymentTransaction[]
+  invoices               Invoice[]
+  auditLead              AuditLead?
+  subscriptionHistories  SubscriptionHistory[]
+
+  // Review Automation Settings
+  reviewAutomationEnabled       Boolean @default(true)
+  reviewCooldownDays            Int     @default(90)
+  reviewDelayMinutes            Int     @default(45)
+  reviewSurveyMessage           String?
+  reviewGoogleInvitationMessage String?
+
   // Usage tracking
-  currentAiCredits  Int             @default(0)
-  currentPatients   Int             @default(0)
+  currentAiCredits Int @default(0)
+  currentPatients  Int @default(0)
 
   @@map("doctors")
 }
 
 model Patient {
-  id            String         @id @default(cuid())
-  doctorId      String
-  firstName     String
-  lastName      String
-  phone         String
-  email         String?
-  dateOfBirth   DateTime?
-  gender        String?
-  bloodGroup    String?
-  address       String?
-  medicalNotes  String?
-  tags          String[]
-  patientType   PatientType    @default(LEAD)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  gbpAccountId  String?
-  appointments  Appointment[]
-  conversations Conversation[]
-  invoices      Invoice[]
-  doctor        Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  gbpAccount    GbpAccount?    @relation(fields: [gbpAccountId], references: [id])
+  id                    String         @id @default(cuid())
+  doctorId              String
+  firstName             String
+  lastName              String
+  phone                 String
+  email                 String?
+  dateOfBirth           DateTime?
+  gender                String?
+  bloodGroup            String?
+  address               String?
+  medicalNotes          String?
+  tags                  String[]
+  patientType           PatientType    @default(LEAD)
+  lastReviewRequestedAt DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  gbpAccountId          String?
+  primaryPractitionerId String?
+  appointments          Appointment[]
+  conversations         Conversation[]
+  invoices              Invoice[]
+  doctor                Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount            GbpAccount?    @relation(fields: [gbpAccountId], references: [id])
+  primaryPractitioner   Practitioner?  @relation(fields: [primaryPractitionerId], references: [id])
 
   @@index([doctorId])
+  @@index([doctorId, createdAt])
   @@index([gbpAccountId])
   @@map("patients")
 }
 
+model Practitioner {
+  id                 String   @id @default(cuid())
+  doctorId           String
+  name               String
+  email              String?
+  phone              String?
+  specialty          String?
+  otherSpecialty     String?
+  qualification      String?
+  registrationNumber String?
+  consultationFee    Float?
+  duration           Int?
+  bufferTime         Int?
+  isOwner            Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  calendarColor      String?  @default("#4F46E5")
+  displayOrder       Int      @default(0)
+  workingDays        String[] @default([])
+  workingHoursEnd    String?  @default("17:00")
+  workingHoursStart  String?  @default("09:00")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  patients     Patient[]
+
+  @@index([doctorId])
+  @@map("practitioners")
+}
+
 model Appointment {
-  id              String            @id @default(cuid())
+  id              String                  @id @default(cuid())
   patientId       String
   doctorId        String
   date            DateTime
   startTime       DateTime
   endTime         DateTime
   reason          String?
-  status          AppointmentStatus @default(SCHEDULED)
+  status          AppointmentStatus       @default(CONFIRMED)
   notes           String?
-  reminderSent    Boolean           @default(false)
-  reviewRequested Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  reminderSent    Boolean                 @default(false)
+  reviewRequested Boolean                 @default(false) // LEGACY: Keep for migration
+  reviewStatus    AppointmentReviewStatus @default(NOT_SENT)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
   gbpAccountId    String?
-  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  gbpAccount      GbpAccount?       @relation(fields: [gbpAccountId], references: [id])
-  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  practitionerId  String?
+  gcalEventId     String?
+  doctor          Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount      GbpAccount?             @relation(fields: [gbpAccountId], references: [id])
+  practitioner    Practitioner?           @relation(fields: [practitionerId], references: [id])
+  patient         Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  followUps       AppointmentFollowUp[]
+  invoices        Invoice[]
 
   @@index([doctorId, date])
   @@index([patientId])
   @@index([gbpAccountId])
+  @@index([practitionerId])
   @@map("appointments")
 }
 
+model AppointmentFollowUp {
+  id            String   @id @default(cuid())
+  appointmentId String
+  type          String // e.g., "1_DAY", "1_WEEK", "POST_OP"
+  sentAt        DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@map("appointment_follow_ups")
+}
+
 model GbpAccount {
-  id           String          @id @default(cuid())
-  doctorId     String
-  accessToken  String
-  refreshToken String
-  tokenExpiry  DateTime
-  locationId   String?
-  locationName String?
-  insightsData Json?
-  lastSyncAt   DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  appointments Appointment[]
-  campaigns    Campaign[]
-  doctor       Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  gbpPosts     GBPPost[]
-  patients     Patient[]
-  reviews      Review[]
-  waitlist     WaitlistEntry[]
-  gbpSnapshots GbpSnapshot[]
-  competitorSnapshots CompetitorSnapshot[]
-  seoTasks     SeoTask[]
-  engineRuns   EngineRun[]
+  id                      String                   @id @default(cuid())
+  doctorId                String
+  accessToken             String
+  refreshToken            String
+  tokenExpiry             DateTime
+  locationId              String?
+  locationName            String?
+  insightsData            Json?
+  lastSyncAt              DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  appointments            Appointment[]
+  campaigns               Campaign[]
+  doctor                  Doctor                   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpPosts                GBPPost[]
+  patients                Patient[]
+  reviews                 Review[]
+  waitlist                WaitlistEntry[]
+  profileSnapshots        ProfileSnapshot[]
+  gbpPerformanceSnapshots GbpPerformanceSnapshot[]
+  gbpKeywordSnapshots     GbpKeywordSnapshot[]
+  gbpReviewSnapshots      GbpReviewSnapshot[]
+  competitorSnapshots     CompetitorSnapshot[]
+  gbpPostSnapshots        GbpPostSnapshot[]
+  gbpQaSnapshots          GbpQaSnapshot[]
+  searchGridSnapshots     SearchGridSnapshot[]
+  seoRecommendations      SeoRecommendation[]
 
   @@unique([doctorId, locationName])
   @@map("gbp_accounts")
@@ -160,6 +241,7 @@ model Review {
   gbpAccount   GbpAccount?  @relation(fields: [gbpAccountId], references: [id])
 
   @@index([doctorId])
+  @@index([doctorId, reviewDate])
   @@index([gbpAccountId])
   @@map("reviews")
 }
@@ -197,18 +279,21 @@ model WhatsAppMessage {
 }
 
 model StaffMember {
-  id            String         @id @default(cuid())
-  doctorId      String
-  email         String         @unique
-  password      String
-  name          String
-  role          StaffRole      @default(RECEPTIONIST)
-  phone         String?
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  assignedChats Conversation[]
-  doctor        Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  id                  String         @id @default(cuid())
+  doctorId            String
+  email               String         @unique
+  password            String
+  name                String
+  role                StaffRole      @default(RECEPTIONIST)
+  phone               String?
+  isActive            Boolean        @default(true)
+  emailVerified       DateTime?
+  failedLoginAttempts Int            @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  assignedChats       Conversation[]
+  doctor              Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
   @@map("staff_members")
 }
@@ -319,6 +404,10 @@ model Campaign {
   segmentType  String
   segmentValue String?
   status       CampaignStatus      @default(DRAFT)
+  mediaUrl     String?
+  mediaType    String?             // e.g. "IMAGE", "PDF"
+  ctaText      String?
+  ctaLink      String?
   scheduledAt  DateTime?
   sentAt       DateTime?
   createdAt    DateTime            @default(now())
@@ -349,15 +438,15 @@ model CampaignRecipient {
 }
 
 model AIAgentConfig {
-  id          String   @id @default(cuid())
-  doctorId    String
-  agentType   String   // "APPOINTMENT", "REVIEW", "PROFILE", "RANKING"
-  enabled     Boolean  @default(false)
-  config      Json     @default("{}") // Stores agent-specific settings (tone, constraints, etc.)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  doctorId  String
+  agentType String // "APPOINTMENT", "REVIEW", "PROFILE", "RANKING"
+  enabled   Boolean  @default(false)
+  config    Json     @default("{}") // Stores agent-specific settings (tone, constraints, etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
   @@unique([doctorId, agentType])
   @@map("ai_agent_configs")
@@ -373,25 +462,25 @@ enum UserRole {
 }
 
 model Package {
-  id                String    @id @default(cuid())
-  slug              String?   @unique // Idempotency key; backfilled after initial push
-  name              String
-  description       String?
-  price             Float?    // Deprecated: keeping temporarily for migration
-  billingPeriod     String?   // Deprecated: keeping temporarily for migration
-  priceMonthly      Float     @default(0)
-  priceQuarterly    Float     @default(0)
-  priceYearly       Float     @default(0)
-  razorpayPlanId    String?   // ID from Razorpay Dashboard
-  features          Json      @default("{}") // Deprecated: keeping temporarily for migration
-  packageFeatures   PackageFeature[]
-  modules           PackageModule[]
-  limits            PackageLimit[]
-  isActive          Boolean   @default(true)
-  isArchived        Boolean   @default(false) // Soft archive; archived packages cannot be assigned to new doctors
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  doctors           Doctor[]
+  id                  String               @id @default(cuid())
+  slug                String?              @unique // Idempotency key; backfilled after initial push
+  name                String
+  description         String?
+  price               Float? // Deprecated: keeping temporarily for migration
+  billingPeriod       String? // Deprecated: keeping temporarily for migration
+  priceMonthly        Float                @default(0)
+  priceQuarterly      Float                @default(0)
+  priceYearly         Float                @default(0)
+  razorpayPlanId      String? // ID from Razorpay Dashboard
+  features            Json                 @default("{}") // Deprecated: keeping temporarily for migration
+  packageFeatures     PackageFeature[]
+  modules             PackageModule[]
+  limits              PackageLimit[]
+  isActive            Boolean              @default(true)
+  isArchived          Boolean              @default(false) // Soft archive; archived packages cannot be assigned to new doctors
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  doctors             Doctor[]
   paymentTransactions PaymentTransaction[]
 
   @@map("packages")
@@ -407,6 +496,7 @@ enum ModuleName {
 enum LimitName {
   MAX_STAFF_SEATS
   MAX_PATIENTS
+  MAX_PRACTITIONERS
   MAX_GBP_LOCATIONS
   MAX_TRACKED_KEYWORDS
   MAX_SCHEDULED_POSTS
@@ -414,23 +504,23 @@ enum LimitName {
 }
 
 model PackageModule {
-  id              String      @id @default(cuid())
-  packageId       String
-  moduleName      ModuleName
-  
-  package         Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  packageId  String
+  moduleName ModuleName
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
   @@unique([packageId, moduleName])
   @@map("package_modules")
 }
 
 model PackageLimit {
-  id              String      @id @default(cuid())
-  packageId       String
-  limitName       LimitName
-  limitValue      Int?        // Null implies Unlimited
-  
-  package         Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  packageId  String
+  limitName  LimitName
+  limitValue Int? // Null implies Unlimited
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
   @@unique([packageId, limitName])
   @@map("package_limits")
@@ -438,37 +528,38 @@ model PackageLimit {
 
 // Immutable record created every time a doctor's package changes
 model SubscriptionHistory {
-  id              String    @id @default(cuid())
-  doctorId        String
+  id                String   @id @default(cuid())
+  doctorId          String
   previousPackageId String?
-  newPackageId    String
-  changedById     String    // ID of the admin/staff who made the change
-  changedByRole   String    // Role of changer at time of change (SUPERADMIN, ADMIN, etc.)
-  reason          String?   // Optional reason for the change
-  createdAt       DateTime  @default(now())
+  newPackageId      String
+  changedById       String // ID of the admin/staff who made the change
+  changedByRole     String // Role of changer at time of change (SUPERADMIN, ADMIN, etc.)
+  reason            String? // Optional reason for the change
+  createdAt         DateTime @default(now())
 
-  doctor          Doctor    @relation(fields: [doctorId], references: [id])
+  doctor Doctor @relation(fields: [doctorId], references: [id])
 
   @@map("subscription_history")
 }
 
 model Promotion {
-  id                String    @id @default(cuid())
-  code              String    @unique
-  description       String?
-  discountPercent   Float
-  razorpayOfferId   String?
-  expiresAt         DateTime?
-  usageLimit        Int?
-  usageCount        Int       @default(0)
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
+  id              String    @id @default(cuid())
+  code            String    @unique
+  description     String?
+  discountPercent Float
+  razorpayOfferId String?
+  expiresAt       DateTime?
+  usageLimit      Int?
+  usageCount      Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
 
   @@map("promotions")
 }
 
 enum AppointmentStatus {
-  SCHEDULED
+  CONFIRMED
+  CHECKED_IN
   COMPLETED
   CANCELLED
   NO_SHOW
@@ -477,6 +568,19 @@ enum AppointmentStatus {
 enum ReviewSource {
   GOOGLE
   MANUAL
+}
+
+enum IntegrationType {
+  GOOGLE_BUSINESS
+  WHATSAPP
+}
+
+enum AppointmentReviewStatus {
+  NOT_SENT
+  SURVEY_SENT
+  POSITIVE_RESPONSE
+  NEGATIVE_RESPONSE
+  LINK_SENT
 }
 
 enum StaffRole {
@@ -529,8 +633,6 @@ enum RecipientStatus {
   FAILED
 }
 
-
-
 enum SubscriptionStatus {
   ACTIVE
   CANCELED
@@ -538,19 +640,19 @@ enum SubscriptionStatus {
 }
 
 model PaymentTransaction {
-  id              String   @id @default(cuid())
-  doctorId        String
-  packageId       String
-  amount          Float
-  currency        String   @default("USD")
-  status          String   @default("SUCCESS") // SUCCESS, FAILED
-  razorpayOrderId String?
+  id                String   @id @default(cuid())
+  doctorId          String
+  packageId         String
+  amount            Float
+  currency          String   @default("USD")
+  status            String   @default("SUCCESS") // SUCCESS, FAILED
+  razorpayOrderId   String?
   razorpayPaymentId String?
-  promoCode       String?
-  createdAt       DateTime @default(now())
+  promoCode         String?
+  createdAt         DateTime @default(now())
 
-  doctor          Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  package         Package  @relation(fields: [packageId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  package Package @relation(fields: [packageId], references: [id])
 
   @@map("payment_transactions")
 }
@@ -562,29 +664,41 @@ enum PatientType {
   LOST
 }
 
-model Invoice {
-  id              String         @id @default(cuid())
-  invoiceNumber   String
-  doctorId        String
-  patientId       String
-  appointmentId   String?
-  status          InvoiceStatus  @default(DRAFT)
-  issueDate       DateTime       @default(now())
-  dueDate         DateTime?
-  paidAt          DateTime?
-  
-  subtotal        Float
-  discountAmount  Float          @default(0)
-  totalAmount     Float
-  
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+enum DiscountType {
+  FLAT
+  PERCENTAGE
+}
 
-  doctor          Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  items           InvoiceItem[]
-  payments        PatientPayment[]
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String
+  doctorId      String
+  patientId     String
+  appointmentId String?
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  paidAt        DateTime?
+
+  subtotal       Float
+  discountType   DiscountType @default(FLAT)
+  discountValue  Float        @default(0)
+  discountAmount Float        @default(0)
+  taxAmount      Float        @default(0)
+  totalAmount    Float
+
+  currencyCode   String @default("INR")
+  currencySymbol String @default("₹")
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor      Doctor           @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient     Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment?     @relation(fields: [appointmentId], references: [id])
+  items       InvoiceItem[]
+  payments    PatientPayment[]
 
   @@unique([doctorId, invoiceNumber])
   @@index([doctorId])
@@ -593,33 +707,33 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id              String       @id @default(cuid())
-  invoiceId       String
-  serviceTypeId   String?
-  description     String
-  quantity        Int          @default(1)
-  unitPrice       Float
-  total           Float
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id            String   @id @default(cuid())
+  invoiceId     String
+  serviceTypeId String?
+  description   String
+  quantity      Int      @default(1)
+  unitPrice     Float
+  total         Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
   @@index([invoiceId])
   @@map("invoice_items")
 }
 
 model PatientPayment {
-  id              String       @id @default(cuid())
-  invoiceId       String
-  doctorId        String
-  amount          Float
-  paymentMethod   PaymentMethod
-  paymentDate     DateTime     @default(now())
-  referenceId     String?
-  createdAt       DateTime     @default(now())
+  id            String        @id @default(cuid())
+  invoiceId     String
+  doctorId      String
+  amount        Float
+  paymentMethod PaymentMethod
+  paymentDate   DateTime      @default(now())
+  referenceId   String?
+  createdAt     DateTime      @default(now())
 
-  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
   @@index([doctorId])
@@ -644,15 +758,15 @@ enum PaymentMethod {
 }
 
 model PlatformLead {
-  id          String     @id @default(cuid())
-  name        String?
-  email       String?
-  phone       String?
-  clinicName  String?
-  source      String     // e.g. "AUDIT_REPORT", "HOME_PAGE", "CONTACT_US"
-  status      LeadStatus @default(NEW)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  name       String?
+  email      String?
+  phone      String?
+  clinicName String?
+  source     String // e.g. "AUDIT_REPORT", "HOME_PAGE", "CONTACT_US"
+  status     LeadStatus @default(NEW)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   @@map("platform_leads")
 }
@@ -685,14 +799,17 @@ enum ClinicRole {
 }
 
 model PlatformUser {
-  id        String       @id @default(cuid())
-  name      String
-  email     String       @unique
-  password  String
-  role      PlatformRole @default(SUPPORT)
-  isActive  Boolean      @default(true)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  name                String
+  email               String       @unique
+  password            String
+  role                PlatformRole @default(SUPPORT)
+  isActive            Boolean      @default(true)
+  emailVerified       DateTime?
+  failedLoginAttempts Int          @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   assignedLeads AuditLead[]
 
@@ -702,10 +819,11 @@ model PlatformUser {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String
-  userType  String   // "PLATFORM" or "CLINIC"
-  action    String   // e.g. "LOGIN", "SUBSCRIPTION_CHANGE"
+  userType  String // "PLATFORM" or "CLINIC"
+  action    String // e.g. "LOGIN", "SUBSCRIPTION_CHANGE"
   details   Json     @default("{}")
   ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -713,51 +831,73 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("email_verification_tokens")
+}
+
 // ==========================================
 // FEATURE FLAG ENGINE
 // ==========================================
 
 model FeatureFlag {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
-  key          String   @unique
+  key          String  @unique
   description  String?
-  type         String   // "BOOLEAN" or "NUMBER"
-  defaultValue String   // "true", "false", or "10"
-  
+  type         String // "BOOLEAN" or "NUMBER"
+  defaultValue String // "true", "false", or "10"
+
   packageFeatures PackageFeature[]
   clinicOverrides ClinicFeatureOverride[]
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("feature_flags")
 }
 
 model PackageFeature {
-  id          String   @id @default(cuid())
-  packageId   String
-  featureId   String
-  isEnabled   Boolean  @default(false)
-  limit       Int?     // For NUMBER type features
-  
-  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  feature     FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  packageId String
+  featureId String
+  isEnabled Boolean @default(false)
+  limit     Int? // For NUMBER type features
+
+  package Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  feature FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
   @@unique([packageId, featureId])
   @@map("package_features")
 }
 
 model ClinicFeatureOverride {
-  id          String   @id @default(cuid())
-  doctorId    String
-  featureId   String
-  isEnabled   Boolean  @default(false)
-  limit       Int?
-  
-  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  feature     FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  doctorId  String
+  featureId String
+  isEnabled Boolean @default(false)
+
+  doctor  Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  feature FeatureFlag @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
   @@unique([doctorId, featureId])
   @@map("clinic_feature_overrides")
 }
@@ -774,36 +914,36 @@ enum AuditLeadStatus {
 }
 
 model AuditRequest {
-  id              String       @id @default(cuid())
-  placeId         String?
-  searchQuery     String
-  status          String       @default("PENDING") // PENDING, SCANNING, COMPLETED, FAILED
-  progress        Int          @default(0) // 0 to 100
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id          String   @id @default(cuid())
+  placeId     String?
+  searchQuery String
+  status      String   @default("PENDING") // PENDING, SCANNING, COMPLETED, FAILED
+  progress    Int      @default(0) // 0 to 100
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  report          AuditReport?
-  
-  leadId          String
-  lead            AuditLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  
+  report AuditReport?
+
+  leadId String
+  lead   AuditLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
   @@map("audit_requests")
 }
 
 model AuditReport {
-  id              String       @id @default(cuid())
-  requestId       String       @unique
-  businessName    String
-  speciality      String?
-  address         String?
-  websiteUrl      String?
-  
+  id           String  @id @default(cuid())
+  requestId    String  @unique
+  businessName String
+  speciality   String?
+  address      String?
+  websiteUrl   String?
+
   // Exact API metrics
-  primaryCategory String?
+  primaryCategory     String?
   secondaryCategories String[] @default([])
-  businessType    String?
-  rating          Float?
-  reviewCount     Int?
+  businessType        String?
+  rating              Float?
+  reviewCount         Int?
 
   // Version 3 Diagnostic Report Sections (Premium Consultant Framework)
   businessOverview       Json?
@@ -817,10 +957,10 @@ model AuditReport {
   growthOpportunities    Json?
   aiActionPlan           Json?
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  request         AuditRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request         AuditRequest          @relation(fields: [requestId], references: [id], onDelete: Cascade)
   competitors     AuditCompetitor[]
   recommendations AuditRecommendation[]
 
@@ -828,67 +968,67 @@ model AuditReport {
 }
 
 model AuditCompetitor {
-  id              String       @id @default(cuid())
-  reportId        String
-  name            String
-  speciality      String?      // Used for strictly matching Speciality-to-Speciality
-  distance        Float?
-  rating          Float?
-  reviewCount     Int?
-  
-  report          AuditReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  reportId    String
+  name        String
+  speciality  String? // Used for strictly matching Speciality-to-Speciality
+  distance    Float?
+  rating      Float?
+  reviewCount Int?
+
+  report AuditReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@map("audit_competitors")
 }
 
 model AuditRecommendation {
-  id              String       @id @default(cuid())
-  reportId        String
-  category        String       // GBP, WEBSITE, REVIEWS
-  title           String
-  description     String       // AI-driven Action Plan (Locked)
-  priority        String       // HIGH, MEDIUM, LOW
-  impact          Int          // 1-10
-  currentStatus   String?
-  estimatedOpp    String?      // E.g., "+$5,000/mo"
-  aiAutomatable   Boolean      @default(false)
-  
-  report          AuditReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id            String  @id @default(cuid())
+  reportId      String
+  category      String // GBP, WEBSITE, REVIEWS
+  title         String
+  description   String // AI-driven Action Plan (Locked)
+  priority      String // HIGH, MEDIUM, LOW
+  impact        Int // 1-10
+  currentStatus String?
+  estimatedOpp  String? // E.g., "+$5,000/mo"
+  aiAutomatable Boolean @default(false)
+
+  report AuditReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@map("audit_recommendations")
 }
 
 model AuditLead {
-  id              String       @id @default(cuid())
-  legacyRequestId String?      @map("requestId")
+  id              String  @id @default(cuid())
+  legacyRequestId String? @map("requestId")
   name            String
   email           String?
   phone           String?
   clinicName      String?
-  placeId         String?      // Used for deduplication alongside phone
-  
-  status          AuditLeadStatus   @default(NEW)
-  
+  placeId         String? // Used for deduplication alongside phone
+
+  status AuditLeadStatus @default(NEW)
+
   // Marketing & Attribution
-  leadSource      String?
-  landingPage     String?
-  utmSource       String?
-  utmMedium       String?
-  utmCampaign     String?
-  gclid           String?
-  fbclid          String?
+  leadSource  String?
+  landingPage String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  gclid       String?
+  fbclid      String?
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @default(now()) @updatedAt
-  
-  requests        AuditRequest[]
-  activities      LeadActivity[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  assignedToId    String?
-  assignedTo      PlatformUser? @relation(fields: [assignedToId], references: [id])
+  requests   AuditRequest[]
+  activities LeadActivity[]
 
-  convertedDoctorId String?     @unique
-  convertedDoctor   Doctor?     @relation(fields: [convertedDoctorId], references: [id])
+  assignedToId String?
+  assignedTo   PlatformUser? @relation(fields: [assignedToId], references: [id])
+
+  convertedDoctorId String? @unique
+  convertedDoctor   Doctor? @relation(fields: [convertedDoctorId], references: [id])
 
   // Gracefully handle duplicate submissions for the same physical location & phone
   @@unique([phone, placeId])
@@ -896,25 +1036,26 @@ model AuditLead {
 }
 
 model LeadActivity {
-  id              String       @id @default(cuid())
-  leadId          String
-  eventType       String       // e.g., "LEAD_CREATED", "AUDIT_STARTED", "AUDIT_COMPLETED", "AUDIT_FAILED", "SALES_CONTACTED"
-  message         String
-  metadata        Json?        // Any contextual metadata (e.g., audit ID, error message)
-  createdAt       DateTime     @default(now())
+  id        String   @id @default(cuid())
+  leadId    String
+  eventType String // e.g., "LEAD_CREATED", "AUDIT_STARTED", "AUDIT_COMPLETED", "AUDIT_FAILED", "SALES_CONTACTED"
+  message   String
+  metadata  Json? // Any contextual metadata (e.g., audit ID, error message)
+  createdAt DateTime @default(now())
 
-  lead            AuditLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead AuditLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@map("lead_activities")
 }
 
 // ==========================================
-// DOCFLO LOCAL SEO ENGINE MODELS
+// GYREX LOCAL SEO ENGINE MODELS
 // ==========================================
 
 enum ScanStatus {
   SUCCESS
-  PARTIAL
+  SUCCESS_WITH_WARNINGS
+  RUNNING
   FAILED
 }
 
@@ -933,148 +1074,120 @@ enum TaskPriority {
   LOW
 }
 
-model EngineRun {
-  id               String       @id @default(cuid())
-  gbpAccountId     String
-  status           ScanStatus
-  idempotencyKey   String?
-  
-  startedAt        DateTime     @default(now())
-  completedAt      DateTime?
-  durationMs       Int?
-  
-  gbpAccount       GbpAccount   @relation(fields: [gbpAccountId], references: [id])
-  logs             SeoEngineLog[]
-  snapshots        GbpSnapshot[]
-  
-  @@unique([gbpAccountId, idempotencyKey])
-  @@map("engine_runs")
+model ProfileSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("profile_snapshots")
 }
 
-model SeoEngineLog {
-  id               String       @id @default(cuid())
-  engineRunId      String
-  eventType        String
-  message          String
-  metadata         Json?
-  createdAt        DateTime     @default(now())
-  
-  engineRun        EngineRun    @relation(fields: [engineRunId], references: [id], onDelete: Cascade)
-  
-  @@map("seo_engine_logs")
+model GbpPerformanceSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("gbp_performance_snapshots")
 }
 
-model GbpSnapshot {
-  id                  String      @id @default(cuid())
-  gbpAccountId        String
-  engineRunId         String?
-  scannedAt           DateTime    @default(now())
-  
-  scanStatus          ScanStatus  @default(SUCCESS)
-  apiErrors           Json?
-  scanDurationMs      Int?
-  apiLatencyMs        Int?
-  
-  // Provenance Metadata
-  engineVersion       String?
-  connectorVersion    String?
-  googleApiVersion    String?
-  
-  // Typed Columns for Analytics (Nullable)
-  reviewCount         Int?
-  averageRating       Float?
-  photoCount          Int?
-  postCount           Int?
-  primaryCategory     String?
-  unansweredReviews   Int?
-  unansweredQA        Int?
-  hasAppointmentUrl   Boolean?
-  hasWebsite          Boolean?
-  hasMessaging        Boolean?
-  
-  rawGoogleResponse   Json?
-  
-  gbpAccount          GbpAccount  @relation(fields: [gbpAccountId], references: [id])
-  engineRun           EngineRun?  @relation(fields: [engineRunId], references: [id])
-  observations        SeoObservation[]
-  
-  @@index([gbpAccountId, scannedAt])
-  @@map("gbp_snapshots")
+model SeoRecommendation {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  category     String // e.g., "PROFILE", "REVIEWS", "CITATIONS", "CONTENT"
+  title        String
+  description  String   @db.Text
+  priority     String // "HIGH", "MEDIUM", "LOW"
+  impact       String?
+  status       String   @default("PENDING") // "PENDING", "COMPLETED", "DISMISSED"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId])
+  @@map("seo_recommendations")
+}
+
+model GbpKeywordSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("gbp_keyword_snapshots")
+}
+
+model GbpReviewSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("gbp_review_snapshots")
 }
 
 model CompetitorSnapshot {
-  id                  String      @id @default(cuid())
-  gbpAccountId        String
-  scannedAt           DateTime    @default(now())
-  
-  scanStatus          ScanStatus  @default(SUCCESS)
-  benchmarkFreshness  DateTime    @default(now())
-  
-  competitorName      String
-  placeId             String?
-  reviewCount         Int?
-  rating              Float?
-  photoCount          Int?
-  postCount           Int?
-  primaryCategory     String?
-  distance            Float?
-  hasWebsite          Boolean?
-  
-  gbpAccount          GbpAccount  @relation(fields: [gbpAccountId], references: [id])
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
 
-  @@index([gbpAccountId, scannedAt])
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
   @@map("competitor_snapshots")
 }
 
-model SeoObservation {
-  id               String       @id @default(cuid())
-  gbpSnapshotId    String
-  
-  ruleId           String
-  ruleVersion      String
-  category         String
-  
-  detectedValue    String?
-  createdAt        DateTime     @default(now())
-  
-  snapshot         GbpSnapshot  @relation(fields: [gbpSnapshotId], references: [id], onDelete: Cascade)
-  tasks            SeoTask[]
-  
-  @@map("seo_observations")
+model GbpPostSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("gbp_post_snapshots")
 }
 
-model SeoTask {
-  id               String          @id @default(cuid())
-  gbpAccountId     String
-  observationId    String?
-  
-  // Provenance
-  engineVersion    String?
-  ruleId           String?
-  ruleVersion      String?
-  apiSource        String?
-  fieldMapping     String?
-  
-  // Core Evidence
-  observationText  String
-  evidence         String
-  reason           String
-  
-  // Actionability
-  title            String
-  priority         TaskPriority
-  estimatedEffort  String
-  expectedImpact   String
-  confidenceScore  Int             @default(100) // 0-100
-  
-  status           TaskStatus      @default(PENDING)
-  createdAt        DateTime        @default(now())
-  completedAt      DateTime?
-  
-  gbpAccount       GbpAccount      @relation(fields: [gbpAccountId], references: [id])
-  observationRecord SeoObservation? @relation(fields: [observationId], references: [id])
-  
-  @@map("seo_tasks")
+model GbpQaSnapshot {
+  id           String   @id @default(cuid())
+  gbpAccountId String
+  locationId   String
+  date         DateTime
+  json         Json
+  createdAt    DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@map("gbp_qa_snapshots")
 }
 
 model ShadowEntitlementLog {
@@ -1100,4 +1213,25 @@ model ShadowEntitlementLog {
   @@index([timestamp])
   @@index([eventType])
   @@map("shadow_entitlement_logs")
+}
+
+model SearchGridSnapshot {
+  id            String   @id @default(cuid())
+  gbpAccountId  String
+  locationId    String
+  date          DateTime
+  gridSize      Int      @default(5)
+  centerLat     Float
+  centerLng     Float
+  spacingMeters Int      @default(500)
+  businessName  String?
+  keyword       String?
+  json          Json // Array of { lat, lng, row, col, rank, found }
+  createdAt     DateTime @default(now())
+
+  gbpAccount GbpAccount @relation(fields: [gbpAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gbpAccountId, date])
+  @@index([gbpAccountId, keyword])
+  @@map("search_grid_snapshots")
 }

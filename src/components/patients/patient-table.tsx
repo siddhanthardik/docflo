@@ -42,6 +42,10 @@ interface Patient {
   tags: string[];
   createdAt: string;
   patientType?: string;
+  primaryPractitioner?: {
+    id: string;
+    name: string;
+  };
   appointments?: any[];
 }
 
@@ -116,13 +120,14 @@ export function PatientTable({
           )}
         </div>
       ) : (
-        <div className="border rounded-lg bg-white">
+        <div className="border rounded-lg bg-white overflow-x-auto">
           <Table>
             <TableHeader className="bg-gray-50/80 border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold text-gray-600 pl-6">Patient Name</TableHead>
                 <TableHead className="font-semibold text-gray-600">Contact</TableHead>
                 <TableHead className="font-semibold text-gray-600">Gender</TableHead>
+                <TableHead className="font-semibold text-gray-600">Practitioner</TableHead>
                 <TableHead className="font-semibold text-gray-600">Last Visit</TableHead>
                 <TableHead className="font-semibold text-gray-600">Tags</TableHead>
                 <TableHead className="w-[100px] text-right font-semibold text-gray-600 pr-6">Actions</TableHead>
@@ -182,6 +187,16 @@ export function PatientTable({
                     <span className="text-sm text-gray-600">
                       {patient.gender || "-"}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {patient.primaryPractitioner ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
+                        <Users className="h-3 w-3" />
+                        {patient.primaryPractitioner.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium">Unassigned</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-gray-600">

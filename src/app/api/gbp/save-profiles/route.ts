@@ -4,6 +4,7 @@ import { GBPService } from "@/services/gbp.service";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { shadowCheck } from "@/lib/shadowCheck";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 function formatAddress(location: any) {
   const address = location.storefrontAddress;
@@ -22,6 +23,9 @@ function formatAddress(location: any) {
 export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
     if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -32,6 +36,23 @@ export async function POST(req: Request) {
     const { selectedLocations } = await req.json(); // array of location.name strings
     if (!Array.isArray(selectedLocations) || selectedLocations.length === 0) {
       return NextResponse.json({ error: "No locations selected" }, { status: 400 });
+    }
+
+    if (selectedLocations.length > 1) {
+      return NextResponse.json({ error: "You can select only one Google Business Profile." }, { status: 400 });
+    }
+
+    // Check if they already have a profile connected
+    const existingProfiles = await prisma.gbpAccount.findMany({
+      where: { doctorId },
+      select: { locationName: true }
+    });
+
+    if (existingProfiles.length > 0) {
+      const existingName = existingProfiles[0].locationName;
+      if (selectedLocations[0] !== existingName) {
+        return NextResponse.json({ error: "Your plan only allows one Google Business Profile. You already have a profile connected." }, { status: 400 });
+      }
     }
 
     const cookieStore = await cookies();

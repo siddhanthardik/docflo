@@ -8,17 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, Reply, ThumbsUp, MessageCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-interface Review {
-  id: string;
-  reviewerName: string;
-  rating: number;
-  comment: string;
-  reply?: string;
-  reviewDate: string;
-  responded: boolean;
-  source: string;
-}
+import type { GbpDbReview as Review } from "@/types/gbp";
 
 interface ReviewsListProps {
   reviews: Review[];

@@ -4,6 +4,7 @@ import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { GBPService } from "@/services/gbp.service";
 import { PlacesService } from "@/services/places.service";
+import { entitlementGuard } from "@/lib/withEntitlements";
 
 function mapStoredReview(review: any) {
   return {
@@ -21,7 +22,7 @@ function mapStoredReview(review: any) {
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { doctorId, locationId } = await getSessionData();
     const accountWhere: any = { doctorId };
@@ -131,6 +132,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
+
+    const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
+    if (block) return block;
     const { reviewId, reply } = await req.json();
 
     if (!reviewId || !reply) {

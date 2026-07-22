@@ -160,7 +160,7 @@ export default function BillingDashboard() {
                       {format(new Date(inv.issueDate), "MMM dd, yyyy")}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-gray-900">₹{inv.totalAmount.toLocaleString()}</span>
+                      <span className="font-bold text-gray-900">{inv.currencySymbol || "$"}{inv.totalAmount.toLocaleString()}</span>
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(inv.status)}

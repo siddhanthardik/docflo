@@ -1,23 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-interface GBPInsights {
-  locationName: string;
-  profileName?: string;
-  totalSearches: number;
-  directSearches: number;
-  discoverySearches: number;
-  totalViews: number;
-  searchViews: number;
-  mapsViews: number;
-  totalActions: number;
-  websiteClicks: number;
-  phoneCalls: number;
-  directionRequests: number;
-  searchKeywords?: any[];
-  viewsChange?: number;
-  searchChange?: number;
-  actionsChange?: number;
-}
+import type { GbpAccountInsights as GBPInsights } from "@/types/gbp";
 
 interface GBPAccount {
   name: string;

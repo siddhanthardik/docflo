@@ -17,6 +17,21 @@ class WhatsAppManager {
     }
   }
 
+  // Resolves a LID to a phone number using Baileys reverse mapping files
+  async resolveLidToPhone(doctorId: string, lid: string): Promise<string> {
+    try {
+      const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+      const reverseMappingPath = path.join(sessionDir, `lid-mapping-${lid}_reverse.json`);
+      if (fs.existsSync(reverseMappingPath)) {
+        const rawPhone = JSON.parse(fs.readFileSync(reverseMappingPath, 'utf8'));
+        return rawPhone.replace('@s.whatsapp.net', '');
+      }
+    } catch (e) {
+      console.error(`[WhatsAppManager] Failed to parse lid mapping for ${lid}:`, e);
+    }
+    return lid;
+  }
+
   // Normalizes phone numbers to standard format (E.164 without +)
   normalizePhone(phone: string): string {
     if (!phone) return "";
@@ -45,7 +60,7 @@ class WhatsAppManager {
       auth: state,
       printQRInTerminal: false,
       generateHighQualityLinkPreview: true,
-      browser: ['Docflo', 'Chrome', '1.0.0'],
+      browser: ['Gyrex', 'Chrome', '1.0.0'],
     });
 
     this.sockets.set(doctorId, sock);
@@ -95,6 +110,11 @@ class WhatsAppManager {
 
         if (remoteJid && textMessage && !remoteJid.includes('@g.us') && !remoteJid.includes('status@broadcast')) {
           let rawPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@lid', '');
+          
+          if (remoteJid.includes('@lid')) {
+            rawPhone = await this.resolveLidToPhone(doctorId, rawPhone);
+          }
+          
           const patientPhone = this.normalizePhone(rawPhone);
           console.log(`[WhatsAppManager] Message from ${patientPhone} (raw: ${remoteJid}) to doctor ${doctorId}: ${textMessage}`);
 
@@ -156,51 +176,110 @@ class WhatsAppManager {
             });
 
             // Check if this is a reply to the review survey
-            const lastMessages = await prisma.chatMessage.findMany({
-              where: { conversationId: conversation.id },
-              orderBy: { createdAt: "desc" },
-              take: 2
+            const pendingAppointment = await prisma.appointment.findFirst({
+              where: {
+                doctorId,
+                patientId: conversation.patientId || "",
+                reviewStatus: "SURVEY_SENT"
+              },
+              orderBy: { createdAt: "desc" }
             });
 
-            if (lastMessages.length >= 2) {
-              const prevMsg = lastMessages[1];
-              if (prevMsg.direction === "OUTGOING" && prevMsg.content.includes("Were you happy with today's consultation?")) {
-                const textLower = textMessage.trim().toLowerCase();
-                const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good)$/.test(textLower) || textLower.includes("yes");
-                const isNo = /^(no|n|nope|nah|never|bad)$/.test(textLower) || textLower.includes("no");
+            if (pendingAppointment) {
+              const textLower = textMessage.trim().toLowerCase();
+              const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good)$/.test(textLower) || textLower.includes("yes");
+              const isNo = /^(no|n|nope|nah|never|bad)$/.test(textLower) || textLower.includes("no");
 
-                if (isYes) {
-                  const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
-                  const insights: any = gbp?.insightsData || {};
-                  const placeId = insights?.placeId;
+              if (isYes) {
+                const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
+                const insights: any = gbp?.insightsData || {};
+                const placeId = insights?.placeId;
+                
+                const doctorData = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { clinicName: true, reviewGoogleInvitationMessage: true }});
+                const clinicSearch = encodeURIComponent(doctorData?.clinicName || "clinic");
+                
+                const reviewLink = placeId
+                  ? `https://search.google.com/local/writereview?placeid=${placeId}`
+                  : `https://google.com/search?q=${clinicSearch}`;
                   
-                  const doctorData = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { clinicName: true }});
-                  const clinicSearch = encodeURIComponent(doctorData?.clinicName || "clinic");
-                  
-                  const reviewLink = placeId
-                    ? `https://search.google.com/local/writereview?placeid=${placeId}`
-                    : `https://google.com/search?q=${clinicSearch}`;
-                    
-                  const replyText = `We are so glad to hear that! 🌟\n\nCould you take 60 seconds to leave us a quick review on Google? It helps others find our clinic and means the world to us.\n\n${reviewLink}\n\nThank you, and stay healthy!`;
-                  
-                  await sock.sendMessage(remoteJid, { text: replyText });
-                  await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
-                  });
-                  return; // Don't pass to AI agent
-                } else if (isNo) {
-                  const replyText = `We are very sorry to hear that your experience wasn't perfect. We take patient feedback very seriously. Could you please tell us what went wrong so we can improve?`;
-                  await sock.sendMessage(remoteJid, { text: replyText });
-                  await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
-                  });
-                  
-                  // Alert Clinic Owner via an internal note
-                  await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System" }
-                  });
-                  return; // Don't pass to AI agent
-                }
+                const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much, and stay healthy!`;
+                const replyText = doctorData?.reviewGoogleInvitationMessage 
+                  ? doctorData.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
+                  : defaultReply;
+                
+                await sock.sendMessage(remoteJid, { text: replyText });
+                await prisma.chatMessage.create({
+                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                });
+
+                await prisma.appointment.update({
+                  where: { id: pendingAppointment.id },
+                  data: { reviewStatus: "LINK_SENT" }
+                });
+
+                return; // Don't pass to AI agent
+              } else if (isNo) {
+                const replyText = `We are so sorry to hear that we didn't meet your expectations today. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
+                await sock.sendMessage(remoteJid, { text: replyText });
+                await prisma.chatMessage.create({
+                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                });
+                
+                // Alert Clinic Owner via an internal note
+                await prisma.chatMessage.create({
+                  data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System" }
+                });
+
+                await prisma.appointment.update({
+                  where: { id: pendingAppointment.id },
+                  data: { reviewStatus: "NEGATIVE_RESPONSE" }
+                });
+
+                return; // Don't pass to AI agent
+              }
+            }
+
+            // Check if patient is confirming an appointment
+            const textLowerConfirm = textMessage.trim().toLowerCase();
+            const isConfirming = /^(confirm|yes|i confirm|confirmed|ok|okay)$/.test(textLowerConfirm) || textLowerConfirm.includes("confirm");
+
+            if (isConfirming && patient) {
+              // Find nearest upcoming unconfirmed appointment
+              const upcomingAppointment = await prisma.appointment.findFirst({
+                where: {
+                  doctorId,
+                  patientId: patient.id,
+                  date: { gte: new Date() },
+                },
+                orderBy: { date: 'asc' }
+              });
+
+              if (upcomingAppointment) {
+                // We ensure it is set to CONFIRMED (in case it was changed)
+                await prisma.appointment.update({
+                  where: { id: upcomingAppointment.id },
+                  data: { status: "CONFIRMED" }
+                });
+
+                const replyText = `Wonderful! Your appointment is fully confirmed. We're looking forward to seeing you soon. Drive safely! 🚗`;
+                await sock.sendMessage(remoteJid, { text: replyText });
+                
+                await prisma.chatMessage.create({
+                  data: {
+                    conversationId: conversation.id,
+                    direction: "OUTGOING",
+                    messageType: "text",
+                    content: replyText,
+                    senderName: "Clinic",
+                  }
+                });
+
+                await prisma.conversation.update({
+                  where: { id: conversation.id },
+                  data: { lastMessageAt: new Date() }
+                });
+
+                return; // Don't pass to AI agent
               }
             }
 
@@ -268,7 +347,14 @@ class WhatsAppManager {
   async logout(doctorId: string) {
     const sock = this.sockets.get(doctorId);
     if (sock) {
-      sock.logout();
+      try { sock.logout(); } catch (e) {}
+    }
+    
+    this.sockets.delete(doctorId);
+    this.qrCodes.delete(doctorId);
+    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+    if (fs.existsSync(sessionDir)) {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
     }
   }
 
@@ -281,6 +367,34 @@ class WhatsAppManager {
     const jid = `${cleanPhone}@s.whatsapp.net`;
     await sock.sendMessage(jid, { text });
     return cleanPhone; // Return the normalized phone so callers can use it for DB lookups
+  }
+
+  async sendDocument(doctorId: string, phone: string, buffer: Buffer, fileName: string, caption?: string) {
+    const sock = this.sockets.get(doctorId);
+    if (!sock) throw new Error("WhatsApp not connected for this doctor");
+    
+    const cleanPhone = this.normalizePhone(phone);
+    const jid = `${cleanPhone}@s.whatsapp.net`;
+    await sock.sendMessage(jid, { 
+      document: buffer, 
+      mimetype: 'application/pdf', 
+      fileName: fileName,
+      caption: caption 
+    });
+    return cleanPhone;
+  }
+
+  async sendImage(doctorId: string, phone: string, buffer: Buffer, caption?: string) {
+    const sock = this.sockets.get(doctorId);
+    if (!sock) throw new Error("WhatsApp not connected for this doctor");
+    
+    const cleanPhone = this.normalizePhone(phone);
+    const jid = `${cleanPhone}@s.whatsapp.net`;
+    await sock.sendMessage(jid, { 
+      image: buffer, 
+      caption: caption 
+    });
+    return cleanPhone;
   }
 
   // Auto-connect all saved sessions on boot

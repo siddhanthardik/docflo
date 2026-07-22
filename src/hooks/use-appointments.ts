@@ -11,7 +11,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   reason?: string;
-  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+  status: "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
   notes?: string;
   reminderSent: boolean;
   reviewRequested: boolean;
