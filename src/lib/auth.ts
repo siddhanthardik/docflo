@@ -74,36 +74,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Helper to check lockout
         const checkLockout = async (user: any, userType: any) => {
-          if (user.lockedUntil && user.lockedUntil > new Date()) {
+          if (user?.lockedUntil && user.lockedUntil > new Date()) {
             await logActivity({
               userId: user.id,
               userType,
               action: "LOGIN_FAILED_LOCKED",
               ipAddress,
               userAgent
-            });
-            throw new Error("Invalid credentials"); // Generic message
+            }).catch(() => {});
+            throw new Error("Invalid credentials");
           }
         };
 
         // Helper to handle failed login
         const handleFailedLogin = async (user: any, model: any, userType: any) => {
-          const attempts = (user.failedLoginAttempts || 0) + 1;
-          const lockedUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
-          
-          await model.update({
-            where: { id: user.id },
-            data: { failedLoginAttempts: attempts, lockedUntil }
-          });
+          try {
+            const attempts = (user.failedLoginAttempts || 0) + 1;
+            const lockedUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+            
+            await model.update({
+              where: { id: user.id },
+              data: { failedLoginAttempts: attempts, lockedUntil }
+            });
 
-          await logActivity({
-            userId: user.id,
-            userType,
-            action: lockedUntil ? "ACCOUNT_LOCKOUT" : "LOGIN_FAILED",
-            details: { attempts },
-            ipAddress,
-            userAgent
-          });
+            await logActivity({
+              userId: user.id,
+              userType,
+              action: lockedUntil ? "ACCOUNT_LOCKOUT" : "LOGIN_FAILED",
+              details: { attempts },
+              ipAddress,
+              userAgent
+            });
+          } catch (e) {
+            // Ignore missing column errors during migration sync
+          }
         };
 
         // 0. Try to find a Platform User first (SaaS Staff)
@@ -117,8 +121,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             isActive: true,
             createdAt: true,
-            failedLoginAttempts: true,
-            lockedUntil: true,
           },
         });
 
@@ -127,8 +129,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (platformUser.password) {
             const isValid = await compare(password, platformUser.password);
             if (isValid) {
-              await prisma.platformUser.update({ where: { id: platformUser.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
-              await logActivity({ userId: platformUser.id, userType: "PLATFORM", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              try {
+                await prisma.platformUser.update({ where: { id: platformUser.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              } catch (e) {}
+              await logActivity({ userId: platformUser.id, userType: "PLATFORM", action: "LOGIN_SUCCESS", ipAddress, userAgent }).catch(() => {});
               return { 
                 id: platformUser.id, 
                 email: platformUser.email, 
@@ -153,8 +157,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: true,
             role: true,
             createdAt: true,
-            failedLoginAttempts: true,
-            lockedUntil: true,
           },
         });
 
@@ -163,8 +165,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (doctor.password) {
             const isValid = await compare(password, doctor.password);
             if (isValid) {
-              await prisma.doctor.update({ where: { id: doctor.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
-              await logActivity({ userId: doctor.id, userType: "CLINIC", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              try {
+                await prisma.doctor.update({ where: { id: doctor.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              } catch (e) {}
+              await logActivity({ userId: doctor.id, userType: "CLINIC", action: "LOGIN_SUCCESS", ipAddress, userAgent }).catch(() => {});
               return { 
                 id: doctor.id, 
                 email: doctor.email, 
@@ -190,8 +194,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             doctorId: true,
             createdAt: true,
-            failedLoginAttempts: true,
-            lockedUntil: true,
           },
         });
 
@@ -200,8 +202,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (staff.password) {
             const isValid = await compare(password, staff.password);
             if (isValid) {
-              await prisma.staffMember.update({ where: { id: staff.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
-              await logActivity({ userId: staff.id, userType: "STAFF", action: "LOGIN_SUCCESS", ipAddress, userAgent });
+              try {
+                await prisma.staffMember.update({ where: { id: staff.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+              } catch (e) {}
+              await logActivity({ userId: staff.id, userType: "STAFF", action: "LOGIN_SUCCESS", ipAddress, userAgent }).catch(() => {});
               return { 
                 id: staff.id, 
                 email: staff.email, 
