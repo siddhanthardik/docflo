@@ -9,8 +9,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctor: any = await prisma.doctor.findUnique({
+    const doctor = await prisma.doctor.findUnique({
       where: { id: session.user.id },
+      select: {
+        gcalAccessToken: true,
+        gcalRefreshToken: true,
+        gcalConnectedAt: true,
+      },
     });
 
     const isConnected = Boolean(doctor?.gcalAccessToken || doctor?.gcalRefreshToken);

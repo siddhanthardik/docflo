@@ -15,7 +15,7 @@ export async function POST() {
         gcalAccessToken: null,
         gcalRefreshToken: null,
         gcalConnectedAt: null,
-      } as any,
+      },
     });
 
     return NextResponse.json({ success: true, message: "Google Calendar disconnected successfully" });

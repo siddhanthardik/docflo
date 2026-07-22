@@ -49,7 +49,7 @@ export async function GET(req: Request) {
         gcalAccessToken: tokenData.access_token,
         gcalRefreshToken: tokenData.refresh_token || undefined,
         gcalConnectedAt: new Date(),
-      } as any,
+      },
     });
 
     return NextResponse.redirect(`${baseUrl}/settings/integrations?status=gcal_connected`);

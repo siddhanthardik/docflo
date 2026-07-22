@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
 export async function getValidGCalAccessToken(doctorId: string): Promise<string | null> {
-  const doctor: any = await prisma.doctor.findUnique({
+  const doctor = await prisma.doctor.findUnique({
     where: { id: doctorId },
+    select: { gcalAccessToken: true, gcalRefreshToken: true },
   });
 
   if (!doctor?.gcalAccessToken && !doctor?.gcalRefreshToken) {
@@ -38,7 +39,7 @@ export async function getValidGCalAccessToken(doctorId: string): Promise<string 
       if (res.ok && data.access_token) {
         await prisma.doctor.update({
           where: { id: doctorId },
-          data: { gcalAccessToken: data.access_token } as any,
+          data: { gcalAccessToken: data.access_token },
         });
         return data.access_token;
       }
@@ -52,7 +53,7 @@ export async function getValidGCalAccessToken(doctorId: string): Promise<string 
 
 export async function syncAppointmentToGCal(appointmentId: string): Promise<boolean> {
   try {
-    const appointment: any = await prisma.appointment.findUnique({
+    const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: {
         patient: true,
@@ -120,7 +121,7 @@ export async function syncAppointmentToGCal(appointmentId: string): Promise<bool
       if (gcalEvent.id && !appointment.gcalEventId) {
         await prisma.appointment.update({
           where: { id: appointmentId },
-          data: { gcalEventId: gcalEvent.id } as any,
+          data: { gcalEventId: gcalEvent.id },
         });
       }
       console.log(`[GCAL SYNC SUCCESS] Appointment ${appointmentId} synced to GCal Event ID: ${gcalEvent.id}`);
@@ -137,8 +138,9 @@ export async function syncAppointmentToGCal(appointmentId: string): Promise<bool
 
 export async function deleteGCalAppointmentEvent(appointmentId: string): Promise<boolean> {
   try {
-    const appointment: any = await prisma.appointment.findUnique({
+    const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
+      select: { doctorId: true, gcalEventId: true },
     });
 
     if (!appointment || !appointment.gcalEventId) return false;
