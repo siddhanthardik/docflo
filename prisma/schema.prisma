@@ -1056,6 +1056,7 @@ model LeadActivity {
 enum ScanStatus {
   SUCCESS
   SUCCESS_WITH_WARNINGS
+  PARTIAL
   RUNNING
   FAILED
 }
