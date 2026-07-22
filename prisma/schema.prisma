@@ -924,8 +924,8 @@ model AuditRequest {
 
   report AuditReport?
 
-  leadId String
-  lead   AuditLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String?
+  lead   AuditLead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@map("audit_requests")
 }
