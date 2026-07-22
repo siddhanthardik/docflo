@@ -20,17 +20,13 @@ const getCachedDashboardStats = unstable_cache(
       ? { doctorId, practitionerId }
       : { doctorId };
 
+    // Batch queries to prevent connection pool exhaustion on serverless database
     const [
       totalPatients,
       todayAppointments,
       totalReviews,
       upcomingAppointments,
-      patientsThisWeekList,
-      appointmentsThisWeek,
-      completedThisWeek,
       gbpAccount,
-      recentReviews,
-      reviewsThisWeekList,
     ] = await Promise.all([
       prisma.patient.count({ where: { doctorId, ...(practitionerId ? { primaryPractitionerId: practitionerId } : {}) } }),
       prisma.appointment.count({ where: { ...appointmentWhere, date: { gte: today, lt: tomorrow } } }),
@@ -41,6 +37,19 @@ const getCachedDashboardStats = unstable_cache(
         orderBy: { startTime: "asc" },
         take: 6,
       }),
+      prisma.gbpAccount.findFirst({
+        where: { doctorId },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const [
+      patientsThisWeekList,
+      appointmentsThisWeek,
+      completedThisWeek,
+      recentReviews,
+      reviewsThisWeekList,
+    ] = await Promise.all([
       prisma.patient.findMany({ 
         where: { doctorId, createdAt: { gte: weekAgo }, ...(practitionerId ? { primaryPractitionerId: practitionerId } : {}) },
         select: { createdAt: true }
@@ -52,10 +61,6 @@ const getCachedDashboardStats = unstable_cache(
       prisma.appointment.count({
         where: { ...appointmentWhere, date: { gte: weekAgo }, status: "COMPLETED" },
       }),
-      prisma.gbpAccount.findFirst({
-        where: { doctorId },
-        orderBy: { createdAt: "desc" },
-      }),
       prisma.review.findMany({
         where: { doctorId, source: "GOOGLE" },
         orderBy: { reviewDate: "desc" },
@@ -63,9 +68,9 @@ const getCachedDashboardStats = unstable_cache(
       }),
       prisma.review.findMany({
         where: { doctorId, reviewDate: { gte: weekAgo } },
-        select: { reviewDate: true }
+        select: { reviewDate: true },
       }),
-    ])
+    ]);
 
     return {
       totalPatients,
