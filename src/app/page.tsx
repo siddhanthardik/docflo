@@ -7,7 +7,7 @@ import {
   Activity, Star, ArrowRight, CheckCircle2, TrendingUp, Users, MessageSquare,
   Search, MapPin, Building2, ChevronRight, Zap, Globe, BarChart3,
   Calendar, Phone, Clock, Shield, Heart, Award, Play, ChevronDown, Layers, Database,
-  Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2
+  Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -28,6 +28,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -117,8 +118,56 @@ export default function LandingPage() {
                 Get Free Audit
               </Button>
             </Link>
+            <button 
+              className="md:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open mobile menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
           </div>
         </div>
+
+        {/* ── MOBILE MENU OVERLAY ── */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] bg-white flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
+            <div className="flex items-center justify-between mb-8">
+              <GyrexLogo size="md" />
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-slate-600 hover:text-blue-600 rounded-full bg-slate-100 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <nav className="flex flex-col gap-6 text-lg font-medium text-slate-700">
+              {["Overview", "Data Architecture", "Features", "Process"].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
+                >
+                  {item}
+                </a>
+              ))}
+            </nav>
+
+            <div className="mt-auto pb-8 pt-8 border-t border-slate-100 flex flex-col gap-4">
+              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button variant="outline" className="w-full rounded-xl h-12 text-base font-semibold border-slate-300">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/local-seo/free-audit" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 text-base font-semibold shadow-md shadow-blue-500/20">
+                  Get Free Audit
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ── HERO SECTION ── */}
