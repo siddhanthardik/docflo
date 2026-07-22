@@ -171,19 +171,13 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO SECTION ── */}
-      <section id="overview" className="relative pt-36 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
+      <section id="overview" className="relative pt-28 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
         {/* Soft Background Gradient Blobs */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-b from-blue-400/15 to-indigo-400/5 blur-3xl pointer-events-none -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto mb-12">
             
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-200 bg-white shadow-sm text-blue-700 text-xs font-bold uppercase tracking-wider mb-8">
-              <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-              Healthcare Practice Growth System
-            </div>
-
             {/* Main Headline */}
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tight leading-[1.08] mb-6">
               Your clinic deserves <br className="hidden sm:block" />
@@ -193,7 +187,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
-              Gyrex connects structured local data layers, automated patient communication flows, and multi-channel profile synchronization into a unified practice engine.
+              Automate your patient acquisition, rank higher on Google, and fill your calendar with an all-in-one practice growth engine.
             </p>
 
             {/* Audit Search Bar */}
