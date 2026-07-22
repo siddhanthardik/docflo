@@ -109,6 +109,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // 0. Try to find a Platform User first (SaaS Staff)
         const platformUser = await prisma.platformUser.findUnique({
           where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
+          },
         });
 
         if (platformUser && platformUser.isActive) {
@@ -124,7 +135,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: platformUser.name, 
                 role: platformUser.role,
                 createdAt: platformUser.createdAt,
-                emailVerified: (platformUser as any).emailVerified ?? null,
+                emailVerified: null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -135,6 +146,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // 1. Try to find a Doctor next
         const doctor = await prisma.doctor.findUnique({
           where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            role: true,
+            createdAt: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
+          },
         });
 
         if (doctor) {
@@ -150,7 +171,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: doctor.name, 
                 role: doctor.role,
                 createdAt: doctor.createdAt,
-                emailVerified: (doctor as any).emailVerified ?? null,
+                emailVerified: null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -161,6 +182,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // 2. If not a doctor, try to find a Staff member
         const staff = await prisma.staffMember.findFirst({
           where: { email, isActive: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            role: true,
+            doctorId: true,
+            createdAt: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
+          },
         });
 
         if (staff) {
@@ -177,7 +209,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: staff.role, 
                 doctorId: staff.doctorId,
                 createdAt: staff.createdAt,
-                emailVerified: (staff as any).emailVerified ?? null,
+                emailVerified: null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
