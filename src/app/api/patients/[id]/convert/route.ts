@@ -18,7 +18,7 @@ export async function PATCH(
     }
 
     // Verify patient belongs to this doctor
-    const existingPatient = await prisma.patient.findUnique({
+    const existingPatient = await prisma.patient.findFirst({
       where: { id: patientId, doctorId },
     });
 

@@ -167,8 +167,8 @@ export async function POST(req: Request) {
     }
 
     // Check if patient is LEAD
-    const patient = await prisma.patient.findUnique({
-      where: { id: patientId }
+    const patient = await prisma.patient.findFirst({
+      where: { id: patientId, doctorId }
     });
 
     if (!patient) {
