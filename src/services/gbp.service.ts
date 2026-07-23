@@ -398,36 +398,48 @@ export class GBPService {
         return [];
       }
 
-      const params = new URLSearchParams({
-        pageSize: "50",
-        orderBy: "updateTime desc",
-      });
-      const data = await this.googleFetch<any>(
-        `${LEGACY_GBP_BASE}/${locationName}/reviews?${params.toString()}`
-      );
-      const reviews = (data.reviews || []).map((review: any) => ({
+      const allRawReviews: any[] = [];
+      let pageToken: string | undefined = undefined;
+      let averageRating: number | undefined;
+      let totalReviewCount: number | undefined;
+
+      do {
+        const params = new URLSearchParams({
+          pageSize: "50",
+          orderBy: "updateTime desc",
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+
+        const data = await this.googleFetch<any>(
+          `${LEGACY_GBP_BASE}/${locationName}/reviews?${params.toString()}`
+        );
+        
+        if (data.reviews) {
+          allRawReviews.push(...data.reviews);
+        }
+        
+        // Capture stats from first page
+        if (!pageToken) {
+          averageRating = data.averageRating;
+          totalReviewCount = data.totalReviewCount;
+        }
+
+        pageToken = data.nextPageToken;
+      } while (pageToken);
+
+      const reviews = allRawReviews.map((review: any) => ({
         reviewId: review.reviewId,
         reviewerName: review.reviewer?.displayName || "Google user",
         rating:
-          review.starRating === "FIVE"
-            ? 5
-            : review.starRating === "FOUR"
-            ? 4
-            : review.starRating === "THREE"
-            ? 3
-            : review.starRating === "TWO"
-            ? 2
-            : review.starRating === "ONE"
-            ? 1
-            : 0,
+          review.starRating === "FIVE" ? 5 :
+          review.starRating === "FOUR" ? 4 :
+          review.starRating === "THREE" ? 3 :
+          review.starRating === "TWO" ? 2 :
+          review.starRating === "ONE" ? 1 : 0,
         comment: review.comment || "",
         createTime: review.createTime,
         reply: review.reviewReply?.comment || null,
       }));
-
-      // Extract rating and total count from API response and save to insightsData
-      const averageRating = data.averageRating;
-      const totalReviewCount = data.totalReviewCount;
 
       if (gbpAccountId && (averageRating !== undefined || totalReviewCount !== undefined)) {
         const account = await prisma.gbpAccount.findUnique({ where: { id: gbpAccountId } });

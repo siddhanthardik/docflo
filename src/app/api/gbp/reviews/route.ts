@@ -15,9 +15,11 @@ function mapStoredReview(review: any) {
     text: review.comment,
     comment: review.comment,
     reply: review.reply,
+    replied: review.responded,
     responded: review.responded,
     source: review.source,
     reviewDate: review.reviewDate,
+    createTime: review.reviewDate,
     relative_time_description: new Date(review.reviewDate).toLocaleDateString(),
   };
 }
@@ -67,7 +69,6 @@ export async function GET(req: Request) {
       const storedReviews = await prisma.review.findMany({
         where: { doctorId, source: "GOOGLE", gbpAccountId: account.id },
         orderBy: { reviewDate: "desc" },
-        take: 50,
       });
 
       return NextResponse.json({
