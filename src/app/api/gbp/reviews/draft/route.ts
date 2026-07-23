@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Fast and efficient for text
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Fast and efficient for text
 
     const systemPrompt = `You are the empathetic, professional clinic manager for ${clinicName}.
 Your task is to draft a reply to a patient review.
