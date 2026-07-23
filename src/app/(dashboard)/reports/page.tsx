@@ -13,15 +13,23 @@ import {
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
 
-type TabKey = "operations" | "financial" | "patients" | "automation";
+type TabKey = "operations" | "financial" | "patients" | "reviews" | "automation";
 
 export default function ReportsPage() {
   const { toast } = useToast();
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  
+  const getLocalYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-  const [startDate, setStartDate] = useState(thirtyDaysAgo);
-  const [endDate, setEndDate] = useState(today);
+  const initialEnd = getLocalYMD(new Date());
+  const initialStart = getLocalYMD(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+
+  const [startDate, setStartDate] = useState(initialStart);
+  const [endDate, setEndDate] = useState(initialEnd);
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("operations");
@@ -31,7 +39,9 @@ export default function ReportsPage() {
     let start = new Date();
     let end = new Date();
 
-    if (preset === 'yesterday') {
+    if (preset === 'today') {
+      // already set to today
+    } else if (preset === 'yesterday') {
       start.setDate(now.getDate() - 1);
       end.setDate(now.getDate() - 1);
     } else if (preset === '7days') {
@@ -47,8 +57,8 @@ export default function ReportsPage() {
       start = new Date(now.getFullYear(), 0, 1);
     }
 
-    setStartDate(start.toISOString().split("T")[0]);
-    setEndDate(end.toISOString().split("T")[0]);
+    setStartDate(getLocalYMD(start));
+    setEndDate(getLocalYMD(end));
   };
 
   const fetchReport = async () => {
@@ -183,6 +193,33 @@ export default function ReportsPage() {
     );
   };
 
+  const renderReviews = () => {
+    if (!reportData) return null;
+    
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon={Star} color="yellow" title="New Reviews Received" value={reportData.reviewCount || 0} />
+          <StatCard icon={TrendingUp} color="emerald" title="Average Rating" value={reportData.avgRating ? Number(reportData.avgRating).toFixed(1) : "N/A"} />
+          <StatCard icon={Eye} color="blue" title="GBP Profile Views" value={reportData.gbpData?.totalViews || 0} subtitle="Google Maps & Search" />
+          <StatCard icon={MousePointerClick} color="indigo" title="GBP Interactions" value={(reportData.gbpData?.phoneCalls || 0) + (reportData.gbpData?.directionRequests || 0)} subtitle="Calls & Directions" />
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
+          <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" /> Reputation Summary
+          </h3>
+          <div className="prose prose-sm max-w-none text-gray-600">
+            <p>During the selected period, your clinic received <strong>{reportData.reviewCount || 0}</strong> new reviews with an average rating of <strong>{reportData.avgRating ? Number(reportData.avgRating).toFixed(1) : "N/A"}</strong>.</p>
+            {reportData.gbpData && (
+              <p>Your Google Business Profile generated <strong>{reportData.gbpData.totalViews || 0}</strong> views and <strong>{(reportData.gbpData.phoneCalls || 0) + (reportData.gbpData.directionRequests || 0)}</strong> interactions (including <strong>{reportData.gbpData.phoneCalls || 0}</strong> phone calls).</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderAutomation = () => {
     if (!reportData) return null;
     const aiPercentage = reportData.totalMessages > 0 
@@ -275,6 +312,7 @@ export default function ReportsPage() {
           { key: "operations" as const, label: "Operations", icon: Calendar },
           { key: "financial" as const, label: "Financial", icon: CreditCard },
           { key: "patients" as const, label: "Patients", icon: Users },
+          { key: "reviews" as const, label: "Reviews", icon: Star },
           { key: "automation" as const, label: "Automation & AI", icon: Bot },
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -309,6 +347,7 @@ export default function ReportsPage() {
           {activeTab === "operations" && renderOperations()}
           {activeTab === "financial" && renderFinancial()}
           {activeTab === "patients" && renderPatients()}
+          {activeTab === "reviews" && renderReviews()}
           {activeTab === "automation" && renderAutomation()}
         </div>
       )}
