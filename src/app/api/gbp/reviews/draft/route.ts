@@ -40,7 +40,7 @@ Draft the reply now:`;
     return NextResponse.json({ draft: replyDraft });
 
   } catch (error: any) {
-    console.error("Error generating AI draft:", error);
-    return NextResponse.json({ error: "Failed to generate AI draft" }, { status: 500 });
+    console.error("Error generating draft:", error);
+    return NextResponse.json({ error: `Failed to generate draft: ${error.message || "Unknown error"}` }, { status: 500 });
   }
 }
