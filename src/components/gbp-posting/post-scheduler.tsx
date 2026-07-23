@@ -143,7 +143,43 @@ export function PostScheduler() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* FULL SCREEN SUCCESS MODAL */}
+      {showSuccessOverlay && (
+        <>
+          <style>{`
+            @keyframes shrink {
+              from { width: 100%; }
+              to { width: 0%; }
+            }
+          `}</style>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-md animate-in fade-in duration-500">
+            <div className="bg-white rounded-3xl p-10 shadow-2xl flex flex-col items-center transform animate-in zoom-in-90 duration-500 max-w-[450px] w-full text-center border-t-8 border-t-emerald-500 relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-50 rounded-full blur-3xl opacity-60"></div>
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-50 rounded-full blur-3xl opacity-60"></div>
+            
+            <div className="relative z-10 w-24 h-24 bg-gradient-to-tr from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-6 ring-8 ring-emerald-50/50 shadow-inner">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 drop-shadow-sm" />
+            </div>
+            
+            <h3 className="font-extrabold text-gray-900 text-3xl tracking-tight relative z-10 mb-3 leading-tight">
+              {overlayMessage.includes('Scheduled') ? 'Post Scheduled!' : 'Posted on Google!'}
+            </h3>
+            
+            <p className="text-base text-gray-500 font-medium relative z-10">
+              {overlayMessage.includes('Scheduled') 
+                ? 'Your post has been successfully scheduled and will go live automatically.' 
+                : 'Your post is now live and visible to patients on Google Search and Maps.'}
+            </p>
+            
+            <div className="mt-8 relative z-10 w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 w-full origin-left animate-[shrink_3s_linear_forwards]"></div>
+            </div>
+          </div>
+        </div>
+        </>
+      )}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
         {/* COMPOSER (LEFT) */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full ring-1 ring-black/5">
@@ -297,18 +333,6 @@ export function PostScheduler() {
           <div className="bg-white rounded-[2.5rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden w-full max-w-[375px] mx-auto relative h-[700px] flex flex-col ring-4 ring-gray-100">
             
             {/* SUCCESS OVERLAY */}
-            {showSuccessOverlay && (
-              <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 transition-all">
-                <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center transform animate-in zoom-in-90 duration-500 border border-gray-100 max-w-[80%] text-center">
-                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-emerald-50/50">
-                    <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-                  </div>
-                  <h4 className="font-extrabold text-gray-900 text-xl">{overlayMessage}</h4>
-                  <p className="text-sm text-gray-500 mt-2 font-medium">Successfully synced with your profile.</p>
-                </div>
-              </div>
-            )}
-
             {/* Fake Mobile Header */}
             <div className="bg-gray-100 px-6 pt-3 pb-2 flex justify-between items-center text-[10px] font-medium text-gray-900 sticky top-0 z-20">
               <span>9:41</span>
