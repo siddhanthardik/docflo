@@ -192,15 +192,18 @@ export default function ReviewsPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Failed to generate AI reply");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate reply");
+      }
       
       const data = await res.json();
       setReplyText(data.draft || "");
     } catch (err: any) {
-      console.error(err);
+      console.error("Draft Generation Error:", err);
       setReplyText("");
       toast.error("Generation Failed", {
-        description: "Could not generate AI reply. Please try again or type manually."
+        description: err.message || "Could not generate reply. Please try again or type manually."
       });
     }
   };
@@ -420,7 +423,7 @@ export default function ReviewsPage() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2 text-indigo-700 font-medium text-sm">
                           <Bot className="h-4 w-4" />
-                          AI Keyword-Rich Reply
+                          Drafted Reply
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setDraftingReplyFor(null)} className="h-7 text-xs text-gray-500">Cancel</Button>
                       </div>
@@ -458,7 +461,7 @@ export default function ReviewsPage() {
                         className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-medium"
                       >
                         <Bot className="h-4 w-4 mr-1.5" />
-                        Draft AI Reply
+                        Draft Reply
                       </Button>
                     </div>
                   )}
