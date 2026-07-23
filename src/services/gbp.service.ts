@@ -581,7 +581,11 @@ export class GBPService {
           body: JSON.stringify(body),
         }
       );
-      if (!response.ok) throw new Error("Failed to create post on Google Business Profile");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("GBP createPost error:", response.status, errorText);
+        throw new Error(`Failed to create post on Google Business Profile: ${errorText}`);
+      }
       return await response.json();
     } catch (error) {
       console.error("Error creating post:", error);

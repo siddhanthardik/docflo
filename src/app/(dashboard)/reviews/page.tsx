@@ -184,7 +184,7 @@ export default function ReviewsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reviewText: review.comment || "",
+          reviewText: review.text || review.comment || "",
           rating: review.rating,
           authorName: review.author_name || "Valued Patient",
           clinicName: insights?.name || "Our Clinic",

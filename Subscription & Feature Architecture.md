@@ -1,6 +1,6 @@
-# DocFlo Subscription & Feature Architecture
+# Gyrex Subscription & Feature Architecture
 
-This document defines the product architecture for DocFlo's Subscription and Feature Management, strictly adhering to the philosophy that doctors buy high-level capabilities (Modules) constrained by volume (Usage Limits), rather than a disjointed list of feature flags.
+This document defines the product architecture for Gyrex's Subscription and Feature Management, strictly adhering to the philosophy that doctors buy high-level capabilities (Modules) constrained by volume (Usage Limits), rather than a disjointed list of feature flags.
 
 ## 1. Subscription Module Catalog
 
