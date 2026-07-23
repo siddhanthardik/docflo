@@ -58,9 +58,9 @@ export async function POST(req: Request) {
     // Write file to local disk (Abstraction point: later replace with S3 putObject)
     await writeFile(filepath, buffer);
 
-    // Return the relative URL
+    // Return the relative URL using the dynamic API route
     const folder = type === "logo" ? "logos/" : type === "announcement" ? "announcements/" : "";
-    const url = `/uploads/${folder}${filename}`;
+    const url = `/api/uploads/${folder}${filename}`;
 
     return NextResponse.json({ url });
   } catch (error) {

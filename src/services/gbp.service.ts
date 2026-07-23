@@ -546,15 +546,12 @@ export class GBPService {
       // Note: Google requires a public URL. Localhost URLs will fail on the Google side,
       // but we send it anyway so it works when deployed.
       if (imageUrl) {
-        // If it's a relative URL (e.g. /uploads/...), make it absolute.
-        // For development, we'll just pass it. It will fail on Google API if not public.
+        // GBP API requires absolute public URLs
         let fullUrl = imageUrl;
         if (imageUrl.startsWith("/")) {
-           // Provide a dummy public URL for localhost testing to avoid GBP API hard crash,
-           // or pass the actual absolute URL if in production.
-           // Since we know we are in dev, let's use a placeholder image if it's relative
-           // just to ensure the API succeeds for the user's testing.
-           fullUrl = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80";
+           // We prepend the app URL if it's a relative path from our own upload API
+           const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+           fullUrl = `${baseUrl}${imageUrl}`;
         }
         
         body.media = [
