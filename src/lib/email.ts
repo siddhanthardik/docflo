@@ -110,3 +110,92 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
     html,
   });
 }
+
+/**
+ * Send Subscription Payment Success Email
+ */
+export async function sendPaymentSuccessEmail(email: string, name: string, planName: string, amount: string, invoiceUrl?: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; }
+        .header { font-size: 20px; font-weight: bold; color: #10b981; margin-bottom: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">Payment Successful! 🎉</div>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your payment of <strong>${amount}</strong> for the <strong>${planName}</strong> has been successfully processed.</p>
+        <p>Thank you for subscribing to Gyrex! Your account is fully active.</p>
+        ${invoiceUrl ? `<p><a href="${invoiceUrl}">Download your Invoice here</a></p>` : ''}
+        <p>Best regards,<br>The Gyrex Team</p>
+      </div>
+    </body>
+    </html>
+  `;
+  return sendEmail({ to: email, subject: "Payment Successful - Gyrex", html });
+}
+
+/**
+ * Send Subscription Payment Failed Email
+ */
+export async function sendPaymentFailedEmail(email: string, name: string, planName: string, actionUrl: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; }
+        .header { font-size: 20px; font-weight: bold; color: #ef4444; margin-bottom: 20px; }
+        .btn { display: inline-block; background-color: #0066FF; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">Payment Failed ⚠️</div>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>We attempted to process your renewal for the <strong>${planName}</strong>, but the payment failed.</p>
+        <p>To avoid any interruption in your service, please update your payment method or retry the payment.</p>
+        <a href="${actionUrl}" class="btn">Update Payment Method</a>
+        <p>Best regards,<br>The Gyrex Team</p>
+      </div>
+    </body>
+    </html>
+  `;
+  return sendEmail({ to: email, subject: "Action Required: Payment Failed - Gyrex", html });
+}
+
+/**
+ * Send Plan Expiry Warning Email
+ */
+export async function sendPlanExpiryEmail(email: string, name: string, daysLeft: number, actionUrl: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; }
+        .header { font-size: 20px; font-weight: bold; color: #f59e0b; margin-bottom: 20px; }
+        .btn { display: inline-block; background-color: #0066FF; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">Your Plan is Expiring Soon</div>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your Gyrex subscription is scheduled to expire in <strong>${daysLeft} days</strong>.</p>
+        <p>Please ensure your payment method is up to date so your subscription can renew automatically without any interruption.</p>
+        <a href="${actionUrl}" class="btn">Manage Subscription</a>
+        <p>Best regards,<br>The Gyrex Team</p>
+      </div>
+    </body>
+    </html>
+  `;
+  return sendEmail({ to: email, subject: "Subscription Expiring Soon - Gyrex", html });
+}

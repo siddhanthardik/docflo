@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, X, CreditCard, Sparkles } from "lucide-react";
+import { Check, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -10,105 +10,99 @@ export function BillingClient({
   currentPackage, 
   subscriptionStatus, 
   availablePackages,
-  featureFlags
+  featureFlags,
+  userCountry = "IN" // Default to IN for razorpay, others will use Stripe
 }: { 
   currentPackage: any; 
   subscriptionStatus: string; 
   availablePackages: any[]; 
   featureFlags: any[];
+  userCountry?: string;
 }) {
   const { toast } = useToast();
   const router = useRouter();
   const [loadingPkgId, setLoadingPkgId] = useState<string | null>(null);
-  const [promoCode, setPromoCode] = useState("");
+  const [period, setPeriod] = useState<"monthly" | "quarterly" | "yearly">("monthly");
   
-  // Load Razorpay script dynamically
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+    if (userCountry === "IN") {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      document.body.appendChild(script);
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
+  }, [userCountry]);
 
   const handleSubscribe = async (pkg: any) => {
     setLoadingPkgId(pkg.id);
     try {
-      // Create order
-      const res = await fetch("/api/billing/razorpay", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packageId: pkg.id, promoCode: promoCode || undefined }),
+        body: JSON.stringify({ 
+          packageId: pkg.id, 
+          countryCode: userCountry,
+          period 
+        }),
       });
       
       const data = await res.json();
       
       if (!res.ok) throw new Error(data.error || "Failed to initiate payment");
       
-      if (data.isFree) {
-        toast({ title: "Success", description: "Successfully subscribed to Free plan!" });
-        router.refresh();
-        setLoadingPkgId(null);
+      if (data.provider === "stripe") {
+        window.location.href = data.url; // Redirect to Stripe Checkout
         return;
       }
 
-      // Initialize Razorpay
-      const options = {
-        key: data.key,
-        amount: data.amount,
-        currency: data.currency,
-        name: "Gyrex",
-        description: `Upgrade to ${pkg.name}`,
-        image: "https://via.placeholder.com/150", // replace with actual logo
-        order_id: data.orderId,
-        handler: async function (response: any) {
-          // Verify payment
-          try {
-            const verifyRes = await fetch("/api/billing/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                packageId: pkg.id,
-                promoCode: data.promoCode || undefined, // from the create order response
-              }),
-            });
-            const verifyData = await verifyRes.json();
-            
-            if (verifyData.success) {
-              toast({ title: "Payment Successful", description: "Your subscription has been upgraded!" });
-              router.refresh();
-            } else {
-              toast({ title: "Payment Failed", description: "Could not verify payment.", variant: "destructive" });
-            }
-          } catch (e) {
-             toast({ title: "Error", description: "An error occurred during verification.", variant: "destructive" });
-          }
-        },
-        prefill: {
-          name: "Gyrex User",
-          email: "user@example.com",
-        },
-        theme: {
-          color: "#4f46e5",
-        },
-      };
+      if (data.provider === "razorpay") {
+        const options = {
+          key: data.keyId,
+          subscription_id: data.subscriptionId,
+          name: "Gyrex",
+          description: `Subscribe to ${pkg.name}`,
+          image: "https://gyrex.in/logo.png",
+          handler: function (response: any) {
+            toast({ title: "Subscription Active", description: "Your subscription has been successfully activated!" });
+            router.refresh();
+          },
+          prefill: {
+            name: "Gyrex User",
+            email: "user@example.com",
+          },
+          theme: {
+            color: "#4f46e5",
+          },
+        };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on("payment.failed", function (response: any) {
-        toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
-      });
-      rzp.open();
-      
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", function (response: any) {
+          toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
+        });
+        rzp.open();
+      }
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoadingPkgId(null);
     }
+  };
+
+  const getPriceForPeriod = (pkg: any) => {
+    const priceModel = pkg.prices?.find((p: any) => p.countryCode === userCountry);
+    if (!priceModel) return 0;
+    if (period === "monthly") return priceModel.priceMonthly;
+    if (period === "quarterly") return priceModel.priceQuarterly;
+    if (period === "yearly") return priceModel.priceYearly;
+    return 0;
+  };
+
+  const getCurrency = (pkg: any) => {
+    const priceModel = pkg.prices?.find((p: any) => p.countryCode === userCountry);
+    return priceModel?.currency === "INR" ? "₹" : "$";
   };
 
   return (
@@ -132,7 +126,7 @@ export function BillingClient({
               </p>
             </div>
             <div className="mt-4 md:mt-0 text-right">
-              <div className="text-2xl font-bold text-gray-900">${currentPackage.priceMonthly}<span className="text-sm text-gray-500 font-medium">/mo</span></div>
+              <Button onClick={() => window.location.href = "/subscription"} variant="outline" size="sm">Manage Billing</Button>
             </div>
           </div>
         ) : (
@@ -144,22 +138,36 @@ export function BillingClient({
 
       {/* Available Plans */}
       <div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h2 className="text-lg font-bold text-gray-900">Upgrade Your Plan</h2>
-          <div className="flex items-center gap-2 max-w-sm w-full">
-            <input 
-              type="text" 
-              placeholder="Promo Code (Optional)" 
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono uppercase"
-            />
+          
+          <div className="inline-flex bg-gray-100 p-1 rounded-lg">
+            <button 
+              onClick={() => setPeriod("monthly")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'monthly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              Monthly
+            </button>
+            <button 
+              onClick={() => setPeriod("quarterly")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'quarterly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              Quarterly
+            </button>
+            <button 
+              onClick={() => setPeriod("yearly")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'yearly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              Yearly (Save 20%)
+            </button>
           </div>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {availablePackages.map((pkg) => {
             const isCurrent = currentPackage?.id === pkg.id;
-            const features = pkg.features as any || {};
+            const price = getPriceForPeriod(pkg);
+            const currency = getCurrency(pkg);
             
             return (
               <div key={pkg.id} className={`bg-white rounded-2xl border ${isCurrent ? 'border-indigo-500 shadow-indigo-100/50 ring-1 ring-indigo-500' : 'border-gray-100'} shadow-sm overflow-hidden flex flex-col relative transition-all hover:shadow-md`}>
@@ -175,8 +183,8 @@ export function BillingClient({
                   <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wider">{pkg.name}</h3>
                   <p className="text-sm text-gray-500 mt-1 h-10">{pkg.description}</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
-                    <span className="text-sm font-medium text-gray-500">/mo</span>
+                    <span className="text-4xl font-extrabold text-gray-900">{currency}{price}</span>
+                    <span className="text-sm font-medium text-gray-500">/{period === 'monthly' ? 'mo' : period === 'quarterly' ? 'quarter' : 'yr'}</span>
                   </div>
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
@@ -220,9 +228,9 @@ export function BillingClient({
                       <Button 
                         onClick={() => handleSubscribe(pkg)}
                         className={`w-full ${pkg.name === "GROWTH" ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-900 hover:bg-gray-800'}`}
-                        disabled={loadingPkgId === pkg.id}
+                        disabled={loadingPkgId === pkg.id || price === 0}
                       >
-                        {loadingPkgId === pkg.id ? "Processing..." : (pkg.priceMonthly === 0 ? "Get Started" : "Upgrade")}
+                        {loadingPkgId === pkg.id ? "Processing..." : (price === 0 ? "Contact Sales" : "Upgrade")}
                       </Button>
                     )}
                   </div>

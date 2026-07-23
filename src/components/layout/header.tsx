@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Bell } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
   const { data: session } = useSession();
@@ -34,10 +35,7 @@ export function Header() {
 
       {/* Right: actions + avatar */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        <button className="relative w-9 h-9 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center border border-gray-100 transition-colors">
-          <Bell className="h-4 w-4 text-gray-500" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full border-2 border-white" />
-        </button>
+        <NotificationBell />
 
         <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">

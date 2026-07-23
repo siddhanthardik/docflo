@@ -69,6 +69,7 @@ model Doctor {
   invoices               Invoice[]
   auditLead              AuditLead?
   subscriptionHistories  SubscriptionHistory[]
+  notifications          Notification[]
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -482,6 +483,7 @@ model Package {
   updatedAt           DateTime             @updatedAt
   doctors             Doctor[]
   paymentTransactions PaymentTransaction[]
+  prices              PackagePrice[]
 
   @@map("packages")
 }
@@ -1237,3 +1239,61 @@ model SearchGridSnapshot {
   @@index([gbpAccountId, keyword])
   @@map("search_grid_snapshots")
 }
+
+model PackagePrice {
+  id                     String   @id @default(cuid())
+  packageId              String
+  countryCode            String   // e.g. "IN", "US", "GLOBAL"
+  currency               String   // e.g. "INR", "USD"
+  priceMonthly           Float    @default(0)
+  priceQuarterly         Float    @default(0)
+  priceYearly            Float    @default(0)
+  razorpayMonthlyPlanId  String?
+  razorpayQuarterlyPlanId String?
+  razorpayYearlyPlanId   String?
+  stripeMonthlyPriceId   String?
+  stripeQuarterlyPriceId String?
+  stripeYearlyPriceId    String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, countryCode])
+  @@map("package_prices")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  doctorId    String
+  title       String
+  message     String
+  type        String   // "INFO", "WARNING", "SUCCESS", "ERROR", "BILLING"
+  isRead      Boolean  @default(false)
+  actionUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([doctorId, isRead])
+  @@map("notifications")
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  gateway         String   // "RAZORPAY", "STRIPE"
+  eventId         String   @unique
+  eventType       String
+  payload         Json
+  processed       Boolean  @default(false)
+  processingError String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([processed])
+  @@map("webhook_events")
+}
+
