@@ -44,13 +44,17 @@ export async function POST(req: Request) {
     // If publishing now, call GBP API
     if (!scheduledDate && account && account.accessToken && account.insightsData) {
       const insights = account.insightsData as any;
-      const locationName = insights.locationName;
-      
-      if (locationName) {
+      if (insights.locationName) {
+         let fullLocationName = insights.locationName;
+         if (insights.accountName && !fullLocationName.startsWith("accounts/")) {
+           const locPart = fullLocationName.startsWith("locations/") ? fullLocationName : `locations/${fullLocationName}`;
+           fullLocationName = `${insights.accountName}/${locPart}`;
+         }
+
          try {
            const gbpService = new GBPService(account.accessToken, account.doctorId);
            const res = await gbpService.createPost(
-             locationName,
+             fullLocationName,
              content,
              postType,
              imageUrl,
@@ -58,8 +62,9 @@ export async function POST(req: Request) {
              ctaLink
            );
            gbpPostId = res.name;
-         } catch(e) {
+         } catch(e: any) {
            console.error("GBP API error:", e);
+           require('fs').writeFileSync('d:\\gyrex\\gbp_error.log', e.toString() + '\\n' + (e.stack || ''), {flag: 'a'});
            status = "DRAFT";
            publishedAt = null;
          }
