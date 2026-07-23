@@ -451,6 +451,7 @@ export class GBPService {
             comment: review.comment,
             reply: review.reply,
             responded: !!review.reply,
+            gbpAccountId: gbpAccountId || undefined,
           },
           create: {
             id: review.reviewId,

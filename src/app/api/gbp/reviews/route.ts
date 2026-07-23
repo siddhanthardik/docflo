@@ -24,7 +24,12 @@ function mapStoredReview(review: any) {
 
 export async function GET(req: Request) {
   try {
-    const { doctorId, locationId } = await getSessionData();
+    const sessionData = await getSessionData();
+    const doctorId = sessionData.doctorId;
+    
+    const url = new URL(req.url);
+    const locationId = url.searchParams.get("locationId") || sessionData.locationId;
+    
     const accountWhere: any = { doctorId };
     if (locationId) {
       accountWhere.id = locationId;
@@ -46,7 +51,7 @@ export async function GET(req: Request) {
         const tokenData = await getValidGbpAccessToken(doctorId);
         if (tokenData) {
           const gbpService = new GBPService(tokenData.accessToken, doctorId);
-          await gbpService.getReviews(account.locationName);
+          await gbpService.getReviews(account.locationName, account.id);
         }
       } catch (err) {
         console.warn("Could not fetch fresh OAuth GBP reviews:", err);
