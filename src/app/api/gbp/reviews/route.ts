@@ -45,13 +45,20 @@ export async function GET(req: Request) {
     }
 
     const insights = (account.insightsData as any) || {};
+    
+    // Construct the full location path required for v4 API (accounts/{accountId}/locations/{locationId})
+    let fullLocationPath = account.locationName || "";
+    if (insights.accountName && !fullLocationPath.startsWith("accounts/")) {
+      const locPart = fullLocationPath.startsWith("locations/") ? fullLocationPath : `locations/${fullLocationPath}`;
+      fullLocationPath = `${insights.accountName}/${locPart}`;
+    }
 
-    if (account.locationName?.startsWith("accounts/")) {
+    if (fullLocationPath.startsWith("accounts/")) {
       try {
         const tokenData = await getValidGbpAccessToken(doctorId);
         if (tokenData) {
           const gbpService = new GBPService(tokenData.accessToken, doctorId);
-          await gbpService.getReviews(account.locationName, account.id);
+          await gbpService.getReviews(fullLocationPath, account.id);
         }
       } catch (err) {
         console.warn("Could not fetch fresh OAuth GBP reviews:", err);
