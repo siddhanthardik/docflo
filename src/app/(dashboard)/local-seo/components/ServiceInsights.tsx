@@ -7,6 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const SERVICE_RECOMMENDATIONS: Record<string, string[]> = {
   default: [
+    "Preventive Care",
+    "General Consultation",
+    "Telemedicine",
+    "Health Screening",
+    "Diagnostic Tests",
+  ],
+  ortho: [
     "Spine Surgery",
     "Arthritis Management",
     "Pediatric Orthopedics",
@@ -15,6 +22,15 @@ const SERVICE_RECOMMENDATIONS: Record<string, string[]> = {
     "Joint Pain Treatment",
     "Ligament Repair",
     "Shoulder Replacement",
+  ],
+  pediatric: [
+    "Newborn Care",
+    "Vaccinations & Immunizations",
+    "Developmental Screenings",
+    "Asthma Management",
+    "Childhood Nutrition",
+    "Allergy Testing",
+    "Fever & Infection Treatment",
   ],
   physio: [
     "Post-Operative Rehabilitation",
@@ -52,6 +68,8 @@ const SERVICE_RECOMMENDATIONS: Record<string, string[]> = {
 
 function getRecommendations(primaryCategory: string): string[] {
   const cat = primaryCategory.toLowerCase();
+  if (cat.includes("ortho") || cat.includes("bone")) return SERVICE_RECOMMENDATIONS.ortho;
+  if (cat.includes("pedia") || cat.includes("child")) return SERVICE_RECOMMENDATIONS.pediatric;
   if (cat.includes("physio")) return SERVICE_RECOMMENDATIONS.physio;
   if (cat.includes("dent")) return SERVICE_RECOMMENDATIONS.dent;
   if (cat.includes("eye") || cat.includes("ophthal")) return SERVICE_RECOMMENDATIONS.eye;
