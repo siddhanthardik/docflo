@@ -157,78 +157,52 @@ export default function ReviewsPage() {
   if (filter === "replied") filteredReviews = filteredReviews.filter((r: any) => r.replied);
   if (starFilter) filteredReviews = filteredReviews.filter((r: any) => r.rating === starFilter);
 
-  const handleDraftAI = (review: any) => {
+  const handleDraftAI = async (review: any) => {
     setDraftingReplyFor(review.id);
     setReplyText("Analyzing review and generating contextual reply...");
     
-    setTimeout(() => {
+    try {
       // 1. Dynamic Keyword Extraction
       let availableKeywords: string[] = [];
       
-      if (insights.searchKeywords && insights.searchKeywords.length > 0) {
-        availableKeywords = insights.searchKeywords.map((k) => typeof k === "string" ? k : k.keyword);
+      if (insights?.searchKeywords && insights.searchKeywords.length > 0) {
+        availableKeywords = insights.searchKeywords.map((k: any) => typeof k === "string" ? k : k.keyword);
       } 
       
-      if (insights.categories) {
+      if (insights?.categories) {
         if (insights.categories.primaryCategory?.displayName) {
           availableKeywords.push(insights.categories.primaryCategory.displayName);
         }
         if (Array.isArray(insights.categories.additionalCategories)) {
-          insights.categories.additionalCategories.forEach(c => {
+          insights.categories.additionalCategories.forEach((c: any) => {
             if (c.displayName) availableKeywords.push(c.displayName);
           });
         }
       }
 
-      // Smart Fallback if no insights data is available
-      if (availableKeywords.length === 0) {
-        const nameLower = (insights.name || "").toLowerCase();
-        if (nameLower.includes("physio")) availableKeywords.push("physiotherapy care");
-        else if (nameLower.includes("dental") || nameLower.includes("dentist")) availableKeywords.push("dental services");
-        else if (nameLower.includes("cardio")) availableKeywords.push("cardiology care");
-        else if (nameLower.includes("derma")) availableKeywords.push("dermatology treatments");
-        else if (nameLower.includes("ortho")) availableKeywords.push("orthopedic care");
-        else availableKeywords.push("medical care", "healthcare services", "patient care");
-      }
+      const res = await fetch("/api/gbp/reviews/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewText: review.comment || "",
+          rating: review.rating,
+          authorName: review.author_name || "Valued Patient",
+          clinicName: insights?.name || "Our Clinic",
+          keywords: availableKeywords
+        })
+      });
 
-      // Add a couple of generic positive terms to mix it up
-      availableKeywords.push("professional service", "excellent care");
+      if (!res.ok) throw new Error("Failed to generate AI reply");
       
-      const kw = availableKeywords[Math.floor(Math.random() * availableKeywords.length)].toLowerCase();
-      const clinicName = insights.name || "our clinic";
-      const author = review.author_name || "there";
-      
-      let draft = "";
-      
-      if (review.rating >= 4) {
-        // Diverse Positive Templates with high human sentiment
-        const positiveTemplates = [
-          `Hi ${author},\n\nThis completely made our day! It means so much to our entire team when we hear that our patients feel genuinely cared for. We pour our hearts into providing the best ${kw} possible, and it’s wonderful to know we hit the mark for you. Hope you're doing well, and thanks again for trusting ${clinicName}!\n\nWarmly,\nThe team at ${clinicName}`,
-          
-          `Dear ${author},\n\nThank you from the bottom of our hearts for taking the time to write this. Knowing that you felt comfortable and happy with the ${kw} you received is exactly why we do what we do every single day. We're always here for you whenever you need us!\n\nBest regards,\n${clinicName}`,
-          
-          `Hello ${author}! What a lovely review to read. The team was smiling from ear to ear when we saw this today. We truly love taking care of our patients and ensuring your experience with our ${kw} is as stress-free as possible. Stay healthy and we hope to see you next time!\n\nSincerely,\n${clinicName} Team`,
-          
-          `Hi ${author},\n\nThank you so much for your incredibly kind words. It’s such a privilege to look after wonderful patients like you. Our whole staff is passionate about delivering compassionate ${kw}, and your feedback validates all our hard work. We appreciate you choosing ${clinicName}!\n\nBest,\n${clinicName}`,
-          
-          `Dear ${author},\n\nWe were absolutely thrilled to read your review! Sometimes going to a clinic can be daunting, so we try really hard to make sure our ${kw} makes you feel right at home. Thank you for noticing and for being such a great patient. \n\nTake care,\n${clinicName}`
-        ];
-        draft = positiveTemplates[Math.floor(Math.random() * positiveTemplates.length)];
-      } else if (review.rating === 3) {
-        // Neutral Template
-        draft = `Hi ${author},\n\nThank you honestly for your feedback. We genuinely care about how our patients feel, and while we're glad you visited, we'd love to know how we could have turned this into a 5-star experience. We are always looking for ways to improve our ${kw}. If you're open to it, please reach out to our front desk—we’d love to hear your thoughts.\n\nWarmly,\n${clinicName} Management`;
-      } else {
-        // Diverse Negative Templates with empathy
-        const negativeTemplates = [
-          `Hi ${author},\n\nI am so sorry to hear that you felt let down during your recent visit. This absolutely isn't the standard of care we want our patients to experience. We care deeply about providing excellent ${kw}, and it breaks our hearts to know we missed the mark for you. I would truly appreciate the chance to speak with you personally to understand exactly what happened and make things right. Please call our office when you have a moment.\n\nSincerely,\nClinic Management`,
-          
-          `Dear ${author},\n\nThank you for being completely honest with us. I want to sincerely apologize that your experience caused frustration. We treat our patients like family, so hearing that our ${kw} wasn't up to par is very upsetting to our team. We’d love the opportunity to listen to your concerns directly and find a way to resolve this. Please reach out to us at your earliest convenience.\n\nBest regards,\n${clinicName} Team`
-        ];
-        draft = negativeTemplates[Math.floor(Math.random() * negativeTemplates.length)];
-      }
-      
-      setReplyText(draft);
-    }, 800);
+      const data = await res.json();
+      setReplyText(data.draft || "");
+    } catch (err: any) {
+      console.error(err);
+      setReplyText("");
+      toast.error("Generation Failed", {
+        description: "Could not generate AI reply. Please try again or type manually."
+      });
+    }
   };
 
   const handleSubmitReply = async (reviewId: string) => {
