@@ -35,14 +35,22 @@ export default async function BillingPage() {
   const ipCountry = headersList.get('x-vercel-ip-country') || headersList.get('cf-ipcountry');
   
   let userCountryCode = "US"; // Default fallback
-  if (doctor?.country) {
+  
+  // 1. Check explicit currency setting
+  if (doctor?.currency === "INR") {
+    userCountryCode = "IN";
+  } 
+  // 2. Check explicit country setting
+  else if (doctor?.country) {
     const c = doctor.country.toLowerCase();
     if (c === "india" || c === "in") {
       userCountryCode = "IN";
     } else {
-      userCountryCode = "US"; // Could map to global codes if needed
+      userCountryCode = "US";
     }
-  } else if (ipCountry && ipCountry.toUpperCase() === "IN") {
+  } 
+  // 3. Check IP address
+  else if (ipCountry && ipCountry.toUpperCase() === "IN") {
     userCountryCode = "IN";
   }
 
