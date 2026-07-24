@@ -47,7 +47,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       stripeYearlyPriceId
     );
 
-    return NextResponse.json(packagePrice, { status: 201 });
+    const updatedPackage = await prisma.package.findUnique({
+      where: { id: packageId },
+      include: { prices: true }
+    });
+
+    return NextResponse.json(updatedPackage, { status: 201 });
   } catch (error: any) {
     console.error("Create Package Price Error:", error);
     return NextResponse.json({ error: "Failed to create package price" }, { status: 500 });

@@ -23,7 +23,8 @@ export default async function BillingPage() {
     where: { isActive: true },
     orderBy: { priceMonthly: "asc" },
     include: {
-      packageFeatures: true
+      packageFeatures: true,
+      prices: true
     }
   });
 
