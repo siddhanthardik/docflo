@@ -10,15 +10,21 @@ export async function createPackagePricing(
   currency: string,
   priceMonthly: number,
   priceQuarterly: number,
-  priceYearly: number
+  priceYearly: number,
+  customRazorpayMonthlyPlanId?: string,
+  customRazorpayQuarterlyPlanId?: string,
+  customRazorpayYearlyPlanId?: string,
+  customStripeMonthlyPriceId?: string,
+  customStripeQuarterlyPriceId?: string,
+  customStripeYearlyPriceId?: string
 ) {
-  let stripeMonthlyPriceId = null;
-  let stripeQuarterlyPriceId = null;
-  let stripeYearlyPriceId = null;
+  let stripeMonthlyPriceId = customStripeMonthlyPriceId || null;
+  let stripeQuarterlyPriceId = customStripeQuarterlyPriceId || null;
+  let stripeYearlyPriceId = customStripeYearlyPriceId || null;
 
-  let razorpayMonthlyPlanId = null;
-  let razorpayQuarterlyPlanId = null;
-  let razorpayYearlyPlanId = null;
+  let razorpayMonthlyPlanId = customRazorpayMonthlyPlanId || null;
+  let razorpayQuarterlyPlanId = customRazorpayQuarterlyPlanId || null;
+  let razorpayYearlyPlanId = customRazorpayYearlyPlanId || null;
 
   const isStripe = countryCode !== "IN";
   const isRazorpay = countryCode === "IN";
@@ -33,7 +39,7 @@ export async function createPackagePricing(
         metadata: { packageId },
       });
 
-      if (priceMonthly > 0) {
+      if (priceMonthly > 0 && !stripeMonthlyPriceId) {
         const pM = await stripe.prices.create({
           product: product.id,
           unit_amount: Math.round(priceMonthly * 100), // Stripe expects cents
@@ -43,7 +49,7 @@ export async function createPackagePricing(
         stripeMonthlyPriceId = pM.id;
       }
 
-      if (priceQuarterly > 0) {
+      if (priceQuarterly > 0 && !stripeQuarterlyPriceId) {
         const pQ = await stripe.prices.create({
           product: product.id,
           unit_amount: Math.round(priceQuarterly * 100),
@@ -53,7 +59,7 @@ export async function createPackagePricing(
         stripeQuarterlyPriceId = pQ.id;
       }
 
-      if (priceYearly > 0) {
+      if (priceYearly > 0 && !stripeYearlyPriceId) {
         const pY = await stripe.prices.create({
           product: product.id,
           unit_amount: Math.round(priceYearly * 100),
@@ -68,7 +74,7 @@ export async function createPackagePricing(
   // Create Razorpay Plans for Indian Audience
   if (isRazorpay) {
     if (process.env.RAZORPAY_KEY_SECRET) {
-      if (priceMonthly > 0) {
+      if (priceMonthly > 0 && !razorpayMonthlyPlanId) {
         const plan = await razorpay.plans.create({
           period: "monthly",
           interval: 1,
@@ -82,7 +88,7 @@ export async function createPackagePricing(
         razorpayMonthlyPlanId = plan.id;
       }
 
-      if (priceQuarterly > 0) {
+      if (priceQuarterly > 0 && !razorpayQuarterlyPlanId) {
         const plan = await razorpay.plans.create({
           period: "monthly", // Razorpay handles quarterly as monthly period with interval 3 or weekly
           interval: 3,
@@ -96,7 +102,7 @@ export async function createPackagePricing(
         razorpayQuarterlyPlanId = plan.id;
       }
 
-      if (priceYearly > 0) {
+      if (priceYearly > 0 && !razorpayYearlyPlanId) {
         const plan = await razorpay.plans.create({
           period: "yearly",
           interval: 1,

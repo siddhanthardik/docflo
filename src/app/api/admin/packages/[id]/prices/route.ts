@@ -12,7 +12,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id: packageId } = await params;
     const body = await req.json();
-    const { countryCode, currency, priceMonthly, priceQuarterly, priceYearly } = body;
+    const { 
+      countryCode, currency, priceMonthly, priceQuarterly, priceYearly,
+      razorpayMonthlyPlanId, razorpayQuarterlyPlanId, razorpayYearlyPlanId,
+      stripeMonthlyPriceId, stripeQuarterlyPriceId, stripeYearlyPriceId
+    } = body;
 
     if (!countryCode || !currency || typeof priceMonthly !== 'number') {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -34,7 +38,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       currency,
       priceMonthly,
       priceQuarterly || 0,
-      priceYearly || 0
+      priceYearly || 0,
+      razorpayMonthlyPlanId,
+      razorpayQuarterlyPlanId,
+      razorpayYearlyPlanId,
+      stripeMonthlyPriceId,
+      stripeQuarterlyPriceId,
+      stripeYearlyPriceId
     );
 
     return NextResponse.json(packagePrice, { status: 201 });

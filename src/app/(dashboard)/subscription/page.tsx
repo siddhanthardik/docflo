@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 import { BillingClient } from "./BillingClient";
 
 export default async function BillingPage() {
@@ -30,6 +31,21 @@ export default async function BillingPage() {
     orderBy: { createdAt: "asc" }
   });
 
+  const headersList = await headers();
+  const ipCountry = headersList.get('x-vercel-ip-country') || headersList.get('cf-ipcountry');
+  
+  let userCountryCode = "US"; // Default fallback
+  if (doctor?.country) {
+    const c = doctor.country.toLowerCase();
+    if (c === "india" || c === "in") {
+      userCountryCode = "IN";
+    } else {
+      userCountryCode = "US"; // Could map to global codes if needed
+    }
+  } else if (ipCountry && ipCountry.toUpperCase() === "IN") {
+    userCountryCode = "IN";
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,6 +58,7 @@ export default async function BillingPage() {
         subscriptionStatus={doctor?.subscriptionStatus || "ACTIVE"}
         availablePackages={packages} 
         featureFlags={featureFlags}
+        userCountry={userCountryCode}
       />
     </div>
   );
