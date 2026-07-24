@@ -32,6 +32,7 @@ export function PromotionsClient({ initialPromotions }: { initialPromotions: any
     active: true,
     endDate: "",
     usageLimit: "",
+    stripeCouponId: "",
   });
 
   const openCreateModal = () => {
@@ -43,6 +44,7 @@ export function PromotionsClient({ initialPromotions }: { initialPromotions: any
       active: true,
       endDate: "",
       usageLimit: "",
+      stripeCouponId: "",
     });
     setIsModalOpen(true);
   };
@@ -56,6 +58,7 @@ export function PromotionsClient({ initialPromotions }: { initialPromotions: any
       active: promo.isActive,
       endDate: promo.expiresAt ? new Date(promo.expiresAt).toISOString().split('T')[0] : "",
       usageLimit: promo.usageLimit ? String(promo.usageLimit) : "",
+      stripeCouponId: promo.stripeCouponId || "",
     });
     setIsModalOpen(true);
   };
@@ -88,6 +91,7 @@ export function PromotionsClient({ initialPromotions }: { initialPromotions: any
       active: formData.active,
       endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
       usageLimit: formData.usageLimit ? Number(formData.usageLimit) : null,
+      stripeCouponId: formData.stripeCouponId || null,
     };
 
     try {
@@ -250,6 +254,16 @@ export function PromotionsClient({ initialPromotions }: { initialPromotions: any
                 value={formData.discountPercent}
                 onChange={(e) => setFormData({ ...formData, discountPercent: Number(e.target.value) })}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="stripeCouponId">Stripe Coupon ID (Optional, for Global payments)</Label>
+              <Input
+                id="stripeCouponId"
+                placeholder="e.g. Z4OV52SU"
+                value={formData.stripeCouponId}
+                onChange={(e) => setFormData({ ...formData, stripeCouponId: e.target.value })}
               />
             </div>
 

@@ -51,7 +51,8 @@ model Doctor {
   gcalRefreshToken       String?
   gcalCalendarId         String?                 @default("primary")
   gcalConnectedAt        DateTime?
-  salesRepId             String? // ID of the SALES user who onboarded this customer
+  salesRepId             String? // ID of the SALES or AFFILIATE user who onboarded this customer
+  salesRep               PlatformUser?           @relation(fields: [salesRepId], references: [id])
   appointments           Appointment[]
   practitioners          Practitioner[]
   campaigns              Campaign[]
@@ -550,6 +551,7 @@ model Promotion {
   description     String?
   discountPercent Float
   razorpayOfferId String?
+  stripeCouponId  String?
   expiresAt       DateTime?
   usageLimit      Int?
   usageCount      Int       @default(0)
@@ -792,6 +794,7 @@ enum PlatformRole {
   SALES
   MARKETING
   ACCOUNTS
+  AFFILIATE
 }
 
 enum ClinicRole {
@@ -814,7 +817,16 @@ model PlatformUser {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  assignedLeads AuditLead[]
+  // Affiliate & Sales fields
+  affiliateCode        String? @unique
+  commissionPercentage Float   @default(20.0)
+  kycStatus            String  @default("PENDING") // PENDING, APPROVED, REJECTED
+  kycDocuments         Json?
+  bankDetails          Json?
+
+  assignedLeads     AuditLead[]
+  referredDoctors   Doctor[]
+  affiliatePayouts  AffiliatePayout[]
 
   @@map("platform_users")
 }
@@ -1238,6 +1250,23 @@ model SearchGridSnapshot {
   @@index([gbpAccountId, date])
   @@index([gbpAccountId, keyword])
   @@map("search_grid_snapshots")
+}
+
+model AffiliatePayout {
+  id             String       @id @default(cuid())
+  affiliateId    String
+  amount         Float
+  status         String       @default("PENDING") // PENDING, PAID
+  paidAt         DateTime?
+  referenceId    String? // Transaction reference
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  affiliate      PlatformUser @relation(fields: [affiliateId], references: [id])
+  
+  @@index([affiliateId])
+  @@map("affiliate_payouts")
 }
 
 model PackagePrice {

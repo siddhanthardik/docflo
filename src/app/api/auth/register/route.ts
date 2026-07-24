@@ -17,6 +17,17 @@ export async function POST(req: Request) {
     const hashedPassword = await hash(validatedData.password, 12);
 
     try {
+      // Find affiliate if ref code provided
+      let salesRepId = null;
+      if (validatedData.affiliateCode) {
+        const affiliate = await prisma.platformUser.findUnique({
+          where: { affiliateCode: validatedData.affiliateCode }
+        });
+        if (affiliate) {
+          salesRepId = affiliate.id;
+        }
+      }
+
       // Create doctor atomically
       const doctor = await prisma.doctor.create({
         data: {
@@ -27,6 +38,7 @@ export async function POST(req: Request) {
           specialty: validatedData.specialty,
           clinicName: validatedData.clinicName,
           address: validatedData.address,
+          salesRepId,
           practitioners: {
             create: {
               name: validatedData.name,

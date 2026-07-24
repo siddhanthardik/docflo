@@ -19,10 +19,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    const { packageId, countryCode, period } = await req.json();
+    const { packageId, countryCode, period, promoCode } = await req.json();
 
     if (!packageId || !countryCode || !period) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    let discountPercent = 0;
+    let stripeCouponId = null;
+    let promoId = null;
+
+    if (promoCode) {
+      const promotion = await prisma.promotion.findUnique({
+        where: { code: promoCode.toUpperCase() }
+      });
+      
+      if (!promotion || !promotion.isActive || (promotion.expiresAt && promotion.expiresAt < new Date()) || (promotion.usageLimit && promotion.usageCount >= promotion.usageLimit)) {
+         return NextResponse.json({ error: "Invalid or expired promo code" }, { status: 400 });
+      }
+      
+      discountPercent = promotion.discountPercent;
+      stripeCouponId = promotion.stripeCouponId;
+      promoId = promotion.id;
     }
 
     const packagePrice = await prisma.packagePrice.findUnique({
@@ -50,6 +68,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Price not configured for this period in Stripe" }, { status: 400 });
       }
 
+      let couponId = stripeCouponId;
+      if (discountPercent > 0 && !couponId) {
+         try {
+           const coupon = await stripe.coupons.create({
+              percent_off: discountPercent,
+              duration: 'forever',
+              name: promoCode.toUpperCase()
+           });
+           couponId = coupon.id;
+         } catch(e) {
+           console.error("Stripe coupon creation failed", e);
+         }
+      }
+
       // Create Stripe Checkout Session
       const checkoutSession = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -62,9 +94,17 @@ export async function POST(req: NextRequest) {
             quantity: 1,
           },
         ],
+        discounts: couponId ? [{ coupon: couponId }] : undefined,
         success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`,
       });
+
+      if (promoId) {
+         await prisma.promotion.update({
+            where: { id: promoId },
+            data: { usageCount: { increment: 1 } }
+         });
+      }
 
       return NextResponse.json({ provider: "stripe", url: checkoutSession.url });
     } else {
@@ -75,6 +115,25 @@ export async function POST(req: NextRequest) {
 
       if (!planId) {
         return NextResponse.json({ error: "Plan not configured for this period in Razorpay" }, { status: 400 });
+      }
+
+      let finalPlanId = planId;
+      if (discountPercent > 0) {
+         const amount = period === "monthly" ? packagePrice.priceMonthly : period === "quarterly" ? packagePrice.priceQuarterly : packagePrice.priceYearly;
+         const discountedAmount = amount * (1 - discountPercent / 100);
+         
+         const pkg = await prisma.package.findUnique({ where: { id: packageId } });
+         
+         const plan = await razorpay.plans.create({
+            period: period === "yearly" ? "yearly" : "monthly",
+            interval: period === "quarterly" ? 3 : 1,
+            item: {
+              name: `${pkg?.name || 'Gyrex'} - ${period} - ${discountPercent}% OFF`,
+              amount: Math.round(discountedAmount * 100),
+              currency: packagePrice.currency.toUpperCase(),
+            }
+         });
+         finalPlanId = plan.id;
       }
 
       // Ensure doctor has Razorpay Customer ID
@@ -94,11 +153,18 @@ export async function POST(req: NextRequest) {
 
       // Create Razorpay Subscription
       const subscription = (await razorpay.subscriptions.create({
-        plan_id: planId,
+        plan_id: finalPlanId,
         customer_id: customerId,
         total_count: period === "monthly" ? 120 : period === "quarterly" ? 40 : 10,
         customer_notify: 1,
       } as any)) as any;
+
+      if (promoId) {
+         await prisma.promotion.update({
+            where: { id: promoId },
+            data: { usageCount: { increment: 1 } }
+         });
+      }
 
       return NextResponse.json({
         provider: "razorpay",

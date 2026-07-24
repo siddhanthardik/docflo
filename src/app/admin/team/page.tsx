@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, UserCog, Search, CheckCircle, ShieldAlert } from "lucide-react";
+import { Loader2, Users, Search, CheckCircle, ShieldAlert, Plus, Link as LinkIcon, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-import { Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 import { hasPermission } from "@/lib/permissions";
 
@@ -18,6 +20,11 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
+
+  // Add Member Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "ADMIN" });
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -33,7 +40,7 @@ export default function TeamPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/team");
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
@@ -45,17 +52,17 @@ export default function TeamPage() {
     }
   };
 
-  const handleUpdatePlan = async (userId: string, newPlan: string) => {
+  const handleUpdateRole = async (userId: string, newRole: string) => {
     setUpdating(userId);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetch(`/api/admin/team/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionPlan: newPlan }),
+        body: JSON.stringify({ role: newRole }),
       });
       if (res.ok) {
-        toast({ title: "Success", description: "User plan updated successfully" });
-        setUsers(users.map(u => u.id === userId ? { ...u, subscriptionPlan: newPlan } : u));
+        toast({ title: "Success", description: "User role updated successfully" });
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
       } else {
         throw new Error("Failed to update user");
       }
@@ -64,6 +71,36 @@ export default function TeamPage() {
     } finally {
       setUpdating(null);
     }
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Team member added successfully" });
+        setIsModalOpen(false);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add team member");
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const copyAffiliateLink = (code: string) => {
+    const link = `${window.location.origin}/register?ref=${code}`;
+    navigator.clipboard.writeText(link);
+    toast({ title: "Copied!", description: "Affiliate link copied to clipboard." });
   };
 
   if (status === "loading" || loading) {
@@ -76,12 +113,11 @@ export default function TeamPage() {
 
   const filteredUsers = users.filter(u => 
     (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    u.role !== "DOCTOR"
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
@@ -90,6 +126,55 @@ export default function TeamPage() {
           </h1>
           <p className="text-gray-500 mt-1">Manage superadmins, admins, sales, accounts, and marketing staff.</p>
         </div>
+        
+        {session?.user?.role === "SUPERADMIN" && (
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-indigo-600 hover:bg-indigo-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Team Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Team Member</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddMember} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email Address</Label>
+                  <Input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input type="password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
+                      <SelectItem value="ADMIN">ADMIN</SelectItem>
+                      <SelectItem value="SALES">SALES</SelectItem>
+                      <SelectItem value="ACCOUNTS">ACCOUNTS</SelectItem>
+                      <SelectItem value="MARKETING">MARKETING</SelectItem>
+                      <SelectItem value="SUPPORT">SUPPORT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating..." : "Create Member"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -113,8 +198,8 @@ export default function TeamPage() {
                 <th className="font-semibold px-6 py-4">User</th>
                 <th className="font-semibold px-6 py-4">Role</th>
                 <th className="font-semibold px-6 py-4">Joined Date</th>
-                <th className="font-semibold px-6 py-4">Subscription Plan</th>
-                <th className="font-semibold px-6 py-4">Actions</th>
+                <th className="font-semibold px-6 py-4">Affiliate Info</th>
+                <th className="font-semibold px-6 py-4">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -139,36 +224,54 @@ export default function TeamPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {user.role}
-                      </span>
+                      {session?.user?.role === "SUPERADMIN" ? (
+                        <Select 
+                          value={user.role} 
+                          onValueChange={(val) => handleUpdateRole(user.id, val)}
+                          disabled={updating === user.id}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs font-semibold">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
+                            <SelectItem value="ADMIN">ADMIN</SelectItem>
+                            <SelectItem value="SALES">SALES</SelectItem>
+                            <SelectItem value="ACCOUNTS">ACCOUNTS</SelectItem>
+                            <SelectItem value="MARKETING">MARKETING</SelectItem>
+                            <SelectItem value="SUPPORT">SUPPORT</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {user.role}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <Select 
-                        value={user.role || "ADMIN"} 
-                        onValueChange={(val) => handleUpdatePlan(user.id, val)} // NOTE: reuse handleUpdatePlan temporarily, need a dedicated handleUpdateRole
-                        disabled={updating === user.id}
-                      >
-                        <SelectTrigger className="w-[140px] h-8 text-xs font-semibold">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
-                          <SelectItem value="ADMIN">ADMIN</SelectItem>
-                          <SelectItem value="SALES">SALES</SelectItem>
-                          <SelectItem value="ACCOUNTS">ACCOUNTS</SelectItem>
-                          <SelectItem value="MARKETING">MARKETING</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {user.role === 'SALES' && user.affiliateCode ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-xs bg-indigo-50 border-indigo-200 text-indigo-700">
+                            {user.affiliateCode}
+                          </Badge>
+                          <Button variant="ghost" size="icon-sm" onClick={() => copyAffiliateLink(user.affiliateCode)} title="Copy Link">
+                            <Copy className="w-3.5 h-3.5 text-gray-500 hover:text-indigo-600" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">N/A</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {updating === user.id ? (
                         <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
                       ) : (
-                        <CheckCircle className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100" />
+                        <Badge variant="outline" className={user.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Badge>
                       )}
                     </td>
                   </tr>

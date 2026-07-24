@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
 import jwt from "jsonwebtoken";
 import { logActivity } from "./audit";
+import { cookies } from "next/headers";
 
 // ----- Type augmentation for NextAuth (fixes TS errors) -----
 declare module "next-auth" {
@@ -252,6 +253,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.doctorId = token.doctorId as string | undefined;
         (session.user as any).createdAt = token.createdAt as string;
         (session.user as any).emailVerified = token.emailVerified as string | null;
+
+        // IMPERSONATION LOGIC
+        if (session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SALES") {
+           try {
+             const cookieStore = await cookies();
+             const impersonateId = cookieStore.get("gyrex_impersonate")?.value;
+             if (impersonateId) {
+               const target = await prisma.doctor.findUnique({ where: { id: impersonateId } });
+               if (target) {
+                 (session.user as any).originalAdminId = session.user.id;
+                 (session.user as any).originalRole = session.user.role;
+                 
+                 session.user.id = target.id;
+                 session.user.role = target.role;
+                 session.user.name = target.name;
+                 session.user.email = target.email;
+               }
+             }
+           } catch(e) {}
+        }
       }
       return session;
     },

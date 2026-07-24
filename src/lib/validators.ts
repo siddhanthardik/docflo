@@ -13,6 +13,7 @@ export const registerSchema = z.object({
   specialty: z.string().optional(),
   clinicName: z.string().optional(),
   address: z.string().optional(),
+  affiliateCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],

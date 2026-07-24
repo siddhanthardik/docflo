@@ -63,3 +63,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Failed to fetch package prices" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth();
+    if (!session || !["SUPERADMIN", "ADMIN"].includes(session.user?.role || "")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const url = new URL(req.url);
+    const priceId = url.searchParams.get('id');
+
+    if (!priceId) {
+      return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
+    }
+
+    await prisma.packagePrice.delete({
+      where: { id: priceId }
+    });
+
+    const updatedPackage = await prisma.package.findUnique({
+      where: { id: id },
+      include: { prices: true }
+    });
+
+    return NextResponse.json(updatedPackage);
+  } catch (error: any) {
+    console.error("Delete Package Price Error:", error);
+    return NextResponse.json({ error: "Failed to delete package price" }, { status: 500 });
+  }
+}

@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await req.json();
-    const { code, description, discountPercent, active, endDate, usageLimit } = body;
+    const { code, description, discountPercent, active, endDate, usageLimit, stripeCouponId } = body;
 
     const updatedPromotion = await prisma.promotion.update({
       where: { id },
@@ -22,6 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(active !== undefined && { isActive: active }),
         ...(endDate !== undefined && { expiresAt: endDate ? new Date(endDate) : null }),
         ...(usageLimit !== undefined && { usageLimit: usageLimit ? Number(usageLimit) : null }),
+        ...(stripeCouponId !== undefined && { stripeCouponId: stripeCouponId || null }),
       },
     });
 

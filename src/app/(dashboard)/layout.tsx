@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 
 export default async function DashboardLayout({
   children,
@@ -27,7 +28,8 @@ export default async function DashboardLayout({
             <Sidebar />
           </div>
 
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible print:block">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible print:block relative">
+            <ImpersonationBanner />
             <Header />
             
             {/* Main content with bottom padding for mobile navigation bar */}

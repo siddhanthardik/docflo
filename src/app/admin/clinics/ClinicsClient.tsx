@@ -36,23 +36,16 @@ export function ClinicsClient({ initialClinics, packages }: { initialClinics: an
 
   const handleLoginAsClinic = async (clinicId: string) => {
     try {
-      const res = await fetch(`/api/admin/clinics/${clinicId}/impersonate`, { method: "POST" });
+      const res = await fetch(`/api/admin/impersonate`, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctorId: clinicId })
+      });
       if (res.ok) {
         const data = await res.json();
         toast({ title: "Success", description: "Impersonation started. Redirecting..." });
         
-        // Use NextAuth to login with the generated token
-        const result = await signIn("credentials", {
-          email: data.email,
-          password: data.token,
-          redirect: false
-        });
-        
-        if (result?.ok) {
-          window.location.href = "/dashboard";
-        } else {
-          toast({ title: "Error", description: "Impersonation login failed.", variant: "destructive" });
-        }
+        window.location.href = data.redirectUrl || "/dashboard";
       } else {
         toast({ title: "Error", description: "Failed to impersonate clinic.", variant: "destructive" });
       }

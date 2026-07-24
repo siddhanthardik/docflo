@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Check, X, Edit, Copy, Archive, RotateCcw, UserPlus, History, ShieldAlert } from "lucide-react";
+import { Plus, Check, X, Edit, Copy, Archive, RotateCcw, UserPlus, History, ShieldAlert, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -363,6 +363,9 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
           <Button variant="outline" onClick={() => handleClone(pkg)}>
             <Copy className="h-4 w-4 mr-2 text-gray-500" /> Clone
           </Button>
+          <Button variant="outline" className="col-span-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={() => router.push(`/admin/packages/${pkg.id}/pricing`)}>
+            <Globe className="h-4 w-4 mr-2" /> Manage Country Pricing
+          </Button>
           {!pkg.isArchived ? (
             <Button variant="outline" className="col-span-2 text-rose-600 hover:bg-rose-50" onClick={() => handleToggleState(pkg, true)}>
               <Archive className="h-4 w-4 mr-2" /> Deactivate Package
@@ -419,10 +422,11 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
 
       {/* PACKAGE BUILDER MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-50">
-          <DialogHeader className="bg-white p-6 pb-4 border-b -mx-6 -mt-6 mb-6 sticky top-0 z-10 shadow-sm">
-            <DialogTitle className="text-2xl">{editingPkg ? "Edit Package" : "Create Package"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-50 p-0">
+          <div className="p-6">
+            <DialogHeader className="bg-white p-6 pb-4 border-b -mx-6 -mt-6 mb-6 sticky top-0 z-10 shadow-sm">
+              <DialogTitle className="text-2xl">{editingPkg ? "Edit Package" : "Create Package"}</DialogTitle>
+            </DialogHeader>
           <form onSubmit={submitPackage} className="space-y-8 px-2 pb-8">
             
             {/* Section 1: Basic Info */}
@@ -548,12 +552,13 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
             </div>
 
           </form>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* DOCTOR ASSIGNMENT DIALOG */}
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Assign Package to Doctor</DialogTitle>
           </DialogHeader>

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Activity, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
-export default function RegisterPage() {
+export function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,6 +46,7 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
+          affiliateCode: searchParams.get("ref") || undefined,
         }),
       });
       const data = await res.json();
@@ -69,6 +71,12 @@ export default function RegisterPage() {
             <GyrexLogo size="md" />
           </Link>
         </div>
+
+        {searchParams.get("ref") && (
+          <div className="mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 text-center">
+            You are registering via a partner referral link.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
@@ -175,5 +183,13 @@ export default function RegisterPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function RegisterPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>}>
+      <RegisterPage />
+    </Suspense>
   );
 }

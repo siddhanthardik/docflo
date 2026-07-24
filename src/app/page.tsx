@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
+import { Footer } from "@/components/layout/Footer";
+import { LandingHeader } from "@/components/layout/LandingHeader";
+import { HeroTextCarousel } from "@/components/ui/HeroTextCarousel";
 
 // ──────────────────────────────────────────────
 // Types
@@ -91,85 +94,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
       
       {/* ── NAVBAR ── */}
-      <header className="fixed top-0 z-50 w-full border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <GyrexLogo size="md" />
-          </div>
-
-          <nav className="hidden md:flex items-center gap-8">
-            {["Overview", "Data Architecture", "Features", "Process"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-              >
-                {item}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors hidden sm:block">
-              Sign In
-            </Link>
-            <Link href="/local-seo/free-audit">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 h-11 text-sm font-semibold shadow-md shadow-blue-500/20 transition-all border border-blue-500/30">
-                Get Free Audit
-              </Button>
-            </Link>
-            <button 
-              className="md:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
-              onClick={() => setIsMobileMenuOpen(true)}
-              aria-label="Open mobile menu"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-      </header>
-
-        {/* ── MOBILE MENU OVERLAY ── */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
-            <div className="flex items-center justify-between mb-8">
-              <GyrexLogo size="md" />
-              <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 text-slate-600 hover:text-blue-600 rounded-full bg-slate-100 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <nav className="flex flex-col gap-6 text-lg font-medium text-slate-700">
-              {["Overview", "Data Architecture", "Features", "Process"].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
-                >
-                  {item}
-                </a>
-              ))}
-            </nav>
-
-            <div className="mt-auto pb-8 pt-8 border-t border-slate-100 flex flex-col gap-4">
-              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full rounded-xl h-12 text-base font-semibold border-slate-300 bg-white">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/local-seo/free-audit" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 text-base font-semibold shadow-md shadow-blue-500/20">
-                  Get Free Audit
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+      <LandingHeader />
 
       {/* ── HERO SECTION ── */}
       <section id="overview" className="relative pt-28 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
@@ -177,19 +102,7 @@ export default function LandingPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-b from-blue-400/15 to-indigo-400/5 blur-3xl pointer-events-none -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto mb-12">
-            
-            {/* Main Headline */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tight leading-[1.08] mb-6">
-              Your clinic deserves <br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 bg-clip-text text-transparent">
-                more patients
-              </span>
-            </h1>
-
-            <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
-              Automate your patient acquisition, rank higher on Google, and fill your calendar with an all-in-one practice growth engine.
-            </p>
+          <HeroTextCarousel />
 
             {/* Audit Search Bar */}
             <div className="max-w-2xl mx-auto">
@@ -271,7 +184,7 @@ export default function LandingPage() {
                 Free Scan • Comprehensive Data Audit • Results in 60s
               </p>
             </div>
-          </div>
+
 
           {/* Code-Rendered Interactive Dashboard Mockup (No Image File Needed) */}
           <div className="relative mt-12 max-w-5xl mx-auto">
@@ -702,52 +615,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            <div className="md:col-span-1">
-              <div className="mb-4">
-                <GyrexLogo size="md" lightText />
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Structured data-layer system engineered for medical practice growth and patient engagement.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Platform</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li><Link href="/#data-architecture" className="hover:text-white transition">Data Architecture</Link></li>
-                <li><Link href="/#features" className="hover:text-white transition">Core Modules</Link></li>
-                <li><Link href="/local-seo/free-audit" className="hover:text-white transition">Free Audit Tool</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Company</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li><Link href="/login" className="hover:text-white transition">Doctor Portal</Link></li>
-                <li><Link href="/register" className="hover:text-white transition">Register Practice</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Compliance & Legal</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li><span className="hover:text-white cursor-pointer">Privacy Policy</span></li>
-                <li><span className="hover:text-white cursor-pointer">Terms of Service</span></li>
-                <li><span className="hover:text-white cursor-pointer">Data Security Standard</span></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-            <p>© 2026 Gyrex Technologies. All rights reserved.</p>
-            <p>Built for healthcare professionals</p>
-          </div>
-        </div>
-      </footer>
-
+      <Footer />
     </div>
   );
 }

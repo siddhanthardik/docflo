@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { code, description, discountPercent, active, endDate, usageLimit } = body;
+    const { code, description, discountPercent, active, endDate, usageLimit, stripeCouponId } = body;
 
     if (!code || discountPercent === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
         isActive: active !== undefined ? active : true,
         expiresAt: endDate ? new Date(endDate) : null,
         usageLimit: usageLimit ? Number(usageLimit) : null,
+        stripeCouponId: stripeCouponId || null,
       },
     });
 

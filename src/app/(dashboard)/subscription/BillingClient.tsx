@@ -23,6 +23,7 @@ export function BillingClient({
   const router = useRouter();
   const [loadingPkgId, setLoadingPkgId] = useState<string | null>(null);
   const [period, setPeriod] = useState<"monthly" | "quarterly" | "yearly">("monthly");
+  const [promoCode, setPromoCode] = useState("");
   
   useEffect(() => {
     if (userCountry === "IN") {
@@ -45,7 +46,8 @@ export function BillingClient({
         body: JSON.stringify({ 
           packageId: pkg.id, 
           countryCode: userCountry,
-          period 
+          period,
+          promoCode: promoCode ? promoCode.trim() : undefined
         }),
       });
       
@@ -141,25 +143,36 @@ export function BillingClient({
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h2 className="text-lg font-bold text-gray-900">Upgrade Your Plan</h2>
           
-          <div className="inline-flex bg-gray-100 p-1 rounded-lg">
-            <button 
-              onClick={() => setPeriod("monthly")}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'monthly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-            >
-              Monthly
-            </button>
-            <button 
-              onClick={() => setPeriod("quarterly")}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'quarterly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-            >
-              Quarterly
-            </button>
-            <button 
-              onClick={() => setPeriod("yearly")}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'yearly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-            >
-              Yearly (Save 20%)
-            </button>
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Enter Promo Code"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                className="w-48 pl-3 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm uppercase font-mono"
+              />
+            </div>
+            <div className="inline-flex bg-gray-100 p-1 rounded-lg">
+              <button 
+                onClick={() => setPeriod("monthly")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'monthly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Monthly
+              </button>
+              <button 
+                onClick={() => setPeriod("quarterly")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'quarterly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Quarterly
+              </button>
+              <button 
+                onClick={() => setPeriod("yearly")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${period === 'yearly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Yearly (Save 20%)
+              </button>
+            </div>
           </div>
         </div>
         

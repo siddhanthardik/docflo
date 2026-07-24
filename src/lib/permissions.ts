@@ -41,6 +41,9 @@ const platformPermissions: Record<PlatformRole, PermissionAction[]> = {
   ACCOUNTS: [
     "MANAGE_BILLING", "VIEW_REPORTS", "MANAGE_PACKAGES"
   ],
+  AFFILIATE: [
+    "VIEW_REPORTS"
+  ],
 };
 
 // Clinic Role Matrix
