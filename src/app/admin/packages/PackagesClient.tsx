@@ -306,14 +306,38 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
             <CardDescription className="h-10 mt-1">{pkg.description}</CardDescription>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
-            <span className="text-sm font-medium text-gray-500">/mo</span>
-          </div>
-          <div className="text-xs text-gray-400 mt-1">
-            Yearly: ${pkg.priceYearly} | Quarterly: ${pkg.priceQuarterly}
-          </div>
+        <div className="mt-4 space-y-3">
+          {pkg.prices && pkg.prices.length > 0 ? (
+            pkg.prices.map((price: any) => (
+              <div key={price.id} className="bg-white rounded-md border border-gray-100 p-2 px-3 shadow-sm flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 inline-block mb-1">{price.countryCode}</div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-extrabold text-gray-900">{price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceMonthly}</span>
+                    <span className="text-xs font-medium text-gray-500">/mo</span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-gray-400 text-right leading-tight">
+                  <div>Yr: {price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceYearly}</div>
+                  <div>Qt: {price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceQuarterly}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-md border border-gray-100 p-2 px-3 shadow-sm flex items-center justify-between">
+              <div>
+                <div className="text-xs font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 inline-block mb-1">BASE</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
+                  <span className="text-xs font-medium text-gray-500">/mo</span>
+                </div>
+              </div>
+              <div className="text-[10px] text-gray-400 text-right leading-tight">
+                <div>Yr: ${pkg.priceYearly}</div>
+                <div>Qt: ${pkg.priceQuarterly}</div>
+              </div>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 pt-6 flex flex-col gap-6">

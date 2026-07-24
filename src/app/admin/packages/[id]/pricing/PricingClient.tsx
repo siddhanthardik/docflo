@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export function PricingClient({ initialPackage }: { initialPackage: any }) {
@@ -226,12 +227,40 @@ export function PricingClient({ initialPackage }: { initialPackage: any }) {
             
             <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
               <div className="space-y-2">
-                <Label>Country Code (e.g. IN, US, GLOBAL)</Label>
-                <Input value={formData.countryCode} onChange={e => setFormData({...formData, countryCode: e.target.value})} required disabled={!!editingPrice} />
+                <Label>Country Code</Label>
+                <Select value={formData.countryCode} onValueChange={v => setFormData({...formData, countryCode: v})} disabled={!!editingPrice}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GLOBAL">Global (Default)</SelectItem>
+                    <SelectItem value="IN">India (IN)</SelectItem>
+                    <SelectItem value="US">United States (US)</SelectItem>
+                    <SelectItem value="UK">United Kingdom (UK)</SelectItem>
+                    <SelectItem value="AE">UAE (AE)</SelectItem>
+                    <SelectItem value="AU">Australia (AU)</SelectItem>
+                    <SelectItem value="CA">Canada (CA)</SelectItem>
+                    <SelectItem value="SG">Singapore (SG)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>Currency (e.g. INR, USD)</Label>
-                <Input value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} required />
+                <Label>Currency</Label>
+                <Select value={formData.currency} onValueChange={v => setFormData({...formData, currency: v})}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="INR">INR (₹)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                    <SelectItem value="AED">AED (د.إ)</SelectItem>
+                    <SelectItem value="AUD">AUD ($)</SelectItem>
+                    <SelectItem value="CAD">CAD ($)</SelectItem>
+                    <SelectItem value="SGD">SGD ($)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
