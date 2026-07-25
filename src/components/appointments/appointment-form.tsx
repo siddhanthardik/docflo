@@ -183,7 +183,14 @@ export function AppointmentForm({
 
     try {
       const endTime = calculateEndTime(formData.startTime, formData.duration);
-      const dateStr = format(formData.date, "yyyy-MM-dd");
+      const rawDate: any = formData.date;
+      const dateStr = 
+        typeof rawDate === "string" 
+          ? rawDate.split("T")[0] 
+          : rawDate instanceof Date && !isNaN(rawDate.getTime())
+          ? format(rawDate, "yyyy-MM-dd")
+          : String(rawDate).split("T")[0];
+
       await onSubmit({
         patientId: formData.patientId,
         date: dateStr,

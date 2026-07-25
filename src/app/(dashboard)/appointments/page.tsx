@@ -163,14 +163,28 @@ export default function AppointmentsPage() {
   };
 
   const handleSubmit = async (data: any) => {
+    let dateStr: string;
+    if (typeof data.date === "string") {
+      dateStr = data.date.split("T")[0];
+    } else if (data.date instanceof Date && !isNaN(data.date.getTime())) {
+      const year = data.date.getFullYear();
+      const month = String(data.date.getMonth() + 1).padStart(2, "0");
+      const day = String(data.date.getDate()).padStart(2, "0");
+      dateStr = `${year}-${month}-${day}`;
+    } else {
+      dateStr = String(data.date).split("T")[0];
+    }
+
     const payload = {
       patientId: data.patientId,
-      date: data.date.toISOString().split("T")[0],
+      date: dateStr,
       startTime: data.startTime,
       endTime: data.endTime,
       reason: data.reason,
       notes: data.notes,
       practitionerId: data.practitionerId,
+      isWalkIn: data.isWalkIn,
+      type: data.type,
     };
 
     const url =
