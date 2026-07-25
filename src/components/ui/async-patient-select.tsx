@@ -29,6 +29,7 @@ interface AsyncPatientSelectProps {
   placeholder?: string;
   className?: string;
   initialPatients?: Patient[]; // Fallback list if network is slow initially
+  showRegisterPatient?: boolean;
 }
 
 // Debounce hook
@@ -52,6 +53,7 @@ export function AsyncPatientSelect({
   placeholder = "Select patient...",
   className,
   initialPatients = [],
+  showRegisterPatient = true,
 }: AsyncPatientSelectProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -214,19 +216,21 @@ export function AsyncPatientSelect({
             })}
           </div>
           
-          <div className="border-t p-2">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-              onClick={() => {
-                setOpen(false);
-                setShowPatientModal(true);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Register New Patient
-            </Button>
-          </div>
+          {showRegisterPatient && (
+            <div className="border-t p-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                onClick={() => {
+                  setOpen(false);
+                  setShowPatientModal(true);
+                }}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Register New Patient
+              </Button>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
 

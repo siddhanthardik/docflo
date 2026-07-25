@@ -161,6 +161,7 @@ function CreateInvoiceForm() {
               onValueChange={(value) => setFormData({ ...formData, patientId: value })}
               initialPatients={patients}
               placeholder="Search patient by name, phone, or email..."
+              showRegisterPatient={false}
             />
           </div>
         </div>
