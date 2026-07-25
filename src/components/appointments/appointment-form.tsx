@@ -183,9 +183,10 @@ export function AppointmentForm({
 
     try {
       const endTime = calculateEndTime(formData.startTime, formData.duration);
+      const dateStr = format(formData.date, "yyyy-MM-dd");
       await onSubmit({
         patientId: formData.patientId,
-        date: formData.date,
+        date: dateStr,
         startTime: formData.startTime,
         endTime,
         reason: formData.reason,

@@ -132,11 +132,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const dateStr = typeof date === "string" ? date.split("T")[0] : new Date(date).toISOString().split("T")[0];
-    const appointmentDate = new Date(`${dateStr}T00:00:00.000Z`);
-    const startDateTime = new Date(`${dateStr}T${startTime}:00.000Z`);
-    const endDateTime = new Date(`${dateStr}T${endTime}:00.000Z`);
-
     // 1. Fetch clinic settings for this doctor
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
@@ -151,12 +146,44 @@ export async function POST(req: Request) {
       },
     });
 
+    const doctorTimezone = doctor?.timezone || "Asia/Kolkata";
     const daysOff = doctor?.daysOff || [];
     const workingStart = doctor?.workingHoursStart || "09:00";
     const workingEnd = doctor?.workingHoursEnd || "17:00";
 
-    // 2. Validate past dates (cannot schedule in the past)
-    if (isPast(startDateTime)) {
+    // Extract exact YYYY-MM-DD date string in clinic timezone
+    let dateStr: string;
+    if (typeof date === "string" && !date.includes("T")) {
+      dateStr = date;
+    } else {
+      const d = new Date(date);
+      dateStr = d.toLocaleDateString("en-CA", { timeZone: doctorTimezone });
+    }
+
+    const appointmentDate = new Date(`${dateStr}T00:00:00.000Z`);
+    const startDateTime = new Date(`${dateStr}T${startTime}:00.000Z`);
+    const endDateTime = new Date(`${dateStr}T${endTime}:00.000Z`);
+
+    // 2. Validate past dates & times (in clinic timezone)
+    const todayClinicStr = new Date().toLocaleDateString("en-CA", { timeZone: doctorTimezone });
+    const nowClinicTimeStr = new Date().toLocaleTimeString("en-GB", { timeZone: doctorTimezone, hour: "2-digit", minute: "2-digit" });
+
+    let isAppointmentPast = false;
+    if (dateStr < todayClinicStr) {
+      isAppointmentPast = true;
+    } else if (dateStr === todayClinicStr) {
+      const [startH, startM] = startTime.split(":").map(Number);
+      const [nowH, nowM] = nowClinicTimeStr.split(":").map(Number);
+      const startTotalM = startH * 60 + startM;
+      const nowTotalM = nowH * 60 + nowM;
+
+      // Allow 15 minute grace period for booking current slot
+      if (startTotalM + 15 < nowTotalM) {
+        isAppointmentPast = true;
+      }
+    }
+
+    if (isAppointmentPast) {
       return NextResponse.json(
         { error: "Appointment cannot be in the past. Please choose a future date and time." },
         { status: 400 }
