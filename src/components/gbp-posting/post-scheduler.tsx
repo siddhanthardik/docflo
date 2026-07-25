@@ -35,6 +35,22 @@ export function PostScheduler() {
   const [overlayMessage, setOverlayMessage] = useState("")
 
   useEffect(() => {
+    // Check for draftKeyword search parameter
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const kw = params.get("draftKeyword");
+      if (kw) {
+        setForm((prev) => ({
+          ...prev,
+          content: `Looking for top-quality ${kw}? At Gyrex Clinic, our experienced team provides comprehensive care tailored to your needs. Book your appointment today or call us to learn more about our specialized services.`,
+        }));
+        toast({
+          title: "Target Keyword Draft Loaded",
+          description: `Post text generated for "${kw}". Upload or select an image manually to publish to Google.`,
+        });
+      }
+    }
+
     // Fetch account info for the preview header
     fetch("/api/gbp/insights")
       .then(res => res.json())

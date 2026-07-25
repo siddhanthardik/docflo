@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, Info } from "lucide-react";
+import { MapPin, RefreshCw, Clock, Info, Sparkles, SlidersHorizontal, Trophy, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
@@ -17,8 +17,8 @@ interface GridCell {
 
 function getRankColor(rank: number, found: boolean): { bg: string; text: string; border: string } {
   if (!found || rank === 0) return { bg: "bg-red-100", text: "text-red-700", border: "border-red-200" };
-  if (rank <= 3) return { bg: "bg-green-100", text: "text-green-700", border: "border-green-200" };
-  if (rank <= 7) return { bg: "bg-yellow-100", text: "text-yellow-700", border: "border-yellow-200" };
+  if (rank <= 3) return { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" };
+  if (rank <= 7) return { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" };
   if (rank <= 15) return { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-200" };
   return { bg: "bg-red-100", text: "text-red-700", border: "border-red-200" };
 }
@@ -32,16 +32,35 @@ function getRankLabel(rank: number, found: boolean): string {
 export function SearchGrid() {
   const [keywordInput, setKeywordInput] = useState<string>("");
   const [activeKeyword, setActiveKeyword] = useState<string>("");
+  const [gridRadiusStep, setGridRadiusStep] = useState<number>(500); // 200m, 500m, 1000m
   
+  const { data: overviewData } = useLocalSeoModule<any>('overview');
+  const { data: keywordsData } = useLocalSeoModule<any>('keywords');
   const { data: gridData, isLoading, refetch } = useLocalSeoModule<any>(
     'search-grid', 
-    activeKeyword ? { keyword: activeKeyword } : undefined
+    activeKeyword ? { keyword: activeKeyword, radiusStep: gridRadiusStep } : { radiusStep: gridRadiusStep }
   );
   
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRefresh = async () => {
+  // Dynamic Keyword Pill Generator from Organic Doctor Profile Data
+  const dynamicSuggestedKeywords = (() => {
+    const list: string[] = [];
+    if (overviewData?.primaryCategory) {
+      list.push(overviewData.primaryCategory);
+    }
+    if (keywordsData?.searchKeywordsCounts && Array.isArray(keywordsData.searchKeywordsCounts)) {
+      keywordsData.searchKeywordsCounts.forEach((kw: any) => {
+        const word = typeof kw === "string" ? kw : kw.searchKeyword;
+        if (word && !list.includes(word)) list.push(word);
+      });
+    }
+    return list.slice(0, 6);
+  })();
+
+  const handleRefresh = async (customKw?: string) => {
+    const kwToScan = customKw !== undefined ? customKw : activeKeyword;
     setRefreshing(true);
     setError(null);
     try {
@@ -50,7 +69,7 @@ export function SearchGrid() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ keyword: activeKeyword })
+        body: JSON.stringify({ keyword: kwToScan, radiusStep: gridRadiusStep })
       });
       const json = await res.json();
       if (!res.ok) {
@@ -68,8 +87,16 @@ export function SearchGrid() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (keywordInput.trim()) {
-      setActiveKeyword(keywordInput.trim());
+      const term = keywordInput.trim();
+      setActiveKeyword(term);
+      handleRefresh(term);
     }
+  };
+
+  const handleSelectPill = (kw: string) => {
+    setKeywordInput(kw);
+    setActiveKeyword(kw);
+    handleRefresh(kw);
   };
 
   if (isLoading && !gridData) {
@@ -88,10 +115,11 @@ export function SearchGrid() {
   const cacheAge = gridData?.cacheAge || 0;
   const requiresRefresh = !gridData || gridData.requiresRefresh;
 
-  // Stats
+  // Stats & Share of Local Voice (SoLV)
   const found = grid.filter(c => c.found && c.rank > 0);
   const avgRank = found.length > 0 ? Math.round(found.reduce((s, c) => s + c.rank, 0) / found.length) : 0;
   const top3Count = found.filter(c => c.rank <= 3).length;
+  const solvPercentage = Math.round((top3Count / 25) * 100);
   const centerRow = Math.floor(gridSize / 2);
   const centerCol = Math.floor(gridSize / 2);
 
@@ -110,9 +138,14 @@ export function SearchGrid() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Search Rank Grid</h3>
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            Search Rank Grid
+            <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-100">
+              5×5 Grid · {gridRadiusStep}m Spacing
+            </span>
+          </h3>
           <p className="text-sm text-gray-500 mt-0.5">
-            5×5 grid · 500m spacing · covers 2km radius around your clinic
+            Geographic local rank heat map around your clinic location
           </p>
           {cached && cacheAge < 99 && (
             <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-400">
@@ -122,11 +155,11 @@ export function SearchGrid() {
           )}
         </div>
         <Button
-          onClick={handleRefresh}
+          onClick={() => handleRefresh()}
           disabled={refreshing}
           variant="outline"
           size="sm"
-          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
         >
           {refreshing ? (
             <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />Scanning...</>
@@ -136,26 +169,117 @@ export function SearchGrid() {
         </Button>
       </div>
 
-      <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm">
+      {/* Share of Local Voice (SoLV) KPI Banner */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Share of Local Voice</span>
+            <Trophy className="w-5 h-5 text-amber-400" />
+          </div>
+          <div className="my-2">
+            <span className="text-3xl font-black">{solvPercentage}%</span>
+            <span className="text-xs text-indigo-200 ml-2 font-medium">Top 3 Map Pack Share</span>
+          </div>
+          <p className="text-[11px] text-indigo-300">
+            Ranked #1–#3 in {top3Count} out of 25 neighborhood nodes.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Average Rank</span>
+            <Target className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div className="my-2 flex items-baseline gap-2">
+            <span className={`text-3xl font-black ${avgRank <= 3 ? 'text-emerald-600' : avgRank <= 7 ? 'text-amber-600' : 'text-orange-600'}`}>
+              {avgRank ? `#${avgRank}` : '—'}
+            </span>
+            <span className="text-xs text-gray-400">across ranked areas</span>
+          </div>
+          <p className="text-[11px] text-gray-500">
+            {found.length} of 25 grid areas currently index your clinic.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Grid Radius Spacing</span>
+            <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+          </div>
+          <div className="flex gap-1.5 my-2">
+            {[
+              { label: "200m", val: 200 },
+              { label: "500m", val: 500 },
+              { label: "1km", val: 1000 },
+            ].map((r) => (
+              <button
+                key={r.val}
+                type="button"
+                onClick={() => {
+                  setGridRadiusStep(r.val);
+                }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                  gridRadiusStep === r.val
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-500">
+            Total scan area: {(gridRadiusStep * 4) / 1000}km radius around clinic.
+          </p>
+        </div>
+      </div>
+
+      {/* Dynamic Keyword Pills & Search Bar */}
+      <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm space-y-3">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">Tracked Keyword</label>
+            <label className="text-xs font-semibold text-gray-500 mb-1 block">Track Keyword Grid</label>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="e.g. Orthopaedic surgeon, knee pain..."
+                placeholder="e.g. Gynecologist, Orthopedic surgeon..."
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
               />
-              <Button type="submit" size="sm" className="h-9">Track</Button>
+              <Button type="submit" size="sm" className="h-9 bg-indigo-600 hover:bg-indigo-700">Track</Button>
             </div>
           </div>
         </form>
+
+        {/* Organic Dynamic Keyword Pills */}
+        {dynamicSuggestedKeywords.length > 0 && (
+          <div>
+            <span className="text-xs font-semibold text-gray-400 block mb-1.5">Your GMB Target Keywords (Click to Track):</span>
+            <div className="flex flex-wrap gap-2">
+              {dynamicSuggestedKeywords.map((kw, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSelectPill(kw)}
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                    activeKeyword.toLowerCase() === kw.toLowerCase()
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-indigo-50/50 text-indigo-700 border-indigo-100 hover:bg-indigo-100"
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  {kw}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {gridData?.keyword && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-            <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Currently Tracking</span>
-            <strong>{gridData.keyword}</strong>
+          <div className="pt-2 border-t border-gray-50 flex items-center gap-2 text-sm text-gray-600">
+            <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Active Grid Query</span>
+            <strong className="text-indigo-900">{gridData.keyword}</strong>
           </div>
         )}
       </div>
@@ -176,7 +300,7 @@ export function SearchGrid() {
           <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
             Click "Refresh Grid" to scan 25 points around your clinic and see where you rank on Google Maps in each area.
           </p>
-          <Button onClick={handleRefresh} disabled={refreshing} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => handleRefresh()} disabled={refreshing} className="bg-indigo-600 hover:bg-indigo-700">
             {refreshing ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />Scanning 25 points...</> : "Generate Search Grid"}
           </Button>
         </div>
@@ -185,23 +309,6 @@ export function SearchGrid() {
       {/* Grid */}
       {rows.length > 0 && (
         <>
-          {/* Stat pills */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
-              <span className="font-semibold text-gray-700">Avg Rank</span>
-              <span className={`font-bold text-lg ${avgRank <= 3 ? 'text-green-600' : avgRank <= 7 ? 'text-yellow-600' : 'text-orange-600'}`}>
-                {avgRank || '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-              <span className="text-gray-600">Top 3 in <strong>{top3Count}</strong>/25 areas</span>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
-              <span className="text-gray-600">Not ranked in <strong>{25 - found.length}</strong> areas</span>
-            </div>
-          </div>
-
           {/* The grid */}
           <div className="bg-gray-50 rounded-2xl p-4 overflow-x-auto">
             <div className="flex flex-col gap-2 min-w-[300px]">
@@ -244,11 +351,11 @@ export function SearchGrid() {
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-green-200 border border-green-300 inline-block" />
-              Rank 1–3
+              <span className="w-3 h-3 rounded-sm bg-emerald-200 border border-emerald-300 inline-block" />
+              Rank 1–3 (Top Pack)
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-yellow-200 border border-yellow-300 inline-block" />
+              <span className="w-3 h-3 rounded-sm bg-amber-200 border border-amber-300 inline-block" />
               Rank 4–7
             </div>
             <div className="flex items-center gap-1.5">
@@ -265,7 +372,7 @@ export function SearchGrid() {
             </div>
             <div className="flex items-center gap-1 ml-auto text-gray-400">
               <Info className="w-3 h-3" />
-              Each cell = 500m from center
+              Each cell = {gridRadiusStep}m from center
             </div>
           </div>
         </>
