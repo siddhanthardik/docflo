@@ -7,6 +7,7 @@ import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, Ale
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrencySymbol } from "@/lib/currency";
+import { numberToWords } from "@/lib/number-to-words";
 
 export default function InvoiceDetailsPage() {
   const params = useParams();
@@ -173,15 +174,29 @@ export default function InvoiceDetailsPage() {
         {/* Main Invoice A4 Preview */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-8 sm:p-12 shadow-[0_2px_15px_-3px_rgba(6,81,237,0.05)] print:shadow-none print:border-none print:p-0">
           
-          {/* Invoice Header */}
-          <div className="flex justify-between items-start mb-12">
-            <div>
-              <h2 className="text-2xl font-black text-gray-900 mb-1">INVOICE</h2>
-              <p className="text-sm font-semibold text-gray-500">#{invoice.invoiceNumber}</p>
+          {/* Clinic Header (Print & Screen View) */}
+          <div className="flex justify-between items-start pb-6 mb-8 border-b border-gray-100">
+            <div className="space-y-1">
+              {invoice.doctor?.image && (
+                <img src={invoice.doctor.image} alt="Clinic Logo" className="h-12 w-auto mb-2 object-contain" />
+              )}
+              <h2 className="text-xl font-bold text-gray-900">{invoice.doctor?.clinicName || invoice.doctor?.name || "Clinic"}</h2>
+              {invoice.doctor?.address && <p className="text-xs text-gray-600">{invoice.doctor.address}</p>}
+              {(invoice.doctor?.city || invoice.doctor?.state) && (
+                <p className="text-xs text-gray-600">{[invoice.doctor?.city, invoice.doctor?.state, invoice.doctor?.country].filter(Boolean).join(", ")}</p>
+              )}
+              {invoice.doctor?.phone && <p className="text-xs text-gray-600">Phone: {invoice.doctor.phone}</p>}
+              {invoice.doctor?.email && <p className="text-xs text-gray-600">Email: {invoice.doctor.email}</p>}
+              {invoice.doctor?.taxGstNumber && <p className="text-xs font-semibold text-gray-700 mt-1">GSTIN: {invoice.doctor.taxGstNumber}</p>}
             </div>
+            
             <div className="text-right">
-              <p className="text-sm font-bold text-gray-900">Amount Due</p>
-              <p className="text-3xl font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</p>
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">{invoice.status === "PAID" ? "RECEIPT" : "INVOICE"}</h3>
+              <p className="text-sm font-semibold text-gray-500">#{invoice.invoiceNumber}</p>
+              <div className="mt-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Amount Due</p>
+                <p className="text-3xl font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</p>
+              </div>
             </div>
           </div>
 
@@ -256,6 +271,14 @@ export default function InvoiceDetailsPage() {
                 <span className="font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          {/* Amount in Words */}
+          <div className="mt-6 pt-4 border-t border-gray-100 text-sm">
+            <p className="font-semibold uppercase tracking-wider text-xs text-gray-500 mb-1">Amount in Words</p>
+            <p className="font-medium text-gray-900 italic bg-gray-50 p-2.5 rounded-lg border border-gray-100 print:bg-white print:border-none print:p-0">
+              {numberToWords(invoice.totalAmount)}
+            </p>
           </div>
 
           {invoice.notes && (

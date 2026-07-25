@@ -3,6 +3,7 @@ import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
 import path from 'path';
 import { getCurrencySymbol } from './currency';
 import { Invoice, InvoiceItem, Doctor, Patient, PatientPayment } from '@prisma/client';
+import { numberToWords } from './number-to-words';
 
 type InvoiceWithDetails = Invoice & {
   items: InvoiceItem[];
@@ -152,6 +153,12 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       doc.font('Roboto-Bold');
       doc.text('Balance Due:', 350, y, { width: 120, align: 'right' });
       doc.text(`${sym}${balanceDue.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
+      y += 30;
+
+      // Amount in Words
+      doc.fontSize(10).font('Roboto-Bold').text('Amount in Words:', 50, y);
+      doc.font('Roboto').text(numberToWords(invoice.totalAmount), 50, y + 15, { width: 500 });
+      y += 35;
 
       // Footer
       let footerY = 700;

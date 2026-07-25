@@ -12,6 +12,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       include: {
         items: true,
         patient: true,
+        doctor: true,
         payments: {
           orderBy: { paymentDate: 'desc' }
         }
