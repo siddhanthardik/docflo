@@ -53,7 +53,8 @@ export default async function BillingPage() {
   }
 
   // Serialize Prisma objects to prevent Next.js Server-to-Client component errors
-  const safeDoctorPackage = doctor?.package ? JSON.parse(JSON.stringify(doctor.package)) : null;
+  const activePkg = doctor?.package || (packages.length > 0 ? packages[0] : null);
+  const safeDoctorPackage = activePkg ? JSON.parse(JSON.stringify(activePkg)) : null;
   const safePackages = JSON.parse(JSON.stringify(packages));
   const safeFeatureFlags = JSON.parse(JSON.stringify(featureFlags));
 
