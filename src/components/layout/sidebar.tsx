@@ -32,6 +32,7 @@ const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "WhatsApp Inbox", href: "/whatsapp", icon: MessageCircle },
   { name: "Patients", href: "/patients", icon: Users },
+  { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Billing", href: "/billing", icon: FileText },
   { name: "Announcements", href: "/campaigns", icon: Megaphone },
