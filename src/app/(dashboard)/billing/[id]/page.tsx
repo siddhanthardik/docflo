@@ -277,7 +277,7 @@ export default function InvoiceDetailsPage() {
           <div className="mt-6 pt-4 border-t border-gray-100 text-sm">
             <p className="font-semibold uppercase tracking-wider text-xs text-gray-500 mb-1">Amount in Words</p>
             <p className="font-medium text-gray-900 italic bg-gray-50 p-2.5 rounded-lg border border-gray-100 print:bg-white print:border-none print:p-0">
-              {numberToWords(invoice.totalAmount)}
+              {numberToWords(invoice.totalAmount, invoice.currencyCode)}
             </p>
           </div>
 

@@ -157,7 +157,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
 
       // Amount in Words
       doc.fontSize(10).font('Roboto-Bold').text('Amount in Words:', 50, y);
-      doc.font('Roboto').text(numberToWords(invoice.totalAmount), 50, y + 15, { width: 500 });
+      doc.font('Roboto').text(numberToWords(invoice.totalAmount, invoice.currencyCode), 50, y + 15, { width: 500 });
       y += 35;
 
       // Footer
