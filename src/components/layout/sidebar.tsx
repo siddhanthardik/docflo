@@ -40,7 +40,7 @@ const navigationItems = [
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
   { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "AI Agents", href: "/chatbot", icon: Bot },
+  { name: "AI Agents", href: "/ai-agents", icon: Bot },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
