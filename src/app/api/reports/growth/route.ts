@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     // Retrieve clinic info for timezone and metadata
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      select: { timezone: true, clinicName: true, name: true }
+      select: { timezone: true, clinicName: true, name: true, currency: true }
     });
 
     if (!doctor) {
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       // Flatten for the legacy frontend to remain backwards compatible for now
       return NextResponse.json({
         ...report.totals,
-        metadata: report.metadata,
+        metadata: { ...report.metadata, currency: doctor.currency },
         dateRange: report.dateRange
       });
     } catch (err: any) {

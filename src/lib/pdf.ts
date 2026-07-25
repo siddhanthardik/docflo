@@ -1,5 +1,6 @@
 // @ts-ignore
 import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
+import path from 'path';
 import { getCurrencySymbol } from './currency';
 import { Invoice, InvoiceItem, Doctor, Patient, PatientPayment } from '@prisma/client';
 
@@ -34,10 +35,12 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
         resolve(Buffer.concat(buffers));
       });
 
-      // We don't have font support for all currencies built into standard PDFKit fonts (like Rupee symbol) easily without a custom font file.
-      // So we will use the currency code (e.g. INR) if standard fonts fail, or just rely on the symbol passed. PDFKit Helvetica doesn't support ₹ well.
-      // Actually, since PDFKit uses standard fonts, we might just output the symbol string.
-      // A common workaround is just using the currency code or symbol if supported.
+      // Register Roboto fonts for better unicode currency symbol support (e.g. Rupee ₹)
+      const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
+      const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
+      doc.registerFont('Roboto', fontPath);
+      doc.registerFont('Roboto-Bold', fontBoldPath);
+
       const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
 
       // Clinic Info (Header)
@@ -74,8 +77,8 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       doc.moveTo(50, 160).lineTo(550, 160).stroke();
 
       // Bill To
-      doc.fontSize(12).font('Helvetica-Bold').text('Bill To:', 50, 180);
-      doc.fontSize(10).font('Helvetica')
+      doc.fontSize(12).font('Roboto-Bold').text('Bill To:', 50, 180);
+      doc.fontSize(10).font('Roboto')
          .text(`Name: ${invoice.patient.firstName} ${invoice.patient.lastName}`, 50, 195)
          .text(`Patient ID: ${invoice.patient.id.slice(-6).toUpperCase()}`, 50, 210)
          .text(`Phone: ${invoice.patient.phone}`, 50, 225);
@@ -88,14 +91,14 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
 
       // Table Header
       let y = 280;
-      doc.fontSize(10).font('Helvetica-Bold');
+      doc.fontSize(10).font('Roboto-Bold');
       doc.text('Description', 50, y);
       doc.text('Qty', 350, y, { width: 50, align: 'right' });
       doc.text('Unit Price', 400, y, { width: 70, align: 'right' });
       doc.text('Total', 470, y, { width: 80, align: 'right' });
       
       doc.moveTo(50, y + 15).lineTo(550, y + 15).stroke();
-      doc.font('Helvetica');
+      doc.font('Roboto');
       y += 25;
 
       // Table Rows
@@ -111,20 +114,20 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       y += 25;
 
       // Totals
-      doc.font('Helvetica-Bold');
+      doc.font('Roboto-Bold');
       doc.text('Subtotal:', 350, y, { width: 120, align: 'right' });
       doc.text(`${sym}${invoice.subtotal.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
       y += 20;
 
       if (invoice.discountAmount > 0) {
-        doc.font('Helvetica');
+        doc.font('Roboto');
         doc.text('Discount:', 350, y, { width: 120, align: 'right' });
         doc.text(`-${sym}${invoice.discountAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
         y += 20;
       }
 
       if ((invoice as any).taxAmount > 0) {
-        doc.font('Helvetica');
+        doc.font('Roboto');
         doc.text('Tax:', 350, y, { width: 120, align: 'right' });
         doc.text(`${sym}${(invoice as any).taxAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
         y += 20;
@@ -133,7 +136,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       doc.moveTo(350, y).lineTo(550, y).stroke();
       y += 10;
 
-      doc.fontSize(12).font('Helvetica-Bold');
+      doc.fontSize(12).font('Roboto-Bold');
       doc.text('Grand Total:', 350, y, { width: 120, align: 'right' });
       doc.text(`${sym}${invoice.totalAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
       y += 20;
@@ -141,27 +144,27 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       const amountPaid = invoice.payments ? invoice.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
       const balanceDue = Math.max(0, invoice.totalAmount - amountPaid);
       
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(10).font('Roboto');
       doc.text('Amount Paid:', 350, y, { width: 120, align: 'right' });
       doc.text(`${sym}${amountPaid.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
       y += 20;
 
-      doc.font('Helvetica-Bold');
+      doc.font('Roboto-Bold');
       doc.text('Balance Due:', 350, y, { width: 120, align: 'right' });
       doc.text(`${sym}${balanceDue.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
 
       // Footer
       let footerY = 700;
       if (invoice.notes) {
-        doc.fontSize(10).font('Helvetica-Bold');
+        doc.fontSize(10).font('Roboto-Bold');
         doc.text('Notes:', 50, footerY);
-        doc.font('Helvetica');
+        doc.font('Roboto');
         doc.text(invoice.notes, 50, footerY + 15, { width: 500 });
         footerY += 40;
       }
       
       if (invoice.doctor.invoiceFooter) {
-        doc.fontSize(9).font('Helvetica').fillColor('gray');
+        doc.fontSize(9).font('Roboto').fillColor('gray');
         doc.text(invoice.doctor.invoiceFooter, 50, footerY, { width: 500, align: 'center' });
         footerY += 20;
       }

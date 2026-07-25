@@ -7,6 +7,7 @@ import {
 import { KeywordTracker } from "@/components/reports/keyword-tracker";
 import { useToast } from "@/components/ui/use-toast";
 import { exportReportToCSV } from "@/lib/reports/export";
+import { formatCurrency } from "@/lib/currency";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from "recharts";
@@ -132,10 +133,10 @@ export default function ReportsPage() {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={DollarSign} color="emerald" title="Revenue Summary" value={`$${(financials.revenueSummary || 0).toLocaleString()}`} subtitle="Total Amount Billed" />
-          <StatCard icon={CreditCard} color="indigo" title="Paid Invoices" value={`$${(financials.paidInvoicesTotal || 0).toLocaleString()}`} subtitle={`${financials.paidInvoicesCount} Invoices Paid`} />
-          <StatCard icon={ShieldAlert} color="yellow" title="Unpaid Invoices" value={`$${(financials.unpaidInvoicesTotal || 0).toLocaleString()}`} subtitle={`${financials.unpaidInvoicesCount} Invoices Unpaid`} />
-          <StatCard icon={ShieldAlert} color="red" title="Overdue Invoices" value={`$${(financials.overdueInvoicesTotal || 0).toLocaleString()}`} subtitle={`${financials.overdueInvoicesCount} Invoices Overdue`} />
+          <StatCard icon={DollarSign} color="emerald" title="Revenue Summary" value={formatCurrency(financials.revenueSummary, reportData.metadata?.currency)} subtitle="Total Amount Billed" />
+          <StatCard icon={CreditCard} color="indigo" title="Paid Invoices" value={formatCurrency(financials.paidInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.paidInvoicesCount} Invoices Paid`} />
+          <StatCard icon={ShieldAlert} color="yellow" title="Unpaid Invoices" value={formatCurrency(financials.unpaidInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.unpaidInvoicesCount} Invoices Unpaid`} />
+          <StatCard icon={ShieldAlert} color="red" title="Overdue Invoices" value={formatCurrency(financials.overdueInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.overdueInvoicesCount} Invoices Overdue`} />
         </div>
         
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
@@ -143,7 +144,7 @@ export default function ReportsPage() {
             <DollarSign className="h-5 w-5 text-indigo-500" /> Collection Summary
           </h3>
           <div className="prose prose-sm max-w-none text-gray-600">
-            <p>You have a total of <strong>${(financials.outstandingAmount || 0).toLocaleString()}</strong> in outstanding payments for this period.</p>
+            <p>You have a total of <strong>{formatCurrency(financials.outstandingAmount, reportData.metadata?.currency)}</strong> in outstanding payments for this period.</p>
           </div>
         </div>
       </div>
