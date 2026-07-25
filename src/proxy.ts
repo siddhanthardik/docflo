@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isPlatformRole } from "@/lib/permissions";
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+  const isLoggedIn = !!(req.auth && req.auth.user && (req.auth.user as any).id);
   const { pathname } = req.nextUrl;
   
   // 1. Check Guest Routes

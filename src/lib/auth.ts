@@ -242,37 +242,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       
       if (token.strictExp && Math.floor(Date.now() / 1000) > (token.strictExp as number)) {
-        return {}; // Clear token if strict expiry passed
+        return null as any; // Clear token if strict expiry passed
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.sub && Object.keys(token).length > 1) { // ensure token is valid
-        session.user.id = token.sub;
-        session.user.role = token.role as string;
-        session.user.doctorId = token.doctorId as string | undefined;
-        (session.user as any).createdAt = token.createdAt as string;
-        (session.user as any).emailVerified = token.emailVerified as string | null;
+      if (!token || !token.sub || Object.keys(token).length <= 1) {
+        return null as any;
+      }
+      session.user.id = token.sub;
+      session.user.role = token.role as string;
+      session.user.doctorId = token.doctorId as string | undefined;
+      (session.user as any).createdAt = token.createdAt as string;
+      (session.user as any).emailVerified = token.emailVerified as string | null;
 
-        // IMPERSONATION LOGIC
-        if (session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SALES") {
-           try {
-             const cookieStore = await cookies();
-             const impersonateId = cookieStore.get("gyrex_impersonate")?.value;
-             if (impersonateId) {
-               const target = await prisma.doctor.findUnique({ where: { id: impersonateId } });
-               if (target) {
-                 (session.user as any).originalAdminId = session.user.id;
-                 (session.user as any).originalRole = session.user.role;
-                 
-                 session.user.id = target.id;
-                 session.user.role = target.role;
-                 session.user.name = target.name;
-                 session.user.email = target.email;
-               }
+      // IMPERSONATION LOGIC
+      if (session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SALES") {
+         try {
+           const cookieStore = await cookies();
+           const impersonateId = cookieStore.get("gyrex_impersonate")?.value;
+           if (impersonateId) {
+             const target = await prisma.doctor.findUnique({ where: { id: impersonateId } });
+             if (target) {
+               (session.user as any).originalAdminId = session.user.id;
+               (session.user as any).originalRole = session.user.role;
+               
+               session.user.id = target.id;
+               session.user.role = target.role;
+               session.user.name = target.name;
+               session.user.email = target.email;
              }
-           } catch(e) {}
-        }
+           }
+         } catch(e) {}
       }
       return session;
     },
