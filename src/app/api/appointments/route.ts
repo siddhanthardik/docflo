@@ -237,6 +237,7 @@ export async function POST(req: Request) {
         notes: notes || "",
         status: status,
         type: type as any,
+        reminderSent: isWalkIn ? true : false,
       },
       include: {
         patient: {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
+import { whatsappManager } from "@/lib/whatsapp-manager";
+import { generateInvoicePDF } from "@/lib/pdf";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Verify invoice belongs to doctor
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId, doctorId },
-      include: { payments: true }
+      include: { payments: true, patient: true, doctor: true }
     });
 
     if (!invoice) {
@@ -54,6 +56,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { id: invoiceId },
       data: { status, paidAt }
     });
+
+    // Automatically send receipt via WhatsApp if WhatsApp is connected & patient has phone
+    try {
+      if (whatsappManager.isConnected(doctorId) && invoice.patient?.phone) {
+        const updatedInvoice = await prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          include: { items: true, doctor: true, patient: true, payments: true }
+        });
+
+        if (updatedInvoice) {
+          const pdfBuffer = await generateInvoicePDF(updatedInvoice as any);
+          const fileName = `Receipt_${updatedInvoice.invoiceNumber}.pdf`;
+          const formattedAmount = parseFloat(amount).toLocaleString("en-IN");
+          const formattedTotalPaid = totalPaid.toLocaleString("en-IN");
+          const caption = `Hi ${updatedInvoice.patient.firstName},\n\nThank you for your payment of ₹${formattedAmount}. Attached is your payment receipt from ${updatedInvoice.doctor.clinicName || "our clinic"}.\n\nTotal Amount Paid: ₹${formattedTotalPaid}\nInvoice Status: ${status === "PAID" ? "Fully Paid ✅" : "Partially Paid ⏳"}\n\nThank you for choosing us! 🌟`;
+
+          await whatsappManager.sendDocument(doctorId, updatedInvoice.patient.phone, pdfBuffer, fileName, caption);
+
+          await prisma.auditLog.create({
+            data: {
+              userId: doctorId,
+              userType: "CLINIC",
+              action: "WHATSAPP_RECEIPT_AUTO_SENT",
+              details: {
+                invoiceId: updatedInvoice.id,
+                amount: parseFloat(amount),
+                patientPhone: updatedInvoice.patient.phone
+              }
+            }
+          });
+        }
+      }
+    } catch (waError) {
+      console.error("Auto WhatsApp Receipt dispatch error:", waError);
+      // Non-blocking error: do not fail payment if WhatsApp dispatch fails
+    }
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error: any) {

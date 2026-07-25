@@ -16,7 +16,7 @@ export class ReminderService {
         const upcomingAppointments = await prisma.appointment.findMany({
           where: {
             doctorId: doctor.id,
-            status: { in: ["CONFIRMED", "CHECKED_IN"] },
+            status: "CONFIRMED",
             reminderSent: false,
             date: {
               gte: now,
