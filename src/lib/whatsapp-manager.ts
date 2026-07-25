@@ -54,13 +54,24 @@ class WhatsAppManager {
   async connect(doctorId: string) {
     console.log(`[WhatsAppManager] Starting connection for doctor: ${doctorId}`);
     const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    let authState;
+    try {
+      authState = await useMultiFileAuthState(sessionDir);
+    } catch (e) {
+      console.error(`[WhatsAppManager] Corrupted auth state for ${doctorId}, cannot connect.`, e);
+      // We don't delete the folder automatically here in case it's a temporary read error, 
+      // but if the credentials are truly corrupt, they will need to manually remove and re-link.
+      return;
+    }
+    const { state, saveCreds } = authState;
 
     const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
       generateHighQualityLinkPreview: true,
       browser: ['Gyrex', 'Chrome', '1.0.0'],
+      markOnlineOnConnect: false,
+      syncFullHistory: false,
     });
 
     this.sockets.set(doctorId, sock);
@@ -76,19 +87,31 @@ class WhatsAppManager {
       }
 
       if (connection === 'close') {
-        const shouldReconnect =
-          (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         
-        console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Reconnecting: ${shouldReconnect}`);
+        console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
         
         if (shouldReconnect) {
-          this.connect(doctorId);
+          // Delay reconnect to prevent spamming WhatsApp servers (which causes 401 bans) and to allow files to unlock
+          const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 5000;
+          setTimeout(() => {
+            console.log(`[WhatsAppManager] Reconnecting ${doctorId} now...`);
+            this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Reconnect error for ${doctorId}:`, e));
+          }, delay);
         } else {
-          // Logged out
+          // Genuinely logged out from the phone app (401)
+          console.log(`[WhatsAppManager] Device logged out for ${doctorId}. Clearing session.`);
           this.sockets.delete(doctorId);
           this.qrCodes.delete(doctorId);
-          // Delete auth folder
-          fs.rmSync(sessionDir, { recursive: true, force: true });
+          // Delete auth folder safely
+          if (fs.existsSync(sessionDir)) {
+            try {
+              fs.rmSync(sessionDir, { recursive: true, force: true });
+            } catch (err) {
+              console.error(`[WhatsAppManager] Failed to delete session dir for ${doctorId}`, err);
+            }
+          }
         }
       } else if (connection === 'open') {
         console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
