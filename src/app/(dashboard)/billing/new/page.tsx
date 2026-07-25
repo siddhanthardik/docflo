@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Plus, Trash2, IndianRupee, User, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { AsyncPatientSelect } from "@/components/ui/async-patient-select";
 
 function CreateInvoiceForm() {
   const router = useRouter();
@@ -18,11 +19,9 @@ function CreateInvoiceForm() {
     patientId: "",
     appointmentId: appointmentId || "",
     practitionerId: "",
-    dueDate: "",
     discountType: "FLAT",
     discountValue: 0,
     taxAmount: 0,
-    notes: ""
   });
 
   const [items, setItems] = useState([
@@ -32,7 +31,7 @@ function CreateInvoiceForm() {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const res = await fetch("/api/patients?limit=100");
+        const res = await fetch("/api/patients?limit=50");
         if (res.ok) {
           const data = await res.json();
           setPatients(data.patients);
@@ -62,7 +61,7 @@ function CreateInvoiceForm() {
               { 
                 description: `Consultation - ${appointment.reason || 'General'}`, 
                 quantity: 1, 
-                unitPrice: 500 // Default consultation fee, can be edited
+                unitPrice: 500
               }
             ]);
           }
@@ -155,30 +154,14 @@ function CreateInvoiceForm() {
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <User className="w-5 h-5 text-indigo-500" /> Patient Information
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className={labelClass}>Select Patient *</label>
-              <select
-                required
-                className={inputClass}
-                value={formData.patientId}
-                onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-              >
-                <option value="">-- Choose Patient --</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.phone})</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Due Date</label>
-              <input
-                type="date"
-                className={inputClass}
-                value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              />
-            </div>
+          <div>
+            <label className={labelClass}>Select Patient *</label>
+            <AsyncPatientSelect
+              value={formData.patientId}
+              onValueChange={(value) => setFormData({ ...formData, patientId: value })}
+              initialPatients={patients}
+              placeholder="Search patient by name, phone, or email..."
+            />
           </div>
         </div>
 
@@ -257,19 +240,8 @@ function CreateInvoiceForm() {
           </div>
         </div>
 
-        {/* Summary & Notes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Notes</h2>
-            <textarea
-              rows={4}
-              placeholder="Terms, conditions, or thank you note..."
-              className={inputClass}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </div>
-
+        {/* Summary */}
+        <div className="max-w-md ml-auto">
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] space-y-4">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Summary</h2>
             
