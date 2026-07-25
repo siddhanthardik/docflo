@@ -1,13 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import Providers from "@/components/providers";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 
 export const metadata: Metadata = {
   title: "Gyrex - Practice Growth Platform",
   description:
     "Manage patients, appointments, and grow your practice with Google Business Profile optimization",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Gyrex Clinic",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({
@@ -24,6 +38,7 @@ export default function RootLayout({
       </head>
       <body className={cn("bg-gray-50 font-sans")}>
         <Providers>
+          <PwaInstallBanner />
           {children}
           <Toaster />
         </Providers>
