@@ -132,9 +132,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const appointmentDate = new Date(date);
-    const startDateTime = new Date(`${appointmentDate.toISOString().split("T")[0]}T${startTime}:00`);
-    const endDateTime = new Date(`${appointmentDate.toISOString().split("T")[0]}T${endTime}:00`);
+    const dateStr = typeof date === "string" ? date.split("T")[0] : new Date(date).toISOString().split("T")[0];
+    const appointmentDate = new Date(`${dateStr}T00:00:00.000Z`);
+    const startDateTime = new Date(`${dateStr}T${startTime}:00.000Z`);
+    const endDateTime = new Date(`${dateStr}T${endTime}:00.000Z`);
 
     // 1. Fetch clinic settings for this doctor
     const doctor = await prisma.doctor.findUnique({

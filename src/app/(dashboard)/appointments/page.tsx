@@ -12,8 +12,9 @@ import {
   X,
   MoreVertical,
 } from "lucide-react";
-import { format, isToday, isSameDay } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { AppointmentForm } from "@/components/appointments/appointment-form";
+import { formatClinicTime, getLocalDateString } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,7 +144,8 @@ export default function AppointmentsPage() {
       if (selectedPractitionerId !== "all") {
         result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
       }
-      return result.filter((a) => isToday(new Date(a.date))).length;
+      const todayStr = getLocalDateString(new Date());
+      return result.filter((a) => getLocalDateString(a.date) === todayStr).length;
     },
     [appointments, selectedPractitionerId]
   );
@@ -405,7 +407,7 @@ export default function AppointmentsPage() {
                 {filteredAppointments.map((apt) => {
                   const initials = `${apt.patient.firstName?.[0] ?? ""}${apt.patient.lastName?.[0] ?? ""}`.toUpperCase();
                   const avatarColor = getAvatarColor(apt.patient.firstName ?? "");
-                  const todayHighlight = isToday(new Date(apt.date));
+                  const todayHighlight = getLocalDateString(apt.date) === getLocalDateString(new Date());
 
                   return (
                     <div
@@ -430,8 +432,8 @@ export default function AppointmentsPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <div className="flex items-center gap-1 text-xs font-semibold text-gray-700">
                               <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                              {format(new Date(apt.startTime), "h:mm a")} —{" "}
-                              {format(new Date(apt.endTime), "h:mm a")}
+                              {formatClinicTime(apt.startTime)} —{" "}
+                              {formatClinicTime(apt.endTime)}
                             </div>
                             <StatusBadge status={apt.status} />
                             {todayHighlight && (

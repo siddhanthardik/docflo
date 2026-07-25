@@ -125,7 +125,9 @@ export function AppointmentForm({
         patientId: initialData.patientId || "",
         date: initialData.date ? new Date(initialData.date) : new Date(),
         startTime: initialData.startTime
-          ? format(new Date(initialData.startTime), "HH:mm")
+          ? (typeof initialData.startTime === "string" && initialData.startTime.includes("T")
+              ? initialData.startTime.split("T")[1].slice(0, 5)
+              : format(new Date(initialData.startTime), "HH:mm"))
           : "09:00",
         duration: 30,
         reason: initialData.reason || "",
