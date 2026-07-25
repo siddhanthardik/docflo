@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -29,8 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Search, Phone, Mail, UserPlus, Users } from "lucide-react";
+import { MoreHorizontal, Search, Phone, Mail, UserPlus, Users, MessageSquare, ChevronLeft, ChevronRight, UserCheck, UserX } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Patient {
   id: string;
@@ -52,23 +52,37 @@ interface Patient {
 interface PatientTableProps {
   patients: Patient[];
   loading: boolean;
+  pagination?: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+  page?: number;
+  onPageChange?: (page: number) => void;
   onEdit: (patient: Patient) => void;
   onDelete: (id: string) => Promise<void>;
   onCreate: () => void;
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  onRefresh?: () => void;
 }
 
 export function PatientTable({
   patients,
   loading,
+  pagination,
+  page = 1,
+  onPageChange,
   onEdit,
   onDelete,
   onCreate,
   searchQuery,
   onSearchChange,
+  onRefresh,
 }: PatientTableProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -83,7 +97,25 @@ export function PatientTable({
     }
   };
 
-  // Removed early return for loading to prevent screen blanking during search
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/patients/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientType: newStatus }),
+      });
+      if (res.ok) {
+        toast({ title: "Status Updated", description: `Patient marked as ${newStatus}` });
+        onRefresh?.();
+      } else {
+        toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-4 relative">
       <div className="flex items-center justify-center p-6 border-b border-gray-100 bg-white rounded-t-xl">
@@ -113,7 +145,7 @@ export function PatientTable({
               : "Start by adding your first patient"}
           </p>
           {!searchQuery && (
-            <Button onClick={onCreate} className="mt-4">
+            <Button onClick={onCreate} className="mt-4 bg-indigo-600 hover:bg-indigo-700">
               <UserPlus className="h-4 w-4 mr-2" />
               Add Your First Patient
             </Button>
@@ -125,12 +157,12 @@ export function PatientTable({
             <TableHeader className="bg-gray-50/80 border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold text-gray-600 pl-6">Patient Name</TableHead>
-                <TableHead className="font-semibold text-gray-600">Contact</TableHead>
+                <TableHead className="font-semibold text-gray-600">Contact & WhatsApp</TableHead>
                 <TableHead className="font-semibold text-gray-600">Gender</TableHead>
-                <TableHead className="font-semibold text-gray-600">Practitioner</TableHead>
+                <TableHead className="font-semibold text-gray-600">Doctor</TableHead>
                 <TableHead className="font-semibold text-gray-600">Last Visit</TableHead>
                 <TableHead className="font-semibold text-gray-600">Tags</TableHead>
-                <TableHead className="w-[100px] text-right font-semibold text-gray-600 pr-6">Actions</TableHead>
+                <TableHead className="w-[120px] text-right font-semibold text-gray-600 pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -150,18 +182,15 @@ export function PatientTable({
                           <p className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
                             {patient.firstName} {patient.lastName}
                           </p>
-                          {patient.patientType && (
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${
-                                patient.patientType === "LEAD" ? "bg-purple-100 text-purple-700" :
-                                patient.patientType === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
-                                patient.patientType === "INACTIVE" ? "bg-amber-100 text-amber-700" :
-                                "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {patient.patientType}
-                            </span>
-                          )}
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                              patient.patientType === "INACTIVE"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {patient.patientType || "ACTIVE"}
+                          </span>
                         </div>
                         <p className="text-xs text-gray-500 font-medium">
                           Added {formatDate(new Date(patient.createdAt))}
@@ -171,13 +200,23 @@ export function PatientTable({
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="flex items-center text-sm">
-                        <Phone className="h-3 w-3 mr-2 text-gray-400" />
+                      <div className="flex items-center text-sm font-medium text-gray-900">
+                        <Phone className="h-3.5 w-3.5 mr-2 text-gray-400" />
                         {patient.phone}
+                        <button
+                          title="Open WhatsApp Chat"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/whatsapp`);
+                          }}
+                          className="ml-2 p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                       {patient.email && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Mail className="h-3 w-3 mr-2" />
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Mail className="h-3 w-3 mr-2 text-gray-400" />
                           {patient.email}
                         </div>
                       )}
@@ -201,9 +240,7 @@ export function PatientTable({
                   <TableCell>
                     <span className="text-sm text-gray-600">
                       {patient.appointments && patient.appointments[0]
-                        ? formatDate(
-                            new Date(patient.appointments[0].date)
-                          )
+                        ? formatDate(new Date(patient.appointments[0].date))
                         : "No visits"}
                     </span>
                   </TableCell>
@@ -221,7 +258,16 @@ export function PatientTable({
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600 bg-white shadow-sm border border-gray-100" onClick={(e) => { e.stopPropagation(); onEdit(patient); }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Edit Patient Profile"
+                        className="h-8 w-8 text-gray-400 hover:text-indigo-600 bg-white shadow-sm border border-gray-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(patient);
+                        }}
+                      >
                         <UserPlus className="h-4 w-4" />
                       </Button>
                       <DropdownMenu>
@@ -237,6 +283,19 @@ export function PatientTable({
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(patient); }}>
                             Edit Profile
                           </DropdownMenuItem>
+                          
+                          {patient.patientType === "INACTIVE" ? (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(patient.id, "ACTIVE"); }}>
+                              <UserCheck className="h-4 w-4 mr-2 text-emerald-600" />
+                              Reactivate Patient
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(patient.id, "INACTIVE"); }}>
+                              <UserX className="h-4 w-4 mr-2 text-amber-600" />
+                              Mark Inactive
+                            </DropdownMenuItem>
+                          )}
+
                           <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={(e) => { e.stopPropagation(); setDeleteId(patient.id); }}>
                             Delete Patient
                           </DropdownMenuItem>
@@ -248,6 +307,36 @@ export function PatientTable({
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+              <p className="text-xs text-gray-500 font-medium">
+                Showing page <span className="font-bold text-gray-900">{pagination.page}</span> of{" "}
+                <span className="font-bold text-gray-900">{pagination.totalPages}</span> ({pagination.totalCount} total patients)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page <= 1}
+                  onClick={() => onPageChange?.(pagination.page - 1)}
+                  className="h-8 text-xs font-semibold"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page >= pagination.totalPages}
+                  onClick={() => onPageChange?.(pagination.page + 1)}
+                  className="h-8 text-xs font-semibold"
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
