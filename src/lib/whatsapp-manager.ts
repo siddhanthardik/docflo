@@ -112,6 +112,17 @@ class WhatsAppManager {
               console.error(`[WhatsAppManager] Failed to delete session dir for ${doctorId}`, err);
             }
           }
+          
+          // Notify the user
+          prisma.notification.create({
+            data: {
+              doctorId,
+              title: "WhatsApp Disconnected",
+              message: "WhatsApp is Disconnect. Please connect your device.",
+              type: "ERROR",
+              actionUrl: "/settings",
+            }
+          }).catch(err => console.error(`[WhatsAppManager] Failed to create notification for ${doctorId}`, err));
         }
       } else if (connection === 'open') {
         console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);

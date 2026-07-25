@@ -119,7 +119,11 @@ export async function POST(req: Request) {
   try {
     const { doctorId, locationId } = await getSessionData();
     const body = await req.json();
-    const { patientId, date, startTime, endTime, reason, notes, practitionerId, status = "CONFIRMED" } = body;
+    let { patientId, date, startTime, endTime, reason, notes, practitionerId, status = "CONFIRMED", isWalkIn, type = "IN_CLINIC" } = body;
+
+    if (isWalkIn) {
+      status = "CHECKED_IN";
+    }
 
     if (!patientId || !date || !startTime || !endTime) {
       return NextResponse.json(
@@ -232,6 +236,7 @@ export async function POST(req: Request) {
         reason: reason || "",
         notes: notes || "",
         status: status,
+        type: type as any,
       },
       include: {
         patient: {
@@ -258,7 +263,7 @@ export async function POST(req: Request) {
 
     // --- WhatsApp Notification Logic ---
     try {
-      if (whatsappManager.isConnected(doctorId) && appointment.patient.phone && status === "CONFIRMED") {
+      if (!isWalkIn && whatsappManager.isConnected(doctorId) && appointment.patient.phone && status === "CONFIRMED") {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -271,12 +276,20 @@ export async function POST(req: Request) {
         const locationDetails = [doctor?.address, doctor?.city].filter(Boolean).join(", ");
         const locationString = locationDetails ? ` at ${locationDetails}` : "";
 
-        if (appointmentDate.getTime() === today.getTime()) {
-          // Same Day
-          messageText = `Hi ${appointment.patient.firstName}, this is a quick message from ${clinicName}. Your appointment is confirmed for today at ${startTime}${locationString}.\n\nCould you please reply with 'CONFIRM' to let us know you're still coming? If you need to reschedule, just let us know. We look forward to seeing you! 🌟`;
+        if (type === "TELE_CONSULTATION") {
+          if (appointmentDate.getTime() === today.getTime()) {
+            messageText = `Hi ${appointment.patient.firstName}, your tele-consultation with ${clinicName} is confirmed for today at ${startTime}.\n\nThe doctor will call you or share a meeting link at the scheduled time. Please reply 'CONFIRM' to acknowledge.`;
+          } else {
+            messageText = `Hi ${appointment.patient.firstName}! Your upcoming tele-consultation with ${clinicName} is scheduled for ${formattedDate} at ${startTime}.\n\nThe doctor will call you or share a meeting link at the scheduled time. Please reply 'CONFIRM' to acknowledge.`;
+          }
         } else {
-          // Future
-          messageText = `Hi ${appointment.patient.firstName}! Your upcoming appointment with ${clinicName} is scheduled for ${formattedDate} at ${startTime}${locationString}.\n\nPlease reply 'CONFIRM' to secure your slot, or let us know if you need to make any changes. Have a wonderful day! ✨`;
+          if (appointmentDate.getTime() === today.getTime()) {
+            // Same Day
+            messageText = `Hi ${appointment.patient.firstName}, this is a quick message from ${clinicName}. Your appointment is confirmed for today at ${startTime}${locationString}.\n\nCould you please reply with 'CONFIRM' to let us know you're still coming? If you need to reschedule, just let us know. We look forward to seeing you! 🌟`;
+          } else {
+            // Future
+            messageText = `Hi ${appointment.patient.firstName}! Your upcoming appointment with ${clinicName} is scheduled for ${formattedDate} at ${startTime}${locationString}.\n\nPlease reply 'CONFIRM' to secure your slot, or let us know if you need to make any changes. Have a wonderful day! ✨`;
+          }
         }
 
         const patientPhone = appointment.patient.phone;

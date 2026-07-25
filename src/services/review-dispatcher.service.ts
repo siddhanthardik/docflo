@@ -138,6 +138,10 @@ export class ReviewDispatcherService {
    * Manual send review request by staff
    */
   static async manualSendReviewRequest(patientId: string, appointmentId: string, doctorId: string, overrideCooldown: boolean = false) {
+    if (!whatsappManager.isConnected(doctorId)) {
+      throw new Error("WhatsApp is not connected. Please connect your device in WhatsApp Settings to send review requests.");
+    }
+
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       select: { clinicName: true, reviewCooldownDays: true, reviewSurveyMessage: true }

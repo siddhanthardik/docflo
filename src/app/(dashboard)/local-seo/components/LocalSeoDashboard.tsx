@@ -165,20 +165,20 @@ function GooglePerformanceCompact({ performanceData }: { performanceData: any })
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="flex items-center justify-between bg-gray-50/80 rounded-lg px-2.5 py-1.5 border border-gray-100/50">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Globe className="w-3 h-3 text-blue-500" />Web</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
+              <span className="text-xs text-gray-500 flex items-center gap-1"><Globe className="w-3 h-3 text-blue-500 shrink-0" />Web</span>
               <span className="text-xs font-bold text-gray-900">{websiteClicks}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-50/80 rounded-lg px-2.5 py-1.5 border border-gray-100/50">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Navigation className="w-3 h-3 text-emerald-500" />Maps</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
+              <span className="text-xs text-gray-500 flex items-center gap-1"><Navigation className="w-3 h-3 text-emerald-500 shrink-0" />Maps</span>
               <span className="text-xs font-bold text-gray-900">{directionRequests}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-50/80 rounded-lg px-2.5 py-1.5 border border-gray-100/50">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3 text-amber-500" />Calls</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
+              <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3 text-amber-500 shrink-0" />Calls</span>
               <span className="text-xs font-bold text-gray-900">{callClicks}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-50/80 rounded-lg px-2.5 py-1.5 border border-gray-100/50">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><CalendarCheck2 className="w-3 h-3 text-purple-500" />Book</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
+              <span className="text-xs text-gray-500 flex items-center gap-1"><CalendarCheck2 className="w-3 h-3 text-purple-500 shrink-0" />Book</span>
               <span className="text-xs font-bold text-gray-900">{bookings}</span>
             </div>
           </div>
@@ -399,13 +399,13 @@ export function LocalSeoDashboard() {
       </div>
 
       {/* Tab Navigation Segmented Control */}
-      <div className="flex gap-1 bg-gray-100/80 p-1.5 rounded-2xl mb-6 overflow-x-auto border border-gray-200/50">
+      <div className="flex gap-1 bg-gray-100/80 p-1.5 rounded-2xl mb-6 overflow-x-auto no-scrollbar snap-x snap-mandatory border border-gray-200/50">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-1 justify-center
+              flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-1 justify-center snap-center
               ${activeTab === tab.id
                 ? "bg-white text-indigo-700 shadow-sm border border-gray-100"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
@@ -461,7 +461,7 @@ export function LocalSeoDashboard() {
       {/* ── RANK TRACKER TAB ── */}
       {activeTab === "rank-tracker" && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
             <SearchGrid />
           </div>
           <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 rounded-2xl border border-indigo-100 p-6">
@@ -487,7 +487,7 @@ export function LocalSeoDashboard() {
       {/* ── COMPETITORS TAB ── */}
       {activeTab === "competitors" && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-2">
             <div>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-indigo-500" />
@@ -501,7 +501,7 @@ export function LocalSeoDashboard() {
               From Google Places API
             </div>
           </div>
-          <div className="p-6">
+          <div className="p-2 sm:p-4 md:p-6">
             <CompetitorInsights />
           </div>
         </div>

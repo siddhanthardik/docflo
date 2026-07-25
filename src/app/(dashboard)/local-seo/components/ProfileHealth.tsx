@@ -29,7 +29,7 @@ export function ProfileHealth() {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
       <div className="flex items-center gap-2 mb-6">
         <FileCheck2 className="h-5 w-5 text-indigo-600" />
         <h2 className="text-xl font-bold text-gray-900">Profile Completeness</h2>

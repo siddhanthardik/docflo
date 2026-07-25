@@ -33,6 +33,7 @@ export const patientSchema = z.object({
   gender: z.enum(["Male", "Female", "Other"]).optional(),
   bloodGroup: z.string().optional(),
   address: z.string().optional(),
+  city: z.string().optional(),
   medicalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   patientType: z.enum(["LEAD", "ACTIVE", "INACTIVE", "LOST"]).optional(),

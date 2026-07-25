@@ -169,7 +169,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const avatarColor = getAvatarColor(fullName);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20">
+    <div className="min-h-screen bg-gray-50/50 pb-32 md:pb-12">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -183,7 +183,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               </button>
               <h1 className="text-lg font-semibold text-gray-900">Patient Profile</h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={() => setIsEditModalOpen(true)}
                 className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
@@ -401,6 +401,34 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Sticky Bottom Action Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 pb-6">
+        <div className="flex items-center gap-3 w-full">
+          <button
+            onClick={() => router.push(`/book/${patient.doctorId}?patient=${patient.id}`)}
+            className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <Calendar className="h-4 w-4" />
+            Book
+          </button>
+          <button
+            onClick={() => handleSendReviewRequest(false)}
+            disabled={sendingReview}
+            className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+            {sendingReview ? "Wait..." : "Review"}
+          </button>
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="shrink-0 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+            aria-label="Edit Patient"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
         </div>
       </div>
 

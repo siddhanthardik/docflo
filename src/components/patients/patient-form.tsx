@@ -48,9 +48,10 @@ export function PatientForm({
     gender: "",
     bloodGroup: "",
     address: "",
+    city: "",
     medicalNotes: "",
     tags: [] as string[],
-    patientType: "LEAD",
+    patientType: "ACTIVE",
     primaryPractitionerId: "",
   });
 
@@ -86,9 +87,10 @@ export function PatientForm({
         gender: initialData.gender || "",
         bloodGroup: initialData.bloodGroup || "",
         address: initialData.address || "",
+        city: initialData.city || "",
         medicalNotes: initialData.medicalNotes || "",
         tags: initialData.tags || [],
-        patientType: initialData.patientType || "LEAD",
+        patientType: initialData.patientType || "ACTIVE",
         primaryPractitionerId: initialData.primaryPractitionerId || "",
       });
     } else {
@@ -102,9 +104,10 @@ export function PatientForm({
         gender: "",
         bloodGroup: "",
         address: "",
+        city: "",
         medicalNotes: "",
         tags: [],
-        patientType: "LEAD",
+        patientType: "ACTIVE",
         primaryPractitionerId: "",
       });
     }
@@ -149,7 +152,7 @@ export function PatientForm({
           handleSubmit(e);
         }}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name *</Label>
                 <Input
@@ -176,7 +179,7 @@ export function PatientForm({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
                 <div className="flex gap-2">
@@ -219,7 +222,7 @@ export function PatientForm({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
                 <Input
@@ -273,25 +276,7 @@ export function PatientForm({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="patientType">CRM Status</Label>
-              <Select
-                value={formData.patientType}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, patientType: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LEAD">Lead</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="LOST">Lost</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="primaryPractitioner">Primary Practitioner</Label>
@@ -315,17 +300,30 @@ export function PatientForm({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                placeholder="123 Medical Street, City"
-                rows={2}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Textarea
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  placeholder="123 Medical Street"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  placeholder="New York"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

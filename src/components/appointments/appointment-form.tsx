@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -48,17 +49,10 @@ interface AppointmentFormProps {
   mode: "create" | "edit";
 }
 
-const timeSlots = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-];
 
 const durations = [
   { label: "15 minutes", value: 15 },
   { label: "30 minutes", value: 30 },
-  { label: "45 minutes", value: 45 },
-  { label: "1 hour", value: 60 },
 ];
 
 export function AppointmentForm({
@@ -80,9 +74,12 @@ export function AppointmentForm({
     reason: "",
     notes: "",
     practitionerId: "",
+    isWalkIn: false,
+    type: "IN_CLINIC",
   });
 
   const [practitioners, setPractitioners] = useState<any[]>([]);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/practitioners").then(res => res.ok ? res.json() : []).then(data => {
@@ -92,6 +89,28 @@ export function AppointmentForm({
         setFormData(prev => ({ ...prev, practitionerId: active[0].id }));
       }
     });
+
+    fetch("/api/settings/clinic")
+      .then((res) => res.json())
+      .then((data) => {
+        const start = data.workingHoursStart || "09:00";
+        const end = data.workingHoursEnd || "17:00";
+        
+        const slots = [];
+        let [hour, minute] = start.split(":").map(Number);
+        const [endHour, endMinute] = end.split(":").map(Number);
+        
+        while (hour < endHour || (hour === endHour && minute < endMinute)) {
+          slots.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+          minute += 15;
+          if (minute >= 60) {
+            minute -= 60;
+            hour += 1;
+          }
+        }
+        setTimeSlots(slots);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
@@ -106,6 +125,8 @@ export function AppointmentForm({
         reason: initialData.reason || "",
         notes: initialData.notes || "",
         practitionerId: initialData.practitionerId || "",
+        isWalkIn: false,
+        type: initialData.type || "IN_CLINIC",
       });
     } else {
       setFormData(prev => ({
@@ -116,6 +137,8 @@ export function AppointmentForm({
         reason: "",
         notes: "",
         practitionerId: prev.practitionerId, // preserve if it was auto-set
+        isWalkIn: false,
+        type: "IN_CLINIC",
       }));
       setSelectedPatientObj(null);
     }
@@ -160,6 +183,8 @@ export function AppointmentForm({
         reason: formData.reason,
         notes: formData.notes,
         practitionerId: formData.practitionerId,
+        isWalkIn: formData.type === "TELE_CONSULTATION" ? false : formData.isWalkIn,
+        type: formData.type,
       });
       onOpenChange(false);
     } catch (error) {
@@ -171,7 +196,7 @@ export function AppointmentForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="w-[95vw] max-w-[550px] max-h-[90vh] overflow-y-auto rounded-xl">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Schedule Appointment" : "Edit Appointment"}
@@ -270,7 +295,23 @@ export function AppointmentForm({
               </Popover>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Appointment Type</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(val) => setFormData({ ...formData, type: val, isWalkIn: val === "TELE_CONSULTATION" ? false : formData.isWalkIn })}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IN_CLINIC">In Clinic</SelectItem>
+                    <SelectItem value="TELE_CONSULTATION">Tele-Consultation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time *</Label>
                 <Select
@@ -327,6 +368,27 @@ export function AppointmentForm({
               </div>
             )}
 
+            <div className={`flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm ${formData.type === "TELE_CONSULTATION" ? "opacity-50 pointer-events-none" : "bg-gray-50/50"}`}>
+              <Checkbox
+                id="isWalkIn"
+                checked={formData.type === "TELE_CONSULTATION" ? false : formData.isWalkIn}
+                disabled={formData.type === "TELE_CONSULTATION"}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isWalkIn: checked === true })
+                }
+              />
+              <div className="space-y-1 leading-none">
+                <Label htmlFor="isWalkIn" className="font-semibold text-gray-900">
+                  Walk-in Patient
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.type === "TELE_CONSULTATION" 
+                    ? "Walk-ins are not applicable for Tele-Consultation."
+                    : "Check this if the patient is already at the clinic. This will bypass the WhatsApp scheduled confirmation message and mark them as Checked In."}
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="reason">Reason for Visit</Label>
               <Input
@@ -360,7 +422,11 @@ export function AppointmentForm({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || selectedPatientObj?.patientType === "LEAD"}>
+            <Button 
+              type="submit" 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={loading || selectedPatientObj?.patientType === "LEAD"}
+            >
               {loading
                 ? "Saving..."
                 : mode === "create"

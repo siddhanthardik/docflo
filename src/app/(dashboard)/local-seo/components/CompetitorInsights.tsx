@@ -37,32 +37,40 @@ function ReviewCount({ count }: { count: number }) {
   return <span className={`font-bold text-sm ${color}`}>{count.toLocaleString()}</span>;
 }
 
-// Competitor Keywords — Option B: AI-derived from category + business names
-function CompetitorKeywords({ competitors, primaryCategory }: { competitors: Competitor[]; primaryCategory: string }) {
-  const CATEGORY_KEYWORDS: Record<string, string[]> = {
-    orthopaedic: ["knee replacement", "hip replacement", "arthroscopy surgery", "ACL repair", "sports injury treatment", "bone fracture specialist", "joint pain relief", "spine surgery", "shoulder surgery", "orthopaedic surgeon near me"],
-    orthopedic: ["knee replacement", "hip replacement", "arthroscopy surgery", "ACL repair", "sports injury treatment", "bone fracture specialist", "joint pain relief", "spine surgery", "orthopaedic surgeon near me"],
-    physiotherapy: ["physiotherapy near me", "sports physio", "post-surgery rehab", "pain management", "manual therapy", "dry needling", "back pain treatment"],
-    dentist: ["dental implants", "teeth whitening", "root canal treatment", "Invisalign", "painless dentist", "dental clinic near me"],
-    eye: ["cataract surgery", "LASIK eye surgery", "glaucoma treatment", "retina specialist", "diabetic eye care"],
-    skin: ["skin specialist", "acne treatment", "hair transplant", "laser hair removal", "vitiligo treatment", "dermatologist near me"],
-    default: ["doctor near me", "specialist clinic", "medical consultation", "best doctor in Delhi", "clinic near me"],
-  };
+// Competitor Keywords — Dynamic Data-Driven
+function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { competitors: Competitor[]; primaryCategory: string; keywordsData: any }) {
+  
+  // 1. Get actual search terms from the doctor's profile
+  const actualSearchTerms = (keywordsData?.searchKeywordsCounts || [])
+    .map((kw: any) => (kw.searchKeyword || kw).toLowerCase())
+    .slice(0, 4);
 
-  const cat = primaryCategory.toLowerCase();
-  let keywords = CATEGORY_KEYWORDS.default;
-  for (const [key, kws] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (cat.includes(key)) { keywords = kws; break; }
-  }
+  // 2. Extract competitor primary types (e.g. "pediatrician", "orthopedic_clinic")
+  const competitorTypes = Array.from(new Set(competitors.map(c => c.primaryType).filter(Boolean)))
+    .map(type => type!.replace(/_/g, " ").toLowerCase())
+    .slice(0, 3);
 
-  // Extract terms from competitor names to add specificity
+  // 3. Extract high-value noun terms from top competitor names
   const nameTerms = competitors.slice(0, 5).flatMap(c => {
     const words = c.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(" ");
-    return words.filter(w => w.length > 4 && !["centre", "clinic", "hospital", "delhi", "india", "doctor"].includes(w));
+    return words.filter(w => w.length > 4 && !["centre", "clinic", "hospital", "delhi", "india", "doctor", "care"].includes(w));
   });
 
-  const city = "Delhi"; // Could be derived from profile
-  const localKeywords = keywords.slice(0, 8).map(k => `${k} ${city}`);
+  // 4. Synthesize Dynamic Keywords
+  const baseCategory = primaryCategory.toLowerCase();
+  
+  let dynamicKeywords = [
+    `${baseCategory} near me`,
+    `best ${baseCategory}`,
+    ...actualSearchTerms,
+    ...competitorTypes.map(t => `top ${t}`),
+    ...competitorTypes.map(t => `${t} clinic`),
+  ];
+
+  // Remove duplicates and limit
+  dynamicKeywords = Array.from(new Set(dynamicKeywords)).filter(Boolean).slice(0, 8);
+
+  // (Removed city hardcoding, keywords are now organic)
 
   return (
     <div className="mt-6 pt-6 border-t border-gray-100">
@@ -74,10 +82,10 @@ function CompetitorKeywords({ competitors, primaryCategory }: { competitors: Com
         High-value search terms your competitors are likely ranking for. Target these in your profile description and posts.
       </p>
       <div className="flex flex-wrap gap-2">
-        {localKeywords.map((kw, idx) => (
+        {dynamicKeywords.map((kw, idx) => (
           <span
             key={idx}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors cursor-default"
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors cursor-default capitalize"
           >
             {kw}
           </span>
@@ -85,7 +93,7 @@ function CompetitorKeywords({ competitors, primaryCategory }: { competitors: Com
         {nameTerms.slice(0, 3).map((term, idx) => (
           <span
             key={`name-${idx}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-xs font-medium"
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-xs font-medium capitalize"
           >
             {term} specialist
           </span>
@@ -96,6 +104,8 @@ function CompetitorKeywords({ competitors, primaryCategory }: { competitors: Com
 }
 
 export function CompetitorInsights() {
+  const { data: overviewData } = useLocalSeoModule<any>('overview');
+  const { data: keywordsData } = useLocalSeoModule<any>('keywords');
   const { data: competitors, isLoading, refetch } = useLocalSeoModule<any[]>('competitors');
   const [showAll, setShowAll] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,33 +140,37 @@ export function CompetitorInsights() {
     );
   }
 
-  // Sort by rank (Google's native order = review-weighted rank)
+  // Filter out any competitors strictly further than 5000 meters, then sort by review-weighted rank
   const sorted = [...competitors]
+    .filter(c => c.distanceMeters <= 5000)
     .sort((a, b) => b.reviewCount - a.reviewCount);
 
   // Simulate a rank for the doctor (e.g. they appear after N competitors)
   // In real implementation, this comes from search grid or Places search
   const doctorRank = sorted.length + 1;
-  const aheadCount = sorted.length;
   const displayList = showAll ? sorted : sorted.slice(0, 5);
-  const primaryCategory = "Orthopaedic surgeon"; // Could be from profile data
+  const primaryCategory = overviewData?.primaryCategory || "Medical Clinic";
 
   return (
     <div className="space-y-0">
-      {/* Refresh button */}
-      <div className="flex justify-end mb-3">
+      {/* Refresh button & Helper text */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <div className="text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100/50 flex items-center gap-1.5 flex-1">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>Showing competitors within a <strong>5 km radius</strong>. <span className="opacity-75">*Approximate distance from clinic coordinates.</span></span>
+        </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
         >
           <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
           Refresh
         </button>
       </div>
 
-      {/* Table header */}
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+      {/* Table header (hidden on mobile) */}
+      <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
         <div>Business</div>
         <div className="text-center w-16">Rating</div>
         <div className="text-center w-16">Reviews</div>
@@ -168,27 +182,31 @@ export function CompetitorInsights() {
         {displayList.map((comp, idx) => (
           <div
             key={comp.placeId || idx}
-            className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-3 items-center hover:bg-gray-50/50 transition-colors group"
+            className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 hover:bg-gray-50/50 transition-colors group"
           >
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{comp.name}</p>
+              <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1">{comp.name}</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {comp.distanceMeters < 1000
                   ? `${comp.distanceMeters}m away`
                   : `${(comp.distanceMeters / 1000).toFixed(1)}km away`}
               </p>
             </div>
-            <div className="w-16 flex items-center justify-center gap-1">
-              <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-              <span className="text-sm font-semibold text-gray-800">
-                {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
-              </span>
-            </div>
-            <div className="w-16 text-center">
-              <ReviewCount count={comp.reviewCount} />
-            </div>
-            <div className="w-16 flex justify-center">
-              <RankBadge rank={parseFloat((idx + 1).toFixed(1))} />
+            <div className="flex items-center gap-6 md:gap-0">
+              <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                <span className="text-sm font-semibold text-gray-800">
+                  {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
+                </span>
+                <span className="text-xs text-gray-400 md:hidden ml-1">(Rating)</span>
+              </div>
+              <div className="md:w-16 text-center flex items-center gap-1.5">
+                <ReviewCount count={comp.reviewCount} />
+                <span className="text-xs text-gray-400 md:hidden">Reviews</span>
+              </div>
+              <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
+                <RankBadge rank={parseFloat((idx + 1).toFixed(1))} />
+              </div>
             </div>
           </div>
         ))}
@@ -215,30 +233,32 @@ export function CompetitorInsights() {
 
       {/* Separator: You */}
       <div className="mt-1 border-t-2 border-indigo-100" />
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-3 items-center bg-indigo-50 rounded-b-xl border border-indigo-100">
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-indigo-800 flex items-center gap-1.5">
+      <div className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 items-center bg-indigo-50 rounded-b-xl border border-indigo-100">
+        <div className="min-w-0 w-full">
+          <p className="text-sm font-bold text-indigo-800 flex items-center gap-1.5 truncate">
             <span className="text-indigo-500">▶</span>
             Your Business (You)
           </p>
           <p className="text-xs text-indigo-400 mt-0.5">Based on Google Places ranking</p>
         </div>
-        <div className="w-16 flex items-center justify-center gap-1">
-          <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-          <span className="text-sm font-bold text-indigo-800">—</span>
-        </div>
-        <div className="w-16 text-center">
-          <span className="text-sm font-bold text-indigo-800">—</span>
-        </div>
-        <div className="w-16 flex justify-center">
-          <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-sm font-bold bg-red-100 text-red-700 border-red-200">
-            {doctorRank}+
-          </span>
+        <div className="flex items-center gap-6 md:gap-0 w-full">
+          <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
+            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+            <span className="text-sm font-bold text-indigo-800">—</span>
+          </div>
+          <div className="md:w-16 text-center flex items-center">
+            <span className="text-sm font-bold text-indigo-800">—</span>
+          </div>
+          <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
+            <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-sm font-bold bg-red-100 text-red-700 border-red-200">
+              {doctorRank}+
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Competitor Keywords */}
-      <CompetitorKeywords competitors={sorted} primaryCategory={primaryCategory} />
+      <CompetitorKeywords competitors={sorted} primaryCategory={primaryCategory} keywordsData={keywordsData} />
     </div>
   );
 }

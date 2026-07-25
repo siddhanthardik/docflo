@@ -97,6 +97,7 @@ model Patient {
   gender                String?
   bloodGroup            String?
   address               String?
+  city                  String?
   medicalNotes          String?
   tags                  String[]
   patientType           PatientType    @default(LEAD)
@@ -159,6 +160,7 @@ model Appointment {
   reason          String?
   status          AppointmentStatus       @default(CONFIRMED)
   notes           String?
+  type            AppointmentType         @default(IN_CLINIC)
   reminderSent    Boolean                 @default(false)
   reviewRequested Boolean                 @default(false) // LEGACY: Keep for migration
   reviewStatus    AppointmentReviewStatus @default(NOT_SENT)
@@ -568,6 +570,11 @@ enum AppointmentStatus {
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+enum AppointmentType {
+  IN_CLINIC
+  TELE_CONSULTATION
 }
 
 enum ReviewSource {
