@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Settings, CreditCard, Mail, Bell, Shield, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BackupControlPanel } from "./backup-control-panel";
 
 export default async function AdminSettingsPage() {
   const session = await auth();
@@ -50,17 +51,20 @@ export default async function AdminSettingsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex justify-between items-center mb-8">
+    <div className="space-y-8 max-w-5xl">
+      <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            Platform Settings
+            Platform Settings & System Maintenance
           </h1>
-          <p className="text-gray-500 mt-1">Configure global platform integrations and security.</p>
+          <p className="text-gray-500 mt-1">Configure automated database backups, global integrations, and security.</p>
         </div>
-        <Button disabled>Save Changes</Button>
       </div>
 
+      {/* 1. Automated Google Drive Database Backup Panel */}
+      <BackupControlPanel />
+
+      {/* 2. Platform Settings Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sections.map((section, idx) => (
           <div key={idx} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">

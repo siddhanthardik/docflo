@@ -49,10 +49,9 @@ export async function GET(req: Request) {
         await prisma.notification.create({
           data: {
             doctorId: doctor.id,
-            type: "SYSTEM",
             title: `⚠️ Subscription Expiring (${timeText})`,
-            content: `Your ${planName} subscription expires in ${timeText}. Click here to renew.`,
-            link: "/subscription",
+            message: `Your ${planName} subscription expires in ${timeText}. Click here to renew.`,
+            type: "BILLING",
           },
         });
       } catch (e) {
