@@ -16,6 +16,7 @@ import {
   Layers,
   CreditCard,
   DollarSign,
+  Bot,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
   { name: "Clinics", href: "/admin/clinics", icon: Building },
   { name: "Leads", href: "/admin/leads", icon: UserPlus },
+  { name: "AI Sales Agent", href: "/admin/prospector", icon: Bot },
   { name: "Team", href: "/admin/team", icon: Users },
   { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
   { name: "Settings", href: "/admin/settings", icon: Settings },
