@@ -5,14 +5,20 @@ import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Bell } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { useEffect, useState } from "react";
 
 export function Header() {
   const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const name = session?.user?.name || "Doctor";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  const hour = new Date().getHours();
+  const hour = mounted ? new Date().getHours() : 12;
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
   return (
@@ -25,10 +31,10 @@ export function Header() {
 
         <div className="hidden sm:block font-[family-name:var(--font-poppins)]">
           <p className="text-base sm:text-lg md:text-[20px] text-gray-900 font-medium leading-tight truncate">
-            {greeting}, <span className="font-semibold">{name}</span> 👋
+            {mounted ? greeting : "Welcome"}, <span className="font-semibold">{name}</span> 👋
           </p>
           <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
-            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+            {mounted ? new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : "Loading date..."}
           </p>
         </div>
       </div>

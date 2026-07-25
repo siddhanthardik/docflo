@@ -98,10 +98,16 @@ export function AppointmentForm({
         
         const slots = [];
         let [hour, minute] = start.split(":").map(Number);
-        const [endHour, endMinute] = end.split(":").map(Number);
+        let [endHour, endMinute] = end.split(":").map(Number);
+        
+        // Handle overnight shifts (e.g. 18:00 to 02:00)
+        if (endHour < hour || (endHour === hour && endMinute < minute)) {
+          endHour += 24;
+        }
         
         while (hour < endHour || (hour === endHour && minute < endMinute)) {
-          slots.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+          const displayHour = hour % 24;
+          slots.push(`${String(displayHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
           minute += 15;
           if (minute >= 60) {
             minute -= 60;

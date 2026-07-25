@@ -29,6 +29,8 @@ export default function SettingsClinicPage() {
     dateFormat: "MM/DD/YYYY",
     firstDayOfWeek: "Monday",
     timezone: "UTC",
+    workingHoursStart: "09:00",
+    workingHoursEnd: "17:00",
   });
 
   const [currencyLocked, setCurrencyLocked] = useState(false);
@@ -82,6 +84,8 @@ export default function SettingsClinicPage() {
           dateFormat: data.dateFormat || "MM/DD/YYYY",
           firstDayOfWeek: data.firstDayOfWeek || "Monday",
           timezone: data.timezone || "UTC",
+          workingHoursStart: data.workingHoursStart || "09:00",
+          workingHoursEnd: data.workingHoursEnd || "17:00",
         }));
         
         setUserRole(data.role || "DOCTOR");
@@ -411,6 +415,34 @@ export default function SettingsClinicPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="sm:col-span-2 mt-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Clinic Operating Hours</h4>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label htmlFor="workingHoursStart" className={labelClass}>Opening Time</label>
+                    <input
+                      id="workingHoursStart"
+                      type="time"
+                      className={inputClass}
+                      value={clinic.workingHoursStart}
+                      onChange={(e) => setClinic({ ...clinic, workingHoursStart: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="workingHoursEnd" className={labelClass}>Closing Time</label>
+                    <input
+                      id="workingHoursEnd"
+                      type="time"
+                      className={inputClass}
+                      value={clinic.workingHoursEnd}
+                      onChange={(e) => setClinic({ ...clinic, workingHoursEnd: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  These hours determine the available slots when booking appointments.
+                </p>
               </div>
             </div>
 

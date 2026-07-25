@@ -251,6 +251,32 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
 
+                  {/* Mobile Action Buttons */}
+                  <div className="mt-6 flex md:hidden items-center gap-2 w-full">
+                    <button
+                      onClick={() => router.push(`/book/${patient.doctorId}?patient=${patient.id}`)}
+                      className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Book
+                    </button>
+                    <button
+                      onClick={() => handleSendReviewRequest(false)}
+                      disabled={sendingReview}
+                      className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                      {sendingReview ? "Wait..." : "Review"}
+                    </button>
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="shrink-0 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                      aria-label="Edit Patient"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   <div className="mt-6 space-y-4">
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400">
@@ -401,34 +427,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Sticky Bottom Action Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 pb-6">
-        <div className="flex items-center gap-3 w-full">
-          <button
-            onClick={() => router.push(`/book/${patient.doctorId}?patient=${patient.id}`)}
-            className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
-          >
-            <Calendar className="h-4 w-4" />
-            Book
-          </button>
-          <button
-            onClick={() => handleSendReviewRequest(false)}
-            disabled={sendingReview}
-            className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-            {sendingReview ? "Wait..." : "Review"}
-          </button>
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="shrink-0 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-            aria-label="Edit Patient"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
         </div>
       </div>
 
