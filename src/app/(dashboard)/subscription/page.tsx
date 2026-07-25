@@ -37,11 +37,9 @@ export default async function BillingPage() {
   
   let userCountryCode = "US"; // Default fallback
   
-  // 1. Check explicit currency setting
   if (doctor?.currency === "INR") {
     userCountryCode = "IN";
   } 
-  // 2. Check explicit country setting
   else if (doctor?.country) {
     const c = doctor.country.toLowerCase();
     if (c === "india" || c === "in") {
@@ -50,10 +48,14 @@ export default async function BillingPage() {
       userCountryCode = "US";
     }
   } 
-  // 3. Check IP address
   else if (ipCountry && ipCountry.toUpperCase() === "IN") {
     userCountryCode = "IN";
   }
+
+  // Serialize Prisma objects to prevent Next.js Server-to-Client component errors
+  const safeDoctorPackage = doctor?.package ? JSON.parse(JSON.stringify(doctor.package)) : null;
+  const safePackages = JSON.parse(JSON.stringify(packages));
+  const safeFeatureFlags = JSON.parse(JSON.stringify(featureFlags));
 
   return (
     <div className="space-y-6">
@@ -63,10 +65,10 @@ export default async function BillingPage() {
       </div>
 
       <BillingClient 
-        currentPackage={doctor?.package} 
+        currentPackage={safeDoctorPackage} 
         subscriptionStatus={doctor?.subscriptionStatus || "ACTIVE"}
-        availablePackages={packages} 
-        featureFlags={featureFlags}
+        availablePackages={safePackages} 
+        featureFlags={safeFeatureFlags}
         userCountry={userCountryCode}
       />
     </div>
