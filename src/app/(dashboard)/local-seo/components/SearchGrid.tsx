@@ -38,7 +38,7 @@ export function SearchGrid() {
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
   const { data: gridData, isLoading, refetch } = useLocalSeoModule<any>(
     'search-grid', 
-    activeKeyword ? { keyword: activeKeyword, radiusStep: gridRadiusStep } : { radiusStep: gridRadiusStep }
+    activeKeyword ? { keyword: activeKeyword, radiusStep: String(gridRadiusStep) } : { radiusStep: String(gridRadiusStep) }
   );
   
   const [refreshing, setRefreshing] = useState(false);
