@@ -36,9 +36,9 @@ export class BackupService {
       prisma.doctor.findMany({ select: { id: true, name: true, email: true, phone: true, clinicName: true, createdAt: true, packageId: true, subscriptionStatus: true } }),
       prisma.patient.findMany({ take: 10000, orderBy: { createdAt: "desc" } }),
       prisma.appointment.findMany({ take: 10000, orderBy: { createdAt: "desc" } }),
-      prisma.billingInvoice.findMany({ take: 10000, orderBy: { createdAt: "desc" } }),
+      prisma.invoice.findMany({ take: 10000, orderBy: { createdAt: "desc" } }),
       prisma.campaign.findMany({ take: 1000, orderBy: { createdAt: "desc" } }),
-      prisma.localSeoKeyword.findMany({ take: 2000 }),
+      prisma.gbpKeywordSnapshot.findMany({ take: 2000 }),
       prisma.aIAgentConfig.findMany({ select: { id: true, doctorId: true, agentType: true, enabled: true } }),
       prisma.auditLead.findMany({ take: 5000, orderBy: { createdAt: "desc" } })
     ]);
