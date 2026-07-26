@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingExcludes: {
+    '*': ['./auth_info/**'],
+  },
   serverExternalPackages: ['@whiskeysockets/baileys', 'jimp', 'qrcode', 'ws', 'bufferutil', 'utf-8-validate'],
   async headers() {
     return [
