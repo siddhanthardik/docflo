@@ -42,19 +42,18 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       });
 
       // Register Roboto fonts for better unicode currency symbol support (e.g. Rupee ₹)
-      const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
-      const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
-      
-      if (fs.existsSync(fontPath)) {
-        doc.registerFont('Roboto', fs.readFileSync(fontPath));
-      } else {
-        doc.registerFont('Roboto', 'Helvetica');
-      }
-
-      if (fs.existsSync(fontBoldPath)) {
-        doc.registerFont('Roboto-Bold', fs.readFileSync(fontBoldPath));
-      } else {
-        doc.registerFont('Roboto-Bold', 'Helvetica-Bold');
+      try {
+        const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
+        const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
+        
+        if (fs.existsSync(fontPath)) {
+          doc.registerFont('Roboto', new Uint8Array(fs.readFileSync(fontPath)));
+        }
+        if (fs.existsSync(fontBoldPath)) {
+          doc.registerFont('Roboto-Bold', new Uint8Array(fs.readFileSync(fontBoldPath)));
+        }
+      } catch (fontErr) {
+        console.warn('Font registration fallback to default:', fontErr);
       }
 
       const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);

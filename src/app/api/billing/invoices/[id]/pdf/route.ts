@@ -42,6 +42,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   } catch (error: any) {
     console.error("Error generating invoice PDF:", error);
-    return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to generate PDF" }, { status: 500 });
   }
 }
