@@ -97,8 +97,9 @@ export default function AdminProspectorPage() {
       }
 
       toast({
-        title: "AI Prospecting Scan Complete! 🎯",
-        description: `Discovered ${data.leads?.length || 0} authentic clinic leads, generated persistent audit reports, and synced to Google Sheets.`,
+        title: data.sheetSync?.success ? "AI Prospecting & Google Sheet Sync Complete! 🎯" : "AI Prospecting Scan Complete! 🎯",
+        description: `Discovered ${data.leads?.length || 0} authentic clinic leads. ${data.sheetSync?.message || ""}`,
+        variant: data.sheetSync?.success === false ? "destructive" : "default",
       });
     } catch (error: any) {
       toast({
@@ -331,9 +332,18 @@ export default function AdminProspectorPage() {
                   return (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-4 px-4 space-y-1">
-                        <div className="font-bold text-gray-900 text-sm">{lead.clinicName}</div>
+                        <a
+                          href={lead.gmbUrl || (lead.googlePlaceId ? `https://www.google.com/maps/place/?q=place_id:${lead.googlePlaceId}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.clinicName + " " + lead.address)}`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-gray-900 hover:text-indigo-600 hover:underline text-sm inline-flex items-center gap-1.5 group transition-colors"
+                          title="Click to open official Google Business Profile on Google Maps"
+                        >
+                          {lead.clinicName}
+                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                        </a>
                         {lead.doctorName ? (
-                          <div className="text-gray-600 font-medium">{lead.doctorName}</div>
+                          <div className="text-gray-600 font-medium text-xs">{lead.doctorName}</div>
                         ) : null}
                         <div className="text-[11px] text-gray-400 flex items-center gap-1 max-w-[280px]">
                           <MapPin className="w-3 h-3 text-gray-400 shrink-0" /> {lead.address}

@@ -17,6 +17,7 @@ export interface DiscoveredClinicLead {
   email?: string;
   website?: string;
   googlePlaceId?: string;
+  gmbUrl?: string;
   rating?: number;
   userRatingsTotal?: number;
   auditScore: number;
@@ -78,22 +79,24 @@ export class ProspectorService {
       const clinicName = item.name || "Clinic";
       const address = item.formatted_address || `${areaOrPincode}, ${city}, ${country}`;
 
-      // Fetch authentic Place Details for official phone number, website URL, and precise category rating
+      // Fetch authentic Place Details for official phone number, website URL, GMB maps URL, and rating
       let officialPhone: string = "";
       let officialWebsite: string = "";
+      let officialGmbUrl: string = placeId ? `https://www.google.com/maps/place/?q=place_id:${placeId}` : "";
       let rating = item.rating || 0;
       let userRatingsTotal = item.user_ratings_total || 0;
 
       if (placeId) {
         try {
           const detailsRes = await fetch(
-            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,types&key=${apiKey}`
+            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,types,url&key=${apiKey}`
           );
           const detailsData = await detailsRes.json();
           if (detailsData.result) {
             const res = detailsData.result;
             officialPhone = res.formatted_phone_number || res.international_phone_number || "";
             officialWebsite = res.website || "";
+            if (res.url) officialGmbUrl = res.url;
             if (res.rating) rating = res.rating;
             if (res.user_ratings_total) userRatingsTotal = res.user_ratings_total;
           }
@@ -240,6 +243,7 @@ export class ProspectorService {
         email: officialEmail,
         website: officialWebsite,
         googlePlaceId: placeId,
+        gmbUrl: officialGmbUrl,
         rating,
         userRatingsTotal,
         auditScore,

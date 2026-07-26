@@ -8,19 +8,34 @@ export class GoogleSheetsService {
   /**
    * Appends discovered clinic lead rows to Google Sheet spreadsheet
    */
-  static async syncLeadsToSheet(leads: DiscoveredClinicLead[]): Promise<{ syncedCount: number; spreadsheetUrl?: string }> {
-    const spreadsheetId = process.env.GOOGLE_SHEETS_PROSPECT_ID;
-    const clientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL;
-    const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  static async syncLeadsToSheet(leads: DiscoveredClinicLead[]): Promise<{ success: boolean; syncedCount: number; message: string; spreadsheetUrl?: string }> {
+    const rawSpreadsheetId = process.env.GOOGLE_SHEETS_PROSPECT_ID || "";
+    const rawClientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL || "";
+    const rawPrivateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY || "";
+
+    const spreadsheetId = rawSpreadsheetId.replace(/^["']|["']$/g, '').trim();
+    const clientEmail = rawClientEmail.replace(/^["']|["']$/g, '').trim();
+    const privateKey = rawPrivateKey
+      .replace(/^["']|["']$/g, '')
+      .replace(/\\n/g, '\n')
+      .trim();
 
     const spreadsheetUrl = spreadsheetId 
       ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
       : "https://docs.google.com/spreadsheets";
 
     if (!clientEmail || !privateKey || !spreadsheetId) {
-      console.log(`[GOOGLE SHEETS] Simulating Google Sheet Sync for ${leads.length} leads (Credentials or SPREADSHEET_ID pending in .env)`);
+      const missingVars = [
+        !spreadsheetId && "GOOGLE_SHEETS_PROSPECT_ID",
+        !clientEmail && "GOOGLE_DRIVE_CLIENT_EMAIL",
+        !privateKey && "GOOGLE_DRIVE_PRIVATE_KEY",
+      ].filter(Boolean).join(", ");
+
+      console.warn(`[GOOGLE SHEETS] Sync skipped: Pending ${missingVars} in .env`);
       return {
-        syncedCount: leads.length,
+        success: false,
+        syncedCount: 0,
+        message: `Google Sheets sync skipped: Pending ${missingVars} in .env`,
         spreadsheetUrl,
       };
     }
@@ -55,7 +70,16 @@ export class GoogleSheetsService {
       });
 
       const tokenData = await tokenRes.json();
-      if (!tokenRes.ok) throw new Error(tokenData.error_description || "Google Sheets Auth failed");
+      if (!tokenRes.ok) {
+        const errMsg = tokenData.error_description || tokenData.error || "Google Auth failed";
+        console.error("[GOOGLE SHEETS AUTH ERROR]", errMsg);
+        return {
+          success: false,
+          syncedCount: 0,
+          message: `Google Auth Error: ${errMsg}`,
+          spreadsheetUrl,
+        };
+      }
 
       const accessToken = tokenData.access_token;
 
@@ -125,13 +149,17 @@ export class GoogleSheetsService {
       }
 
       return {
+        success: true,
         syncedCount: leads.length,
+        message: `Successfully appended ${leads.length} rows to sheet tab "${primarySheetName}"!`,
         spreadsheetUrl,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("[GOOGLE SHEETS EXCEPTION]", error);
       return {
-        syncedCount: leads.length,
+        success: false,
+        syncedCount: 0,
+        message: error.message || "Failed to append rows to Google Sheets",
         spreadsheetUrl,
       };
     }
