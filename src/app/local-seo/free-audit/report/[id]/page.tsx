@@ -200,21 +200,8 @@ function SearchGridVisualization({ specialty, city }: { specialty: string; city:
         </div>
       </div>
 
-      <div className="p-6 space-y-5">
-        {/* Ranking Criteria Explanation */}
-        <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-950 space-y-1.5">
-          <div className="font-semibold text-indigo-900 flex items-center gap-2 text-xs">
-            <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" /> Google Maps Ranking Criteria & Methodology
-          </div>
-          <p className="text-[11px] leading-relaxed text-indigo-900/90">
-            Rankings are evaluated across a 5×5 geocoded radius grid surrounding your clinic address based on 3 primary Google Places signals: 
-            <span className="font-semibold"> (1) Category & Sub-specialty Match</span>, 
-            <span className="font-semibold"> (2) Proximity Radius from Patient Location</span>, and 
-            <span className="font-semibold"> (3) Review Volume & Velocity</span> compared to area competitors.
-          </p>
-        </div>
-
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden">
+      <div className="p-6">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden mb-5">
           <div className="relative z-10 grid grid-cols-5 gap-3 max-w-sm mx-auto">
             {gridRanks.map((item, idx) => {
               const bg = item.status === "good" ? "bg-emerald-500 text-white shadow-sm border border-emerald-600"
@@ -499,6 +486,11 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                         <td className="px-6 py-4 font-medium text-slate-800">
                           <div className="flex flex-wrap items-center gap-2">
                             <span>{c.name}</span>
+                            {Number(c.reviewCount) <= 5 ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title="Google Maps ranked this profile higher due to sub-specialty title keywords">
+                                Title Keyword Match
+                              </span>
+                            ) : null}
                             {c.distanceKm != null ? (
                               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                 <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
@@ -574,23 +566,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       <p className="text-[13px] text-slate-500 mt-1 leading-relaxed font-normal">{item.evidence}</p>
                     </div>
                   </div>
-                ))}
-
-                {/* Profile missing items fallback */}
-                {completenessItems.filter(i => i.present === false).slice(0, 3).map((item, i) => (
-                  <div key={`c-${i}`} className="p-4 rounded-xl bg-white border border-amber-100 flex items-start gap-3 shadow-sm">
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
-                      <AlertTriangle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{item.name} not found on profile</p>
-                      <p className="text-[13px] text-slate-500 mt-1 leading-relaxed font-normal">
-                        Google favors fully populated medical profiles. Missing {item.name.toLowerCase()} lowers your local search relevance.
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                ))}              </div>
             </div>
 
             {/* ── SECTION 5: Profile Completeness Checklist ───────────────── */}
