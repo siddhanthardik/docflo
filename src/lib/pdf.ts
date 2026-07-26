@@ -92,10 +92,11 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       doc.moveTo(50, 160).lineTo(550, 160).stroke();
 
       // Bill To
+      const patientCode = `PAT-${invoice.patient.id.slice(-6).toUpperCase()}`;
       doc.fontSize(12).font('Roboto-Bold').text('Bill To:', 50, 180);
       doc.fontSize(10).font('Roboto')
          .text(`Name: ${invoice.patient.firstName} ${invoice.patient.lastName}`, 50, 195)
-         .text(`Patient ID: ${invoice.patient.id.slice(-6).toUpperCase()}`, 50, 210)
+         .text(`Patient ID: ${patientCode}`, 50, 210)
          .text(`Phone: ${invoice.patient.phone}`, 50, 225);
       
       if (invoice.patient.email) {
