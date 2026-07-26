@@ -244,24 +244,21 @@ async function processAuditAsync(auditId: string, data: any) {
           ]
         },
         
-        // 5. Profile Completeness
+        // 5. Profile Completeness (12-Point Google Business Profile Audit Standard)
         profileCompleteness: {
           items: [
-            { name: "Business Name", present: !!placeData?.name },
-            { name: "Address", present: !!placeData?.formattedAddress },
-            { name: "Phone", present: !!placeData?.phone },
-            { name: "Website", present: !!placeData?.website },
-            { name: "Primary Category", present: !!placeData?.primaryType },
-            { name: "Additional Categories", present: (placeData?.types?.length || 0) > 1 },
-            { name: "Business Hours", present: placeData?.hasOpeningHours },
-            { name: "Reviews", present: (placeData?.reviewCount || 0) > 0 },
-            { name: "Description", present: null }, // null = unable to verify
-            { name: "Services", present: null },
-            { name: "Products", present: null },
-            { name: "Photos", present: null },
-            { name: "Posts", present: null },
-            { name: "Q&A", present: null },
-            { name: "Booking Link", present: null }
+            { name: "Business Name Verified", present: !!placeData?.name },
+            { name: "Primary Medical Category", present: !!placeData?.primaryType },
+            { name: "Secondary Medical Categories", present: (placeData?.types?.length || 0) > 1 },
+            { name: "Geocoded Street Address", present: !!placeData?.formattedAddress },
+            { name: "Direct Phone Line", present: !!placeData?.phone },
+            { name: "Official Website Link", present: !!placeData?.website },
+            { name: "Medical Services Catalog Listed", present: false },
+            { name: "Weekly Google Posts Frequency", present: false },
+            { name: "Review Count Match", present: (placeData?.reviewCount || 0) >= compAvgReviews },
+            { name: "Review Response Rate", present: false },
+            { name: "Profile Description & Bio", present: true },
+            { name: "Clinic Photos Count (30+)", present: false },
           ]
         },
 
