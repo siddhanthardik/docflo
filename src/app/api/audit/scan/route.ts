@@ -75,16 +75,15 @@ async function processAuditAsync(auditId: string, data: any) {
     const specialityData = detectSpeciality(actualName, actualCategories);
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
-    // 3. Fetch Real Competitors — specialty-specific search (not generic "clinic near address")
-    // Extract city from address for a cleaner search query
+    // 3. Fetch Real Competitors — strictly anchored to 5 km radius around clinic coordinates
     const locationStr = placeData?.formattedAddress || data.address || "";
-    // Try to extract city: last meaningful part before country (e.g., "New Delhi, Delhi, India" → "New Delhi")
     const addressParts = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean);
     const cityStr = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "";
-    // Use the specialty's primary keyword for precise competitor matching
     const specialtySearchKeyword = specialityData.highValueKeywords[0] || specialityData.speciality;
     const searchString = cityStr ? `${specialtySearchKeyword} in ${cityStr}` : `${specialtySearchKeyword}`;
-    const competitorsData = await searchCompetitors(searchString, data.placeId || "");
+    
+    const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
+    const competitorsData = await searchCompetitors(searchString, data.placeId || "", targetLocation);
 
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });

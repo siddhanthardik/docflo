@@ -3,6 +3,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { calculateDistanceKm } from "@/lib/audit/google-places";
 
 export interface DiscoveredClinicLead {
   id: string;
@@ -79,17 +80,19 @@ export class ProspectorService {
       const clinicName = item.name || "Clinic";
       const address = item.formatted_address || `${areaOrPincode}, ${city}, ${country}`;
 
-      // Fetch authentic Place Details for official phone number, website URL, GMB maps URL, and rating
+      // Fetch authentic Place Details for official phone number, website URL, GMB maps URL, rating, and geometry
       let officialPhone: string = "";
       let officialWebsite: string = "";
       let officialGmbUrl: string = placeId ? `https://www.google.com/maps/place/?q=place_id:${placeId}` : "";
       let rating = item.rating || 0;
       let userRatingsTotal = item.user_ratings_total || 0;
+      let targetLat: number | undefined = item.geometry?.location?.lat;
+      let targetLng: number | undefined = item.geometry?.location?.lng;
 
       if (placeId) {
         try {
           const detailsRes = await fetch(
-            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,types,url&key=${apiKey}`
+            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,geometry,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,types,url&key=${apiKey}`
           );
           const detailsData = await detailsRes.json();
           if (detailsData.result) {
@@ -99,6 +102,8 @@ export class ProspectorService {
             if (res.url) officialGmbUrl = res.url;
             if (res.rating) rating = res.rating;
             if (res.user_ratings_total) userRatingsTotal = res.user_ratings_total;
+            if (res.geometry?.location?.lat) targetLat = res.geometry.location.lat;
+            if (res.geometry?.location?.lng) targetLng = res.geometry.location.lng;
           }
         } catch (e) {
           console.warn(`[PROSPECTOR] Place Details fetch error for ${placeId}:`, e);
@@ -156,14 +161,29 @@ export class ProspectorService {
           },
         });
 
-        // Extract real top area competitors from Google Places search results
-        const rawCompetitors = rawPlaces.filter(p => p.place_id !== placeId).slice(0, 5);
-        const compList = rawCompetitors.map(p => ({
-          name: p.name || "Medical Clinic",
-          isYou: false,
-          rating: p.rating || 4.7,
-          reviewCount: p.user_ratings_total || 45,
-        }));
+        // Extract real top area competitors from Google Places search results (strictly within 10 km radius)
+        const rawCompetitors = rawPlaces.filter(p => {
+          if (p.place_id === placeId) return false;
+          if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
+            const dist = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
+            return dist <= 10; // Discard clinics further than 10 km
+          }
+          return true;
+        }).slice(0, 4);
+
+        const compList = rawCompetitors.map(p => {
+          let distKm: number | undefined;
+          if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
+            distKm = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
+          }
+          return {
+            name: p.name || "Medical Clinic",
+            isYou: false,
+            rating: p.rating || 4.7,
+            reviewCount: p.user_ratings_total || 45,
+            distanceKm: distKm,
+          };
+        });
 
         const compAvgReviews = compList.length > 0 
           ? Math.round(compList.reduce((acc, c) => acc + (Number(c.reviewCount) || 0), 0) / compList.length)

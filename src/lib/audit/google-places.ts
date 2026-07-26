@@ -10,10 +10,26 @@ export interface GooglePlaceDetails {
   businessStatus: string | null;
   phone: string | null;
   hasOpeningHours: boolean;
+  lat?: number;
+  lng?: number;
+}
+
+export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
 }
 
 export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDetails | null> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     console.warn("[Google Places] Missing GOOGLE_PLACES_API_KEY. Skipping actual data fetch.");
     return null;
@@ -22,7 +38,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
   // Use the Classic Place Details API to fetch reliable, full data
   const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
   url.searchParams.set("place_id", placeId);
-  url.searchParams.set("fields", "name,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours");
+  url.searchParams.set("fields", "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours");
   url.searchParams.set("key", apiKey);
 
   try {
@@ -55,6 +71,8 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       businessStatus: r.business_status || null,
       phone: r.formatted_phone_number || null,
       hasOpeningHours: !!r.current_opening_hours,
+      lat: r.geometry?.location?.lat,
+      lng: r.geometry?.location?.lng,
     };
   } catch (error) {
     console.error("[Google Places] Error fetching place details:", error);
@@ -67,10 +85,15 @@ export interface CompetitorData {
   rating: number | null;
   reviewCount: number | null;
   placeId: string;
+  distanceKm?: number;
 }
 
-export async function searchCompetitors(query: string, excludePlaceId: string): Promise<CompetitorData[]> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+export async function searchCompetitors(
+  query: string, 
+  excludePlaceId: string, 
+  location?: { lat: number; lng: number }
+): Promise<CompetitorData[]> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     console.warn("[Google Places] Missing API key for competitor search.");
     return [];
@@ -78,6 +101,10 @@ export async function searchCompetitors(query: string, excludePlaceId: string): 
 
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", query);
+  if (location?.lat && location?.lng) {
+    url.searchParams.set("location", `${location.lat},${location.lng}`);
+    url.searchParams.set("radius", "5000"); // Strict 5 km radius search
+  }
   url.searchParams.set("key", apiKey);
 
   try {
@@ -97,17 +124,32 @@ export async function searchCompetitors(query: string, excludePlaceId: string): 
 
     const competitors: CompetitorData[] = [];
     
-    // Grab top 3 that are not the current place
+    // Grab top 3-4 real competitors strictly within 10 km radius (preferred <= 5 km)
     for (const r of data.results) {
       if (r.place_id !== excludePlaceId) {
+        let distanceKm: number | undefined;
+        if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
+          distanceKm = calculateDistanceKm(
+            location.lat,
+            location.lng,
+            r.geometry.location.lat,
+            r.geometry.location.lng
+          );
+          // Hard filter: Discard any competitor more than 10 km away
+          if (distanceKm > 10) {
+            continue;
+          }
+        }
+
         competitors.push({
           name: r.name,
           rating: r.rating || null,
           reviewCount: r.user_ratings_total || null,
-          placeId: r.place_id
+          placeId: r.place_id,
+          distanceKm,
         });
       }
-      if (competitors.length >= 3) break;
+      if (competitors.length >= 4) break;
     }
 
     return competitors;

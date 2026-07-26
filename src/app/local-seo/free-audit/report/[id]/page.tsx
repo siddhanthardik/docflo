@@ -496,7 +496,16 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   <tbody className="divide-y divide-slate-100">
                     {competitors.filter((c: any) => !c.isYou).map((c: any, i: number) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-800">{c.name}</td>
+                        <td className="px-6 py-4 font-medium text-slate-800">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{c.name}</span>
+                            {c.distanceKm != null ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="px-4 py-4">
                           <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating || "4.8"}
