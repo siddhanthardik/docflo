@@ -50,10 +50,11 @@ export default function InvoiceDetailsPage() {
     setSending(true);
     try {
       const res = await fetch(`/api/billing/invoices/${params.id}/send`, { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
-        toast({ title: "Success", description: "Invoice sent to patient via WhatsApp" });
+        toast({ title: "Success", description: data.message || "Invoice sent to patient via WhatsApp" });
       } else {
-        toast({ title: "Error", description: "Failed to send invoice", variant: "destructive" });
+        toast({ title: "Error", description: data.error || "Failed to send invoice", variant: "destructive" });
       }
     } catch (err) {
       toast({ title: "Error", description: "Network error", variant: "destructive" });
@@ -117,7 +118,23 @@ export default function InvoiceDetailsPage() {
   const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12 animate-in fade-in zoom-in-95 duration-500 print:bg-white print:min-h-0 print:pb-0">
+    <div className="min-h-screen bg-[#F8FAFC] pb-12 animate-in fade-in zoom-in-95 duration-500 print:bg-white print:min-h-0 print:pb-0 print:p-0">
+      <style>{`
+        @page {
+          margin: 0;
+          size: auto;
+        }
+        @media print {
+          body {
+            margin: 15mm !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 print:hidden">
         <div className="flex items-center gap-4">

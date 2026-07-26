@@ -1,5 +1,5 @@
-// @ts-ignore
-import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
 import path from 'path';
 import { getCurrencySymbol } from './currency';
 import { Invoice, InvoiceItem, Doctor, Patient, PatientPayment } from '@prisma/client';
@@ -36,11 +36,25 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
         resolve(Buffer.concat(buffers));
       });
 
+      doc.on('error', (err) => {
+        reject(err);
+      });
+
       // Register Roboto fonts for better unicode currency symbol support (e.g. Rupee ₹)
       const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
       const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
-      doc.registerFont('Roboto', fontPath);
-      doc.registerFont('Roboto-Bold', fontBoldPath);
+      
+      if (fs.existsSync(fontPath)) {
+        doc.registerFont('Roboto', fs.readFileSync(fontPath));
+      } else {
+        doc.registerFont('Roboto', 'Helvetica');
+      }
+
+      if (fs.existsSync(fontBoldPath)) {
+        doc.registerFont('Roboto-Bold', fs.readFileSync(fontBoldPath));
+      } else {
+        doc.registerFont('Roboto-Bold', 'Helvetica-Bold');
+      }
 
       const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
 
