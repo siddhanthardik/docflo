@@ -7,13 +7,15 @@ export interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  apiKey?: string;
+  fromEmail?: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "Gyrex Verification <verify@updates.gyrex.in>";
+export async function sendEmail({ to, subject, html, apiKey, fromEmail }: SendEmailOptions) {
+  const finalApiKey = apiKey || process.env.RESEND_API_KEY;
+  const finalFromEmail = fromEmail || process.env.RESEND_FROM_EMAIL || "Gyrex Verification <verify@updates.gyrex.in>";
 
-  if (!apiKey) {
+  if (!finalApiKey) {
     console.log(`[DEV MODE - NO RESEND API KEY] Email to ${to}`);
     console.log(`Subject: ${subject}`);
     return { success: true, devMode: true };
@@ -23,11 +25,11 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${finalApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: fromEmail,
+        from: finalFromEmail,
         to: [to],
         subject,
         html,

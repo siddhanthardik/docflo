@@ -64,11 +64,13 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    // Dispatch email via Resend Service
+    // Dispatch email via Resend Service using secondary outreach credentials
     const dispatchRes = await sendEmail({
       to: lead.email,
       subject,
       html,
+      apiKey: outreachDomainKey,
+      fromEmail: outreachFromEmail,
     });
 
     return NextResponse.json({
