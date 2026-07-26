@@ -10,18 +10,35 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { lead } = body;
+    const { lead, customEmail, customSubject, customMessage } = body;
 
-    if (!lead || !lead.email) {
-      return NextResponse.json({ error: "Valid lead with email required" }, { status: 400 });
+    const recipientEmail = (customEmail || lead?.email || "").trim();
+
+    if (!recipientEmail || !recipientEmail.includes("@")) {
+      return NextResponse.json({ error: "A valid recipient email address is required to send outreach." }, { status: 400 });
     }
 
     const outreachDomainKey = process.env.OUTREACH_RESEND_API_KEY || process.env.RESEND_API_KEY;
     const outreachFromEmail = process.env.OUTREACH_FROM_EMAIL || "Gyrex Growth Engine <audit@getgyrex.com>";
 
-    const subject = `Google Business Scan for ${lead.clinicName}: Estimated ${lead.estimatedPatientsLostMonthly} Monthly Patient Loss`;
+    const subject = customSubject || `Google Business Scan for ${lead.clinicName}: Estimated ${lead.estimatedPatientsLostMonthly} Monthly Patient Loss`;
 
-    const html = `
+    const html = customMessage ? `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 24px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #ffffff; margin: 0; font-size: 20px;">Gyrex Local SEO Intelligence</h2>
+          <p style="color: #818cf8; margin: 6px 0 0 0; font-size: 13px; font-weight: 600;">CONFIDENTIAL CLINIC GROWTH AUDIT REPORT</p>
+        </div>
+        <div style="font-size: 15px; color: #1e293b; line-height: 1.6; whitespace: pre-line;">
+          ${customMessage}
+        </div>
+        <div style="text-align: center; margin: 28px 0 16px 0;">
+          <a href="${lead.auditReportLink}" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; display: inline-block;">
+            View Full Interactive Audit Report 📊
+          </a>
+        </div>
+      </div>
+    ` : `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 24px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
           <h2 style="color: #ffffff; margin: 0; font-size: 20px; tracking-tight: -0.5px;">Gyrex Local SEO Intelligence</h2>
@@ -66,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     // Dispatch email via Resend Service using secondary outreach credentials
     const dispatchRes = await sendEmail({
-      to: lead.email,
+      to: recipientEmail,
       subject,
       html,
       apiKey: outreachDomainKey,
@@ -75,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Outreach email successfully dispatched to ${lead.email} via secondary domain!`,
+      message: `Outreach email successfully dispatched to ${recipientEmail} via secondary domain!`,
       dispatchRes,
     });
   } catch (error: any) {

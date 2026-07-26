@@ -59,40 +59,69 @@ export class GoogleSheetsService {
 
       const accessToken = tokenData.access_token;
 
+      // 1. Fetch spreadsheet metadata to get the exact primary sheet tab name
+      let primarySheetName = "Sheet1";
+      try {
+        const metaRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        if (metaRes.ok) {
+          const metaData = await metaRes.json();
+          if (metaData.sheets && metaData.sheets[0]?.properties?.title) {
+            primarySheetName = metaData.sheets[0].properties.title;
+          }
+        }
+      } catch (metaErr) {
+        console.warn("[GOOGLE SHEETS] Could not fetch sheet metadata, defaulting range to Sheet1", metaErr);
+      }
+
       // Format rows: [Date, Clinic Name, Doctor Name, Specialty, Address, City, PIN, Phone, Email, Website, Audit Score, Report Link, Status]
-      const rows = leads.map(lead => [
+      const rows = leads.map((lead) => [
         new Date().toLocaleDateString("en-IN"),
-        lead.clinicName,
-        lead.doctorName || "N/A",
-        lead.specialty,
-        lead.address,
-        lead.city,
-        lead.pincode,
-        lead.phone || "N/A",
-        lead.email || "N/A",
-        lead.website || "N/A",
+        lead.clinicName || "",
+        lead.doctorName || "",
+        lead.specialty || "",
+        lead.address || "",
+        lead.city || "",
+        lead.pincode || "",
+        lead.phone || "",
+        lead.email || "",
+        lead.website || "",
         `${lead.auditScore}/100`,
-        lead.auditReportLink,
-        lead.status,
+        lead.auditReportLink || "",
+        lead.status || "",
       ]);
 
-      const appendRes = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:M:append?valueInputOption=USER_ENTERED`,
-        {
+      // 2. Append rows to detected sheet tab
+      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(primarySheetName)}!A:M:append?valueInputOption=USER_ENTERED`;
+      
+      const appendRes = await fetch(appendUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ values: rows }),
+      });
+
+      if (!appendRes.ok) {
+        const errData = await appendRes.json();
+        console.error("[GOOGLE SHEETS ERROR]", errData);
+        // Fallback retry without tab name prefix
+        const fallbackUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:M:append?valueInputOption=USER_ENTERED`;
+        await fetch(fallbackUrl, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ values: rows }),
-        }
-      );
-
-      if (!appendRes.ok) {
-        const errData = await appendRes.json();
-        console.error("[GOOGLE SHEETS ERROR]", errData);
+        });
       } else {
-        console.log(`[GOOGLE SHEETS SUCCESS] Appended ${leads.length} rows to Google Sheet!`);
+        console.log(`[GOOGLE SHEETS SUCCESS] Appended ${leads.length} rows to sheet tab "${primarySheetName}"!`);
       }
 
       return {
