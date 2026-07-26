@@ -25,31 +25,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   await prisma.campaign.update({ where: { id: campaign.id }, data: { status: "SENDING" } });
 
-  let patients: any[] = [];
+  let rawPatients: any[] = [];
   if (campaign.segmentType === "all") {
-    patients = await prisma.patient.findMany({
-      where: { doctorId },
+    rawPatients = await prisma.patient.findMany({
+      where: { doctorId, patientType: { not: "LEAD" } },
       select: { id: true, firstName: true, lastName: true, phone: true },
     });
   } else if (campaign.segmentType === "tag") {
-    patients = await prisma.patient.findMany({
-      where: { doctorId, tags: { has: campaign.segmentValue } },
+    rawPatients = await prisma.patient.findMany({
+      where: { doctorId, patientType: { not: "LEAD" }, tags: { has: campaign.segmentValue } },
       select: { id: true, firstName: true, lastName: true, phone: true },
     });
   } else if (campaign.segmentType === "last_visit_before") {
     const monthsAgo = new Date();
     monthsAgo.setMonth(monthsAgo.getMonth() - parseInt(campaign.segmentValue || "0"));
     const allPatients = await prisma.patient.findMany({
-      where: { doctorId },
+      where: { doctorId, patientType: { not: "LEAD" } },
       include: { appointments: { orderBy: { date: "desc" }, take: 1 } },
     });
-    patients = allPatients
+    rawPatients = allPatients
       .filter((p: any) => {
         const lastApt = p.appointments[0];
         return !lastApt || new Date(lastApt.date) < monthsAgo;
       })
       .map((p: any) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, phone: p.phone }));
   }
+
+  // Deduplicate and normalize phone numbers
+  const uniquePatientsMap = new Map();
+  for (const p of rawPatients) {
+    const clean = whatsappManager.normalizePhone(p.phone);
+    if (clean && !uniquePatientsMap.has(clean)) {
+      uniquePatientsMap.set(clean, { ...p, phone: clean });
+    }
+  }
+  const patients = Array.from(uniquePatientsMap.values());
 
   for (const patient of patients) {
     await prisma.campaignRecipient.create({
@@ -81,26 +91,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
         
         try {
+          let mediaSent = false;
           if (campaign.mediaUrl) {
-            let buffer: Buffer;
-            if (campaign.mediaUrl.startsWith("/")) {
-               const filePath = path.join(process.cwd(), "public", campaign.mediaUrl);
-               buffer = fs.readFileSync(filePath);
-            } else {
-               const res = await fetch(campaign.mediaUrl);
-               const arrayBuffer = await res.arrayBuffer();
-               buffer = Buffer.from(arrayBuffer);
+            try {
+              let buffer: Buffer | null = null;
+              if (campaign.mediaUrl.startsWith("/")) {
+                 const filePath = path.join(process.cwd(), "public", campaign.mediaUrl);
+                 if (fs.existsSync(filePath)) {
+                   buffer = fs.readFileSync(filePath);
+                 }
+              } else {
+                 const res = await fetch(campaign.mediaUrl);
+                 if (res.ok) {
+                   const arrayBuffer = await res.arrayBuffer();
+                   buffer = Buffer.from(arrayBuffer);
+                 }
+              }
+              
+              if (buffer) {
+                if (campaign.mediaType === "IMAGE") {
+                  await whatsappManager.sendImage(doctorId, patient.phone, buffer, personalizedMsg);
+                  mediaSent = true;
+                } else if (campaign.mediaType === "PDF") {
+                  await whatsappManager.sendDocument(doctorId, patient.phone, buffer, "Document.pdf", personalizedMsg);
+                  mediaSent = true;
+                }
+              }
+            } catch (mediaErr) {
+              console.warn(`[CAMPAIGN] Media buffer fetch failed, falling back to text for ${patient.phone}:`, mediaErr);
             }
-            
-            if (campaign.mediaType === "IMAGE") {
-              await whatsappManager.sendImage(doctorId, patient.phone, buffer, personalizedMsg);
-            } else if (campaign.mediaType === "PDF") {
-              await whatsappManager.sendDocument(doctorId, patient.phone, buffer, "Document.pdf", personalizedMsg);
-            } else {
-              // Fallback
-              await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
-            }
-          } else {
+          }
+
+          if (!mediaSent) {
             await whatsappManager.sendMessage(doctorId, patient.phone, personalizedMsg);
           }
           

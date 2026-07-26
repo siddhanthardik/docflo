@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
 
+import { whatsappManager } from "@/lib/whatsapp-manager";
+
 export async function GET(req: Request) {
   const { doctorId } = await getSessionData();
   if (!doctorId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,26 +20,34 @@ export async function GET(req: Request) {
     let count = 0;
     
     if (type === "all") {
-      count = await prisma.patient.count({
-        where: { doctorId },
+      const allPatients = await prisma.patient.findMany({
+        where: { doctorId, patientType: { not: "LEAD" } },
+        select: { phone: true },
       });
+      const uniquePhones = new Set(allPatients.map(p => whatsappManager.normalizePhone(p.phone)).filter(Boolean));
+      count = uniquePhones.size;
     } else if (type === "tag" && value) {
-      count = await prisma.patient.count({
-        where: { doctorId, tags: { has: value } },
+      const taggedPatients = await prisma.patient.findMany({
+        where: { doctorId, patientType: { not: "LEAD" }, tags: { has: value } },
+        select: { phone: true },
       });
+      const uniquePhones = new Set(taggedPatients.map(p => whatsappManager.normalizePhone(p.phone)).filter(Boolean));
+      count = uniquePhones.size;
     } else if (type === "last_visit_before" && value) {
       const monthsAgo = new Date();
       monthsAgo.setMonth(monthsAgo.getMonth() - parseInt(value || "0"));
       
       const allPatients = await prisma.patient.findMany({
-        where: { doctorId },
+        where: { doctorId, patientType: { not: "LEAD" } },
         include: { appointments: { orderBy: { date: "desc" }, take: 1 } },
       });
       
-      count = allPatients.filter((p: any) => {
+      const filtered = allPatients.filter((p: any) => {
         const lastApt = p.appointments[0];
         return !lastApt || new Date(lastApt.date) < monthsAgo;
-      }).length;
+      });
+      const uniquePhones = new Set(filtered.map(p => whatsappManager.normalizePhone(p.phone)).filter(Boolean));
+      count = uniquePhones.size;
     }
 
     return NextResponse.json({ count });
