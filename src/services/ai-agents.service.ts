@@ -15,13 +15,18 @@ export class AIAgentsService {
     doctorId: string,
     incomingMessage: string,
     conversationHistory: string[],
-    config: any
+    config: any,
+    clinicPhone?: string
   ) {
     try {
-      const mode = config.mode || "handoff"; // handoff vs autonomous
-      const tone = config.tone || "professional";
-      const customRules = config.trainingPrompt || config.customRules || "Answer questions politely, empathetically, and assist patients with clinic details or bookings.";
-      const emergencyTriggers = config.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
+      const mode = config?.mode || "handoff"; // handoff vs autonomous
+      const tone = config?.tone || "professional";
+      const customRules = config?.trainingPrompt || config?.customRules || "Answer questions politely, empathetically, and assist patients with clinic details or bookings.";
+      const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
+
+      const phoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
+        ? `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number ${clinicPhone.trim()})`
+        : `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number)`;
 
       // Emergency Trigger Check
       const lowerMsg = incomingMessage.toLowerCase();
@@ -29,11 +34,11 @@ export class AIAgentsService {
       const isEmergency = triggers.some((t: string) => lowerMsg.includes(t));
 
       if (isEmergency) {
-        return "⚠️ **Emergency Alert**: If you are experiencing a medical emergency, severe bleeding, or chest pain, please call emergency services immediately or visit the nearest emergency room. Our staff has been alerted to your message. *(I am the clinic's AI assistant. Type 'human' to speak to staff directly)*";
+        return `⚠️ **Emergency Alert**: If you are experiencing a medical emergency, severe bleeding, or chest pain, please call emergency services immediately or visit the nearest emergency room. Our staff has been alerted to your message.\n\n${phoneDisclaimer}`;
       }
 
       const systemPrompt = `
-        You are a master-level AI WhatsApp Patient Coordinator for a premium clinic using Gemini 3.5 Flash.
+        You are an elite, highly intelligent AI WhatsApp Medical Assistant & Patient Coordinator for our clinic using Gemini 3.5 Flash.
         Conversational Tone: ${tone}.
         
         Clinic Rules & Custom Training Guidelines:
@@ -41,14 +46,15 @@ export class AIAgentsService {
 
         Your Objective:
         1. Read the patient's incoming message and conversation history.
-        2. Accurately answer questions about booking appointments, operating hours, and clinic location.
-        3. If the patient wants to book, provide clear booking options or direct them to book online.
+        2. Provide exceptionally smart, empathetic, polite, professional, and clear assistance.
+        3. Help patients schedule appointments, select dates/times, inquire about hours, or learn about clinic services.
         
-        Important Safety & Operational Rules:
-        - Always be polite, empathetic, and exceptionally helpful.
-        - If the patient asks for a human, staff, or doctor, gracefully acknowledge it and confirm staff will contact them.
-        - Do NOT provide medical prescriptions or diagnosis under any circumstances.
-        - Mandatory Disclaimer: End all responses with: "\n\n*(I am the clinic's AI assistant. Type 'human' to speak to staff directly)*".
+        CRITICAL RESTRICTIONS & GUARDRAILS (STRICTLY ENFORCED):
+        - NEVER mention "30 minutes" or "30-minute consultation" or consultation duration under any circumstances.
+        - NEVER mention "walk-ins", "walk-in consultation", or "accept walk-ins" unless the patient explicitly asks if walk-ins are allowed.
+        - NEVER output generic template disclaimers like "We would be happy to assist you in scheduling a 30-minute consultation..." or "Our consultations are 30 minutes in duration."
+        - Do NOT provide medical prescriptions or medical diagnosis under any circumstances. If the patient describes illness or symptoms (e.g. fever, cold, pain), express genuine warmth & empathy, and recommend scheduling a consultation with doctor.
+        - Always end your response with: "\n\n${phoneDisclaimer}".
       `;
 
       const prompt = `
@@ -68,15 +74,27 @@ export class AIAgentsService {
       });
 
       let aiReply = response.text || "Thank you for your message. A staff member will get back to you shortly.";
-      
-      if (!aiReply.toLowerCase().includes("human")) {
-        aiReply += "\n\n*(I am the clinic's AI assistant. Type 'human' to speak to staff directly).*";
-      }
+
+      // Post-processing guardrail: clean up any legacy disclaimers or restricted phrases
+      aiReply = aiReply
+        .replace(/\(I am the clinic's AI assistant.*?\)/gi, "")
+        .replace(/Our consultations are 30 minutes in duration\.?/gi, "")
+        .replace(/Please note that we also accept walk-ins.*?\./gi, "")
+        .replace(/We would be happy to assist you in scheduling a 30-minute consultation.*?\./gi, "")
+        .replace(/30-minute consultation/gi, "consultation")
+        .replace(/30 minutes/gi, "")
+        .trim();
+
+      // Ensure clean footer disclaimer is attached
+      aiReply += `\n\n${phoneDisclaimer}`;
 
       return aiReply;
     } catch (error) {
       console.error("Error in Appointment Agent:", error);
-      return "Thank you for your message. We have received it and a staff member will get back to you shortly.\n\n*(I am the clinic's AI assistant. Type 'human' to speak to staff directly).*";
+      const fallbackPhoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
+        ? `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number ${clinicPhone.trim()})`
+        : `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number)`;
+      return `Thank you for your message. We have received it and a staff member will get back to you shortly.\n\n${fallbackPhoneDisclaimer}`;
     }
   }
 

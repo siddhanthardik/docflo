@@ -370,7 +370,12 @@ class WhatsAppManager {
             // Check AI Appointment Agent
             const doctorInfo = await prisma.doctor.findUnique({
               where: { id: doctorId },
-              select: { enableAIAutoResponder: true }
+              select: { 
+                enableAIAutoResponder: true,
+                phone: true,
+                clinicName: true,
+                user: { select: { phone: true } }
+              }
             });
 
             const agentConfig = await prisma.aIAgentConfig.findUnique({
@@ -389,11 +394,14 @@ class WhatsAppManager {
                 `${rm.direction === "INCOMING" ? "Patient" : "Clinic"}: ${rm.content}`
               );
 
+              const clinicPhone = doctorInfo.phone || doctorInfo.user?.phone || "";
+
               const aiReply = await AIAgentsService.runAppointmentAgent(
                 doctorId,
                 textMessage,
                 history,
-                agentConfig.config as any
+                agentConfig.config as any,
+                clinicPhone
               );
 
               if (aiReply) {
