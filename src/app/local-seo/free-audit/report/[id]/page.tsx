@@ -348,10 +348,31 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   }
 
   const issueCount      = issues.length;
-  const competitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
-  const youRow          = competitors.find((c: any) => c.isYou);
+  const rawCompetitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
+  const youRow          = rawCompetitors.find((c: any) => c.isYou);
   const userRank        = youRow?.rank || 5;
-  const compCount       = competitors.filter((c: any) => !c.isYou && (c.rank ? c.rank < userRank : true)).length || 4;
+  const clinicsAhead    = Math.max(0, userRank - 1);
+
+  // Unify and deduplicate all table rows, sorted strictly by Map Rank
+  const competitorRowsOnly = rawCompetitors.filter((c: any) => !c.isYou);
+  const allTableRows = [
+    ...competitorRowsOnly.map((c: any, i: number) => ({
+      name: c.name,
+      isYou: false,
+      rating: c.rating || "4.8",
+      reviewCount: c.reviewCount || "50+",
+      rank: c.rank || i + 1,
+      distanceKm: c.distanceKm
+    })),
+    {
+      name: businessName,
+      isYou: true,
+      rating: rating,
+      reviewCount: reviewsCount,
+      rank: userRank,
+      distanceKm: null
+    }
+  ].sort((a, b) => a.rank - b.rank);
 
   const defaultCompletenessItems: CheckItem[] = [
     { name: "Business Name Verified", present: true },
@@ -450,17 +471,26 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               {/* Core Diagnosis Headline & Metrics */}
               <div className="p-6 sm:p-8">
                 <h2 className="text-xl sm:text-3xl font-semibold text-slate-900 leading-snug mb-3">
-                  <span className="text-indigo-600">{businessName}</span> is actively losing patients to{" "}
-                  <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{compCount} competitors</span> on Google.
+                  {userRank === 1 ? (
+                    <>
+                      <span className="text-indigo-600">{businessName}</span> is currently the{" "}
+                      <span className="text-emerald-600 underline decoration-emerald-200 underline-offset-4">#1 ranked clinic</span> on Google Maps!
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-indigo-600">{businessName}</span> is actively losing patients to{" "}
+                      <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAhead} competitors</span> on Google.
+                    </>
+                  )}
                 </h2>
                 <p className="text-sm text-slate-600 leading-relaxed mb-6 font-normal max-w-3xl">
-                  Right now, when patients in {city} search for <span className="font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">"{specialty}"</span>, your competitors appear first on Google Maps. You can fix this profile gap starting today.
+                  Right now, when patients in {city} search for <span className="font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">"{specialty}"</span>, {userRank === 1 ? "your clinic leads local search results, but competitors are closing the gap." : "your competitors appear ahead on Google Maps. You can fix this profile gap starting today."}
                 </p>
 
                 {/* 3 Metric Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                   <div className="p-5 rounded-xl bg-rose-50 border border-rose-100 text-center">
-                    <div className="text-4xl font-semibold text-rose-600">{compCount}</div>
+                    <div className="text-4xl font-semibold text-rose-600">{clinicsAhead}</div>
                     <div className="text-[11px] font-medium text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
                   </div>
                   <div className="p-5 rounded-xl bg-amber-50 border border-amber-100 text-center">
@@ -507,9 +537,15 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     Search comparison for <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{specialty}</span> in {city}
                   </p>
                 </div>
-                <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-medium rounded-lg border border-rose-100 flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {compCount} Clinics Ahead
-                </span>
+                {userRank === 1 ? (
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> #1 Top Ranked Clinic
+                  </span>
+                ) : (
+                  <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-medium rounded-lg border border-rose-100 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {clinicsAhead} Clinics Ahead
+                  </span>
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -523,62 +559,66 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {competitors.filter((c: any) => !c.isYou).map((c: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-800">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>{c.name}</span>
-                            {Number(c.reviewCount) <= 5 ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title="Google Maps ranked this profile higher due to sub-specialty title keywords">
-                                Title Keyword Match
+                    {allTableRows.map((c: any, i: number) => {
+                      if (c.isYou) {
+                        return (
+                          <tr key={`you-${i}`} className="bg-indigo-50/50 border-t-2 border-b-2 border-indigo-100">
+                            <td className="px-6 py-4 font-semibold text-indigo-900 flex items-center gap-2 text-sm">
+                              <div className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                              </div>
+                              {c.name} <span className="text-[10px] font-medium text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded">(YOU)</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
+                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
                               </span>
-                            ) : null}
-                            {c.distanceKm != null ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
+                            </td>
+                            <td className="px-4 py-4 font-medium text-rose-600 text-sm">{c.reviewCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
+                            <td className="px-6 py-4 text-right">
+                              <span className={`inline-flex items-center gap-1 font-semibold text-sm px-2.5 py-1 rounded border ${
+                                userRank === 1 
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                  : "bg-rose-50 text-rose-700 border-rose-100"
+                              }`}>
+                                #{userRank} {userRank > 1 && <TrendingUp className="w-3.5 h-3.5 text-rose-500" />}
                               </span>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating || "4.8"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 font-medium text-emerald-600">{c.reviewCount || "50+"} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="inline-flex items-center justify-center w-6 h-6 font-semibold text-slate-600 text-xs bg-slate-100 rounded border border-slate-200">
-                            #{c.rank || i + 1}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {/* "YOU" Highlighted Row */}
-                    <tr className="bg-indigo-50/50 border-t-2 border-b-2 border-indigo-100">
-                      <td className="px-6 py-4 font-semibold text-indigo-900 flex items-center gap-2 text-sm">
-                        <div className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
-                        </div>
-                        {businessName} <span className="text-[10px] font-medium text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded">(YOU)</span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {rating}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 font-medium text-rose-600 text-sm">{reviewsCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-flex items-center gap-1 font-semibold text-sm px-2.5 py-1 rounded border ${
-                          userRank === 1 
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                            : "bg-rose-50 text-rose-700 border-rose-100"
-                        }`}>
-                          #{userRank} {userRank > 1 && <TrendingUp className="w-3.5 h-3.5 text-rose-500" />}
-                        </span>
-                      </td>
-                    </tr>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-slate-800">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>{c.name}</span>
+                              {Number(c.reviewCount) <= 5 ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title="Google Maps ranked this profile higher due to sub-specialty title keywords">
+                                  Title Keyword Match
+                                </span>
+                              ) : null}
+                              {c.distanceKm != null ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                  <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 font-medium text-emerald-600">{c.reviewCount} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="inline-flex items-center justify-center w-6 h-6 font-semibold text-slate-600 text-xs bg-slate-100 rounded border border-slate-200">
+                              #{c.rank}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
