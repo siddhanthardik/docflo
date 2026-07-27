@@ -7,7 +7,7 @@ import {
   AlertTriangle, Trophy, ChevronDown, ChevronUp, ArrowRight, X,
   Building2, TrendingUp, Search, ShieldAlert, ShieldCheck, Sparkles, Download,
   ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw
-} from "lucide-react";
+import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompetitorRow {
@@ -407,11 +407,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       {/* ── Top Navigation Bar ───────────────────────────────────────────── */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-              <Activity className="w-4 h-4" />
-            </div>
-            Gyrex <span className="text-indigo-600">Audit</span>
+          <Link href="/" className="flex items-center gap-2">
+            <GyrexLogo size="md" />
+            <span className="text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1">Audit Report</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link
