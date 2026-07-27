@@ -391,7 +391,8 @@ class WhatsAppManager {
   }
 
   isConnected(doctorId: string): boolean {
-    return this.sockets.has(doctorId) && !this.qrCodes.has(doctorId);
+    const sock = this.sockets.get(doctorId);
+    return !!sock && !!sock.user && !this.qrCodes.has(doctorId);
   }
 
   async logout(doctorId: string) {
@@ -411,7 +412,9 @@ class WhatsAppManager {
   // Helper to send outbound messages manually (from inbox or campaigns)
   async sendMessage(doctorId: string, phone: string, text: string) {
     const sock = this.sockets.get(doctorId);
-    if (!sock) throw new Error("WhatsApp is not connected. Please connect your device in WhatsApp Settings.");
+    if (!sock || !sock.user) {
+      throw new Error("WhatsApp is not connected or device is logged out. Please connect your device in WhatsApp Settings.");
+    }
     
     const cleanPhone = this.normalizePhone(phone);
     if (!cleanPhone) throw new Error("Invalid patient phone number");
@@ -426,7 +429,11 @@ class WhatsAppManager {
       console.warn(`[WhatsAppManager] onWhatsApp verification warning for ${cleanPhone}:`, e);
     }
 
-    await sock.sendMessage(jid, { text });
+    const sent = await sock.sendMessage(jid, { text });
+    if (!sent) {
+      throw new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
+    }
+
     return cleanPhone; // Return the normalized phone so callers can use it for DB lookups
   }
 
