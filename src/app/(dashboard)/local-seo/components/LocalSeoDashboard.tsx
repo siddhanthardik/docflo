@@ -475,23 +475,6 @@ export function LocalSeoDashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
             <SearchGrid />
           </div>
-          <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 rounded-2xl border border-indigo-100 p-6">
-            <h3 className="text-base font-bold text-indigo-900 mb-3 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-600" /> How Search Grid Works
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-indigo-800">
-              {[
-                "We place 25 virtual searchers in a 5×5 grid around your clinic, spaced 500m apart.",
-                "Each point queries Google for your category to discover your exact position.",
-                "Results are color-coded: Green = top 3, Yellow = 4-7, Orange = 8-15, Red = not found.",
-              ].map((text, i) => (
-                <div key={i} className="flex gap-3 bg-white/60 rounded-xl p-3 border border-indigo-100/50">
-                  <span className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
-                  <p className="leading-snug">{text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 

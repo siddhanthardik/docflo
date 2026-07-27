@@ -171,16 +171,16 @@ export function SearchGrid() {
 
       {/* Share of Local Voice (SoLV) KPI Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Share of Local Voice</span>
-            <Trophy className="w-5 h-5 text-amber-400" />
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Share of Local Voice</span>
+            <TrendingUp className="w-5 h-5 text-blue-600" />
           </div>
           <div className="my-2">
-            <span className="text-3xl font-black">{solvPercentage}%</span>
-            <span className="text-xs text-indigo-200 ml-2 font-medium">Top 3 Map Pack Share</span>
+            <span className="text-3xl font-black text-gray-900">{solvPercentage}%</span>
+            <span className="text-xs text-blue-700 font-semibold ml-2">Top 3 Map Pack Share</span>
           </div>
-          <p className="text-[11px] text-indigo-300">
+          <p className="text-[11px] text-gray-500">
             Ranked #1–#3 in {top3Count} out of 25 neighborhood nodes.
           </p>
         </div>
