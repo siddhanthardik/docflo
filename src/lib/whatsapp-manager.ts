@@ -373,8 +373,7 @@ class WhatsAppManager {
               select: { 
                 enableAIAutoResponder: true,
                 phone: true,
-                clinicName: true,
-                user: { select: { phone: true } }
+                clinicName: true
               }
             });
 
@@ -394,7 +393,7 @@ class WhatsAppManager {
                 `${rm.direction === "INCOMING" ? "Patient" : "Clinic"}: ${rm.content}`
               );
 
-              const clinicPhone = doctorInfo.phone || doctorInfo.user?.phone || "";
+              const clinicPhone = doctorInfo?.phone || "";
 
               const aiReply = await AIAgentsService.runAppointmentAgent(
                 doctorId,
