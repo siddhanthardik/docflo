@@ -2,51 +2,34 @@ import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 
 export async function resolveGoogleReviewLink(doctorId: string): Promise<string> {
-  try {
-    const doctor = await prisma.doctor.findUnique({
-      where: { id: doctorId },
-      select: { clinicName: true, address: true }
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+    select: { clinicName: true, address: true }
+  });
+
+  // 1. Check GbpAccount insightsData or locationId strictly for THIS doctorId
+  const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
+  let placeId = (gbp?.insightsData as any)?.placeId;
+
+  // 2. Check AuditReport created specifically for this doctorId
+  if (!placeId) {
+    const auditReport = await prisma.auditReport.findFirst({
+      where: { request: { doctorId } },
+      select: { requestId: true }
     });
-    const clinicName = doctor?.clinicName || "our clinic";
-
-    // 1. Check GbpAccount insightsData or locationId
-    const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
-    let placeId = (gbp?.insightsData as any)?.placeId;
-
-    // 2. Check latest AuditReport or AuditRequest
-    if (!placeId) {
-      const auditReport = await prisma.auditReport.findFirst({
-        where: { businessName: { contains: clinicName, mode: "insensitive" } },
-        select: { requestId: true }
-      });
-      if (auditReport) {
-        const req = await prisma.auditRequest.findUnique({ where: { id: auditReport.requestId } });
-        if (req?.placeId) placeId = req.placeId;
-      }
+    if (auditReport) {
+      const req = await prisma.auditRequest.findUnique({ where: { id: auditReport.requestId } });
+      if (req?.placeId) placeId = req.placeId;
     }
-
-    // 3. Check Google Places API Text Search using clinicName + address
-    if (!placeId) {
-      const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (apiKey) {
-        const query = encodeURIComponent(`${clinicName} ${doctor?.address || ""}`);
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`);
-        const data = await res.json();
-        if (data.status === "OK" && data.results && data.results.length > 0) {
-          placeId = data.results[0].place_id;
-        }
-      }
-    }
-
-    if (placeId) {
-      return `https://search.google.com/local/writereview?placeid=${placeId}`;
-    }
-
-    return `https://google.com/search?q=${encodeURIComponent(clinicName)}`;
-  } catch (e) {
-    console.error("[resolveGoogleReviewLink] Error resolving review link:", e);
-    return "https://google.com";
   }
+
+  // 3. Return Google Review URL if placeId belongs to this doctor
+  if (placeId) {
+    return `https://search.google.com/local/writereview?placeid=${placeId}`;
+  }
+
+  // If no GBP profile is connected for this doctor account, throw user-facing error
+  throw new Error("Google Business Profile is not connected. Please connect your GBP profile in GBP Profile settings to send Google review requests.");
 }
 
 export class ReviewDispatcherService {

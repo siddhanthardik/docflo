@@ -244,22 +244,26 @@ class WhatsAppManager {
                 });
 
                 if (doctorData?.enableGoogleReviewAutoDispatch !== false) {
-                  const reviewLink = await resolveGoogleReviewLink(doctorId);
-                  
-                  const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much, and stay healthy!`;
-                  const replyText = doctorData?.reviewGoogleInvitationMessage 
-                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
-                    : defaultReply;
-                  
-                  await sock.sendMessage(remoteJid, { text: replyText });
-                  await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
-                  });
+                  try {
+                    const reviewLink = await resolveGoogleReviewLink(doctorId);
+                    
+                    const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n\n${reviewLink}\n\nThank you so much, and stay healthy!`;
+                    const replyText = doctorData?.reviewGoogleInvitationMessage 
+                      ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`)
+                      : defaultReply;
+                    
+                    await sock.sendMessage(remoteJid, { text: replyText });
+                    await prisma.chatMessage.create({
+                      data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                    });
 
-                  await prisma.appointment.update({
-                    where: { id: pendingAppointment.id },
-                    data: { reviewStatus: "LINK_SENT" }
-                  });
+                    await prisma.appointment.update({
+                      where: { id: pendingAppointment.id },
+                      data: { reviewStatus: "LINK_SENT" }
+                    });
+                  } catch (e: any) {
+                    console.warn(`[WhatsAppManager] Skipped auto-dispatching Google Review link: ${e.message}`);
+                  }
                 }
 
                 return; // Don't pass to AI agent
