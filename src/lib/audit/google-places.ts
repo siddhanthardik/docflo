@@ -160,14 +160,6 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
     console.error("[Places Classic API] Error:", error);
     return null;
   }
-}ng_hours,
-      lat: r.geometry?.location?.lat,
-      lng: r.geometry?.location?.lng,
-    };
-  } catch (error) {
-    console.error("[Places Classic API] Error:", error);
-    return null;
-  }
 }
 
 export interface CompetitorData {
