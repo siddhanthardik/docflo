@@ -253,7 +253,54 @@ export async function searchCompetitorsWithRank(
         }
       }
 
-      const userRank = userIndex !== -1 ? userIndex + 1 : 5;
+      // If target clinic was not found in top 20 broad search, attempt secondary neighborhood search
+      let finalUserRank = userIndex !== -1 ? userIndex + 1 : 21; // Default to 21 (beyond top 20) instead of fake 5
+
+      if (userIndex === -1 && targetName && location?.lat && location?.lng) {
+        try {
+          const secondaryRes = await fetch(v1Url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": fieldMask,
+            },
+            body: JSON.stringify({
+              textQuery: `${query} near me`,
+              maxResultCount: 20,
+              locationBias: {
+                circle: {
+                  center: { latitude: location.lat, longitude: location.lng },
+                  radius: 3000,
+                },
+              },
+            }),
+          });
+
+          if (secondaryRes.ok) {
+            const secData = await secondaryRes.json();
+            const secPlaces = secData.places || [];
+            let secIdx = -1;
+            if (targetPlaceId) {
+              secIdx = secPlaces.findIndex((p: any) => p.id === targetPlaceId);
+            }
+            if (secIdx === -1) {
+              const cleanTarget = targetName.toLowerCase().replace(/dr\.?|clinic|hospital/g, "").trim();
+              if (cleanTarget.length > 2) {
+                secIdx = secPlaces.findIndex((p: any) => p.displayName?.text?.toLowerCase().includes(cleanTarget));
+              }
+            }
+            if (secIdx !== -1) {
+              finalUserRank = secIdx + 1;
+              console.log(`[Competitor Search v1] Target found in local neighborhood search at rank #${finalUserRank}`);
+            }
+          }
+        } catch (e) {
+          console.warn("[Competitor Search v1] Secondary search failed:", e);
+        }
+      }
+
+      const userRank = finalUserRank;
 
       const competitors: CompetitorData[] = [];
       for (const p of rawPlaces) {

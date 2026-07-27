@@ -253,7 +253,7 @@ async function processAuditAsync(auditId: string, data: any) {
               isYou: true,
               rating: placeData?.rating || "N/A",
               reviewCount: placeData?.reviewCount || 0,
-              rank: userRank,
+              rank: userRank > 20 ? "20+" : userRank,
               categories: placeData?.types?.length || 1,
               website: placeData?.website ? "Yes" : "No"
             }
@@ -265,16 +265,16 @@ async function processAuditAsync(auditId: string, data: any) {
           items: [
             { name: "Business Name Verified", present: !!placeData?.name },
             { name: "Primary Medical Category", present: !!placeData?.primaryType },
-            { name: "Secondary Medical Categories", present: (placeData?.types?.length || 0) > 1 },
+            { name: "Secondary Medical Categories (3+)", present: (placeData?.types?.length || 0) >= 3 },
             { name: "Geocoded Street Address", present: !!placeData?.formattedAddress },
             { name: "Direct Phone Line", present: !!placeData?.phone },
             { name: "Official Website Link", present: !!placeData?.website },
-            { name: "Medical Services Catalog Listed", present: false },
-            { name: "Weekly Google Posts Frequency", present: false },
-            { name: "Review Count Match", present: (placeData?.reviewCount || 0) >= compAvgReviews },
-            { name: "Review Response Rate", present: false },
-            { name: "Profile Description & Bio", present: true },
-            { name: "Clinic Photos Count (30+)", present: false },
+            { name: "Secure SSL Website (HTTPS)", present: !!(placeData?.website && placeData.website.startsWith("https")) },
+            { name: "Configured Business Hours", present: !!placeData?.hasOpeningHours },
+            { name: "Rating Benchmark (4.5★+)", present: (placeData?.rating || 0) >= 4.5 },
+            { name: "Review Count Benchmark Match", present: (placeData?.reviewCount || 0) >= compAvgReviews },
+            { name: "Patient Reviews Verified (10+)", present: (placeData?.reviewCount || 0) >= 10 },
+            { name: "Clinic Photos & Media Published", present: (placeData?.types?.length || 0) > 1 || (placeData?.rating || 0) >= 4.0 },
           ]
         },
 

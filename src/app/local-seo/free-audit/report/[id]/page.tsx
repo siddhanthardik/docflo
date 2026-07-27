@@ -351,8 +351,10 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   const issueCount      = issues.length;
   const rawCompetitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
   const youRow          = rawCompetitors.find((c: any) => c.isYou);
-  const userRank        = youRow?.rank || 5;
-  const clinicsAhead    = Math.max(0, userRank - 1);
+  const rawRank         = youRow?.rank;
+  const userRankNum     = typeof rawRank === "number" ? rawRank : parseInt(String(rawRank).replace(/\D/g, ""), 10) || 21;
+  const isUnranked      = userRankNum > 20 || String(rawRank).includes("+");
+  const clinicsAheadStr = isUnranked ? "20+" : String(Math.max(0, userRankNum - 1));
 
   // Unify and deduplicate all table rows, sorted strictly by Map Rank
   const competitorRowsOnly = rawCompetitors.filter((c: any) => !c.isYou);
@@ -478,18 +480,18 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   ) : (
                     <>
                       <span className="text-indigo-600">{businessName}</span> is actively losing patients to{" "}
-                      <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAhead} competitors</span> on Google.
+                      <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAheadStr} competitors</span> on Google.
                     </>
                   )}
                 </h2>
                 <p className="text-sm text-slate-600 leading-relaxed mb-6 font-normal max-w-3xl">
-                  Right now, when patients in {city} search for <span className="font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">"{specialty}"</span>, {userRank === 1 ? "your clinic leads local search results, but competitors are closing the gap." : "your competitors appear ahead on Google Maps. You can fix this profile gap starting today."}
+                  Right now, when patients in {city} search for <span className="font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">"{specialty}"</span>, {userRankNum === 1 ? "your clinic leads local search results, but competitors are closing the gap." : "your competitors appear ahead on Google Maps. You can fix this profile gap starting today."}
                 </p>
 
                 {/* 3 Metric Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                   <div className="p-5 rounded-xl bg-rose-50 border border-rose-100 text-center">
-                    <div className="text-4xl font-semibold text-rose-600">{clinicsAhead}</div>
+                    <div className="text-4xl font-semibold text-rose-600">{clinicsAheadStr}</div>
                     <div className="text-[11px] font-medium text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
                   </div>
                   <div className="p-5 rounded-xl bg-amber-50 border border-amber-100 text-center">
@@ -518,7 +520,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               specialty={specialty} 
               city={city} 
               businessName={businessName} 
-              mapRank={userRank} 
+              mapRank={userRankNum} 
               reviewsCount={Number(reviewsCount) || 0} 
             />
 
@@ -536,13 +538,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     Search comparison for <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{specialty}</span> in {city}
                   </p>
                 </div>
-                {userRank === 1 ? (
+                {userRankNum === 1 ? (
                   <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-lg border border-emerald-200 flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> #1 Top Ranked Clinic
                   </span>
                 ) : (
                   <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-medium rounded-lg border border-rose-100 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {clinicsAhead} Clinics Ahead
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {clinicsAheadStr} Clinics Ahead
                   </span>
                 )}
               </div>
