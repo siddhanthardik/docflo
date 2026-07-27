@@ -292,7 +292,12 @@ export async function POST(req: Request) {
 
     // --- WhatsApp Notification Logic ---
     try {
-      if (!isWalkIn && whatsappManager.isConnected(doctorId) && appointment.patient.phone && status === "CONFIRMED") {
+      const doctor = await prisma.doctor.findUnique({
+        where: { id: doctorId },
+        select: { clinicName: true, address: true, city: true, enableBookingConfirmation: true }
+      });
+
+      if (!isWalkIn && whatsappManager.isConnected(doctorId) && doctor?.enableBookingConfirmation !== false && appointment.patient.phone && status === "CONFIRMED") {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         

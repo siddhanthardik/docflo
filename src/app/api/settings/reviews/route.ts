@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const { doctorId } = await getSessionData();
+    if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id: session.user.id },
+      where: { id: doctorId },
       select: {
         reviewAutomationEnabled: true,
         reviewCooldownDays: true,
         reviewDelayMinutes: true,
         reviewSurveyMessage: true,
         reviewGoogleInvitationMessage: true,
+        enableBookingConfirmation: true,
+        enable24hReminder: true,
+        enable2hReminder: true,
+        enableGoogleReviewAutoDispatch: true,
+        enableInvoiceMessages: true,
+        enablePaymentReceipts: true,
+        enableAIAutoResponder: true,
       }
     });
 
@@ -33,21 +40,28 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const { doctorId } = await getSessionData();
+    if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
 
     const doctor = await prisma.doctor.update({
-      where: { id: session.user.id },
+      where: { id: doctorId },
       data: {
-        reviewAutomationEnabled: body.reviewAutomationEnabled,
-        reviewCooldownDays: body.reviewCooldownDays,
-        reviewDelayMinutes: body.reviewDelayMinutes,
+        reviewAutomationEnabled: body.reviewAutomationEnabled ?? true,
+        reviewCooldownDays: body.reviewCooldownDays ?? 90,
+        reviewDelayMinutes: body.reviewDelayMinutes ?? 45,
         reviewSurveyMessage: body.reviewSurveyMessage || null,
         reviewGoogleInvitationMessage: body.reviewGoogleInvitationMessage || null,
+        enableBookingConfirmation: body.enableBookingConfirmation ?? true,
+        enable24hReminder: body.enable24hReminder ?? true,
+        enable2hReminder: body.enable2hReminder ?? false,
+        enableGoogleReviewAutoDispatch: body.enableGoogleReviewAutoDispatch ?? true,
+        enableInvoiceMessages: body.enableInvoiceMessages ?? true,
+        enablePaymentReceipts: body.enablePaymentReceipts ?? true,
+        enableAIAutoResponder: body.enableAIAutoResponder ?? true,
       },
       select: {
         reviewAutomationEnabled: true,
@@ -55,6 +69,13 @@ export async function PUT(req: Request) {
         reviewDelayMinutes: true,
         reviewSurveyMessage: true,
         reviewGoogleInvitationMessage: true,
+        enableBookingConfirmation: true,
+        enable24hReminder: true,
+        enable2hReminder: true,
+        enableGoogleReviewAutoDispatch: true,
+        enableInvoiceMessages: true,
+        enablePaymentReceipts: true,
+        enableAIAutoResponder: true,
       }
     });
 

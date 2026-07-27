@@ -238,23 +238,29 @@ class WhatsAppManager {
               const isNo = /^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower.includes("no") || textLower.includes("bad") || textLower.includes("poor") || textLower.includes("disappointed");
 
               if (isYes) {
-                const reviewLink = await resolveGoogleReviewLink(doctorId);
-                const doctorData = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { clinicName: true, reviewGoogleInvitationMessage: true }});
-                
-                const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much, and stay healthy!`;
-                const replyText = doctorData?.reviewGoogleInvitationMessage 
-                  ? doctorData.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
-                  : defaultReply;
-                
-                await sock.sendMessage(remoteJid, { text: replyText });
-                await prisma.chatMessage.create({
-                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                const doctorData = await prisma.doctor.findUnique({ 
+                  where: { id: doctorId }, 
+                  select: { clinicName: true, reviewGoogleInvitationMessage: true, enableGoogleReviewAutoDispatch: true }
                 });
 
-                await prisma.appointment.update({
-                  where: { id: pendingAppointment.id },
-                  data: { reviewStatus: "LINK_SENT" }
-                });
+                if (doctorData?.enableGoogleReviewAutoDispatch !== false) {
+                  const reviewLink = await resolveGoogleReviewLink(doctorId);
+                  
+                  const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much, and stay healthy!`;
+                  const replyText = doctorData?.reviewGoogleInvitationMessage 
+                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
+                    : defaultReply;
+                  
+                  await sock.sendMessage(remoteJid, { text: replyText });
+                  await prisma.chatMessage.create({
+                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                  });
+
+                  await prisma.appointment.update({
+                    where: { id: pendingAppointment.id },
+                    data: { reviewStatus: "LINK_SENT" }
+                  });
+                }
 
                 return; // Don't pass to AI agent
               } else if (isNo) {
@@ -323,11 +329,16 @@ class WhatsAppManager {
             }
 
             // Check AI Appointment Agent
+            const doctorInfo = await prisma.doctor.findUnique({
+              where: { id: doctorId },
+              select: { enableAIAutoResponder: true }
+            });
+
             const agentConfig = await prisma.aIAgentConfig.findUnique({
               where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
             });
 
-            if (agentConfig && agentConfig.enabled) {
+            if (doctorInfo?.enableAIAutoResponder !== false && agentConfig && agentConfig.enabled) {
               const { AIAgentsService } = await import('@/services/ai-agents.service');
               
               const recentMessages = await prisma.chatMessage.findMany({

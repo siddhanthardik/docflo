@@ -15,7 +15,7 @@ export function SettingsTabs() {
     { key: "whatsapp", label: "WhatsApp Settings", icon: MessageCircle, href: "/settings/whatsapp" },
     { key: "subscription", label: "Subscription & Plan", icon: CreditCard, href: "/subscription" },
     { key: "integrations", label: "Integrations", icon: Puzzle, href: "/settings/integrations" },
-    { key: "reviews", label: "Reviews Automation", icon: Star, href: "/settings/reviews" },
+    { key: "reviews", label: "Reviews & Messages", icon: Star, href: "/settings/reviews" },
     { key: "security", label: "Security", icon: Shield, href: "/settings/security" },
   ];
 

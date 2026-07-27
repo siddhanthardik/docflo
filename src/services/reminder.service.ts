@@ -10,7 +10,7 @@ export class ReminderService {
       const doctors = await prisma.doctor.findMany({});
 
       for (const doctor of doctors) {
-        if (!whatsappManager.isConnected(doctor.id)) continue;
+        if (!whatsappManager.isConnected(doctor.id) || doctor.enable24hReminder === false) continue;
 
         // Find appointments in the next 24 hours that haven't been reminded
         const upcomingAppointments = await prisma.appointment.findMany({

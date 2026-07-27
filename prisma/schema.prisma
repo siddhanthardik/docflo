@@ -79,6 +79,15 @@ model Doctor {
   reviewSurveyMessage           String?
   reviewGoogleInvitationMessage String?
 
+  // Granular Automated Message Toggles
+  enableBookingConfirmation      Boolean @default(true)
+  enable24hReminder              Boolean @default(true)
+  enable2hReminder               Boolean @default(false)
+  enableGoogleReviewAutoDispatch Boolean @default(true)
+  enableInvoiceMessages          Boolean @default(true)
+  enablePaymentReceipts          Boolean @default(true)
+  enableAIAutoResponder          Boolean @default(true)
+
   // Usage tracking
   currentAiCredits Int @default(0)
   currentPatients  Int @default(0)

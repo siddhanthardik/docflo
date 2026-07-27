@@ -57,9 +57,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       data: { status, paidAt }
     });
 
-    // Automatically send receipt via WhatsApp if WhatsApp is connected & patient has phone
+    // Automatically send receipt via WhatsApp if WhatsApp is connected & patient has phone & enablePaymentReceipts is true
     try {
-      if (whatsappManager.isConnected(doctorId) && invoice.patient?.phone) {
+      const doctorInfo = await prisma.doctor.findUnique({
+        where: { id: doctorId },
+        select: { enablePaymentReceipts: true }
+      });
+
+      if (whatsappManager.isConnected(doctorId) && doctorInfo?.enablePaymentReceipts !== false && invoice.patient?.phone) {
         const updatedInvoice = await prisma.invoice.findUnique({
           where: { id: invoiceId },
           include: { items: true, doctor: true, patient: true, payments: true }
