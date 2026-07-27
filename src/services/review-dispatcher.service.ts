@@ -2,28 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 
 export async function resolveGoogleReviewLink(doctorId: string): Promise<string> {
-  const doctor = await prisma.doctor.findUnique({
-    where: { id: doctorId },
-    select: { clinicName: true, address: true }
-  });
-
   // 1. Check GbpAccount insightsData or locationId strictly for THIS doctorId
   const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
   let placeId = (gbp?.insightsData as any)?.placeId;
 
-  // 2. Check AuditReport created specifically for this doctorId
-  if (!placeId) {
-    const auditReport = await prisma.auditReport.findFirst({
-      where: { request: { doctorId } },
-      select: { requestId: true }
-    });
-    if (auditReport) {
-      const req = await prisma.auditRequest.findUnique({ where: { id: auditReport.requestId } });
-      if (req?.placeId) placeId = req.placeId;
-    }
-  }
-
-  // 3. Return Google Review URL if placeId belongs to this doctor
+  // 2. Return Google Review URL if placeId belongs to this doctor
   if (placeId) {
     return `https://search.google.com/local/writereview?placeid=${placeId}`;
   }
