@@ -80,7 +80,8 @@ async function processAuditAsync(auditId: string, data: any) {
       locationStr,
       data.searchQuery || "",
       placeData?.primaryType || null,                 // e.g. "pediatrician" — Places API v1
-      placeData?.primaryTypeDisplayName || null       // e.g. "Pediatrician" — Places API v1
+      placeData?.primaryTypeDisplayName || null,      // e.g. "Pediatrician" — Places API v1
+      placeData?.reviewsText || []                    // 🌟 Patient review text snippets
     );
 
     console.log(`[Audit] ${actualName} → Detected specialty: "${specialityData.speciality}" | GBP primaryType: "${placeData?.primaryType}" | displayName: "${placeData?.primaryTypeDisplayName}"`);

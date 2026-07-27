@@ -13,6 +13,7 @@ export interface GooglePlaceDetails {
   hasOpeningHours: boolean;
   lat?: number;
   lng?: number;
+  reviewsText?: string[];             // patient review text snippets for specialty classification
 }
 
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -29,7 +30,7 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
   return Math.round(R * c * 10) / 10;
 }
 
-// ── Places API (New) — fetches actual GBP primaryType and displayName ─────────
+// ── Places API (New) — fetches actual GBP primaryType, displayName, and reviews ──
 export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDetails | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -38,8 +39,6 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
   }
 
   // ── Attempt Places API (New) v1 first ──────────────────────────────────────
-  // This is the ONLY source that returns primaryType and primaryTypeDisplayName
-  // which reflect what Google Maps actually shows as the GBP category.
   try {
     const newApiUrl = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`;
     const fieldMask = [
@@ -56,6 +55,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       "businessStatus",
       "location",
       "currentOpeningHours",
+      "reviews",
     ].join(",");
 
     const res = await fetch(newApiUrl, {
@@ -69,7 +69,6 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
     if (res.ok) {
       const r = await res.json();
 
-      // Validate it's a real response (not an error object)
       if (r && r.id && !r.error) {
         const primaryTypeSlug: string | null = r.primaryType || null;
         const primaryTypeLabel: string | null =
@@ -77,7 +76,11 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
           r.primaryTypeDisplayName?.languageCode ||
           null;
 
-        console.log(`[Places API v1] ${r.displayName?.text} → primaryType: "${primaryTypeSlug}", displayName: "${primaryTypeLabel}"`);
+        const reviewsText: string[] = Array.isArray(r.reviews)
+          ? r.reviews.map((rev: any) => rev.text?.text || rev.originalText?.text || "").filter(Boolean)
+          : [];
+
+        console.log(`[Places API v1] ${r.displayName?.text} → primaryType: "${primaryTypeSlug}", displayName: "${primaryTypeLabel}", reviewsCount: ${reviewsText.length}`);
 
         return {
           placeId,
@@ -94,10 +97,10 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
           hasOpeningHours: !!r.currentOpeningHours,
           lat: r.location?.latitude,
           lng: r.location?.longitude,
+          reviewsText,
         };
       }
 
-      // API returned an error body — fall through to Classic API
       console.warn("[Places API v1] Unexpected response body:", JSON.stringify(r).slice(0, 200));
     } else {
       const errText = await res.text();
@@ -108,16 +111,13 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
   }
 
   // ── Fallback: Classic Place Details API ────────────────────────────────────
-  // Used only if the new API fails (key not enabled, quota, etc.)
-  // NOTE: Classic API does NOT return primaryTypeDisplayName — specialty detection
-  // will rely on keyword matching in this fallback path.
   try {
     console.log("[Places Classic API] Falling back for placeId:", placeId);
     const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
     url.searchParams.set("place_id", placeId);
     url.searchParams.set(
       "fields",
-      "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours"
+      "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours,reviews"
     );
     url.searchParams.set("key", apiKey);
 
@@ -135,8 +135,10 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
 
     const r = data.result;
 
-    // Classic API: types[0] is NOT the GBP display category — mark as null
-    // so detectSpeciality falls through to keyword matching on the name.
+    const reviewsText: string[] = Array.isArray(r.reviews)
+      ? r.reviews.map((rev: any) => rev.text || "").filter(Boolean)
+      : [];
+
     return {
       placeId,
       name: r.name || "",
@@ -145,11 +147,20 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       rating: r.rating || null,
       reviewCount: r.user_ratings_total || null,
       types: r.types || [],
-      primaryType: r.types?.[0] || null,          // raw tag e.g. "doctor"
-      primaryTypeDisplayName: null,                // Classic API has no display name
+      primaryType: r.types?.[0] || null,
+      primaryTypeDisplayName: null,
       businessStatus: r.business_status || null,
       phone: r.formatted_phone_number || null,
       hasOpeningHours: !!r.current_opening_hours,
+      lat: r.geometry?.location?.lat,
+      lng: r.geometry?.location?.lng,
+      reviewsText,
+    };
+  } catch (error) {
+    console.error("[Places Classic API] Error:", error);
+    return null;
+  }
+}ng_hours,
       lat: r.geometry?.location?.lat,
       lng: r.geometry?.location?.lng,
     };

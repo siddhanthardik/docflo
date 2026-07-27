@@ -302,30 +302,37 @@ function detectByDisplayName(displayName: string): string | null {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────────
+// ── Main export ────────────────────────────────────────────────────────────────
 export function detectSpeciality(
   businessName: string,
   categories: string[] = [],
   address: string = "",
   searchQuery: string = "",
   primaryTypeSlug?: string | null,           // e.g. "pediatrician" — from Places API v1
-  primaryTypeDisplayName?: string | null     // e.g. "Pediatrician" — from Places API v1
+  primaryTypeDisplayName?: string | null,    // e.g. "Pediatrician" — from Places API v1
+  reviewsText: string[] = []                 // 🌟 Patient review snippets from Google Places API
 ): SpecialityBenchmark {
 
   // ── Priority 1: Direct GBP primary type slug match ──────────────────────────
   // This is the most reliable signal — it's exactly what Google Maps shows
-  // as the business's primary category.
+  // as the business's primary category (when specific e.g. "pediatrician", "dentist").
   if (primaryTypeSlug) {
     const normalizedSlug = primaryTypeSlug.toLowerCase().trim();
-    const specialtyKey = GBP_TYPE_TO_SPECIALTY[normalizedSlug];
-    if (specialtyKey && SPECIALITY_DATABASE[specialtyKey]) {
-      console.log(`[Specialty] Matched via GBP primaryType slug: "${primaryTypeSlug}" → "${specialtyKey}"`);
-      return SPECIALITY_DATABASE[specialtyKey];
+    // Exclude generic tags like "doctor", "medical_clinic", "health" from slug matching
+    // so they fall through to review/name analysis.
+    const genericSlugs = ["doctor", "medical_clinic", "health", "point_of_interest", "establishment", "consultant"];
+    if (!genericSlugs.includes(normalizedSlug)) {
+      const specialtyKey = GBP_TYPE_TO_SPECIALTY[normalizedSlug];
+      if (specialtyKey && SPECIALITY_DATABASE[specialtyKey]) {
+        console.log(`[Specialty] Matched via GBP primaryType slug: "${primaryTypeSlug}" → "${specialtyKey}"`);
+        return SPECIALITY_DATABASE[specialtyKey];
+      }
     }
   }
 
   // ── Priority 2: Primary type display name keyword match ──────────────────────
   // e.g. primaryTypeDisplayName = "Pediatrician" or "Child Specialist"
-  if (primaryTypeDisplayName) {
+  if (primaryTypeDisplayName && primaryTypeDisplayName.toLowerCase() !== "doctor") {
     const key = detectByDisplayName(primaryTypeDisplayName);
     if (key && SPECIALITY_DATABASE[key]) {
       console.log(`[Specialty] Matched via GBP displayName: "${primaryTypeDisplayName}" → "${key}"`);
@@ -333,8 +340,63 @@ export function detectSpeciality(
     }
   }
 
-  // ── Priority 3: Business name + all secondary types keyword matching ─────────
-  // Fallback for Classic API path or when primaryType is generic ("doctor", "health")
+  // ── Priority 3: Patient Reviews Keyword Engine (🌟 REVOLUTIONARY FOR LOCAL SEO)
+  // When Google Places API returns generic "Doctor" or "Medical Clinic",
+  // patient reviews contain the exact specialty (e.g. "pediatrician", "baby", "root canal").
+  if (reviewsText && reviewsText.length > 0) {
+    const reviewsCorpus = reviewsText.join(" ").toLowerCase();
+
+    if (reviewsCorpus.includes("pediatr") || reviewsCorpus.includes("neonat") || reviewsCorpus.includes("child doctor") || reviewsCorpus.includes("baby's") || reviewsCorpus.includes("child's")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "pediatrics"`);
+      return SPECIALITY_DATABASE["pediatrics"];
+    }
+    if (reviewsCorpus.includes("derma") || reviewsCorpus.includes("acne") || reviewsCorpus.includes("skin care") || reviewsCorpus.includes("laser hair")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "dermatology"`);
+      return SPECIALITY_DATABASE["dermatology"];
+    }
+    if (reviewsCorpus.includes("dentist") || reviewsCorpus.includes("dental") || reviewsCorpus.includes("root canal") || reviewsCorpus.includes("teeth")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "dentist"`);
+      return SPECIALITY_DATABASE["dentist"];
+    }
+    if (reviewsCorpus.includes("ivf") || reviewsCorpus.includes("fertility") || reviewsCorpus.includes("infertility")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "ivf"`);
+      return SPECIALITY_DATABASE["ivf"];
+    }
+    if (reviewsCorpus.includes("gynae") || reviewsCorpus.includes("gynecol") || reviewsCorpus.includes("pregnancy") || reviewsCorpus.includes("pcos")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "gynaecology"`);
+      return SPECIALITY_DATABASE["gynaecology"];
+    }
+    if (reviewsCorpus.includes("orthop") || reviewsCorpus.includes("knee replacement") || reviewsCorpus.includes("bone doctor") || reviewsCorpus.includes("joint pain")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "orthopedic"`);
+      return SPECIALITY_DATABASE["orthopedic"];
+    }
+    if (reviewsCorpus.includes("cardio") || reviewsCorpus.includes("heart doctor") || reviewsCorpus.includes("ecg")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "cardiologist"`);
+      return SPECIALITY_DATABASE["cardiologist"];
+    }
+    if (reviewsCorpus.includes("urol") || reviewsCorpus.includes("kidney stone") || reviewsCorpus.includes("prostate")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "urology"`);
+      return SPECIALITY_DATABASE["urology"];
+    }
+    if (reviewsCorpus.includes("ent") || reviewsCorpus.includes("ear nose") || reviewsCorpus.includes("sinus") || reviewsCorpus.includes("tonsil")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "ent"`);
+      return SPECIALITY_DATABASE["ent"];
+    }
+    if (reviewsCorpus.includes("eye doctor") || reviewsCorpus.includes("lasik") || reviewsCorpus.includes("cataract") || reviewsCorpus.includes("ophthal")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "ophthalmology"`);
+      return SPECIALITY_DATABASE["ophthalmology"];
+    }
+    if (reviewsCorpus.includes("physio") || reviewsCorpus.includes("back pain") || reviewsCorpus.includes("rehab")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "physiotherapy"`);
+      return SPECIALITY_DATABASE["physiotherapy"];
+    }
+    if (reviewsCorpus.includes("diabet") || reviewsCorpus.includes("hba1c") || reviewsCorpus.includes("insulin")) {
+      console.log(`[Specialty] Matched via Patient Reviews → "diabetes"`);
+      return SPECIALITY_DATABASE["diabetes"];
+    }
+  }
+
+  // ── Priority 4: Business name + search query keyword matching ─────────
   const text = (businessName + " " + categories.join(" ") + " " + searchQuery).toLowerCase();
 
   if (text.includes("pediatr") || text.includes("child specialist") || text.includes("bal rog") || text.includes("shishu")) return SPECIALITY_DATABASE["pediatrics"];
@@ -357,10 +419,7 @@ export function detectSpeciality(
   if (text.includes("gastro") || text.includes("digestive") || text.includes("liver") || text.includes("stomach") || text.includes("endoscopy")) return SPECIALITY_DATABASE["gastroenterology"];
   if (text.includes("nephrol") || text.includes("kidney") || text.includes("dialysis") || text.includes("renal")) return SPECIALITY_DATABASE["nephrology"];
 
-  // ── Priority 4: Fallback — only fall to "general" if nothing else matched ────
-  // NOTE: We deliberately do NOT match on "doctor", "clinic", "medical", "health"
-  // alone — these are too generic and cause the bug. A name with only those words
-  // goes to "general" which is honest rather than misidentifying specialty.
+  // ── Priority 5: Fallback — only fall to "general" if explicitly matching family physician ──
   const textWithAddress = text + " " + address.toLowerCase();
   if (textWithAddress.includes("general physician") || textWithAddress.includes("general practice") || textWithAddress.includes("family medicine")) {
     return SPECIALITY_DATABASE["general"];
