@@ -114,7 +114,7 @@ export class ReviewDispatcherService {
 
         // Send survey
         try {
-          const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your healthcare. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
+          const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
           const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
           const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
           const finalMessage = surveyMessage + optOutMsg;
@@ -197,7 +197,7 @@ export class ReviewDispatcherService {
       }
     }
 
-    const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your healthcare. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
+    const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
     const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
     const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
     const finalMessage = surveyMessage + optOutMsg;
