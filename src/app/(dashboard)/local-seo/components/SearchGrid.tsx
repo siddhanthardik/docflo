@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, Info, Sparkles, SlidersHorizontal, Trophy, Target } from "lucide-react";
+import { MapPin, RefreshCw, Clock, Info, Sparkles, SlidersHorizontal, Trophy, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
