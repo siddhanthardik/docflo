@@ -34,6 +34,28 @@ export default function LandingPage() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlacePrediction | null>(null);
   const [activeFeatureCategory, setActiveFeatureCategory] = useState<"growth" | "operations">("growth");
+
+  // Rotating Hero Punchlines
+  const punchlines = [
+    "Delivers Real Patients",
+    "Fills Your Appointment Slots",
+    "Dominates Local Google Search",
+    "Grows Your 5-Star Reputation",
+  ];
+  const [punchlineIndex, setPunchlineIndex] = useState(0);
+  const [punchlineFade, setPunchlineFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPunchlineFade(false);
+      setTimeout(() => {
+        setPunchlineIndex((prev) => (prev + 1) % punchlines.length);
+        setPunchlineFade(true);
+      }, 400);
+    }, 2800);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -123,7 +145,17 @@ export default function LandingPage() {
             <div className="lg:col-span-7 space-y-6 text-left">
               
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
-                Your All-in-One Clinic Growth Engine that <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">Delivers Real Patients</span>
+                Your All-in-One Clinic Growth Engine that{" "}
+                <span
+                  className="inline-block bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent"
+                  style={{
+                    transition: "opacity 0.4s ease, transform 0.4s ease",
+                    opacity: punchlineFade ? 1 : 0,
+                    transform: punchlineFade ? "translateY(0px)" : "translateY(12px)",
+                  }}
+                >
+                  {punchlines[punchlineIndex]}
+                </span>
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed font-normal">
