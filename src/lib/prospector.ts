@@ -4,6 +4,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { calculateDistanceKm } from "@/lib/audit/google-places";
+import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
 
 export interface DiscoveredClinicLead {
   id: string;
@@ -161,12 +162,12 @@ export class ProspectorService {
           },
         });
 
-        // Extract real top area competitors from Google Places search results (strictly within 10 km radius)
+        // Extract real top area competitors from Google Places search results (strictly within 5 km radius)
         const rawCompetitors = rawPlaces.filter(p => {
           if (p.place_id === placeId) return false;
           if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
             const dist = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
-            return dist <= 10; // Discard clinics further than 10 km
+            return dist <= 5; // Discard clinics further than 5 km
           }
           return true;
         }).slice(0, 4);
@@ -174,7 +175,8 @@ export class ProspectorService {
         const compList = rawCompetitors.map(p => {
           let distKm: number | undefined;
           if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
-            distKm = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
+            const rawDist = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
+            distKm = Math.round(rawDist * 10) / 10;
           }
           return {
             name: p.name || "Medical Clinic",
@@ -205,22 +207,25 @@ export class ProspectorService {
           { name: "Clinic Photos Count (30+)", present: false },
         ];
 
+        const specBenchmark = detectSpeciality(clinicName, [], address, specialty);
+        const resolvedSpecialty = specBenchmark.speciality || specialty;
+
         // 3. Create AuditReport record for live viewing at /local-seo/free-audit/report/[id]
         const auditReport = await prisma.auditReport.create({
           data: {
             requestId: auditRequest.id,
             businessName: clinicName,
-            speciality: specialty,
+            speciality: resolvedSpecialty,
             address,
             websiteUrl: officialWebsite || null,
-            primaryCategory: specialty,
+            primaryCategory: resolvedSpecialty,
             secondaryCategories: [],
             businessType: "Local Healthcare Clinic",
             rating: rating || null,
             reviewCount: userRatingsTotal || null,
             businessOverview: {
               businessName: clinicName,
-              primaryCategory: specialty,
+              primaryCategory: resolvedSpecialty,
               additionalCategories: [],
               address,
               phone: officialPhone || "Not Available",

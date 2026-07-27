@@ -124,7 +124,7 @@ export async function searchCompetitors(
 
     const competitors: CompetitorData[] = [];
     
-    // Grab top 3-4 real competitors strictly within 10 km radius (preferred <= 5 km)
+    // Grab top 4 real competitors strictly within 5 km radius
     for (const r of data.results) {
       if (r.place_id !== excludePlaceId) {
         let distanceKm: number | undefined;
@@ -135,8 +135,8 @@ export async function searchCompetitors(
             r.geometry.location.lat,
             r.geometry.location.lng
           );
-          // Hard filter: Discard any competitor more than 10 km away
-          if (distanceKm > 10) {
+          // Hard filter: Discard any competitor more than 5 km away
+          if (distanceKm > 5) {
             continue;
           }
         }
@@ -146,7 +146,7 @@ export async function searchCompetitors(
           rating: r.rating || null,
           reviewCount: r.user_ratings_total || null,
           placeId: r.place_id,
-          distanceKm,
+          distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
         });
       }
       if (competitors.length >= 4) break;

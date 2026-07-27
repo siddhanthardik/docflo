@@ -74,10 +74,10 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
     contentOpportunities: ["Managing diabetes in Indian diet", "When to start insulin therapy"]
   },
   "dermatology": {
-    speciality: "Dermatology Clinic",
+    speciality: "Dermatologist",
     expectedRating: 4.6,
     expectedReviewCount: 180,
-    highValueKeywords: ["Skin Specialist near me", "Acne Treatment", "Laser Hair Removal", "Botox Clinic", "Psoriasis Treatment", "Chemical Peel"],
+    highValueKeywords: ["Dermatologist", "Skin Specialist near me", "Acne Treatment", "Laser Hair Removal", "Botox Clinic", "Psoriasis Treatment", "Chemical Peel"],
     seasonalOpportunities: ["Summer Skin Damage (Apr–Jun)", "Pre-Wedding Skin Packages (Oct–Feb)"],
     contentOpportunities: ["Before & After Laser Skin", "Why over-the-counter creams don't work"]
   },
@@ -131,9 +131,15 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
   }
 };
 
-export function detectSpeciality(businessName: string, categories: string[]): SpecialityBenchmark {
-  const text = (businessName + " " + categories.join(" ")).toLowerCase();
+export function detectSpeciality(
+  businessName: string, 
+  categories: string[] = [], 
+  address: string = "", 
+  searchQuery: string = ""
+): SpecialityBenchmark {
+  const text = (businessName + " " + categories.join(" ") + " " + address + " " + searchQuery).toLowerCase();
   
+  if (text.includes("derma") || text.includes("skin") || text.includes("cosmet") || text.includes("laser") || text.includes("aesthetic") || text.includes("beauty") || text.includes("hair")) return SPECIALITY_DATABASE["dermatology"];
   if (text.includes("urology") || text.includes("urologist")) return SPECIALITY_DATABASE["urology"];
   if (text.includes("ivf") || text.includes("fertility") || text.includes("reproduction") || text.includes("infertility")) return SPECIALITY_DATABASE["ivf"];
   if (text.includes("orthopedic") || text.includes("orthopaedic") || text.includes("bone") || text.includes("sports injury") || text.includes("joint")) return SPECIALITY_DATABASE["orthopedic"];
@@ -142,7 +148,6 @@ export function detectSpeciality(businessName: string, categories: string[]): Sp
   if (text.includes("diagnostic") || text.includes("laboratory") || text.includes("pathology") || text.includes("scan center") || text.includes("imaging")) return SPECIALITY_DATABASE["diagnostic"];
   if (text.includes("hospital") || text.includes("multispecialty") || text.includes("multi specialty")) return SPECIALITY_DATABASE["hospital"];
   if (text.includes("diabet") || text.includes("endocrinol") || text.includes("metabolic") || text.includes("thyroid")) return SPECIALITY_DATABASE["diabetes"];
-  if (text.includes("derma") || text.includes("skin") || text.includes("cosmet") || text.includes("laser clinic")) return SPECIALITY_DATABASE["dermatology"];
   if (text.includes("gynae") || text.includes("gynecol") || text.includes("obstet") || text.includes("maternity") || text.includes("women")) return SPECIALITY_DATABASE["gynaecology"];
   if (text.includes(" ent ") || text.includes("ear nose") || text.includes("otolaryngol") || text.includes("sinus") || text.includes("hearing")) return SPECIALITY_DATABASE["ent"];
   if (text.includes("ophthal") || text.includes("eye") || text.includes("retina") || text.includes("lasik") || text.includes("cataract")) return SPECIALITY_DATABASE["ophthalmology"];

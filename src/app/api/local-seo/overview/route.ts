@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { AnalyticsEngine } from "@/lib/seo-engine/analytics";
 import { prisma } from "@/lib/prisma";
+import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
 
 export async function GET(request: Request) {
   try {
@@ -28,12 +29,17 @@ export async function GET(request: Request) {
     });
 
     const profileData = latestProfile?.json as any;
+    const bName = profileData?.name || account.locationName || "";
+    const bCats = profileData?.categories || profileData?.types || [];
+    const bAddr = profileData?.address || "";
+    const detected = detectSpeciality(bName, bCats, bAddr);
+    const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || "Medical Clinic") : detected.speciality;
 
     return NextResponse.json({
       data: {
         comparisons,
-        businessName: profileData?.name || account.locationName,
-        primaryCategory: profileData?.primaryCategory || "Medical Clinic",
+        businessName: bName,
+        primaryCategory,
         views: comparisons.find(c => c.metric === 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH')?.currentValue || 0,
         calls: comparisons.find(c => c.metric === 'CALL_CLICKS')?.currentValue || 0,
         directionRequests: comparisons.find(c => c.metric === 'BUSINESS_DIRECTION_REQUESTS')?.currentValue || 0,

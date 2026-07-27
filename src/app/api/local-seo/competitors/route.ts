@@ -3,6 +3,7 @@ import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleNormalizer } from "@/services/normalization/GoogleNormalizer";
+import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -98,7 +99,12 @@ export async function GET(request: Request) {
     const profileData = profileSnap?.json as any;
     let lat: number | null = null;
     let lng: number | null = null;
-    const primaryCategory = profileData?.primaryCategory || "Medical Clinic";
+
+    const bName = profileData?.name || account.locationName || "";
+    const bCats = profileData?.categories || profileData?.types || [];
+    const bAddr = profileData?.address || "";
+    const detected = detectSpeciality(bName, bCats, bAddr);
+    const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || "Medical Clinic") : detected.speciality;
 
     // Check if we have coordinates from stored GBP data
     // Try geocoding from address as fallback

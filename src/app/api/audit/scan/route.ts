@@ -72,11 +72,11 @@ async function processAuditAsync(auditId: string, data: any) {
     // 2. Classify Healthcare Speciality
     const actualName = placeData?.name || data.name || data.searchQuery;
     const actualCategories = placeData?.types || [];
-    const specialityData = detectSpeciality(actualName, actualCategories);
+    const locationStr = placeData?.formattedAddress || data.address || "";
+    const specialityData = detectSpeciality(actualName, actualCategories, locationStr, data.searchQuery || "");
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     // 3. Fetch Real Competitors — strictly anchored to 5 km radius around clinic coordinates
-    const locationStr = placeData?.formattedAddress || data.address || "";
     const addressParts = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean);
     const cityStr = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "";
     const specialtySearchKeyword = specialityData.highValueKeywords[0] || specialityData.speciality;

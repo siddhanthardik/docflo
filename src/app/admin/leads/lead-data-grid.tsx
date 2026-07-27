@@ -22,6 +22,7 @@ export default function LeadDataGrid({ leads }: { leads: any[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [auditFilter, setAuditFilter] = useState<string>("ALL");
+  const [sourceFilter, setSourceFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -38,9 +39,14 @@ export default function LeadDataGrid({ leads }: { leads: any[] }) {
       const latestAudit = lead.requests[0]?.status || "NONE";
       const matchesAudit = auditFilter === "ALL" || latestAudit === auditFilter;
 
-      return matchesSearch && matchesStatus && matchesAudit;
+      const matchesSource = 
+        sourceFilter === "ALL" ||
+        (sourceFilter === "ORGANIC" && (!lead.leadSource || lead.leadSource === "Organic" || lead.leadSource === "FREE_AUDIT")) ||
+        (sourceFilter === "AI_PROSPECTOR" && (lead.leadSource === "AI_PROSPECTOR_AGENT" || lead.leadSource === "AI Prospector"));
+
+      return matchesSearch && matchesStatus && matchesAudit && matchesSource;
     });
-  }, [leads, searchTerm, statusFilter, auditFilter]);
+  }, [leads, searchTerm, statusFilter, auditFilter, sourceFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
@@ -74,9 +80,19 @@ export default function LeadDataGrid({ leads }: { leads: any[] }) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <select 
-            className="bg-white border border-slate-200 text-sm rounded-md px-3 py-2 w-full sm:w-auto"
+            className="bg-white border border-slate-200 text-sm rounded-md px-3 py-2 w-full sm:w-auto font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={sourceFilter}
+            onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
+          >
+            <option value="ALL">All Lead Sources</option>
+            <option value="ORGANIC">Organic Lead</option>
+            <option value="AI_PROSPECTOR">AI Prospector</option>
+          </select>
+
+          <select 
+            className="bg-white border border-slate-200 text-sm rounded-md px-3 py-2 w-full sm:w-auto font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           >
@@ -88,7 +104,7 @@ export default function LeadDataGrid({ leads }: { leads: any[] }) {
           </select>
 
           <select 
-            className="bg-white border border-slate-200 text-sm rounded-md px-3 py-2 w-full sm:w-auto"
+            className="bg-white border border-slate-200 text-sm rounded-md px-3 py-2 w-full sm:w-auto font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={auditFilter}
             onChange={(e) => { setAuditFilter(e.target.value); setPage(1); }}
           >

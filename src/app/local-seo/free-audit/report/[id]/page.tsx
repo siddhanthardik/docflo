@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, useMemo, use } from "react";
 import Link from "next/link";
 import {
   Activity, CheckCircle2, XCircle, Star, MapPin, Phone, Globe,
@@ -159,17 +159,51 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
 }
 
 // ─── Local Search Rank Grid Visualization ──────────────────────────────────
-function SearchGridVisualization({ specialty, city }: { specialty: string; city: string }) {
-  // 5x5 Grid nodes representing local Google Maps pack radius
-  const gridRanks = [
-    { rank: 3, status: "good" },  { rank: 2, status: "good" },  { rank: 4, status: "good" },  { rank: 5, status: "good" },  { rank: 8, status: "avg" },
-    { rank: 1, status: "good" },  { rank: 3, status: "good" },  { rank: 6, status: "avg" },   { rank: 9, status: "avg" },   { rank: 14, status: "avg" },
-    { rank: 4, status: "good" },  { rank: 7, status: "avg" },   { rank: 11, status: "avg" },  { rank: 18, status: "poor" }, { rank: 22, status: "poor" },
-    { rank: 8, status: "avg" },   { rank: 12, status: "avg" },  { rank: 19, status: "poor" }, { rank: 25, status: "poor" }, { rank: 31, status: "poor" },
-    { rank: 15, status: "avg" },  { rank: 21, status: "poor" }, { rank: 28, status: "poor" }, { rank: 35, status: "poor" }, { rank: 40, status: "poor" },
-  ];
+function SearchGridVisualization({ 
+  specialty, 
+  city, 
+  businessName = "Your Clinic", 
+  mapRank = 5, 
+  reviewsCount = 45 
+}: { 
+  specialty: string; 
+  city: string; 
+  businessName?: string; 
+  mapRank?: number; 
+  reviewsCount?: number; 
+}) {
+  const gridRanks = useMemo(() => {
+    let seed = 0;
+    const str = businessName + (specialty || "");
+    for (let i = 0; i < str.length; i++) {
+      seed = (seed << 5) - seed + str.charCodeAt(i);
+      seed |= 0;
+    }
 
-  const goodCount = gridRanks.filter(r => r.status === "good").length;
+    const centerR = 1;
+    const centerC = 1;
+    const baseRank = Math.max(1, Math.min(mapRank, 15));
+    const nodes: { rank: number; status: "good" | "avg" | "poor" }[] = [];
+
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const dist = Math.sqrt(Math.pow(r - centerR, 2) + Math.pow(c - centerC, 2));
+        const noise = (Math.abs(Math.sin(seed + r * 5 + c * 3)) * 2.2);
+        
+        let rank = Math.round(baseRank + dist * (reviewsCount > 100 ? 3.0 : 4.8) + noise);
+        if (r === centerR && c === centerC) rank = baseRank;
+        
+        rank = Math.max(1, rank);
+        const status: "good" | "avg" | "poor" = rank <= 5 ? "good" : rank <= 20 ? "avg" : "poor";
+        nodes.push({ rank, status });
+      }
+    }
+    return nodes;
+  }, [businessName, specialty, mapRank, reviewsCount]);
+
+  const goodCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "good").length;
+  const avgCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "avg").length;
+  const poorCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "poor").length;
   const totalGrid = gridRanks.length;
   const searchKeyword = specialty ? `${specialty}` : "Doctor & Clinic";
 
@@ -192,10 +226,10 @@ function SearchGridVisualization({ specialty, city }: { specialty: string; city:
             <span className="w-2 h-2 rounded-full bg-emerald-500" /> Top 5 ({goodCount})
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-100">
-            <span className="w-2 h-2 rounded-full bg-amber-500" /> 6–20 (9)
+            <span className="w-2 h-2 rounded-full bg-amber-500" /> 6–20 ({avgCount})
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg border border-rose-100">
-            <span className="w-2 h-2 rounded-full bg-rose-500" /> &gt;20 (11)
+            <span className="w-2 h-2 rounded-full bg-rose-500" /> &gt;20 ({poorCount})
           </span>
         </div>
       </div>
@@ -203,7 +237,7 @@ function SearchGridVisualization({ specialty, city }: { specialty: string; city:
       <div className="p-6">
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden mb-5">
           <div className="relative z-10 grid grid-cols-5 gap-3 max-w-sm mx-auto">
-            {gridRanks.map((item, idx) => {
+            {gridRanks.map((item: { rank: number; status: string }, idx: number) => {
               const bg = item.status === "good" ? "bg-emerald-500 text-white shadow-sm border border-emerald-600"
                         : item.status === "avg" ? "bg-amber-500 text-white shadow-sm border border-amber-600"
                         : "bg-white text-slate-500 shadow-sm border border-slate-200";
@@ -449,7 +483,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 2: Local Search Rank Grid Visualization ───────── */}
-            <SearchGridVisualization specialty={specialty} city={city} />
+            <SearchGridVisualization 
+              specialty={specialty} 
+              city={city} 
+              businessName={businessName} 
+              mapRank={compCount + 1} 
+              reviewsCount={Number(reviewsCount) || 0} 
+            />
 
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
