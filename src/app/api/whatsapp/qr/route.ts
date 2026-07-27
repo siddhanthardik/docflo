@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import QRCode from "qrcode";
 import { entitlementGuard } from "@/lib/withEntitlements";
 
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { doctorId } = await getSessionData();
+  if (!doctorId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const doctorId = session.user.id;
 
   const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
   if (block) return block;
@@ -41,9 +39,9 @@ export async function GET(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { doctorId } = await getSessionData();
+  if (!doctorId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await whatsappManager.logout(session.user.id);
+  await whatsappManager.logout(doctorId);
   return NextResponse.json({ success: true });
 }

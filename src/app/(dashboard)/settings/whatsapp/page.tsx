@@ -34,18 +34,13 @@ export default function WhatsAppSettingsPage() {
     }
   };
 
-  // Poll for QR status if it's CONNECTING or SCAN_QR
+  // Poll status continuously every 5 seconds to detect real-time disconnections
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (waStatus === "CONNECTING" || waStatus === "SCAN_QR") {
-      interval = setInterval(() => {
-        fetchWhatsAppConfig();
-      }, 5000); // Check every 5s
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    }
-  }, [waStatus]);
+    const interval = setInterval(() => {
+      fetchWhatsAppConfig();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDisconnectWhatsApp = async () => {
     if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;

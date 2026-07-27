@@ -113,16 +113,16 @@ class WhatsAppManager {
             }
           }
           
-          // Notify the user
+          // Notify the clinic owner immediately with a professional alert
           prisma.notification.create({
             data: {
               doctorId,
-              title: "WhatsApp Disconnected",
-              message: "WhatsApp is Disconnect. Please connect your device.",
+              title: "WhatsApp Business Disconnected ⚠️",
+              message: "Your WhatsApp Business device has been disconnected. All automated patient reminders, review requests, and AI receptionist responses are currently paused. Please reconnect your device in Settings to resume automated messaging.",
               type: "ERROR",
-              actionUrl: "/settings",
+              actionUrl: "/settings/whatsapp",
             }
-          }).catch(err => console.error(`[WhatsAppManager] Failed to create notification for ${doctorId}`, err));
+          }).catch(err => console.error(`[WhatsAppManager] Failed to create disconnection notification for ${doctorId}`, err));
         }
       } else if (connection === 'open') {
         console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);

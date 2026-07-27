@@ -25,7 +25,7 @@ export default function IntegrationsPage() {
       const waRes = await fetch("/api/whatsapp/qr");
       if (waRes.ok) {
         const waData = await waRes.json();
-        if (waData.status === "CONNECTED") setWaStatus("Connected");
+        setWaStatus(waData.status === "CONNECTED" ? "Connected" : "Not Connected");
       }
 
       // 2. Google Calendar status
