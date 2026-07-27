@@ -472,7 +472,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               {/* Core Diagnosis Headline & Metrics */}
               <div className="p-6 sm:p-8">
                 <h2 className="text-xl sm:text-3xl font-semibold text-slate-900 leading-snug mb-3">
-                  {userRank === 1 ? (
+                  {userRankNum === 1 ? (
                     <>
                       <span className="text-indigo-600">{businessName}</span> is currently the{" "}
                       <span className="text-emerald-600 underline decoration-emerald-200 underline-offset-4">#1 ranked clinic</span> on Google Maps!
@@ -579,11 +579,11 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                             <td className="px-4 py-4 font-medium text-rose-600 text-sm">{c.reviewCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
                             <td className="px-6 py-4 text-right">
                               <span className={`inline-flex items-center gap-1 font-semibold text-sm px-2.5 py-1 rounded border ${
-                                userRank === 1 
+                                userRankNum === 1 
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                   : "bg-rose-50 text-rose-700 border-rose-100"
                               }`}>
-                                #{userRank} {userRank > 1 && <TrendingUp className="w-3.5 h-3.5 text-rose-500" />}
+                                #{c.rank} {userRankNum > 1 && <TrendingUp className="w-3.5 h-3.5 text-rose-500" />}
                               </span>
                             </td>
                           </tr>
