@@ -254,8 +254,11 @@ export class ProspectorService {
             },
             competitorIntelligence: {
               competitors: [
-                ...compList,
-                { name: clinicName, isYou: true, rating: rating || "N/A", reviewCount: userRatingsTotal || 0 },
+                ...compList.map((c, idx) => ({
+                  ...c,
+                  rank: idx + 1
+                })),
+                { name: clinicName, isYou: true, rating: rating || "N/A", reviewCount: userRatingsTotal || 0, rank: i + 1 },
               ],
             },
             profileCompleteness: {

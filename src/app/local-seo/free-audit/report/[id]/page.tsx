@@ -349,7 +349,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
   const issueCount      = issues.length;
   const competitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
-  const compCount       = competitors.filter((c: any) => !c.isYou).length || 4;
+  const youRow          = competitors.find((c: any) => c.isYou);
+  const userRank        = youRow?.rank || 5;
+  const compCount       = competitors.filter((c: any) => !c.isYou && (c.rank ? c.rank < userRank : true)).length || 4;
 
   const defaultCompletenessItems: CheckItem[] = [
     { name: "Business Name Verified", present: true },
@@ -487,7 +489,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               specialty={specialty} 
               city={city} 
               businessName={businessName} 
-              mapRank={compCount + 1} 
+              mapRank={userRank} 
               reviewsCount={Number(reviewsCount) || 0} 
             />
 
@@ -546,7 +548,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                         <td className="px-4 py-4 font-medium text-emerald-600">{c.reviewCount || "50+"} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
                         <td className="px-6 py-4 text-right">
                           <span className="inline-flex items-center justify-center w-6 h-6 font-semibold text-slate-600 text-xs bg-slate-100 rounded border border-slate-200">
-                            #{i + 1}
+                            #{c.rank || i + 1}
                           </span>
                         </td>
                       </tr>
@@ -568,8 +570,12 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       </td>
                       <td className="px-4 py-4 font-medium text-rose-600 text-sm">{reviewsCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
                       <td className="px-6 py-4 text-right">
-                        <span className="inline-flex items-center gap-1 font-semibold text-rose-700 text-sm bg-rose-50 px-2 py-1 rounded border border-rose-100">
-                          #{compCount + 1} <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
+                        <span className={`inline-flex items-center gap-1 font-semibold text-sm px-2.5 py-1 rounded border ${
+                          userRank === 1 
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                            : "bg-rose-50 text-rose-700 border-rose-100"
+                        }`}>
+                          #{userRank} {userRank > 1 && <TrendingUp className="w-3.5 h-3.5 text-rose-500" />}
                         </span>
                       </td>
                     </tr>

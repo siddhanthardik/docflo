@@ -93,10 +93,26 @@ export async function searchCompetitors(
   excludePlaceId: string, 
   location?: { lat: number; lng: number }
 ): Promise<CompetitorData[]> {
+  const result = await searchCompetitorsWithRank(query, excludePlaceId, "", location);
+  return result.competitors;
+}
+
+export interface CompetitorSearchResult {
+  competitors: CompetitorData[];
+  userRank: number;
+  userIndexInResults: number;
+}
+
+export async function searchCompetitorsWithRank(
+  query: string,
+  targetPlaceId: string,
+  targetName: string,
+  location?: { lat: number; lng: number }
+): Promise<CompetitorSearchResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     console.warn("[Google Places] Missing API key for competitor search.");
-    return [];
+    return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
@@ -114,47 +130,68 @@ export async function searchCompetitors(
 
     if (!res.ok) {
       console.error("[Google Places] Failed to fetch competitors:", await res.text());
-      return [];
+      return { competitors: [], userRank: 5, userIndexInResults: -1 };
     }
 
     const data = await res.json();
-    if (data.status !== "OK" || !data.results) {
-      return [];
+    if (data.status !== "OK" || !data.results || !Array.isArray(data.results)) {
+      return { competitors: [], userRank: 5, userIndexInResults: -1 };
     }
 
-    const competitors: CompetitorData[] = [];
-    
-    // Grab top 4 real competitors strictly within 5 km radius
-    for (const r of data.results) {
-      if (r.place_id !== excludePlaceId) {
-        let distanceKm: number | undefined;
-        if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
-          distanceKm = calculateDistanceKm(
-            location.lat,
-            location.lng,
-            r.geometry.location.lat,
-            r.geometry.location.lng
-          );
-          // Hard filter: Discard any competitor more than 5 km away
-          if (distanceKm > 5) {
-            continue;
-          }
-        }
+    const rawResults = data.results;
 
-        competitors.push({
-          name: r.name,
-          rating: r.rating || null,
-          reviewCount: r.user_ratings_total || null,
-          placeId: r.place_id,
-          distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
-        });
+    // 1. Detect target clinic position in Google Places search results
+    let userIndex = -1;
+    if (targetPlaceId) {
+      userIndex = rawResults.findIndex((r: any) => r.place_id === targetPlaceId);
+    }
+    if (userIndex === -1 && targetName) {
+      const cleanTarget = targetName.toLowerCase().replace(/dr\.?|clinic|hospital/g, "").trim();
+      if (cleanTarget.length > 2) {
+        userIndex = rawResults.findIndex((r: any) => r.name?.toLowerCase().includes(cleanTarget));
       }
+    }
+
+    const userRank = userIndex !== -1 ? userIndex + 1 : 5;
+
+    // 2. Gather top competitors within 5 km (excluding target clinic)
+    const competitors: CompetitorData[] = [];
+    for (const r of rawResults) {
+      if (targetPlaceId && r.place_id === targetPlaceId) continue;
+      if (targetName && r.name?.toLowerCase().trim() === targetName.toLowerCase().trim()) continue;
+
+      let distanceKm: number | undefined;
+      if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
+        distanceKm = calculateDistanceKm(
+          location.lat,
+          location.lng,
+          r.geometry.location.lat,
+          r.geometry.location.lng
+        );
+        // Hard filter: Discard any competitor more than 5 km away
+        if (distanceKm > 5) {
+          continue;
+        }
+      }
+
+      competitors.push({
+        name: r.name,
+        rating: r.rating || null,
+        reviewCount: r.user_ratings_total || null,
+        placeId: r.place_id,
+        distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
+      });
+
       if (competitors.length >= 4) break;
     }
 
-    return competitors;
+    return {
+      competitors,
+      userRank,
+      userIndexInResults: userIndex,
+    };
   } catch (error) {
     console.error("[Google Places] Error searching competitors:", error);
-    return [];
+    return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { fetchPlaceDetails, searchCompetitors } from "@/lib/audit/google-places";
+import { fetchPlaceDetails, searchCompetitorsWithRank } from "@/lib/audit/google-places";
 
 export async function POST(req: Request) {
   try {
@@ -83,8 +83,7 @@ async function processAuditAsync(auditId: string, data: any) {
     const searchString = cityStr ? `${specialtySearchKeyword} in ${cityStr}` : `${specialtySearchKeyword}`;
     
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
-    const competitorsData = await searchCompetitors(searchString, data.placeId || "", targetLocation);
-
+    const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(searchString, data.placeId || "", actualName, targetLocation);
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     
@@ -165,9 +164,6 @@ async function processAuditAsync(auditId: string, data: any) {
         rating: placeData?.rating || null,
         reviewCount: placeData?.reviewCount || null,
 
-        // Calculated Scores (Removed from this endpoint, but required by schema previously? No, they were removed from schema)
-        // Schema no longer has score fields, so we do NOT include them here.
-
         competitors: {
           create: competitorsData.map(c => ({
             name: c.name,
@@ -224,22 +220,25 @@ async function processAuditAsync(auditId: string, data: any) {
         // 4. Competitor Intelligence
         competitorIntelligence: {
           competitors: [
+            ...competitorsData.map((c, i) => ({
+              name: c.name,
+              isYou: false,
+              rating: c.rating || "N/A",
+              reviewCount: c.reviewCount || 0,
+              rank: i + 1,
+              distanceKm: c.distanceKm,
+              categories: "Unknown",
+              website: "Unknown"
+            })),
             {
               name: actualName,
               isYou: true,
               rating: placeData?.rating || "N/A",
               reviewCount: placeData?.reviewCount || 0,
+              rank: userRank,
               categories: placeData?.types?.length || 1,
               website: placeData?.website ? "Yes" : "No"
-            },
-            ...competitorsData.map(c => ({
-              name: c.name,
-              isYou: false,
-              rating: c.rating || "N/A",
-              reviewCount: c.reviewCount || 0,
-              categories: "Unknown", // Google text search doesn't return full types reliably
-              website: "Unknown"
-            }))
+            }
           ]
         },
         
