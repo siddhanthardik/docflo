@@ -372,7 +372,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       isYou: true,
       rating: rating,
       reviewCount: reviewsCount,
-      rank: userRank,
+      rank: rawRank || userRankNum,
       distanceKm: null
     }
   ].sort((a, b) => a.rank - b.rank);
