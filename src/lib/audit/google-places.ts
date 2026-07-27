@@ -5,8 +5,9 @@ export interface GooglePlaceDetails {
   website: string | null;
   rating: number | null;
   reviewCount: number | null;
-  types: string[]; // e.g. ["dentist", "health", "point_of_interest", "establishment"]
-  primaryType: string | null;
+  types: string[];                    // all secondary GBP type slugs
+  primaryType: string | null;         // primary GBP type slug e.g. "pediatrician"
+  primaryTypeDisplayName: string | null; // human label from Google e.g. "Pediatrician"
   businessStatus: string | null;
   phone: string | null;
   hasOpeningHours: boolean;
@@ -15,7 +16,7 @@ export interface GooglePlaceDetails {
 }
 
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in kilometers
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -28,37 +29,114 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
   return Math.round(R * c * 10) / 10;
 }
 
+// ── Places API (New) — fetches actual GBP primaryType and displayName ─────────
 export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDetails | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    console.warn("[Google Places] Missing GOOGLE_PLACES_API_KEY. Skipping actual data fetch.");
+    console.warn("[Google Places] Missing GOOGLE_PLACES_API_KEY.");
     return null;
   }
 
-  // Use the Classic Place Details API to fetch reliable, full data
-  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-  url.searchParams.set("place_id", placeId);
-  url.searchParams.set("fields", "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours");
-  url.searchParams.set("key", apiKey);
-
+  // ── Attempt Places API (New) v1 first ──────────────────────────────────────
+  // This is the ONLY source that returns primaryType and primaryTypeDisplayName
+  // which reflect what Google Maps actually shows as the GBP category.
   try {
-    const res = await fetch(url.toString(), {
-      headers: { "Accept": "application/json" }
+    const newApiUrl = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`;
+    const fieldMask = [
+      "id",
+      "displayName",
+      "formattedAddress",
+      "websiteUri",
+      "rating",
+      "userRatingCount",
+      "types",
+      "primaryType",
+      "primaryTypeDisplayName",
+      "nationalPhoneNumber",
+      "businessStatus",
+      "location",
+      "currentOpeningHours",
+    ].join(",");
+
+    const res = await fetch(newApiUrl, {
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask,
+        "Accept": "application/json",
+      },
     });
 
+    if (res.ok) {
+      const r = await res.json();
+
+      // Validate it's a real response (not an error object)
+      if (r && r.id && !r.error) {
+        const primaryTypeSlug: string | null = r.primaryType || null;
+        const primaryTypeLabel: string | null =
+          r.primaryTypeDisplayName?.text ||
+          r.primaryTypeDisplayName?.languageCode ||
+          null;
+
+        console.log(`[Places API v1] ${r.displayName?.text} → primaryType: "${primaryTypeSlug}", displayName: "${primaryTypeLabel}"`);
+
+        return {
+          placeId,
+          name: r.displayName?.text || "",
+          formattedAddress: r.formattedAddress || "",
+          website: r.websiteUri || null,
+          rating: r.rating || null,
+          reviewCount: r.userRatingCount || null,
+          types: Array.isArray(r.types) ? r.types : [],
+          primaryType: primaryTypeSlug,
+          primaryTypeDisplayName: primaryTypeLabel,
+          businessStatus: r.businessStatus || null,
+          phone: r.nationalPhoneNumber || null,
+          hasOpeningHours: !!r.currentOpeningHours,
+          lat: r.location?.latitude,
+          lng: r.location?.longitude,
+        };
+      }
+
+      // API returned an error body — fall through to Classic API
+      console.warn("[Places API v1] Unexpected response body:", JSON.stringify(r).slice(0, 200));
+    } else {
+      const errText = await res.text();
+      console.warn(`[Places API v1] HTTP ${res.status} — falling back to Classic API. Error: ${errText.slice(0, 200)}`);
+    }
+  } catch (err) {
+    console.warn("[Places API v1] Network error — falling back to Classic API:", err);
+  }
+
+  // ── Fallback: Classic Place Details API ────────────────────────────────────
+  // Used only if the new API fails (key not enabled, quota, etc.)
+  // NOTE: Classic API does NOT return primaryTypeDisplayName — specialty detection
+  // will rely on keyword matching in this fallback path.
+  try {
+    console.log("[Places Classic API] Falling back for placeId:", placeId);
+    const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
+    url.searchParams.set("place_id", placeId);
+    url.searchParams.set(
+      "fields",
+      "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours"
+    );
+    url.searchParams.set("key", apiKey);
+
+    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
     if (!res.ok) {
-      console.error("[Google Places] Failed to fetch details:", await res.text());
+      console.error("[Places Classic API] Failed:", await res.text());
       return null;
     }
 
     const data = await res.json();
     if (data.status !== "OK" || !data.result) {
-      console.warn("[Google Places] Invalid status or missing result:", data.status);
+      console.warn("[Places Classic API] Bad status:", data.status);
       return null;
     }
 
     const r = data.result;
 
+    // Classic API: types[0] is NOT the GBP display category — mark as null
+    // so detectSpeciality falls through to keyword matching on the name.
     return {
       placeId,
       name: r.name || "",
@@ -67,7 +145,8 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       rating: r.rating || null,
       reviewCount: r.user_ratings_total || null,
       types: r.types || [],
-      primaryType: r.types && r.types.length > 0 ? r.types[0] : null,
+      primaryType: r.types?.[0] || null,          // raw tag e.g. "doctor"
+      primaryTypeDisplayName: null,                // Classic API has no display name
       businessStatus: r.business_status || null,
       phone: r.formatted_phone_number || null,
       hasOpeningHours: !!r.current_opening_hours,
@@ -75,7 +154,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       lng: r.geometry?.location?.lng,
     };
   } catch (error) {
-    console.error("[Google Places] Error fetching place details:", error);
+    console.error("[Places Classic API] Error:", error);
     return null;
   }
 }
@@ -88,19 +167,19 @@ export interface CompetitorData {
   distanceKm?: number;
 }
 
-export async function searchCompetitors(
-  query: string, 
-  excludePlaceId: string, 
-  location?: { lat: number; lng: number }
-): Promise<CompetitorData[]> {
-  const result = await searchCompetitorsWithRank(query, excludePlaceId, "", location);
-  return result.competitors;
-}
-
 export interface CompetitorSearchResult {
   competitors: CompetitorData[];
   userRank: number;
   userIndexInResults: number;
+}
+
+export async function searchCompetitors(
+  query: string,
+  excludePlaceId: string,
+  location?: { lat: number; lng: number }
+): Promise<CompetitorData[]> {
+  const result = await searchCompetitorsWithRank(query, excludePlaceId, "", location);
+  return result.competitors;
 }
 
 export async function searchCompetitorsWithRank(
@@ -119,17 +198,15 @@ export async function searchCompetitorsWithRank(
   url.searchParams.set("query", query);
   if (location?.lat && location?.lng) {
     url.searchParams.set("location", `${location.lat},${location.lng}`);
-    url.searchParams.set("radius", "5000"); // Strict 5 km radius search
+    url.searchParams.set("radius", "5000");
   }
   url.searchParams.set("key", apiKey);
 
   try {
-    const res = await fetch(url.toString(), {
-      headers: { "Accept": "application/json" }
-    });
+    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
 
     if (!res.ok) {
-      console.error("[Google Places] Failed to fetch competitors:", await res.text());
+      console.error("[Google Places] Failed competitor search:", await res.text());
       return { competitors: [], userRank: 5, userIndexInResults: -1 };
     }
 
@@ -140,7 +217,7 @@ export async function searchCompetitorsWithRank(
 
     const rawResults = data.results;
 
-    // 1. Detect target clinic position in Google Places search results
+    // Detect target clinic position in results
     let userIndex = -1;
     if (targetPlaceId) {
       userIndex = rawResults.findIndex((r: any) => r.place_id === targetPlaceId);
@@ -154,7 +231,7 @@ export async function searchCompetitorsWithRank(
 
     const userRank = userIndex !== -1 ? userIndex + 1 : 5;
 
-    // 2. Gather top competitors within 5 km (excluding target clinic)
+    // Gather top competitors within 5 km (excluding target clinic)
     const competitors: CompetitorData[] = [];
     for (const r of rawResults) {
       if (targetPlaceId && r.place_id === targetPlaceId) continue;
@@ -168,10 +245,7 @@ export async function searchCompetitorsWithRank(
           r.geometry.location.lat,
           r.geometry.location.lng
         );
-        // Hard filter: Discard any competitor more than 5 km away
-        if (distanceKm > 5) {
-          continue;
-        }
+        if (distanceKm > 5) continue;
       }
 
       competitors.push({
@@ -185,11 +259,7 @@ export async function searchCompetitorsWithRank(
       if (competitors.length >= 4) break;
     }
 
-    return {
-      competitors,
-      userRank,
-      userIndexInResults: userIndex,
-    };
+    return { competitors, userRank, userIndexInResults: userIndex };
   } catch (error) {
     console.error("[Google Places] Error searching competitors:", error);
     return { competitors: [], userRank: 5, userIndexInResults: -1 };

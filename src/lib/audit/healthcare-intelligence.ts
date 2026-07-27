@@ -36,7 +36,7 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
   "dentist": {
     speciality: "Dental Clinic",
     expectedRating: 4.9,
-    expectedReviewCount: 300, 
+    expectedReviewCount: 300,
     highValueKeywords: ["Teeth Whitening", "Dental Implants", "Invisalign", "Emergency Dentist", "Root Canal"],
     seasonalOpportunities: ["Back to School Checkups (August)", "Use Your Benefits Before Year-End (Nov-Dec)"],
     contentOpportunities: ["Before & After Invisalign", "Why Dental Implants are better than Dentures"]
@@ -129,6 +129,38 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
     seasonalOpportunities: ["World Mental Health Day (Oct 10)", "New Year Wellness (Jan)"],
     contentOpportunities: ["When to see a psychiatrist vs psychologist", "Breaking the stigma around mental health"]
   },
+  "neurology": {
+    speciality: "Neurology Clinic",
+    expectedRating: 4.5,
+    expectedReviewCount: 90,
+    highValueKeywords: ["Neurologist near me", "Migraine Treatment", "Epilepsy Specialist", "Stroke Clinic", "Memory Clinic", "Parkinson's Treatment"],
+    seasonalOpportunities: ["Brain Tumour Awareness Month (May)", "World Stroke Day (Oct 29)"],
+    contentOpportunities: ["Warning signs of a stroke", "Migraine triggers and management"]
+  },
+  "pulmonology": {
+    speciality: "Pulmonology Clinic",
+    expectedRating: 4.5,
+    expectedReviewCount: 80,
+    highValueKeywords: ["Pulmonologist near me", "Asthma Specialist", "COPD Treatment", "Sleep Apnea Clinic", "Allergy Testing", "Chest Specialist"],
+    seasonalOpportunities: ["World Asthma Day (May)", "Air Pollution Season (Oct–Jan)"],
+    contentOpportunities: ["Managing asthma in winter", "Is your child's cough asthma?"]
+  },
+  "gastroenterology": {
+    speciality: "Gastroenterology Clinic",
+    expectedRating: 4.5,
+    expectedReviewCount: 100,
+    highValueKeywords: ["Gastroenterologist near me", "Endoscopy Center", "IBS Treatment", "Colonoscopy", "Liver Specialist", "Acidity Treatment"],
+    seasonalOpportunities: ["World Digestive Health Day (May 29)", "Colorectal Cancer Awareness Month (Mar)"],
+    contentOpportunities: ["When to get a colonoscopy", "Foods to avoid with IBS"]
+  },
+  "nephrology": {
+    speciality: "Nephrology Clinic",
+    expectedRating: 4.5,
+    expectedReviewCount: 70,
+    highValueKeywords: ["Nephrologist near me", "Kidney Disease Specialist", "Dialysis Center", "CKD Treatment", "Renal Failure Clinic"],
+    seasonalOpportunities: ["World Kidney Day (Mar)"],
+    contentOpportunities: ["Early signs of kidney disease", "How to protect kidney health"]
+  },
   "general": {
     speciality: "Medical Clinic",
     expectedRating: 4.5,
@@ -139,38 +171,209 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
   }
 };
 
+// ── GBP Category Slug → Specialty Key ────────────────────────────────────────
+// Maps the exact `primaryType` values returned by Places API (New) v1
+// to our internal specialty keys. This is the PRIMARY detection path.
+// Source: https://developers.google.com/maps/documentation/places/web-service/place-types
+const GBP_TYPE_TO_SPECIALTY: Record<string, string> = {
+  // Pediatrics
+  "pediatrician": "pediatrics",
+  "pediatric_clinic": "pediatrics",
+  "child_care_agency": "pediatrics",
+
+  // Dentistry
+  "dentist": "dentist",
+  "dental_clinic": "dentist",
+  "orthodontist": "dentist",
+  "oral_surgeon": "dentist",
+  "periodontist": "dentist",
+  "endodontist": "dentist",
+  "cosmetic_dentist": "dentist",
+
+  // Dermatology
+  "dermatologist": "dermatology",
+  "skin_care_clinic": "dermatology",
+  "medical_spa": "dermatology",
+
+  // Cardiology
+  "cardiologist": "cardiologist",
+  "cardiovascular_health_clinic": "cardiologist",
+
+  // Orthopedics
+  "orthopedic_surgeon": "orthopedic",
+  "sports_complex": "orthopedic",
+
+  // Gynaecology / Obstetrics
+  "gynecologist": "gynaecology",
+  "obstetrician_gynecologist": "gynaecology",
+  "pregnancy_care_center": "gynaecology",
+
+  // Urology
+  "urologist": "urology",
+
+  // ENT
+  "otolaryngologist": "ent",
+  "audiologist": "ent",
+  "hearing_aid_store": "ent",
+
+  // Ophthalmology
+  "ophthalmologist": "ophthalmology",
+  "optometrist": "ophthalmology",
+  "lasik_eye_surgery_clinic": "ophthalmology",
+
+  // Physiotherapy
+  "physiotherapist": "physiotherapy",
+  "physical_therapy_clinic": "physiotherapy",
+  "sports_medicine_clinic": "physiotherapy",
+
+  // Psychiatry / Mental Health
+  "psychiatrist": "psychiatry",
+  "psychologist": "psychiatry",
+  "mental_health_clinic": "psychiatry",
+  "counselor": "psychiatry",
+
+  // Neurology
+  "neurologist": "neurology",
+  "neurosurgeon": "neurology",
+
+  // Pulmonology
+  "pulmonologist": "pulmonology",
+
+  // Gastroenterology
+  "gastroenterologist": "gastroenterology",
+  "colonoscopy_clinic": "gastroenterology",
+
+  // Nephrology
+  "nephrologist": "nephrology",
+  "dialysis_center": "nephrology",
+
+  // Diagnostics / Labs
+  "medical_laboratory": "diagnostic",
+  "blood_testing_service": "diagnostic",
+  "diagnostic_center": "diagnostic",
+  "pathologist": "diagnostic",
+  "x_ray_lab": "diagnostic",
+  "radiologist": "diagnostic",
+  "medical_imaging_center": "diagnostic",
+
+  // IVF / Fertility
+  "fertility_clinic": "ivf",
+  "reproductive_health_clinic": "ivf",
+
+  // Diabetes / Endocrinology
+  "diabetologist": "diabetes",
+  "endocrinologist": "diabetes",
+
+  // Hospital
+  "hospital": "hospital",
+  "general_hospital": "hospital",
+  "private_hospital": "hospital",
+
+  // Pharmacy (falls through to general)
+  "pharmacy": "general",
+};
+
+// ── Display Name keyword → Specialty Key ─────────────────────────────────────
+// Secondary path: used when primaryTypeDisplayName is available from Places API v1
+// but doesn't exactly match a GBP_TYPE_TO_SPECIALTY slug.
+// Also handles Hindi/regional terms common in Indian GBP profiles.
+function detectByDisplayName(displayName: string): string | null {
+  const t = displayName.toLowerCase();
+  if (t.includes("pediatr") || t.includes("child specialist") || t.includes("baby doctor") || t.includes("bal rog") || t.includes("shishu")) return "pediatrics";
+  if (t.includes("derma") || t.includes("skin") || t.includes("cosmet") || t.includes("aesthetic")) return "dermatology";
+  if (t.includes("dentist") || t.includes("dental") || t.includes("teeth") || t.includes("orthodon")) return "dentist";
+  if (t.includes("cardio") || t.includes("heart") || t.includes("cardiac")) return "cardiologist";
+  if (t.includes("orthop") || t.includes("orthopaed") || t.includes("bone") || t.includes("joint")) return "orthopedic";
+  if (t.includes("gynae") || t.includes("gynecol") || t.includes("obstet") || t.includes("maternity") || t.includes("women")) return "gynaecology";
+  if (t.includes("ivf") || t.includes("fertility") || t.includes("infertil") || t.includes("reproduct")) return "ivf";
+  if (t.includes("urol")) return "urology";
+  if (t.includes("ent") || t.includes("ear nose") || t.includes("otolaryng") || t.includes("sinus") || t.includes("hearing")) return "ent";
+  if (t.includes("ophthal") || t.includes("eye") || t.includes("retina") || t.includes("lasik") || t.includes("cataract")) return "ophthalmology";
+  if (t.includes("physio") || t.includes("rehab") || t.includes("rehabilitation")) return "physiotherapy";
+  if (t.includes("psychi") || t.includes("mental health") || t.includes("psycholog") || t.includes("deaddiction")) return "psychiatry";
+  if (t.includes("neurol") || t.includes("neuro") || t.includes("brain")) return "neurology";
+  if (t.includes("pulmon") || t.includes("chest") || t.includes("lung") || t.includes("asthma") || t.includes("respirat")) return "pulmonology";
+  if (t.includes("gastro") || t.includes("digestive") || t.includes("liver") || t.includes("stomach") || t.includes("endoscopy")) return "gastroenterology";
+  if (t.includes("nephrol") || t.includes("kidney") || t.includes("dialysis") || t.includes("renal")) return "nephrology";
+  if (t.includes("diabet") || t.includes("endocrinol") || t.includes("metabolic") || t.includes("thyroid")) return "diabetes";
+  if (t.includes("diagnostic") || t.includes("laboratory") || t.includes("pathology") || t.includes("lab") || t.includes("imaging") || t.includes("scan center")) return "diagnostic";
+  if (t.includes("hospital") || t.includes("multispecialty") || t.includes("multi specialty")) return "hospital";
+  return null;
+}
+
+// ── Main export ────────────────────────────────────────────────────────────────
 export function detectSpeciality(
-  businessName: string, 
-  categories: string[] = [], 
-  address: string = "", 
-  searchQuery: string = ""
+  businessName: string,
+  categories: string[] = [],
+  address: string = "",
+  searchQuery: string = "",
+  primaryTypeSlug?: string | null,           // e.g. "pediatrician" — from Places API v1
+  primaryTypeDisplayName?: string | null     // e.g. "Pediatrician" — from Places API v1
 ): SpecialityBenchmark {
-  const text = (businessName + " " + categories.join(" ") + " " + address + " " + searchQuery).toLowerCase();
-  
-  if (text.includes("pediatr") || text.includes("child") || text.includes("baby") || text.includes("kids") || text.includes("pedia") || text.includes("neonat")) return SPECIALITY_DATABASE["pediatrics"];
-  if (text.includes("derma") || text.includes("skin") || text.includes("cosmet") || text.includes("laser") || text.includes("aesthetic") || text.includes("beauty") || text.includes("hair")) return SPECIALITY_DATABASE["dermatology"];
-  if (text.includes("urology") || text.includes("urologist")) return SPECIALITY_DATABASE["urology"];
-  if (text.includes("ivf") || text.includes("fertility") || text.includes("reproduction") || text.includes("infertility")) return SPECIALITY_DATABASE["ivf"];
-  if (text.includes("orthopedic") || text.includes("orthopaedic") || text.includes("bone") || text.includes("sports injury") || text.includes("joint")) return SPECIALITY_DATABASE["orthopedic"];
+
+  // ── Priority 1: Direct GBP primary type slug match ──────────────────────────
+  // This is the most reliable signal — it's exactly what Google Maps shows
+  // as the business's primary category.
+  if (primaryTypeSlug) {
+    const normalizedSlug = primaryTypeSlug.toLowerCase().trim();
+    const specialtyKey = GBP_TYPE_TO_SPECIALTY[normalizedSlug];
+    if (specialtyKey && SPECIALITY_DATABASE[specialtyKey]) {
+      console.log(`[Specialty] Matched via GBP primaryType slug: "${primaryTypeSlug}" → "${specialtyKey}"`);
+      return SPECIALITY_DATABASE[specialtyKey];
+    }
+  }
+
+  // ── Priority 2: Primary type display name keyword match ──────────────────────
+  // e.g. primaryTypeDisplayName = "Pediatrician" or "Child Specialist"
+  if (primaryTypeDisplayName) {
+    const key = detectByDisplayName(primaryTypeDisplayName);
+    if (key && SPECIALITY_DATABASE[key]) {
+      console.log(`[Specialty] Matched via GBP displayName: "${primaryTypeDisplayName}" → "${key}"`);
+      return SPECIALITY_DATABASE[key];
+    }
+  }
+
+  // ── Priority 3: Business name + all secondary types keyword matching ─────────
+  // Fallback for Classic API path or when primaryType is generic ("doctor", "health")
+  const text = (businessName + " " + categories.join(" ") + " " + searchQuery).toLowerCase();
+
+  if (text.includes("pediatr") || text.includes("child specialist") || text.includes("bal rog") || text.includes("shishu")) return SPECIALITY_DATABASE["pediatrics"];
+  if (text.includes("derma") || text.includes("skin specialist") || text.includes("cosmet") || text.includes("laser") || text.includes("aesthetic")) return SPECIALITY_DATABASE["dermatology"];
+  if (text.includes("urol")) return SPECIALITY_DATABASE["urology"];
+  if (text.includes("ivf") || text.includes("fertility") || text.includes("infertil") || text.includes("reproduct")) return SPECIALITY_DATABASE["ivf"];
+  if (text.includes("orthopedic") || text.includes("orthopaedic") || text.includes("bone") || text.includes("sports injury") || text.includes("joint replace")) return SPECIALITY_DATABASE["orthopedic"];
   if (text.includes("dental") || text.includes("dentist") || text.includes("teeth") || text.includes("orthodon")) return SPECIALITY_DATABASE["dentist"];
   if (text.includes("cardio") || text.includes("heart") || text.includes("cardiac")) return SPECIALITY_DATABASE["cardiologist"];
   if (text.includes("diagnostic") || text.includes("laboratory") || text.includes("pathology") || text.includes("scan center") || text.includes("imaging")) return SPECIALITY_DATABASE["diagnostic"];
   if (text.includes("hospital") || text.includes("multispecialty") || text.includes("multi specialty")) return SPECIALITY_DATABASE["hospital"];
   if (text.includes("diabet") || text.includes("endocrinol") || text.includes("metabolic") || text.includes("thyroid")) return SPECIALITY_DATABASE["diabetes"];
   if (text.includes("gynae") || text.includes("gynecol") || text.includes("obstet") || text.includes("maternity") || text.includes("women")) return SPECIALITY_DATABASE["gynaecology"];
-  if (text.includes(" ent ") || text.includes("ear nose") || text.includes("otolaryngol") || text.includes("sinus") || text.includes("hearing")) return SPECIALITY_DATABASE["ent"];
-  if (text.includes("ophthal") || text.includes("eye") || text.includes("retina") || text.includes("lasik") || text.includes("cataract")) return SPECIALITY_DATABASE["ophthalmology"];
+  if (text.includes(" ent ") || text.includes("ear nose") || text.includes("otolaryng") || text.includes("sinus") || text.includes("hearing")) return SPECIALITY_DATABASE["ent"];
+  if (text.includes("ophthal") || text.includes("eye clinic") || text.includes("retina") || text.includes("lasik") || text.includes("cataract")) return SPECIALITY_DATABASE["ophthalmology"];
   if (text.includes("physio") || text.includes("rehab") || text.includes("rehabilitation")) return SPECIALITY_DATABASE["physiotherapy"];
   if (text.includes("psychi") || text.includes("mental health") || text.includes("psycholog") || text.includes("deaddiction")) return SPECIALITY_DATABASE["psychiatry"];
-  if (text.includes("clinic") || text.includes("doctor") || text.includes("physician") || text.includes("medical") || text.includes("health")) return SPECIALITY_DATABASE["general"];
+  if (text.includes("neurol") || text.includes("neuro") || text.includes("brain")) return SPECIALITY_DATABASE["neurology"];
+  if (text.includes("pulmon") || text.includes("chest") || text.includes("lung") || text.includes("asthma") || text.includes("respirat")) return SPECIALITY_DATABASE["pulmonology"];
+  if (text.includes("gastro") || text.includes("digestive") || text.includes("liver") || text.includes("stomach") || text.includes("endoscopy")) return SPECIALITY_DATABASE["gastroenterology"];
+  if (text.includes("nephrol") || text.includes("kidney") || text.includes("dialysis") || text.includes("renal")) return SPECIALITY_DATABASE["nephrology"];
 
+  // ── Priority 4: Fallback — only fall to "general" if nothing else matched ────
+  // NOTE: We deliberately do NOT match on "doctor", "clinic", "medical", "health"
+  // alone — these are too generic and cause the bug. A name with only those words
+  // goes to "general" which is honest rather than misidentifying specialty.
+  const textWithAddress = text + " " + address.toLowerCase();
+  if (textWithAddress.includes("general physician") || textWithAddress.includes("general practice") || textWithAddress.includes("family medicine")) {
+    return SPECIALITY_DATABASE["general"];
+  }
+
+  // ── Unknown — not enough signal ──────────────────────────────────────────────
   return {
-    speciality: "Unable to determine business specialty",
+    speciality: "General Medical Clinic",
     isUnknown: true,
     expectedRating: 4.5,
     expectedReviewCount: 100,
-    highValueKeywords: [],
-    seasonalOpportunities: [],
-    contentOpportunities: []
+    highValueKeywords: ["Doctor Near Me", "Clinic Near Me", "General Physician"],
+    seasonalOpportunities: ["Annual Health Checkups (Jan)"],
+    contentOpportunities: ["Importance of regular checkups"]
   };
 }

@@ -70,18 +70,38 @@ async function processAuditAsync(auditId: string, data: any) {
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 60 } });
 
     // 2. Classify Healthcare Speciality
+    // Priority: GBP primaryType slug → displayName → business name keywords
     const actualName = placeData?.name || data.name || data.searchQuery;
     const actualCategories = placeData?.types || [];
     const locationStr = placeData?.formattedAddress || data.address || "";
-    const specialityData = detectSpeciality(actualName, actualCategories, locationStr, data.searchQuery || "");
+    const specialityData = detectSpeciality(
+      actualName,
+      actualCategories,
+      locationStr,
+      data.searchQuery || "",
+      placeData?.primaryType || null,                 // e.g. "pediatrician" — Places API v1
+      placeData?.primaryTypeDisplayName || null       // e.g. "Pediatrician" — Places API v1
+    );
+
+    console.log(`[Audit] ${actualName} → Detected specialty: "${specialityData.speciality}" | GBP primaryType: "${placeData?.primaryType}" | displayName: "${placeData?.primaryTypeDisplayName}"`);
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
-    // 3. Fetch Real Competitors — strictly anchored to 5 km radius around clinic coordinates
+    // 3. Fetch Real Competitors — same category, 5 km radius
+    // Build competitor search query from actual GBP category (not generic keywords)
+    // Priority: primaryTypeDisplayName ("Pediatrician") > speciality ("Pediatrician") > highValueKeywords[0]
     const addressParts = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean);
     const cityStr = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "";
-    const specialtySearchKeyword = specialityData.highValueKeywords[0] || specialityData.speciality;
-    const searchString = cityStr ? `${specialtySearchKeyword} in ${cityStr}` : `${specialtySearchKeyword}`;
-    
+
+    // Use the actual GBP display name as competitor search category for maximum accuracy
+    const gbpDisplayCategory = placeData?.primaryTypeDisplayName || null;
+    const specialtyLabel = gbpDisplayCategory || specialityData.speciality;
+    // Build the search string: "Pediatrician in Safdarjung" — same as what patients type
+    const searchString = cityStr
+      ? `${specialtyLabel} in ${cityStr}`
+      : specialtyLabel;
+
+    console.log(`[Audit] Competitor search query: "${searchString}"`);
+
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
     const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(searchString, data.placeId || "", actualName, targetLocation);
 
@@ -157,8 +177,8 @@ async function processAuditAsync(auditId: string, data: any) {
         address: placeData?.formattedAddress || data.address || "Data unavailable",
         websiteUrl: placeData?.website || null,
         
-        // Exact API metrics
-        primaryCategory: placeData?.primaryType || "Data unavailable",
+        // Exact API metrics — use human-readable display name as the stored category
+        primaryCategory: placeData?.primaryTypeDisplayName || placeData?.primaryType || specialityData.speciality,
         secondaryCategories: placeData?.types || [],
         businessType: "Local Healthcare",
         rating: placeData?.rating || null,
@@ -175,7 +195,7 @@ async function processAuditAsync(auditId: string, data: any) {
         // 1. Business Overview
         businessOverview: {
           businessName: placeData?.name || actualName,
-          primaryCategory: placeData?.primaryType || "Not Available",
+          primaryCategory: placeData?.primaryTypeDisplayName || placeData?.primaryType || specialityData.speciality,
           additionalCategories: placeData?.types?.filter(t => t !== placeData?.primaryType) || [],
           address: placeData?.formattedAddress || data.address || "Not Available",
           phone: placeData?.phone || "Not Available",
