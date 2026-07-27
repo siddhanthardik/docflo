@@ -213,16 +213,10 @@ export default function LandingPage() {
                   alt="Professional Clinic Doctor"
                   className="w-full h-[420px] object-cover object-top rounded-2xl"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-lg font-bold">Dr. Vinay Kumar Rai</h4>
-                      <p className="text-xs text-blue-200">Pediatric Specialist · South Delhi</p>
-                    </div>
-                    <span className="bg-emerald-500/90 text-white text-xs font-bold px-3 py-1 rounded-full border border-emerald-400">
-                      Rank #2 Google Maps
-                    </span>
-                  </div>
+                <div className="absolute top-4 right-4 z-10">
+                  <span className="bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md border border-emerald-400">
+                    Rank #1 Google Maps
+                  </span>
                 </div>
               </div>
 
@@ -642,32 +636,23 @@ export default function LandingPage() {
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trusted by Leading Doctors</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-sm text-left">
-            <div className="md:col-span-4 rounded-2xl overflow-hidden shadow-md">
-              <img
-                src="/doctor_consultation_scene.jpg"
-                alt="Doctor Consultation"
-                className="w-full h-56 object-cover"
-              />
+          <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-sm max-w-3xl mx-auto text-left space-y-6">
+            <div className="flex items-center gap-1 text-amber-400">
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-amber-400" />)}
             </div>
-            <div className="md:col-span-8 space-y-4">
-              <div className="flex items-center gap-1 text-amber-400">
-                {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-amber-400" />)}
-              </div>
 
-              <p className="text-base sm:text-lg text-slate-700 italic leading-relaxed">
-                "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #2 on Google Maps within a 5km radius. Patient WhatsApp response rates are incredible."
-              </p>
+            <p className="text-base sm:text-lg text-slate-700 italic leading-relaxed">
+              "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #1 on Google Maps within a 5km radius. Patient WhatsApp response rates are incredible."
+            </p>
 
-              <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                <div>
-                  <h4 className="text-base font-bold text-slate-900">Dr. Vinay Kumar Rai</h4>
-                  <p className="text-xs text-slate-500">Pediatric Specialist · Pediatric Clinic, South Delhi</p>
-                </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                  Rank #2 Google Maps
-                </span>
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+              <div>
+                <h4 className="text-base font-bold text-slate-900">Dr. Vinay Kumar Rai</h4>
+                <p className="text-xs text-slate-500">Pediatric Specialist · Pediatric Clinic, South Delhi</p>
               </div>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                Rank #1 Google Maps
+              </span>
             </div>
           </div>
 
@@ -690,7 +675,7 @@ export default function LandingPage() {
               </Button>
             </Link>
             <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto border-blue-300/60 text-white hover:bg-blue-800/40 rounded-xl px-8 h-14 text-base">
+              <Button variant="outline" className="w-full sm:w-auto border-2 border-white/80 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl px-8 h-14 text-base backdrop-blur-xs">
                 Free Google Profile Audit
               </Button>
             </Link>
