@@ -165,11 +165,11 @@ export async function GET(req: Request) {
 
     // Calculate response rate and stats
     const totalCount = finalReviewsList.length || insights.user_ratings_total || 0;
-    const respondedCount = finalReviewsList.filter((r) => r.responded || r.replied || r.reply).length;
+    const respondedCount = finalReviewsList.filter((r: any) => r.responded || r.replied || r.reply).length;
     const responseRate = totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0;
     const rawRating = (insights.rating && !isNaN(Number(insights.rating)) && Number(insights.rating) > 0)
       ? Number(insights.rating)
-      : (finalReviewsList.length > 0 ? (finalReviewsList.reduce((sum, r) => sum + r.rating, 0) / finalReviewsList.length) : 0);
+      : (finalReviewsList.length > 0 ? (finalReviewsList.reduce((sum: number, r: any) => sum + r.rating, 0) / finalReviewsList.length) : 0);
     const avgRating = (rawRating > 0) ? rawRating.toFixed(1) : "0.0";
 
     // Update insightsData in DB with calculated response rate & user_ratings_total
