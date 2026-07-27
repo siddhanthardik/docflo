@@ -31,12 +31,11 @@ function generateDynamicKeywords(category: string): string[] {
 
 // ── Main export: 100% Dynamic Specialty Detection Engine ─────────────────────
 // Uses Google Places API (New v1) live primaryTypeDisplayName directly.
-// ZERO hardcoded static category dictionary dependencies.
+// Strictly isolated from user search bar queries (searchQuery).
 export function detectSpeciality(
   businessName: string,
   categories: string[] = [],
   address: string = "",
-  searchQuery: string = "",
   primaryTypeSlug?: string | null,           // e.g. "plastic_surgeon", "pediatrician"
   primaryTypeDisplayName?: string | null,    // e.g. "Plastic Surgeon", "Pediatrician"
   reviewsText: string[] = []                 // Patient review snippets
@@ -78,21 +77,20 @@ export function detectSpeciality(
     };
   }
 
-  // ── Priority 3: Dynamic NLP Search across Name, Reviews & Secondary Tags ─
-  // Used ONLY when Google returns generic tags ("doctor", "medical_clinic").
+  // ── Priority 3: Dynamic NLP Search strictly across official profile data ─
+  // ONLY reads official clinic title, categories, and reviews. ZERO search query leakage.
   const fullCorpus = [
     businessName,
     categories.join(" "),
-    searchQuery,
     reviewsText.join(" ")
   ].join(" ").toLowerCase();
 
-  // Distinct Medical Specialty Detection Rules
+  // Distinct Medical Specialty Detection Rules (Supporting both British/Indian & American spellings)
   let detectedLabel: string | null = null;
 
   if (fullCorpus.includes("plastic") || fullCorpus.includes("cosmetic surgeon") || fullCorpus.includes("rhinoplasty") || fullCorpus.includes("liposuction")) {
     detectedLabel = "Plastic & Cosmetic Surgeon";
-  } else if (fullCorpus.includes("pediatr") || fullCorpus.includes("neonat") || fullCorpus.includes("child doctor") || fullCorpus.includes("baby") || fullCorpus.includes("bal rog") || fullCorpus.includes("shishu")) {
+  } else if (fullCorpus.includes("paediatr") || fullCorpus.includes("pediatr") || fullCorpus.includes("neonat") || fullCorpus.includes("child doctor") || fullCorpus.includes("baby") || fullCorpus.includes("bal rog") || fullCorpus.includes("shishu")) {
     detectedLabel = "Pediatrician";
   } else if (fullCorpus.includes("derma") || fullCorpus.includes("skin specialist") || fullCorpus.includes("acne") || fullCorpus.includes("skincare")) {
     detectedLabel = "Dermatologist";
@@ -100,9 +98,9 @@ export function detectSpeciality(
     detectedLabel = "Dental Clinic";
   } else if (fullCorpus.includes("ivf") || fullCorpus.includes("fertility") || fullCorpus.includes("infertility")) {
     detectedLabel = "Fertility Clinic";
-  } else if (fullCorpus.includes("gynae") || fullCorpus.includes("gynecol") || fullCorpus.includes("obstet") || fullCorpus.includes("pregnancy") || fullCorpus.includes("pcos")) {
+  } else if (fullCorpus.includes("gynaec") || fullCorpus.includes("gynec") || fullCorpus.includes("obstet") || fullCorpus.includes("pregnancy") || fullCorpus.includes("pcos")) {
     detectedLabel = "Gynaecology Clinic";
-  } else if (fullCorpus.includes("orthop") || fullCorpus.includes("knee replacement") || fullCorpus.includes("bone doctor") || fullCorpus.includes("joint pain") || fullCorpus.includes("sports injury")) {
+  } else if (fullCorpus.includes("orthopaed") || fullCorpus.includes("orthoped") || fullCorpus.includes("knee replacement") || fullCorpus.includes("bone doctor") || fullCorpus.includes("joint pain") || fullCorpus.includes("sports injury")) {
     detectedLabel = "Orthopedic Clinic";
   } else if (fullCorpus.includes("cardio") || fullCorpus.includes("heart doctor") || fullCorpus.includes("ecg") || fullCorpus.includes("chest pain")) {
     detectedLabel = "Cardiology Clinic";
