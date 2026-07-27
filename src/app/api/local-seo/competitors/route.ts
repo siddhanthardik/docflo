@@ -113,7 +113,7 @@ export async function GET(request: Request) {
     const detected = detectSpeciality(bName, categoryNames, bAddr, doctor?.specialty || "");
     const primaryCategory = !detected.isUnknown 
       ? detected.speciality 
-      : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Pediatrician");
+      : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
 
     // Check if we have coordinates from stored GBP data
     // Try geocoding from address as fallback

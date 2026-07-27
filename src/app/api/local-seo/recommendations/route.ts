@@ -49,11 +49,18 @@ export async function GET(req: Request) {
       const doc = await prisma.doctor.findUnique({ where: { id: session.doctorId }, select: { specialty: true, name: true, clinicName: true } });
       const insights = (gbpAccount.insightsData as any) || {};
 
+      const spec = doc?.specialty || insights.primaryCategory || "Medical Clinic";
+      const categoryExample = spec.toLowerCase().includes("pediat") || spec.toLowerCase().includes("child") ? `"Child Specialist", "Pediatric Clinic", or "Vaccination Center"`
+        : spec.toLowerCase().includes("derma") || spec.toLowerCase().includes("skin") ? `"Skin Care Clinic", "Dermatologist", or "Laser Clinic"`
+        : spec.toLowerCase().includes("denta") || spec.toLowerCase().includes("teeth") ? `"Dental Clinic", "Orthodontist", or "Teeth Whitening"`
+        : spec.toLowerCase().includes("gynae") || spec.toLowerCase().includes("women") ? `"Women's Health Clinic", "Maternity Hospital", or "Gynaecologist"`
+        : `"Specialist Clinic", "Urgent Care", or "Health Center"`;
+
       const initialTasks = [
         {
           category: "PROFILE",
           title: "Add Secondary Categories to Google Profile",
-          description: `Expand profile reach by adding secondary categories such as "Children's Hospital", "Pediatric Clinic", or "Vaccination Center" to rank in multi-keyword patient searches.`,
+          description: `Expand profile reach by adding secondary categories such as ${categoryExample} to rank in multi-keyword patient searches.`,
           priority: "HIGH",
           impact: "+15% Map Pack Visibility",
         },
