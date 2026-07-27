@@ -2,7 +2,7 @@ export class PlacesService {
   private apiKey: string;
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_PLACES_API_KEY!;
+    this.apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY || "";
   }
 
   async searchPlaces(query: string) {

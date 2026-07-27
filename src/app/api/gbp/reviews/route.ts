@@ -95,26 +95,36 @@ export async function GET(req: Request) {
     // Fallback & Auto-backfill: If DB has 0 reviews, check insights.reviews or Places API
     if (storedReviews.length === 0) {
       let fallbackReviews: any[] = insights.reviews || insights.recentReviews || [];
+      const placesApiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
 
       let targetPlaceId = insights.placeId;
-      if (fallbackReviews.length === 0 && !targetPlaceId && insights.name && process.env.GOOGLE_PLACES_API_KEY) {
+      if (fallbackReviews.length === 0 && !targetPlaceId && placesApiKey) {
         try {
-          const placesService = new PlacesService();
-          const searchResults = await placesService.searchPlaces(`${insights.name} ${insights.formattedAddress || ""}`);
-          if (searchResults && searchResults.length > 0) {
-            targetPlaceId = searchResults[0].placeId;
-            insights.placeId = targetPlaceId;
-            await prisma.gbpAccount.update({
-              where: { id: account.id },
-              data: { insightsData: insights }
-            }).catch(e => console.warn("Failed to save placeId to insightsData:", e));
+          let searchQuery = (insights.name && insights.name !== "Google Business Profile") 
+            ? `${insights.name} ${insights.formattedAddress || ""}`
+            : "";
+          if (!searchQuery) {
+            const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { name: true, clinicName: true, city: true } });
+            searchQuery = [doc?.clinicName, doc?.name, doc?.city].filter(Boolean).join(" ");
+          }
+          if (searchQuery) {
+            const placesService = new PlacesService();
+            const searchResults = await placesService.searchPlaces(searchQuery);
+            if (searchResults && searchResults.length > 0) {
+              targetPlaceId = searchResults[0].placeId;
+              insights.placeId = targetPlaceId;
+              await prisma.gbpAccount.update({
+                where: { id: account.id },
+                data: { insightsData: insights }
+              }).catch(e => console.warn("Failed to save placeId to insightsData:", e));
+            }
           }
         } catch (e) {
           console.warn("Could not search placeId via Places API:", e);
         }
       }
 
-      if (fallbackReviews.length === 0 && targetPlaceId && process.env.GOOGLE_PLACES_API_KEY) {
+      if (fallbackReviews.length === 0 && targetPlaceId && placesApiKey) {
         try {
           const placesService = new PlacesService();
           const details = await placesService.getPlaceDetails(targetPlaceId);
