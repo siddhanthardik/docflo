@@ -209,20 +209,33 @@ class WhatsAppManager {
               }
             });
 
-            // Check if this is a reply to the review survey
-            const pendingAppointment = await prisma.appointment.findFirst({
+            // Check if this is a reply to the review survey or a recent completed appointment
+            let pendingAppointment = await prisma.appointment.findFirst({
               where: {
                 doctorId,
-                patientId: conversation.patientId || "",
+                patientId: patient.id,
                 reviewStatus: "SURVEY_SENT"
               },
               orderBy: { createdAt: "desc" }
             });
 
+            if (!pendingAppointment) {
+              pendingAppointment = await prisma.appointment.findFirst({
+                where: {
+                  doctorId,
+                  patientId: patient.id,
+                  status: "COMPLETED",
+                  reviewStatus: { in: ["NOT_SENT", "SURVEY_SENT"] }
+                },
+                orderBy: { createdAt: "desc" }
+              });
+            }
+
             if (pendingAppointment) {
               const textLower = textMessage.trim().toLowerCase();
-              const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good)$/.test(textLower) || textLower.includes("yes");
-              const isNo = /^(no|n|nope|nah|never|bad)$/.test(textLower) || textLower.includes("no");
+              const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
+                textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍");
+              const isNo = /^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower.includes("no") || textLower.includes("bad") || textLower.includes("poor") || textLower.includes("disappointed");
 
               if (isYes) {
                 const reviewLink = await resolveGoogleReviewLink(doctorId);
