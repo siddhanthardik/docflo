@@ -143,7 +143,7 @@ export default function ReviewsPage() {
   const responseRate = stats?.responseRate ?? (totalReviews > 0 ? Math.round((repliedCount / totalReviews) * 100) : (insights.responseRate || 0));
   
   // Calculate average rating strictly from fetched reviews or insights
-  const avgRating = stats?.avgRating || (totalReviews > 0 ? (sortedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / sortedReviews.length).toFixed(1) : (insights.rating ? String(insights.rating) : "0.0"));
+  const avgRating = stats?.avgRating || (insights.rating ? String(insights.rating) : (sortedReviews.length > 0 ? (sortedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / sortedReviews.length).toFixed(1) : "0.0"));
   
   const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
     stars,

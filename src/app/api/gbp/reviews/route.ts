@@ -81,9 +81,10 @@ export async function GET(req: Request) {
     const totalCount = storedReviews.length || insights.user_ratings_total || 0;
     const respondedCount = storedReviews.filter((r) => r.responded || r.reply).length;
     const responseRate = totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0;
-    const avgRating = totalCount > 0 
-      ? (storedReviews.reduce((sum, r) => sum + r.rating, 0) / storedReviews.length).toFixed(1)
-      : (insights.rating || "0.0");
+    const rawRating = (insights.rating && !isNaN(Number(insights.rating)) && Number(insights.rating) > 0)
+      ? Number(insights.rating)
+      : (storedReviews.length > 0 ? (storedReviews.reduce((sum, r) => sum + r.rating, 0) / storedReviews.length) : 0);
+    const avgRating = (rawRating > 0) ? rawRating.toFixed(1) : "0.0";
 
     // Update insightsData in DB with calculated response rate & user_ratings_total
     insights.responseRate = responseRate;

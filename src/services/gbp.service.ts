@@ -394,7 +394,33 @@ export class GBPService {
 
   async getReviews(locationName: string, gbpAccountId?: string) {
     try {
-      if (!locationName.startsWith("accounts/")) {
+      let fullPath = locationName.trim();
+      
+      if (!fullPath.startsWith("accounts/")) {
+        let accountName: string | undefined;
+        if (gbpAccountId) {
+          const acc = await prisma.gbpAccount.findUnique({ where: { id: gbpAccountId } });
+          const insights = (acc?.insightsData as any) || {};
+          accountName = insights.accountName;
+        }
+        if (!accountName) {
+          try {
+            const accountsData = await this.googleFetch<any>(`${LEGACY_GBP_BASE}/accounts`);
+            if (accountsData?.accounts?.[0]?.name) {
+              accountName = accountsData.accounts[0].name;
+            }
+          } catch (e) {
+            console.warn("[GBPService] Could not fetch accounts list:", e);
+          }
+        }
+        if (accountName) {
+          const locPart = fullPath.startsWith("locations/") ? fullPath : `locations/${fullPath}`;
+          fullPath = `${accountName}/${locPart}`;
+        }
+      }
+
+      if (!fullPath.startsWith("accounts/")) {
+        console.warn(`[GBPService] Cannot fetch reviews: location path "${fullPath}" is not in accounts/X/locations/Y format.`);
         return [];
       }
 
@@ -411,7 +437,7 @@ export class GBPService {
         if (pageToken) params.set("pageToken", pageToken);
 
         const data = await this.googleFetch<any>(
-          `${LEGACY_GBP_BASE}/${locationName}/reviews?${params.toString()}`
+          `${LEGACY_GBP_BASE}/${fullPath}/reviews?${params.toString()}`
         );
         
         if (data.reviews) {

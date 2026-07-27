@@ -171,10 +171,17 @@ export async function PUT(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
+    const primaryPractitionerId = (
+      validatedData.primaryPractitionerId &&
+      validatedData.primaryPractitionerId !== "none" &&
+      validatedData.primaryPractitionerId.trim() !== ""
+    ) ? validatedData.primaryPractitionerId : null;
+
     const patient = await prisma.patient.update({
       where: { id },
       data: {
         ...validatedData,
+        primaryPractitionerId,
         dateOfBirth: validatedData.dateOfBirth
           ? new Date(validatedData.dateOfBirth)
           : null,
