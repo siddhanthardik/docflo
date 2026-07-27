@@ -308,14 +308,15 @@ class WhatsAppManager {
                   data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System" }
                 });
 
-                await prisma.appointment.update({
-                  where: { id: pendingAppointment.id },
-                  data: { reviewStatus: "NEGATIVE_RESPONSE" }
-                });
+                if (pendingAppointment) {
+                  await prisma.appointment.update({
+                    where: { id: pendingAppointment.id },
+                    data: { reviewStatus: "NEGATIVE_RESPONSE" }
+                  });
+                }
 
                 return; // Don't pass to AI agent
               }
-            }
 
             // Check if patient is confirming an appointment
             const textLowerConfirm = textMessage.trim().toLowerCase();
