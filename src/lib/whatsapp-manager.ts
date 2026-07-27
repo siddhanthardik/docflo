@@ -433,7 +433,7 @@ class WhatsAppManager {
       console.warn(`[WhatsAppManager] onWhatsApp verification warning for ${cleanPhone}:`, e);
     }
 
-    const sent = await sock.sendMessage(jid, { text });
+    const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
     if (!sent) {
       throw new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
     }
