@@ -141,11 +141,88 @@ export default function FreeAuditPage() {
   const [phone, setPhone] = useState("");
 
   const [isScanning, setIsScanning] = useState(false);
-  const [formError, setFormError] = useState("");
+
+  // Field-level validation errors
+  const [errors, setErrors] = useState<{
+    clinic?: string;
+    name?: string;
+    phone?: string;
+    general?: string;
+  }>({});
+
+  // Per-field touched state (show errors only after user has interacted)
+  const [touched, setTouched] = useState<{
+    clinic?: boolean;
+    name?: boolean;
+    phone?: boolean;
+  }>({});
 
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Phone digit-only enforcement ────────────────────────────────────────────
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, "");
+    setPhone(val);
+    if (touched.phone) {
+      setErrors((prev) => ({ ...prev, phone: validatePhone(val) }));
+    }
+  };
+
+  // ── Name change ─────────────────────────────────────────────────────────────
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    if (touched.name) {
+      setErrors((prev) => ({ ...prev, name: validateName(val) }));
+    }
+  };
+
+  // ── Validation helpers ───────────────────────────────────────────────────────
+  const validateClinic = (place: PlacePrediction | null, query: string): string | undefined => {
+    if (!query.trim()) return "Please type your clinic name and select it from the list.";
+    if (!place) return "Please select your clinic from the dropdown suggestions.";
+    return undefined;
+  };
+
+  const validateName = (val: string): string | undefined => {
+    if (!val.trim()) return "Please enter your name.";
+    if (val.trim().length < 2) return "Name must be at least 2 characters.";
+    if (/[^a-zA-Z\s.'-]/.test(val)) return "Name should only contain letters, spaces, or dots.";
+    return undefined;
+  };
+
+  const getMinPhoneLength = (code: string): number => {
+    // Shorter numbers for some regions (e.g. US = 10, India = 10)
+    const short = ["+1", "+7", "+20", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43", "+44", "+45", "+46", "+47", "+48", "+49", "+51", "+52", "+54", "+55", "+56", "+57", "+60", "+61", "+62", "+63", "+64", "+65", "+66", "+81", "+82", "+84", "+86", "+90", "+91", "+92", "+93", "+94"];
+    return short.includes(code) ? 7 : 5;
+  };
+
+  const validatePhone = (val: string): string | undefined => {
+    if (!val.trim()) return "Please enter your phone number.";
+    if (!/^\d+$/.test(val)) return "Phone number must contain digits only.";
+    const min = getMinPhoneLength(countryCode);
+    if (val.length < min) return `Phone number must be at least ${min} digits.`;
+    if (val.length > 15) return "Phone number is too long.";
+    return undefined;
+  };
+
+  // ── Blur handlers (mark field as touched) ────────────────────────────────────
+  const handleClinicBlur = () => {
+    setTouched((prev) => ({ ...prev, clinic: true }));
+    setErrors((prev) => ({ ...prev, clinic: validateClinic(selectedPlace, searchQuery) }));
+  };
+
+  const handleNameBlur = () => {
+    setTouched((prev) => ({ ...prev, name: true }));
+    setErrors((prev) => ({ ...prev, name: validateName(name) }));
+  };
+
+  const handlePhoneBlur = () => {
+    setTouched((prev) => ({ ...prev, phone: true }));
+    setErrors((prev) => ({ ...prev, phone: validatePhone(phone) }));
+  };
 
   // ── Google Places autocomplete ──────────────────────────────────────────────
   const fetchSuggestions = useCallback(async (input: string) => {
@@ -167,6 +244,10 @@ export default function FreeAuditPage() {
     setSearchQuery(val);
     setSelectedPlace(null);
     setShowDropdown(true);
+    // Clear clinic error while user is typing
+    if (touched.clinic) {
+      setErrors((prev) => ({ ...prev, clinic: "Please select your clinic from the dropdown suggestions." }));
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
   };
@@ -179,6 +260,9 @@ export default function FreeAuditPage() {
     setSearchQuery(label);
     setShowDropdown(false);
     setPredictions([]);
+    // Clear clinic error on selection
+    setErrors((prev) => ({ ...prev, clinic: undefined }));
+    setTouched((prev) => ({ ...prev, clinic: true }));
   };
 
   // ── Outside click ───────────────────────────────────────────────────────────
@@ -196,15 +280,23 @@ export default function FreeAuditPage() {
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError("");
 
-    if (!searchQuery.trim()) { setFormError("Please search and select your clinic."); return; }
-    if (!name.trim()) { setFormError("Please enter your name."); return; }
-    if (!phone.trim() || phone.trim().length < 6) { setFormError("Please enter a valid phone number."); return; }
+    // Mark all fields touched
+    setTouched({ clinic: true, name: true, phone: true });
+
+    const clinicErr = validateClinic(selectedPlace, searchQuery);
+    const nameErr = validateName(name);
+    const phoneErr = validatePhone(phone);
+
+    if (clinicErr || nameErr || phoneErr) {
+      setErrors({ clinic: clinicErr, name: nameErr, phone: phoneErr });
+      return;
+    }
 
     const fullPhone = `${countryCode} ${phone.trim()}`;
 
     setIsScanning(true);
+    setErrors({});
     try {
       // 1. Create Lead first
       const leadRes = await fetch("/api/audit/lead", {
@@ -219,7 +311,7 @@ export default function FreeAuditPage() {
       });
       const leadData = await leadRes.json();
       if (!leadRes.ok || !leadData.lead?.id) {
-        setFormError("Failed to capture lead. Please try again.");
+        setErrors({ general: "Failed to capture lead. Please try again." });
         setIsScanning(false);
         return;
       }
@@ -240,14 +332,15 @@ export default function FreeAuditPage() {
       if (data.auditId) {
         router.push(`/local-seo/free-audit/scan/${data.auditId}`);
       } else {
-        setFormError("Failed to start scan. Please try again.");
+        setErrors({ general: "Failed to start scan. Please try again." });
         setIsScanning(false);
       }
     } catch {
-      setFormError("Connection error. Please try again.");
+      setErrors({ general: "Connection error. Please try again." });
       setIsScanning(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col selection:bg-blue-600 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -349,9 +442,14 @@ export default function FreeAuditPage() {
                       value={searchQuery}
                       onChange={handleInputChange}
                       onFocus={() => predictions.length > 0 && setShowDropdown(true)}
+                      onBlur={handleClinicBlur}
                       disabled={isScanning}
                       autoComplete="off"
-                      className="w-full pl-10 pr-4 h-11 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all"
+                      className={`w-full pl-10 pr-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                        errors.clinic && touched.clinic
+                          ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
+                          : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                      }`}
                     />
 
                     {/* Dropdown */}
@@ -396,7 +494,13 @@ export default function FreeAuditPage() {
                       <span className="text-xs font-semibold text-emerald-800 truncate">{selectedPlace.structured_formatting.main_text} selected</span>
                     </div>
                   )}
-                  <p className="text-[11px] text-slate-400 font-medium pl-1">Type the name, then pick your clinic from the list.</p>
+                  {errors.clinic && touched.clinic ? (
+                    <p className="text-[11px] text-rose-600 font-semibold pl-1 flex items-center gap-1">
+                      <span>⚠</span> {errors.clinic}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 font-medium pl-1">Type the name, then pick your clinic from the list.</p>
+                  )}
                 </div>
 
                 {/* Step 2: Name */}
@@ -409,10 +513,20 @@ export default function FreeAuditPage() {
                     type="text"
                     placeholder="Dr. Priya Sharma"
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={handleNameChange}
+                    onBlur={handleNameBlur}
                     disabled={isScanning}
-                    className="w-full px-4 h-11 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all"
+                    className={`w-full px-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                      errors.name && touched.name
+                        ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
+                        : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                    }`}
                   />
+                  {errors.name && touched.name && (
+                    <p className="text-[11px] text-rose-600 font-semibold pl-1 flex items-center gap-1">
+                      <span>⚠</span> {errors.name}
+                    </p>
+                  )}
                 </div>
 
                 {/* Step 3: Phone */}
@@ -443,17 +557,29 @@ export default function FreeAuditPage() {
                       type="tel"
                       placeholder="98765 43210"
                       value={phone}
-                      onChange={e => setPhone(e.target.value)}
+                      onChange={handlePhoneChange}
+                      onBlur={handlePhoneBlur}
                       disabled={isScanning}
-                      className="flex-1 px-4 h-11 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 focus:bg-white transition-all"
+                      maxLength={15}
+                      inputMode="numeric"
+                      className={`flex-1 px-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                        errors.phone && touched.phone
+                          ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
+                          : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                      }`}
                     />
                   </div>
+                  {errors.phone && touched.phone && (
+                    <p className="text-[11px] text-rose-600 font-semibold pl-1 flex items-center gap-1">
+                      <span>⚠</span> {errors.phone}
+                    </p>
+                  )}
                 </div>
 
-                {/* Error */}
-                {formError && (
+                {/* General API Error */}
+                {errors.general && (
                   <div className="flex items-start gap-2 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl">
-                    <span className="text-rose-600 text-xs font-semibold">{formError}</span>
+                    <span className="text-rose-600 text-xs font-semibold">⚠ {errors.general}</span>
                   </div>
                 )}
 
