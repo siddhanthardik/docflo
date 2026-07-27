@@ -88,23 +88,20 @@ async function processAuditAsync(auditId: string, data: any) {
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     // 3. Fetch Real Competitors — same category, 5 km radius
-    // Build competitor search query from actual GBP category (not generic keywords)
-    // Priority: primaryTypeDisplayName ("Pediatrician") > speciality ("Pediatrician") > highValueKeywords[0]
+    // Build competitor search query from detected specialty (e.g. "Pediatrician")
     const addressParts = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean);
     const cityStr = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "";
 
-    // Use the actual GBP display name as competitor search category for maximum accuracy
+    // Use detected specialty (or specific GBP category label if not generic "Doctor")
     const gbpDisplayCategory = placeData?.primaryTypeDisplayName || null;
-    const specialtyLabel = gbpDisplayCategory || specialityData.speciality;
-    // Build the search string: "Pediatrician in Safdarjung" — same as what patients type
-    const searchString = cityStr
-      ? `${specialtyLabel} in ${cityStr}`
-      : specialtyLabel;
+    const specialtyLabel = (gbpDisplayCategory && gbpDisplayCategory.toLowerCase() !== "doctor")
+      ? gbpDisplayCategory
+      : specialityData.speciality;
 
-    console.log(`[Audit] Competitor search query: "${searchString}"`);
+    console.log(`[Audit] Competitor search query: "${specialtyLabel}" (city context: "${cityStr}")`);
 
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
-    const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(searchString, data.placeId || "", actualName, targetLocation);
+    const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(specialtyLabel, data.placeId || "", actualName, targetLocation);
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     

@@ -197,6 +197,99 @@ export async function searchCompetitorsWithRank(
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 
+  // ── Attempt Places API (New v1) places:searchText ─────────────────────────
+  // Exact same endpoint used by Local SEO Intelligence Dashboard for 100% parity
+  try {
+    const v1Url = "https://places.googleapis.com/v1/places:searchText";
+    const fieldMask = [
+      "places.id",
+      "places.displayName",
+      "places.rating",
+      "places.userRatingCount",
+      "places.primaryType",
+      "places.primaryTypeDisplayName",
+      "places.nationalPhoneNumber",
+      "places.websiteUri",
+      "places.location",
+    ].join(",");
+
+    const requestBody: any = {
+      textQuery: query,
+      maxResultCount: 20,
+    };
+
+    if (location?.lat && location?.lng) {
+      requestBody.locationBias = {
+        circle: {
+          center: { latitude: location.lat, longitude: location.lng },
+          radius: 5000,
+        },
+      };
+    }
+
+    const res = await fetch(v1Url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawPlaces = data.places || [];
+
+      // Detect target clinic index in results
+      let userIndex = -1;
+      if (targetPlaceId) {
+        userIndex = rawPlaces.findIndex((p: any) => p.id === targetPlaceId);
+      }
+      if (userIndex === -1 && targetName) {
+        const cleanTarget = targetName.toLowerCase().replace(/dr\.?|clinic|hospital/g, "").trim();
+        if (cleanTarget.length > 2) {
+          userIndex = rawPlaces.findIndex((p: any) => p.displayName?.text?.toLowerCase().includes(cleanTarget));
+        }
+      }
+
+      const userRank = userIndex !== -1 ? userIndex + 1 : 5;
+
+      const competitors: CompetitorData[] = [];
+      for (const p of rawPlaces) {
+        if (targetPlaceId && p.id === targetPlaceId) continue;
+        if (targetName && p.displayName?.text?.toLowerCase().trim() === targetName.toLowerCase().trim()) continue;
+
+        let distanceKm: number | undefined;
+        if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
+          distanceKm = calculateDistanceKm(
+            location.lat,
+            location.lng,
+            p.location.latitude,
+            p.location.longitude
+          );
+          if (distanceKm > 5) continue;
+        }
+
+        competitors.push({
+          name: p.displayName?.text || "",
+          rating: p.rating || null,
+          reviewCount: p.userRatingCount || null,
+          placeId: p.id || "",
+          distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
+        });
+
+        if (competitors.length >= 4) break;
+      }
+
+      console.log(`[Competitor Search v1] query: "${query}" → Found ${competitors.length} competitors within 5km.`);
+      return { competitors, userRank, userIndexInResults: userIndex };
+    }
+  } catch (err) {
+    console.warn("[Competitor Search v1] Error, falling back to Classic API:", err);
+  }
+
+  // ── Fallback: Classic Text Search ──────────────────────────────────────────
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", query);
   if (location?.lat && location?.lng) {
@@ -220,7 +313,6 @@ export async function searchCompetitorsWithRank(
 
     const rawResults = data.results;
 
-    // Detect target clinic position in results
     let userIndex = -1;
     if (targetPlaceId) {
       userIndex = rawResults.findIndex((r: any) => r.place_id === targetPlaceId);
@@ -234,7 +326,6 @@ export async function searchCompetitorsWithRank(
 
     const userRank = userIndex !== -1 ? userIndex + 1 : 5;
 
-    // Gather top competitors within 5 km (excluding target clinic)
     const competitors: CompetitorData[] = [];
     for (const r of rawResults) {
       if (targetPlaceId && r.place_id === targetPlaceId) continue;
