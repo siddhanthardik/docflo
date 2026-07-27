@@ -194,17 +194,10 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={() => handleSendReviewRequest(false)}
                 disabled={sendingReview}
-                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
-                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                {sendingReview ? "Sending..." : "Request Review"}
-              </button>
-              <button
-                onClick={() => router.push(`/book/${patient.doctorId}?patient=${patient.id}`)}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
-              >
-                <Calendar className="h-4 w-4" />
-                Book
+                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                {sendingReview ? "Sending..." : "Send Review Survey"}
               </button>
             </div>
           </div>
@@ -239,34 +232,22 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
                   <h2 className="text-2xl font-bold text-gray-900">{fullName}</h2>
                   
-                  {patient.primaryPractitioner ? (
+                  {patient.primaryPractitioner && (
                     <div className="mt-2 flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg w-fit">
                       <Users className="h-4 w-4" />
                       Assigned to {patient.primaryPractitioner.name}
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg w-fit border border-gray-100">
-                      <Users className="h-4 w-4" />
-                      Unassigned (Clinic)
                     </div>
                   )}
 
                   {/* Mobile Action Buttons */}
                   <div className="mt-6 flex md:hidden items-center gap-2 w-full">
                     <button
-                      onClick={() => router.push(`/book/${patient.doctorId}?patient=${patient.id}`)}
-                      className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
-                    >
-                      <Calendar className="h-4 w-4" />
-                      Book
-                    </button>
-                    <button
                       onClick={() => handleSendReviewRequest(false)}
                       disabled={sendingReview}
-                      className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                      className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
-                      <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                      {sendingReview ? "Wait..." : "Review"}
+                      <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                      {sendingReview ? "Sending..." : "Send Review Survey"}
                     </button>
                     <button
                       onClick={() => setIsEditModalOpen(true)}
@@ -357,13 +338,13 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 <FileText className="h-4 w-4" />
                 Create Invoice
               </button>
-              <button className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 transition-all">
-                <Plus className="h-4 w-4" />
-                Add Clinical Note
-              </button>
-              <button className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 transition-all">
-                <Activity className="h-4 w-4" />
-                Log Call
+              <button 
+                onClick={() => handleSendReviewRequest(false)}
+                disabled={sendingReview}
+                className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 disabled:opacity-50 transition-all"
+              >
+                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                {sendingReview ? "Sending Survey..." : "Send Review Survey"}
               </button>
             </div>
 
