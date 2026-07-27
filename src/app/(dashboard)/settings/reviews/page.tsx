@@ -353,8 +353,8 @@ export default function ReviewsAndMessagingSettingsPage() {
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900">Invoices & Payment Receipts</h3>
-                    <p className="text-xs text-gray-500">Deliver digital invoices and payment confirmations directly to patient WhatsApp.</p>
+                    <h3 className="text-base font-semibold text-gray-900">Invoices & Billing Notifications</h3>
+                    <p className="text-xs text-gray-500">Control automated WhatsApp messages sent during billing and invoice generation.</p>
                   </div>
                 </div>
 
@@ -363,7 +363,7 @@ export default function ReviewsAndMessagingSettingsPage() {
                   <div className="flex items-center justify-between pt-3 first:pt-0">
                     <div className="space-y-0.5 max-w-md">
                       <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                        WhatsApp PDF Invoice Sharing
+                        Invoice PDF Delivery
                       </Label>
                       <p className="text-xs text-gray-500">Sends PDF invoice attachments with patient summaries over WhatsApp when created.</p>
                     </div>
@@ -377,7 +377,7 @@ export default function ReviewsAndMessagingSettingsPage() {
                   <div className="flex items-center justify-between pt-4">
                     <div className="space-y-0.5 max-w-md">
                       <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                        Automated Payment Receipt Notice
+                        Payment Receipt Confirmation
                       </Label>
                       <p className="text-xs text-gray-500">Sends instant WhatsApp payment confirmation receipts when invoices are marked PAID.</p>
                     </div>

@@ -12,9 +12,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id: patientId } = await params;
     const body = await req.json().catch(() => ({}));
     const overrideCooldown = body.overrideCooldown || false;
+    const requestType = body.type === "GOOGLE_REVIEW" ? "GOOGLE_REVIEW" : "SURVEY";
 
     // Use dispatcher service for manual sending
-    await ReviewDispatcherService.manualSendReviewRequest(patientId, "", doctorId, overrideCooldown);
+    await ReviewDispatcherService.manualSendReviewRequest(patientId, "", doctorId, overrideCooldown, requestType);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

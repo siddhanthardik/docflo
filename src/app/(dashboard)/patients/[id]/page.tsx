@@ -107,14 +107,17 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [sendingReview, setSendingReview] = useState(false);
   const [showCooldownOverride, setShowCooldownOverride] = useState(false);
 
-  const handleSendReviewRequest = async (overrideCooldown = false) => {
+  const [pendingType, setPendingType] = useState<"SURVEY" | "GOOGLE_REVIEW">("GOOGLE_REVIEW");
+
+  const handleSendReviewRequest = async (overrideCooldown = false, type: "SURVEY" | "GOOGLE_REVIEW" = "GOOGLE_REVIEW") => {
     if (!patient) return;
     setSendingReview(true);
+    setPendingType(type);
     try {
       const res = await fetch(`/api/patients/${patient.id}/request-review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ overrideCooldown })
+        body: JSON.stringify({ overrideCooldown, type })
       });
       
       const data = await res.json();
@@ -126,7 +129,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
           throw new Error(data.error || "Failed to send review request");
         }
       } else {
-        toast({ title: "Success", description: "Review request sent via WhatsApp!" });
+        const msgType = type === "GOOGLE_REVIEW" ? "Google Review link" : "Feedback survey";
+        toast({ title: "Success", description: `${msgType} sent via WhatsApp!` });
         setShowCooldownOverride(false);
       }
     } catch (e: any) {
@@ -192,12 +196,12 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 Edit
               </button>
               <button
-                onClick={() => handleSendReviewRequest(false)}
+                onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
                 disabled={sendingReview}
                 className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                {sendingReview ? "Sending..." : "Send Review Survey"}
+                {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending Link..." : "Send Google Review"}
               </button>
             </div>
           </div>
@@ -339,12 +343,12 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 Create Invoice
               </button>
               <button 
-                onClick={() => handleSendReviewRequest(false)}
+                onClick={() => handleSendReviewRequest(false, "SURVEY")}
                 disabled={sendingReview}
                 className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 disabled:opacity-50 transition-all"
               >
                 <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                {sendingReview ? "Sending Survey..." : "Send Review Survey"}
+                {sendingReview && pendingType === "SURVEY" ? "Sending Survey..." : "Send Feedback Survey"}
               </button>
             </div>
 

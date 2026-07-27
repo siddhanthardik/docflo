@@ -173,21 +173,28 @@ export class ReviewDispatcherService {
   }
 
   /**
-   * Manual send review request by staff
+   * Manual send review request or direct Google review link by staff
    */
-  static async manualSendReviewRequest(patientId: string, appointmentId: string, doctorId: string, overrideCooldown: boolean = false) {
+  static async manualSendReviewRequest(
+    patientId: string, 
+    appointmentId: string, 
+    doctorId: string, 
+    overrideCooldown: boolean = false,
+    requestType: "SURVEY" | "GOOGLE_REVIEW" = "SURVEY"
+  ) {
     if (!whatsappManager.isConnected(doctorId)) {
       throw new Error("WhatsApp is not connected. Please connect your device in WhatsApp Settings to send review requests.");
     }
 
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      select: { clinicName: true, reviewCooldownDays: true, reviewSurveyMessage: true }
+      select: { clinicName: true, reviewCooldownDays: true, reviewSurveyMessage: true, reviewGoogleInvitationMessage: true }
     });
     if (!doctor) throw new Error("Doctor not found");
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) throw new Error("Patient not found");
+    if (!patient.phone) throw new Error("Patient has no phone number recorded.");
     
     if (!overrideCooldown && patient.lastReviewRequestedAt) {
       const cooldownDays = doctor.reviewCooldownDays || 90;
@@ -197,10 +204,20 @@ export class ReviewDispatcherService {
       }
     }
 
-    const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
-    const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
-    const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
-    const finalMessage = surveyMessage + optOutMsg;
+    let finalMessage = "";
+
+    if (requestType === "GOOGLE_REVIEW") {
+      const reviewLink = await resolveGoogleReviewLink(doctorId);
+      const defaultReply = `Hi ${patient.firstName}, thank you for choosing ${doctor.clinicName || "our clinic"}! 🌟\n\nIf you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much!`;
+      finalMessage = doctor.reviewGoogleInvitationMessage 
+        ? doctor.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
+        : defaultReply;
+    } else {
+      const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
+      const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
+      const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
+      finalMessage = surveyMessage + optOutMsg;
+    }
 
     const normalizedPhone = await whatsappManager.sendMessage(doctorId, patient.phone, finalMessage);
 
@@ -233,7 +250,7 @@ export class ReviewDispatcherService {
     if (appointmentId) {
       await prisma.appointment.update({
         where: { id: appointmentId },
-        data: { reviewStatus: "SURVEY_SENT", reviewRequested: true }
+        data: { reviewStatus: requestType === "GOOGLE_REVIEW" ? "LINK_SENT" : "SURVEY_SENT", reviewRequested: true }
       });
     }
 
