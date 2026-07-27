@@ -148,23 +148,20 @@ async function processAuditAsync(auditId: string, data: any) {
 
     const reviewCountStr = placeData?.reviewCount ? placeData.reviewCount.toString() : "0";
     const ratingStr = placeData?.rating ? placeData.rating.toString() : "N/A";
-    const avgReviews = specialityData.expectedReviewCount || 0;
-    
-    // Competitor average metrics — use MEDIAN to prevent a single hospital
-    // with 50k reviews from inflating the average (e.g., showing 3843 for a lab).
-    // Also cap each competitor at 3× the specialty benchmark before calculation.
-    const reviewCap = specialityData.expectedReviewCount * 3;
-    const cappedReviews = competitorsData
-      .map(c => Math.min(c.reviewCount || 0, reviewCap))
+    // Competitor average metrics — compute live median review count from top competitors in 5km radius
+    const compReviewCounts = competitorsData
+      .map(c => c.reviewCount || 0)
+      .filter(cnt => cnt > 0)
       .sort((a, b) => a - b);
-    const compAvgReviews = cappedReviews.length > 0
+
+    const compAvgReviews = compReviewCounts.length > 0
       ? (() => {
-          const mid = Math.floor(cappedReviews.length / 2);
-          return cappedReviews.length % 2 !== 0
-            ? cappedReviews[mid]
-            : Math.round((cappedReviews[mid - 1] + cappedReviews[mid]) / 2);
+          const mid = Math.floor(compReviewCounts.length / 2);
+          return compReviewCounts.length % 2 !== 0
+            ? compReviewCounts[mid]
+            : Math.round((compReviewCounts[mid - 1] + compReviewCounts[mid]) / 2);
         })()
-      : avgReviews;
+      : 100;
 
     // 5. Save to Database (Mapping to Diagnostic Report sections)
     const report = await prisma.auditReport.create({
