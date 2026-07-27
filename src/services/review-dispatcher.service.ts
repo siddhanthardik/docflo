@@ -2,16 +2,56 @@ import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 
 export async function resolveGoogleReviewLink(doctorId: string): Promise<string> {
-  // 1. Check GbpAccount insightsData or locationId strictly for THIS doctorId
-  const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
-  let placeId = (gbp?.insightsData as any)?.placeId;
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+    select: { clinicName: true, address: true, city: true }
+  });
+  const clinicName = doctor?.clinicName || "";
 
-  // 2. Return Google Review URL if placeId belongs to this doctor
-  if (placeId) {
-    return `https://search.google.com/local/writereview?placeid=${placeId}`;
+  // 1. Check GbpAccount connected to THIS doctor
+  const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
+  
+  if (gbp) {
+    const insights = (gbp.insightsData as any) || {};
+    
+    // Check direct Google Review URI from GBP API
+    if (insights.newReviewUri && typeof insights.newReviewUri === "string" && insights.newReviewUri.trim().length > 0) {
+      return insights.newReviewUri.trim();
+    }
+    if (insights.googleReviewUrl && typeof insights.googleReviewUrl === "string" && insights.googleReviewUrl.trim().length > 0) {
+      return insights.googleReviewUrl.trim();
+    }
+    if (insights.placeId && typeof insights.placeId === "string" && insights.placeId.trim().length > 0) {
+      return `https://search.google.com/local/writereview?placeid=${insights.placeId.trim()}`;
+    }
+    if (insights.place_id && typeof insights.place_id === "string" && insights.place_id.trim().length > 0) {
+      return `https://search.google.com/local/writereview?placeid=${insights.place_id.trim()}`;
+    }
   }
 
-  // If no GBP profile is connected for this doctor account, throw user-facing error
+  // 2. Check if doctor has a Google Places API place_id using clinicName + address
+  if (clinicName) {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (apiKey) {
+      try {
+        const query = encodeURIComponent(`${clinicName} ${doctor?.address || ""} ${doctor?.city || ""}`.trim());
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`);
+        const data = await res.json();
+        if (data.status === "OK" && data.results && data.results.length > 0 && data.results[0].place_id) {
+          return `https://search.google.com/local/writereview?placeid=${data.results[0].place_id}`;
+        }
+      } catch (e) {
+        console.warn("[resolveGoogleReviewLink] Google Places API search failed:", e);
+      }
+    }
+  }
+
+  // 3. If doctor has a GBP account record or clinicName, fallback to Google Search for THIS clinic
+  if (gbp || (clinicName && clinicName !== "our clinic")) {
+    return `https://www.google.com/search?q=${encodeURIComponent(clinicName + " " + (doctor?.city || ""))}`;
+  }
+
+  // 4. If doctor has NO GBP profile and NO clinic name configured
   throw new Error("Google Business Profile is not connected. Please connect your GBP profile in GBP Profile settings to send Google review requests.");
 }
 
