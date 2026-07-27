@@ -74,8 +74,6 @@ class WhatsAppManager {
       syncFullHistory: false,
     });
 
-    this.sockets.set(doctorId, sock);
-
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
@@ -87,6 +85,9 @@ class WhatsAppManager {
       }
 
       if (connection === 'close') {
+        // ALWAYS remove socket on connection close so isConnected() immediately returns false
+        this.sockets.delete(doctorId);
+
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         
@@ -102,7 +103,6 @@ class WhatsAppManager {
         } else {
           // Genuinely logged out from the phone app (401)
           console.log(`[WhatsAppManager] Device logged out for ${doctorId}. Clearing session.`);
-          this.sockets.delete(doctorId);
           this.qrCodes.delete(doctorId);
           // Delete auth folder safely
           if (fs.existsSync(sessionDir)) {
@@ -126,6 +126,7 @@ class WhatsAppManager {
         }
       } else if (connection === 'open') {
         console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
+        this.sockets.set(doctorId, sock);
         this.qrCodes.delete(doctorId); // Clear QR once connected
       }
     });
