@@ -20,13 +20,19 @@ export function LandingHeader() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
-            {["Overview", "Data Architecture", "Features", "Process"].map((item) => (
+            {[
+              { label: "Growth Platform", href: "/#growth-platform" },
+              { label: "Local SEO", href: "/#local-seo" },
+              { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
+              { label: "Patient Management", href: "/#patient-management" },
+              { label: "ROI Calculator", href: "/#roi-calculator" },
+            ].map((item) => (
               <Link
-                key={item}
-                href={`/#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+                key={item.label}
+                href={item.href}
+                className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
               >
-                {item}
+                {item.label}
               </Link>
             ))}
           </nav>
@@ -66,15 +72,21 @@ export function LandingHeader() {
             </button>
           </div>
           
-          <nav className="flex flex-col gap-6 text-lg font-medium text-slate-700">
-            {["Overview", "Data Architecture", "Features", "Process"].map((item) => (
+          <nav className="flex flex-col gap-6 text-lg font-semibold text-slate-700">
+            {[
+              { label: "Growth Platform", href: "/#growth-platform" },
+              { label: "Local SEO", href: "/#local-seo" },
+              { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
+              { label: "Patient Management", href: "/#patient-management" },
+              { label: "ROI Calculator", href: "/#roi-calculator" },
+            ].map((item) => (
               <Link
-                key={item}
-                href={`/#${item.toLowerCase().replace(/\s+/g, "-")}`}
+                key={item.label}
+                href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
               >
-                {item}
+                {item.label}
               </Link>
             ))}
           </nav>
