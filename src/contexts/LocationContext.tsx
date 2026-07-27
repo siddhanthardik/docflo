@@ -28,38 +28,32 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch available locations for the user
   useEffect(() => {
-    if (status === "authenticated") {
-      fetch("/api/gbp/profiles")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.connected) {
-            setConnected(true);
-            if (Array.isArray(data.accounts)) {
-              setAccounts(data.accounts);
-              
-              // Try to load saved preference from localStorage
-              const savedLocationId = localStorage.getItem("gyrex_active_location");
-              if (savedLocationId && data.accounts.some((p: GbpAccount) => p.id === savedLocationId)) {
-                setActiveLocationId(savedLocationId);
-              } else if (data.accounts.length > 0) {
-                // Auto-select first if none saved
-                setActiveLocationId(data.accounts[0].id);
-              }
+    setIsLoading(true);
+    fetch("/api/gbp/profiles")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.connected) {
+          setConnected(true);
+          if (Array.isArray(data.accounts)) {
+            setAccounts(data.accounts);
+            
+            // Try to load saved preference from localStorage
+            const savedLocationId = localStorage.getItem("gyrex_active_location");
+            if (savedLocationId && data.accounts.some((p: GbpAccount) => p.id === savedLocationId)) {
+              setActiveLocationId(savedLocationId);
+            } else if (data.accounts.length > 0) {
+              // Auto-select first if none saved
+              setActiveLocationId(data.accounts[0].id);
             }
-          } else {
-            setConnected(false);
-            setAccounts([]);
           }
-        })
-        .catch(console.error)
-        .finally(() => setIsLoading(false));
-    } else if (status === "unauthenticated") {
-      setIsLoading(false);
-      setConnected(false);
-      setAccounts([]);
-      setActiveLocationId(null);
-    }
-  }, [status]);
+        } else {
+          setConnected(false);
+          setAccounts([]);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   // Save to localStorage and cookie when changed
   useEffect(() => {

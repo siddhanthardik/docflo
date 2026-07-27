@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const session = await getSessionData();
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
-    const account = await prisma.gbpAccount.findFirst({ where: { doctorId: session.doctorId, lastSyncAt: { not: null } }, orderBy: { updatedAt: 'desc' } });
+    const account = await prisma.gbpAccount.findFirst({ where: { doctorId: session.doctorId }, orderBy: { updatedAt: 'desc' } });
     if (!account) return NextResponse.json({ error: "No GBP Account connected" }, { status: 400 });
 
     const searchParams = new URL(request.url).searchParams;
@@ -28,26 +28,32 @@ export async function GET(request: Request) {
       orderBy: { date: 'desc' }
     });
 
+    const insights = (account.insightsData as any) || {};
     const profileData = latestProfile?.json as any;
-    const bName = profileData?.name || account.locationName || "";
-    const bCats = profileData?.categories || profileData?.types || [];
-    const bAddr = profileData?.address || "";
+    const bName = insights.name || profileData?.name || account.locationName || "";
+    const bCats = profileData?.categories || profileData?.types || insights.categories || [];
+    const bAddr = insights.formattedAddress || profileData?.address || "";
     const detected = detectSpeciality(bName, bCats, bAddr);
     const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || "Medical Clinic") : detected.speciality;
+
+    const views = comparisons.find(c => c.metric === 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH')?.currentValue || insights.views || insights.user_ratings_total || 0;
+    const calls = comparisons.find(c => c.metric === 'CALL_CLICKS')?.currentValue || insights.calls || 0;
+    const directionRequests = comparisons.find(c => c.metric === 'BUSINESS_DIRECTION_REQUESTS')?.currentValue || 0;
+    const websiteClicks = comparisons.find(c => c.metric === 'WEBSITE_CLICKS')?.currentValue || 0;
 
     return NextResponse.json({
       data: {
         comparisons,
         businessName: bName,
         primaryCategory,
-        views: comparisons.find(c => c.metric === 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH')?.currentValue || 0,
-        calls: comparisons.find(c => c.metric === 'CALL_CLICKS')?.currentValue || 0,
-        directionRequests: comparisons.find(c => c.metric === 'BUSINESS_DIRECTION_REQUESTS')?.currentValue || 0,
-        websiteClicks: comparisons.find(c => c.metric === 'WEBSITE_CLICKS')?.currentValue || 0,
+        views,
+        calls,
+        directionRequests,
+        websiteClicks,
         services: profileData?.services || [],
       },
       source: "Google Business Profile Performance API",
-      lastUpdated: latestPerformance?.date || latestProfile?.date || null
+      lastUpdated: latestPerformance?.date || latestProfile?.date || account.lastSyncAt || null
     });
   } catch (error: any) {
     console.error("Overview API Error:", error);

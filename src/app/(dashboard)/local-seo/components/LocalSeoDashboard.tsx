@@ -112,9 +112,15 @@ function CompactVisibilityScore({ score, status }: { score: number; status: stri
 }
 
 // ── Google Performance Compact Card ───────────────────────────────────────
-function GooglePerformanceCompact({ performanceData }: { performanceData: any }) {
-  let desktopSearch = 0, mobileSearch = 0, desktopMaps = 0, mobileMaps = 0;
-  let websiteClicks = 0, callClicks = 0, directionRequests = 0, bookings = 0;
+function CompactPerformanceCard({ performanceData, overviewData }: { performanceData: any; overviewData: any }) {
+  let desktopSearch = 0;
+  let mobileSearch = 0;
+  let desktopMaps = 0;
+  let mobileMaps = 0;
+  let websiteClicks = 0;
+  let callClicks = 0;
+  let directionRequests = 0;
+  let bookings = 0;
 
   if (performanceData?.multiDailyMetricTimeSeries) {
     for (const multiSeries of performanceData.multiDailyMetricTimeSeries) {
@@ -140,7 +146,12 @@ function GooglePerformanceCompact({ performanceData }: { performanceData: any })
     }
   }
 
-  const totalViews = desktopSearch + mobileSearch + desktopMaps + mobileMaps;
+  const rawViews = desktopSearch + mobileSearch + desktopMaps + mobileMaps;
+  const totalViews = rawViews || overviewData?.data?.views || overviewData?.views || 0;
+  const finalCalls = callClicks || overviewData?.data?.calls || overviewData?.calls || 0;
+  const finalWeb = websiteClicks || overviewData?.data?.websiteClicks || overviewData?.websiteClicks || 0;
+  const finalDirections = directionRequests || overviewData?.data?.directionRequests || overviewData?.directionRequests || 0;
+
   const pieData = [
     { name: "Search Mobile", value: mobileSearch, color: "#f59e0b" },
     { name: "Search Desktop", value: desktopSearch, color: "#3b82f6" },
@@ -167,15 +178,15 @@ function GooglePerformanceCompact({ performanceData }: { performanceData: any })
           <div className="grid grid-cols-2 gap-2 mt-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
               <span className="text-xs text-gray-500 flex items-center gap-1"><Globe className="w-3 h-3 text-blue-500 shrink-0" />Web</span>
-              <span className="text-xs font-bold text-gray-900">{websiteClicks}</span>
+              <span className="text-xs font-bold text-gray-900">{finalWeb}</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
               <span className="text-xs text-gray-500 flex items-center gap-1"><Navigation className="w-3 h-3 text-emerald-500 shrink-0" />Maps</span>
-              <span className="text-xs font-bold text-gray-900">{directionRequests}</span>
+              <span className="text-xs font-bold text-gray-900">{finalDirections}</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
               <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3 text-amber-500 shrink-0" />Calls</span>
-              <span className="text-xs font-bold text-gray-900">{callClicks}</span>
+              <span className="text-xs font-bold text-gray-900">{finalCalls}</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
               <span className="text-xs text-gray-500 flex items-center gap-1"><CalendarCheck2 className="w-3 h-3 text-purple-500 shrink-0" />Book</span>
@@ -430,7 +441,7 @@ export function LocalSeoDashboard() {
               />
             </div>
             <div className="lg:col-span-2">
-              <GooglePerformanceCompact performanceData={performanceData} />
+              <CompactPerformanceCard performanceData={performanceData} overviewData={overviewData} />
             </div>
           </div>
 

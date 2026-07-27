@@ -55,83 +55,66 @@ export async function GET(req: Request) {
       fullLocationPath = `${insights.accountName}/${locPart}`;
     }
 
-    if (fullLocationPath.startsWith("accounts/")) {
-      try {
-        const tokenData = await getValidGbpAccessToken(doctorId);
-        if (tokenData) {
-          const gbpService = new GBPService(tokenData.accessToken, doctorId);
-          await gbpService.getReviews(fullLocationPath, account.id);
+    // Attempt to fetch fresh reviews from Google API
+    try {
+      const tokenData = await getValidGbpAccessToken(doctorId);
+      if (tokenData) {
+        const gbpService = new GBPService(tokenData.accessToken, doctorId);
+        const locationToFetch = fullLocationPath.startsWith("accounts/") 
+          ? fullLocationPath 
+          : (tokenData.account?.locationName || account.locationName);
+        if (locationToFetch) {
+          await gbpService.getReviews(locationToFetch, account.id);
         }
-      } catch (err) {
-        console.warn("Could not fetch fresh OAuth GBP reviews:", err);
       }
-
-      const storedReviews = await prisma.review.findMany({
-        where: { doctorId, source: "GOOGLE", gbpAccountId: account.id },
-        orderBy: { reviewDate: "desc" },
-      });
-
-      return NextResponse.json({
-        connected: true,
-        insights: {
-          name: insights.name || "Google Business Profile",
-          formattedAddress: insights.formattedAddress || "",
-          rating: insights.rating || 0,
-          user_ratings_total: insights.user_ratings_total || storedReviews.length,
-          phone: insights.phone || "",
-          website: insights.website || "",
-          placeId: insights.placeId || null,
-          mapsUri: insights.mapsUri || "",
-          newReviewUri: insights.newReviewUri || "",
-        },
-        reviews: storedReviews.map(mapStoredReview),
-      });
+    } catch (err) {
+      console.warn("Could not fetch fresh OAuth GBP reviews:", err);
     }
 
-    if (!account.insightsData) {
-      return NextResponse.json({
-        connected: false,
-        insights: null,
-        reviews: [],
-      });
-    }
+    // Fetch stored reviews from DB
+    let storedReviews = await prisma.review.findMany({
+      where: { doctorId, source: "GOOGLE" },
+      orderBy: { reviewDate: "desc" },
+    });
 
-    let reviews: any[] = [];
-    if (insights.placeId && process.env.GOOGLE_PLACES_API_KEY) {
-      try {
-        const placesService = new PlacesService();
-        const details = await placesService.getPlaceDetails(insights.placeId);
-        reviews = (details.reviews || []).map((r: any) => ({
-          author_name: r.author_name,
-          rating: r.rating,
-          text: r.text,
-          relative_time_description: r.relative_time_description,
-          time: r.time,
-        }));
-        insights.reviews = reviews;
-        await prisma.gbpAccount.updateMany({ where: { doctorId },
-          data: { insightsData: insights },
-        });
-      } catch (err) {
-        console.warn("Could not fetch fresh reviews from Places:", err);
-        reviews = insights.reviews || [];
-      }
-    } else {
-      reviews = insights.reviews || [];
-    }
+    // Calculate response rate and stats
+    const totalCount = storedReviews.length || insights.user_ratings_total || 0;
+    const respondedCount = storedReviews.filter((r) => r.responded || r.reply).length;
+    const responseRate = totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0;
+    const avgRating = totalCount > 0 
+      ? (storedReviews.reduce((sum, r) => sum + r.rating, 0) / storedReviews.length).toFixed(1)
+      : (insights.rating || "0.0");
+
+    // Update insightsData in DB with calculated response rate & user_ratings_total
+    insights.responseRate = responseRate;
+    insights.rating = Number(avgRating);
+    insights.user_ratings_total = totalCount;
+    await prisma.gbpAccount.update({
+      where: { id: account.id },
+      data: { insightsData: insights }
+    }).catch(e => console.warn("Failed to update gbpAccount insights responseRate:", e));
 
     return NextResponse.json({
       connected: true,
+      stats: {
+        avgRating,
+        totalReviews: totalCount,
+        responseRate,
+        needsReply: totalCount - respondedCount,
+      },
       insights: {
-        name: insights.name || "N/A",
+        name: insights.name || "Google Business Profile",
         formattedAddress: insights.formattedAddress || "",
         rating: insights.rating || 0,
-        user_ratings_total: insights.user_ratings_total || 0,
+        user_ratings_total: totalCount,
+        responseRate,
         phone: insights.phone || "",
         website: insights.website || "",
         placeId: insights.placeId || null,
+        mapsUri: insights.mapsUri || "",
+        newReviewUri: insights.newReviewUri || "",
       },
-      reviews,
+      reviews: storedReviews.map(mapStoredReview),
     });
   } catch (error) {
     console.error("Error fetching GBP reviews:", error);

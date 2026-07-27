@@ -137,13 +137,13 @@ export default function ReviewsPage() {
   // Sort by newest first
   const sortedReviews = reviews ? [...reviews].sort((a: any, b: any) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime()) : [];
 
-  const totalReviews = sortedReviews.length;
-  const repliedCount = sortedReviews.filter((r: any) => r.replied).length;
-  const needsReplyCount = totalReviews - repliedCount;
-  const responseRate = totalReviews > 0 ? Math.round((repliedCount / totalReviews) * 100) : 0;
+  const totalReviews = stats?.totalReviews || sortedReviews.length || insights.user_ratings_total || 0;
+  const repliedCount = sortedReviews.filter((r: any) => r.replied || r.reply).length;
+  const needsReplyCount = stats?.needsReply ?? Math.max(0, totalReviews - repliedCount);
+  const responseRate = stats?.responseRate ?? (totalReviews > 0 ? Math.round((repliedCount / totalReviews) * 100) : (insights.responseRate || 0));
   
-  // Calculate average rating strictly from fetched reviews
-  const avgRating = totalReviews > 0 ? (sortedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / totalReviews).toFixed(1) : "0.0";
+  // Calculate average rating strictly from fetched reviews or insights
+  const avgRating = stats?.avgRating || (totalReviews > 0 ? (sortedReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / sortedReviews.length).toFixed(1) : (insights.rating ? String(insights.rating) : "0.0"));
   
   const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
     stars,
