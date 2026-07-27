@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const sessionData = await getSessionData();
+    if (!sessionData || !sessionData.doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = sessionData.doctorId;
 
     // Fetch review metrics from the Appointment table
     const stats = await prisma.appointment.groupBy({

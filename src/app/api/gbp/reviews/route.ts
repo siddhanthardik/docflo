@@ -81,10 +81,28 @@ export async function GET(req: Request) {
     if (storedReviews.length === 0) {
       let fallbackReviews: any[] = insights.reviews || insights.recentReviews || [];
 
-      if (fallbackReviews.length === 0 && insights.placeId && process.env.GOOGLE_PLACES_API_KEY) {
+      let targetPlaceId = insights.placeId;
+      if (fallbackReviews.length === 0 && !targetPlaceId && insights.name && process.env.GOOGLE_PLACES_API_KEY) {
         try {
           const placesService = new PlacesService();
-          const details = await placesService.getPlaceDetails(insights.placeId);
+          const searchResults = await placesService.searchPlaces(`${insights.name} ${insights.formattedAddress || ""}`);
+          if (searchResults && searchResults.length > 0) {
+            targetPlaceId = searchResults[0].placeId;
+            insights.placeId = targetPlaceId;
+            await prisma.gbpAccount.update({
+              where: { id: account.id },
+              data: { insightsData: insights }
+            }).catch(e => console.warn("Failed to save placeId to insightsData:", e));
+          }
+        } catch (e) {
+          console.warn("Could not search placeId via Places API:", e);
+        }
+      }
+
+      if (fallbackReviews.length === 0 && targetPlaceId && process.env.GOOGLE_PLACES_API_KEY) {
+        try {
+          const placesService = new PlacesService();
+          const details = await placesService.getPlaceDetails(targetPlaceId);
           if (details.reviews && details.reviews.length > 0) {
             fallbackReviews = details.reviews.map((r: any) => ({
               id: `place-rev-${r.time || Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
