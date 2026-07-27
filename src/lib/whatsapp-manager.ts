@@ -418,9 +418,9 @@ class WhatsAppManager {
 
     let jid = `${cleanPhone}@s.whatsapp.net`;
     try {
-      const [onWa] = await sock.onWhatsApp(cleanPhone);
-      if (onWa && onWa.jid) {
-        jid = onWa.jid;
+      const results = await sock.onWhatsApp(cleanPhone);
+      if (results && results.length > 0 && results[0]?.jid) {
+        jid = results[0].jid;
       }
     } catch (e) {
       console.warn(`[WhatsAppManager] onWhatsApp verification warning for ${cleanPhone}:`, e);
