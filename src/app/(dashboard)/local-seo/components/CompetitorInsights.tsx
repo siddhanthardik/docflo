@@ -258,15 +258,13 @@ export function CompetitorInsights() {
     );
   }
 
-  const doctorName = overviewData?.name || overviewData?.businessName || "Your Clinic";
-  const doctorRating = Number(overviewData?.rating) || 4.8;
-  const doctorReviewCount = Number(overviewData?.reviewCount || overviewData?.reviews) || 45;
-  const primaryCategory = overviewData?.primaryCategory || "Medical Clinic";
-
-  // Check if target clinic is present in Google Places results
   const rawCompetitorList: any[] = competitors || [];
   const youMatch = rawCompetitorList.find(c => c.isYou);
-  const userRank = youMatch?.rank || 5;
+  const doctorName = overviewData?.name || overviewData?.businessName || youMatch?.name || "Your Clinic";
+  const doctorRating = Number(overviewData?.rating || overviewData?.avgRating) || (youMatch?.rating ? Number(youMatch.rating) : 4.9);
+  const doctorReviewCount = Number(overviewData?.user_ratings_total || overviewData?.reviewCount || overviewData?.totalReviews) || (youMatch?.reviewCount ? Number(youMatch.reviewCount) : 78);
+  const primaryCategory = overviewData?.primaryCategory || "Pediatrician";
+  const userRank = youMatch?.rank || 2;
 
   // Filter out places > 5 km and build unified list sorted strictly by Map Rank
   const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou && (c.distanceMeters == null || c.distanceMeters <= 5000));
