@@ -33,18 +33,18 @@ function RankBadge({ rank }: { rank: number }) {
     ? "bg-emerald-100 text-emerald-700 border-emerald-200"
     : isOk
     ? "bg-amber-100 text-amber-700 border-amber-200"
-    : "bg-red-100 text-red-700 border-red-200";
+    : "bg-rose-100 text-rose-700 border-rose-200";
 
   return (
-    <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-sm font-bold ${color}`}>
-      {rank.toFixed(1)}
+    <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-xs font-bold ${color}`}>
+      #{rank}
     </span>
   );
 }
 
 function ReviewCount({ count }: { count: number }) {
   const color = count >= 200 ? "text-emerald-600" : count >= 50 ? "text-amber-600" : "text-orange-500";
-  return <span className={`font-bold text-sm ${color}`}>{count.toLocaleString()}</span>;
+  return <span className={`font-bold text-sm ${color}`}>{count ? count.toLocaleString() : 0}</span>;
 }
 
 // Interactive Competitor Keyword Targeting Block
@@ -164,9 +164,9 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
 }
 
 // 4-Pillar Side-by-Side Competitive Benchmark Matrix
-function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorReviewCount = 45 }: { competitors: Competitor[]; doctorRating?: number; doctorReviewCount?: number }) {
+function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorReviewCount = 45, userRank = 5 }: { competitors: Competitor[]; doctorRating?: number; doctorReviewCount?: number; userRank?: number }) {
   const top1 = competitors[0];
-  const top2 = competitors[1];
+  const clinicsAhead = Math.max(0, userRank - 1);
 
   const reviewGap = top1 ? Math.max(0, top1.reviewCount - doctorReviewCount) : 0;
   const ratingGap = top1 ? (top1.rating - doctorRating).toFixed(1) : "0.0";
@@ -178,8 +178,8 @@ function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorRev
           <Award className="w-5 h-5 text-amber-400" />
           <h3 className="font-bold text-sm text-white">4-Pillar Competitor Gap Matrix</h3>
         </div>
-        <span className="text-[11px] font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full">
-          Map Pack Dominance
+        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${userRank === 1 ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' : 'bg-rose-900/80 text-rose-300 border border-rose-700'}`}>
+          {userRank === 1 ? "#1 Top Ranked Clinic" : `${clinicsAhead} Clinics Ahead`}
         </span>
       </div>
 
@@ -258,18 +258,48 @@ export function CompetitorInsights() {
     );
   }
 
-  const sorted = [...competitors]
-    .filter(c => c.distanceMeters <= 5000)
-    .sort((a, b) => b.reviewCount - a.reviewCount);
-
-  const doctorRank = sorted.length + 1;
-  const displayList = showAll ? sorted : sorted.slice(0, 5);
+  const doctorName = overviewData?.name || overviewData?.businessName || "Your Clinic";
+  const doctorRating = Number(overviewData?.rating) || 4.8;
+  const doctorReviewCount = Number(overviewData?.reviewCount || overviewData?.reviews) || 45;
   const primaryCategory = overviewData?.primaryCategory || "Medical Clinic";
+
+  // Check if target clinic is present in Google Places results
+  const rawCompetitorList: any[] = competitors || [];
+  const youMatch = rawCompetitorList.find(c => c.isYou);
+  const userRank = youMatch?.rank || 5;
+
+  // Filter out places > 5 km and build unified list sorted strictly by Map Rank
+  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou && (c.distanceMeters == null || c.distanceMeters <= 5000));
+  
+  const allRows = [
+    ...competitorRowsOnly.map((c, i) => ({
+      placeId: c.placeId || `comp-${i}`,
+      name: c.name,
+      rating: Number(c.rating) || 4.8,
+      reviewCount: Number(c.reviewCount) || 0,
+      distanceMeters: c.distanceMeters != null ? c.distanceMeters : 1000,
+      rank: c.rank || i + 1,
+      isYou: false,
+      primaryType: c.primaryType
+    })),
+    {
+      placeId: "you-row",
+      name: doctorName,
+      rating: doctorRating,
+      reviewCount: doctorReviewCount,
+      distanceMeters: 0,
+      rank: userRank,
+      isYou: true,
+      primaryType: primaryCategory
+    }
+  ].sort((a, b) => a.rank - b.rank);
+
+  const displayList = showAll ? allRows : allRows.slice(0, 6);
 
   return (
     <div className="space-y-0">
       {/* 4-Pillar Side-by-Side Competitive Benchmark Matrix */}
-      <CompetitiveBenchmarkMatrix competitors={sorted} />
+      <CompetitiveBenchmarkMatrix competitors={allRows} doctorRating={doctorRating} doctorReviewCount={doctorReviewCount} userRank={userRank} />
 
       {/* Refresh button & Helper text */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
@@ -295,88 +325,98 @@ export function CompetitorInsights() {
         <div className="text-center w-16">Rank</div>
       </div>
 
-      {/* Competitor rows */}
+      {/* Unified Competitor Rows (sorted by Map Rank) */}
       <div className="divide-y divide-gray-50">
-        {displayList.map((comp, idx) => (
-          <div
-            key={comp.placeId || idx}
-            className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 hover:bg-gray-50/50 transition-colors group"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1">{comp.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {comp.distanceMeters < 1000
-                  ? `${comp.distanceMeters}m away`
-                  : `${(comp.distanceMeters / 1000).toFixed(1)}km away`}
-              </p>
+        {displayList.map((comp, idx) => {
+          if (comp.isYou) {
+            return (
+              <div
+                key="you-row"
+                className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 items-center bg-indigo-50/80 rounded-xl border-2 border-indigo-200 shadow-xs"
+              >
+                <div className="min-w-0 w-full">
+                  <p className="text-sm font-bold text-indigo-900 flex items-center gap-1.5 truncate">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                    </span>
+                    {comp.name} <span className="text-[10px] font-medium text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200">(YOU)</span>
+                  </p>
+                  <p className="text-xs text-indigo-500 mt-0.5">Your official Google Business Profile</p>
+                </div>
+                <div className="flex items-center gap-6 md:gap-0 w-full">
+                  <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                    <span className="text-sm font-bold text-indigo-900">{comp.rating.toFixed(1)}</span>
+                  </div>
+                  <div className="md:w-16 text-center flex items-center justify-center">
+                    <ReviewCount count={comp.reviewCount} />
+                  </div>
+                  <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
+                    <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-xs font-bold ${userRank === 1 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
+                      #{userRank}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={comp.placeId || idx}
+              className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 hover:bg-gray-50/50 transition-colors group"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1">{comp.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {comp.distanceMeters < 1000
+                    ? `${comp.distanceMeters}m away`
+                    : `${(comp.distanceMeters / 1000).toFixed(1)}km away`}
+                </p>
+              </div>
+              <div className="flex items-center gap-6 md:gap-0">
+                <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                  <span className="text-sm font-semibold text-gray-800">
+                    {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
+                  </span>
+                  <span className="text-xs text-gray-400 md:hidden ml-1">(Rating)</span>
+                </div>
+                <div className="md:w-16 text-center flex items-center justify-center gap-1.5">
+                  <ReviewCount count={comp.reviewCount} />
+                  <span className="text-xs text-gray-400 md:hidden">Reviews</span>
+                </div>
+                <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
+                  <RankBadge rank={comp.rank} />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-6 md:gap-0">
-              <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
-                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                <span className="text-sm font-semibold text-gray-800">
-                  {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
-                </span>
-                <span className="text-xs text-gray-400 md:hidden ml-1">(Rating)</span>
-              </div>
-              <div className="md:w-16 text-center flex items-center gap-1.5">
-                <ReviewCount count={comp.reviewCount} />
-                <span className="text-xs text-gray-400 md:hidden">Reviews</span>
-              </div>
-              <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
-                <RankBadge rank={parseFloat((idx + 1).toFixed(1))} />
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* "X more ahead" + show more toggle */}
-      {!showAll && sorted.length > 5 && (
+      {!showAll && allRows.length > 6 && (
         <button
           onClick={() => setShowAll(true)}
           className="w-full py-2.5 text-xs text-gray-400 text-center hover:text-indigo-600 transition-colors font-medium"
         >
-          {sorted.length - 5} more ahead of you...
+          Show all {allRows.length} nearby clinics...
           <ChevronDown className="w-3 h-3 inline ml-1" />
         </button>
       )}
-      {showAll && sorted.length > 5 && (
+      {showAll && allRows.length > 6 && (
         <button
           onClick={() => setShowAll(false)}
           className="w-full py-2 text-xs text-gray-400 text-center hover:text-indigo-600 transition-colors font-medium"
         >
-          Show less <ChevronUp className="w-3 h-3 inline ml-1" />
+          Show top 6 <ChevronUp className="w-3 h-3 inline ml-1" />
         </button>
       )}
 
-      {/* Separator: You */}
-      <div className="mt-1 border-t-2 border-indigo-100" />
-      <div className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-4 md:py-3 items-center bg-indigo-50 rounded-b-xl border border-indigo-100">
-        <div className="min-w-0 w-full">
-          <p className="text-sm font-bold text-indigo-800 flex items-center gap-1.5 truncate">
-            <span className="text-indigo-500">▶</span>
-            Your Business (You)
-          </p>
-          <p className="text-xs text-indigo-400 mt-0.5">Based on Google Places ranking</p>
-        </div>
-        <div className="flex items-center gap-6 md:gap-0 w-full">
-          <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
-            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-            <span className="text-sm font-bold text-indigo-800">—</span>
-          </div>
-          <div className="md:w-16 text-center flex items-center">
-            <span className="text-sm font-bold text-indigo-800">—</span>
-          </div>
-          <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
-            <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-sm font-bold bg-red-100 text-red-700 border-red-200">
-              {doctorRank}+
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Competitor Keywords with 1-Click Action Menus */}
-      <CompetitorKeywords competitors={sorted} primaryCategory={primaryCategory} keywordsData={keywordsData} />
+      <CompetitorKeywords competitors={allRows} primaryCategory={primaryCategory} keywordsData={keywordsData} />
     </div>
   );
 }

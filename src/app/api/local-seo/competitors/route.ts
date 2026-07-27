@@ -143,7 +143,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const normalized = GoogleNormalizer.normalizeCompetitors(rawPlaces, lat, lng);
+    const normalized = GoogleNormalizer.normalizeCompetitors(rawPlaces, lat, lng, bName);
 
     // Cache the result
     await prisma.competitorSnapshot.create({
