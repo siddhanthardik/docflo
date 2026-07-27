@@ -179,19 +179,19 @@ class WhatsAppManager {
               where: { phone: patientPhone, doctorId },
             });
 
-            // If no patient exists, auto-create as a LEAD
+            // If no patient exists, auto-create as a Patient
             if (!patient) {
               patient = await prisma.patient.create({
                 data: {
                   doctorId,
-                  firstName: "Lead",
+                  firstName: "Patient",
                   lastName: `+${patientPhone}`,
                   phone: patientPhone,
-                  patientType: "LEAD",
-                  tags: ["WhatsApp Lead"]
+                  patientType: "ACTIVE",
+                  tags: ["WhatsApp"]
                 }
               });
-              console.log(`[WhatsAppManager] Auto-created new CRM lead for ${patientPhone}`);
+              console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}`);
             }
 
             const patientName = `${patient.firstName} ${patient.lastName}`;
@@ -251,43 +251,52 @@ class WhatsAppManager {
               });
             }
 
-            if (pendingAppointment) {
-              const textLower = textMessage.trim().toLowerCase();
-              const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
-                textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍");
-              const isNo = /^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower.includes("no") || textLower.includes("bad") || textLower.includes("poor") || textLower.includes("disappointed");
+            const isSurveySent = patient.reviewStatus === "SURVEY_SENT" || !!pendingAppointment;
+            const textLower = textMessage.trim().toLowerCase();
+            const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
+              textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍"));
+            const isNo = isSurveySent && (/^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower.includes("no") || textLower.includes("bad") || textLower.includes("poor") || textLower.includes("disappointed"));
 
-              if (isYes) {
-                const doctorData = await prisma.doctor.findUnique({ 
-                  where: { id: doctorId }, 
-                  select: { clinicName: true, reviewGoogleInvitationMessage: true, enableGoogleReviewAutoDispatch: true }
-                });
+            if (isYes) {
+              const doctorData = await prisma.doctor.findUnique({ 
+                where: { id: doctorId }, 
+                select: { clinicName: true, reviewGoogleInvitationMessage: true, enableGoogleReviewAutoDispatch: true }
+              });
 
-                if (doctorData?.enableGoogleReviewAutoDispatch !== false) {
-                  try {
-                    const reviewLink = await resolveGoogleReviewLink(doctorId);
-                    
-                    const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n\n${reviewLink}\n\nThank you so much, and stay healthy!`;
-                    const replyText = doctorData?.reviewGoogleInvitationMessage 
-                      ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`)
-                      : defaultReply;
-                    
-                    await sock.sendMessage(remoteJid, { text: replyText });
-                    await prisma.chatMessage.create({
-                      data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
-                    });
+              if (doctorData?.enableGoogleReviewAutoDispatch !== false) {
+                try {
+                  const reviewLink = await resolveGoogleReviewLink(doctorId);
+                  
+                  const displayName = (patient.firstName && patient.firstName !== "Lead" && patient.firstName !== "Patient") ? ` ${patient.firstName}` : "";
+                  const defaultReply = `Hello${displayName},\n\nThank you so much for your positive feedback! We are absolutely delighted to hear that you were happy with your care at ${doctorData?.clinicName || "our clinic"}.\n\nIf you have 60 seconds, it would mean the world to our team if you could share your experience on Google:\n\n${reviewLink}\n\nWishing you the very best of health!`;
+                  
+                  const replyText = doctorData?.reviewGoogleInvitationMessage 
+                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`).replace("{firstName}", patient.firstName || "")
+                    : defaultReply;
+                  
+                  await sock.sendMessage(remoteJid, { text: replyText });
+                  await prisma.chatMessage.create({
+                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
+                  });
 
+                  await prisma.patient.update({
+                    where: { id: patient.id },
+                    data: { reviewStatus: "LINK_SENT" }
+                  });
+
+                  if (pendingAppointment) {
                     await prisma.appointment.update({
                       where: { id: pendingAppointment.id },
                       data: { reviewStatus: "LINK_SENT" }
                     });
-                  } catch (e: any) {
-                    console.warn(`[WhatsAppManager] Skipped auto-dispatching Google Review link: ${e.message}`);
                   }
+                } catch (e: any) {
+                  console.warn(`[WhatsAppManager] Skipped auto-dispatching Google Review link: ${e.message}`);
                 }
+              }
 
-                return; // Don't pass to AI agent
-              } else if (isNo) {
+              return; // Don't pass to AI agent
+            } else if (isNo) {
                 const replyText = `We are so sorry to hear that we didn't meet your expectations today. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
                 await sock.sendMessage(remoteJid, { text: replyText });
                 await prisma.chatMessage.create({

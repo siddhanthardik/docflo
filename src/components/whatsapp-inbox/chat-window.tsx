@@ -88,23 +88,9 @@ export function ChatWindow({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-gray-900 truncate">{name}</h3>
-              {conversation.patient && (
-                <select
-                  value={conversation.patient.patientType || "LEAD"}
-                  onChange={(e) => onUpdatePatientStatus?.(e.target.value)}
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border-0 cursor-pointer focus:ring-0 ${
-                    conversation.patient.patientType === "LEAD" ? "bg-purple-100 text-purple-700" :
-                    conversation.patient.patientType === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
-                    conversation.patient.patientType === "INACTIVE" ? "bg-amber-100 text-amber-700" :
-                    "bg-red-100 text-red-700"
-                  }`}
-                >
-                  <option value="LEAD" className="text-gray-900 bg-white">LEAD</option>
-                  <option value="ACTIVE" className="text-gray-900 bg-white">ACTIVE</option>
-                  <option value="INACTIVE" className="text-gray-900 bg-white">INACTIVE</option>
-                  <option value="LOST" className="text-gray-900 bg-white">LOST</option>
-                </select>
-              )}
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                Patient
+              </span>
             </div>
             <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
               <span

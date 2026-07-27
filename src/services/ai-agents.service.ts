@@ -20,7 +20,7 @@ export class AIAgentsService {
     try {
       const mode = config.mode || "handoff"; // handoff vs autonomous
       const tone = config.tone || "professional";
-      const customRules = config.trainingPrompt || config.customRules || "Consultations are 30 mins. Walk-ins accepted during business hours.";
+      const customRules = config.trainingPrompt || config.customRules || "Answer questions politely, empathetically, and assist patients with clinic details or bookings.";
       const emergencyTriggers = config.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
 
       // Emergency Trigger Check

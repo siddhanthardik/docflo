@@ -102,7 +102,8 @@ export function ConversationList({
             </div>
           )
           : filtered.map((conv) => {
-              const name = conv.patientName || conv.patientPhone
+              const rawName = conv.patientName || conv.patientPhone
+              const name = (rawName.startsWith("Lead") && conv.patientPhone) ? conv.patientPhone : rawName
               const lastMsg = conv.messages?.[0]?.content || "No messages yet"
               const isSelected = selectedId === conv.id
               return (
