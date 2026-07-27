@@ -279,7 +279,6 @@ export default function FreeAuditPage() {
     "+356": { min:  8, max:  8, hint: "8-digit number" },               // Malta
     "+960": { min:  7, max:  7, hint: "7-digit number" },               // Maldives
     "+975": { min:  8, max:  8, hint: "8-digit number" },               // Bhutan
-    "+254": { min: 10, max: 10, hint: "10-digit number" },              // Kenya (dupe guard)
   };
 
   const getPhoneRule = (code: string) =>
