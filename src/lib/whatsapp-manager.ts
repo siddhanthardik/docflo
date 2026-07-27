@@ -251,7 +251,17 @@ class WhatsAppManager {
               });
             }
 
-            const isSurveySent = patient.reviewStatus === "SURVEY_SENT" || !!pendingAppointment;
+            // Check recent outgoing chat message to see if a review survey was sent
+            const lastSurveyMessage = await prisma.chatMessage.findFirst({
+              where: {
+                conversationId: conversation.id,
+                direction: "OUTGOING",
+                content: { contains: "reply" }
+              },
+              orderBy: { createdAt: "desc" }
+            });
+
+            const isSurveySent = !!lastSurveyMessage || !!pendingAppointment || patient.reviewRequested;
             const textLower = textMessage.trim().toLowerCase();
             const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
               textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍"));
@@ -268,7 +278,7 @@ class WhatsAppManager {
                   const reviewLink = await resolveGoogleReviewLink(doctorId);
                   
                   const displayName = (patient.firstName && patient.firstName !== "Lead" && patient.firstName !== "Patient") ? ` ${patient.firstName}` : "";
-                  const defaultReply = `Hello${displayName},\n\nThank you so much for your positive feedback! We are absolutely delighted to hear that you were happy with your care at ${doctorData?.clinicName || "our clinic"}.\n\nIf you have 60 seconds, it would mean the world to our team if you could share your experience on Google:\n\n${reviewLink}\n\nWishing you the very best of health!`;
+                  const defaultReply = `Hello${displayName},\n\nThank you so much for your positive feedback! We are delighted to hear that you were happy with your care at ${doctorData?.clinicName || "our clinic"}.\n\nIf you have 60 seconds, it would mean the world to our team if you could share your experience on Google:\n\n${reviewLink}\n\nWishing you the very best of health!`;
                   
                   const replyText = doctorData?.reviewGoogleInvitationMessage 
                     ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`).replace("{firstName}", patient.firstName || "")
@@ -277,11 +287,6 @@ class WhatsAppManager {
                   await sock.sendMessage(remoteJid, { text: replyText });
                   await prisma.chatMessage.create({
                     data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
-                  });
-
-                  await prisma.patient.update({
-                    where: { id: patient.id },
-                    data: { reviewStatus: "LINK_SENT" }
                   });
 
                   if (pendingAppointment) {
