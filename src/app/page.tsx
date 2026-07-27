@@ -7,17 +7,14 @@ import {
   Activity, Star, ArrowRight, CheckCircle2, TrendingUp, Users, MessageSquare,
   Search, MapPin, Building2, ChevronRight, Zap, Globe, BarChart3,
   Calendar, Phone, Clock, Shield, Heart, Award, Play, ChevronDown, Layers, Database,
-  Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X
+  Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X,
+  ShieldCheck, Calculator, ArrowRightCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
-import { HeroTextCarousel } from "@/components/ui/HeroTextCarousel";
 
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
 interface PlacePrediction {
   place_id: string;
   structured_formatting: {
@@ -31,7 +28,6 @@ export default function LandingPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -39,6 +35,12 @@ export default function LandingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Interactive ROI Calculator State
+  const [avgFee, setAvgFee] = useState<number>(3000);
+  const [newPatients, setNewPatients] = useState<number>(10);
+  const monthlyRevenue = avgFee * newPatients;
+  const annualRevenue = monthlyRevenue * 12;
 
   // Fetch suggestions from backend proxy
   const fetchSuggestions = useCallback(async (input: string) => {
@@ -76,6 +78,18 @@ export default function LandingPage() {
     setPredictions([]);
   };
 
+  const handleScanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsScanning(true);
+
+    if (selectedPlace) {
+      router.push(`/local-seo/free-audit?place_id=${selectedPlace.place_id}`);
+    } else {
+      router.push(`/local-seo/free-audit?query=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -93,521 +107,454 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
       
-      {/* ── NAVBAR ── */}
+      {/* ── HEADER ── */}
       <LandingHeader />
 
-      {/* ── HERO SECTION ── */}
+      {/* ── HERO SECTION (GREXA.AI INSPIRED) ── */}
       <section id="overview" className="relative pt-28 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
-        {/* Soft Background Gradient Blobs */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-b from-blue-400/15 to-indigo-400/5 blur-3xl pointer-events-none -z-10" />
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <HeroTextCarousel />
+          
+          <div className="text-center max-w-3xl mx-auto space-y-6">
+            {/* Top Badge: Free Google Profile Booster */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-purple-900 tracking-wide">Free Google Profile Booster</span>
+              <ChevronRight className="w-3.5 h-3.5 text-purple-600" />
+            </div>
 
-            {/* Audit Search Bar */}
-            <div className="max-w-2xl mx-auto">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (searchQuery.trim()) {
-                    const params = new URLSearchParams();
-                    params.set("q", searchQuery);
-                    if (selectedPlace?.place_id) params.set("placeId", selectedPlace.place_id);
-                    window.location.href = `/local-seo/free-audit?${params.toString()}`;
-                  } else {
-                    window.location.href = "/local-seo/free-audit";
-                  }
-                }}
-                className="relative bg-white rounded-2xl p-2.5 border border-slate-200 shadow-xl flex flex-col sm:flex-row gap-2"
-              >
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
+              Your All-in-One Clinic Growth Engine that <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">Delivers Real Patients</span>
+            </h1>
+
+            {/* Sub-headline */}
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              Trusted by 500+ doctors, dermatologists, dentists, and healthcare practices to dominate local Google search and automate patient WhatsApp follow-ups.
+            </p>
+
+            {/* Dual CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-7 h-13 text-base shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 border border-emerald-500">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                  Free Google Profile Booster
+                </Button>
+              </Link>
+              <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl px-7 h-13 text-base">
+                  Book Free Demo
+                </Button>
+              </Link>
+            </div>
+
+            {/* Instant Search Bar Scanner */}
+            <div className="pt-6 max-w-xl mx-auto">
+              <form onSubmit={handleScanSubmit} className="relative flex flex-col sm:flex-row items-center gap-2 bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80">
+                <div className="relative flex-1 w-full flex items-center">
+                  <Search className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     ref={inputRef}
                     type="text"
-                    placeholder="Search your clinic name or location…"
-                    className="w-full pl-12 pr-4 h-13 rounded-xl bg-slate-50 text-slate-900 text-sm placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition"
                     value={searchQuery}
                     onChange={handleInputChange}
                     onFocus={() => predictions.length > 0 && setShowDropdown(true)}
-                    autoComplete="off"
+                    placeholder="Enter your clinic or doctor name..."
+                    className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none"
                   />
-
-                  {/* Dropdown Suggestions */}
-                  {showDropdown && searchQuery.length > 1 && (
-                    <div
-                      ref={dropdownRef}
-                      className="absolute left-0 right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden text-left"
-                    >
-                      {isLoadingSuggestions && (
-                        <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
-                          <Activity className="h-4 w-4 animate-spin text-blue-600" /> Searching location profiles…
-                        </div>
-                      )}
-                      {!isLoadingSuggestions && predictions.length === 0 && searchQuery.length > 2 && (
-                        <div className="px-4 py-3 text-sm text-slate-500">
-                          No matching clinics found. Type your full clinic name.
-                        </div>
-                      )}
-                      {predictions.map((place) => (
-                        <button
-                          key={place.place_id}
-                          type="button"
-                          onClick={() => handleSelectPlace(place)}
-                          className="w-full flex items-start gap-3 px-4 py-3.5 hover:bg-blue-50/70 transition-colors text-left border-b border-slate-50 last:border-0"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Building2 className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{place.structured_formatting.main_text}</p>
-                            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-slate-400" /> {place.structured_formatting.secondary_text}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                  {isLoadingSuggestions && (
+                    <RefreshCw className="w-4 h-4 text-blue-600 animate-spin absolute right-3" />
                   )}
                 </div>
 
                 <Button
                   type="submit"
-                  className="h-13 px-7 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25 transition-all border border-blue-500/30 shrink-0"
+                  disabled={isScanning || !searchQuery.trim()}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-6 h-12 text-sm shadow-md shrink-0"
                 >
-                  <span className="flex items-center gap-2">
-                    Get Free Report <ArrowRight className="h-4 w-4" />
-                  </span>
+                  {isScanning ? (
+                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</>
+                  ) : (
+                    <>Run Free Scan <ArrowRight className="w-4 h-4 ml-1.5" /></>
+                  )}
                 </Button>
-              </form>
-              <p className="text-xs text-slate-500 mt-3 font-medium">
-                Free Scan • Comprehensive Data Audit • Results in 60s
-              </p>
-            </div>
 
-
-          {/* Code-Rendered Interactive Dashboard Mockup (No Image File Needed) */}
-          <div className="relative mt-12 max-w-5xl mx-auto">
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-2xl shadow-blue-900/10">
-              
-              {/* Mock App Header */}
-              <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-rose-400" />
-                  <div className="w-3 h-3 rounded-full bg-amber-400" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                  <span className="ml-2 text-xs font-semibold text-slate-500 hidden sm:inline">
-                    Gyrex Practice Command Center
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    Data Layer Active
-                  </span>
-                </div>
-              </div>
-
-              {/* Mock Dashboard Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                
-                {/* Panel 1: Local Geo-Grid Map Rank */}
-                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Geo-Grid Rank Heatmap</span>
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Rank #1</span>
-                    </div>
-                    <p className="text-sm font-bold text-slate-900 mb-3">"Dermatologist Near Me"</p>
-                    
-                    {/* 3x3 Mock Grid */}
-                    <div className="grid grid-cols-3 gap-2 my-2">
-                      {[1, 1, 1, 1, 2, 1, 1, 1, 3].map((rank, idx) => (
-                        <div key={idx} className={`h-9 rounded-lg flex items-center justify-center font-bold text-xs ${rank === 1 ? "bg-emerald-500 text-white shadow-sm" : rank === 2 ? "bg-blue-500 text-white" : "bg-amber-400 text-slate-900"}`}>
-                          #{rank}
+                {/* Suggestions Dropdown */}
+                {showDropdown && predictions.length > 0 && (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 max-h-64 overflow-y-auto text-left"
+                  >
+                    {predictions.map((p) => (
+                      <div
+                        key={p.place_id}
+                        onClick={() => handleSelectPlace(p)}
+                        className="p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-start gap-2.5 transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">{p.structured_formatting.main_text}</p>
+                          {p.structured_formatting.secondary_text && (
+                            <p className="text-[11px] text-slate-500 truncate">{p.structured_formatting.secondary_text}</p>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                    <span>9 Coverage Radius Points</span>
-                    <span className="font-semibold text-emerald-600">+4 positions up</span>
-                  </p>
-                </div>
-
-                {/* Panel 2: WhatsApp Review Automation */}
-                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">WhatsApp Feedback Flow</span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Auto-Sent</span>
-                    </div>
-                    
-                    {/* Mock Chat Bubble */}
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[10px] font-bold">WA</div>
-                        <span className="text-xs font-bold text-slate-800">City Clinic Bot</span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-snug">
-                        "Hi Ananya! How was your consultation with Dr. Sharma today?"
-                      </p>
-                      <div className="inline-block bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold px-2 py-1 rounded">
-                        ★★★★★ Rate 5 Stars on Google
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200/60 flex justify-between text-xs">
-                    <span className="text-slate-500">Reviews this month</span>
-                    <span className="font-bold text-slate-900">+42 5-Star Reviews</span>
-                  </div>
-                </div>
-
-                {/* Panel 3: Patient Growth Metrics */}
-                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Monthly Patient Acquisition</span>
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">+320%</span>
-                    </div>
-                    
-                    <div className="my-4">
-                      <p className="text-3xl font-black text-slate-900">842</p>
-                      <p className="text-xs text-slate-500 mt-0.5">New Patient Walk-ins (Last 30 Days)</p>
-                    </div>
-
-                    {/* Simple Bar Graphic */}
-                    <div className="flex items-end gap-1.5 h-16 pt-2">
-                      {[35, 45, 40, 60, 75, 90, 100].map((h, i) => (
-                        <div
-                          key={i}
-                          style={{ height: `${h}%` }}
-                          className={`flex-1 rounded-t ${i === 6 ? "bg-blue-600" : "bg-blue-200"}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                    <span>Google Map Inquiries</span>
-                    <span className="font-semibold text-blue-600">450 Action Clicks</span>
-                  </p>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── METRICS STRIP ── */}
-      <section className="border-y border-slate-200/80 bg-white py-12">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { value: "500+", label: "Active Clinics", desc: "Trusting Gyrex Data Layer" },
-            { value: "48K+", label: "Verified Reviews", desc: "Generated via WhatsApp Flows" },
-            { value: "3.2x", label: "Patient Growth Rate", desc: "Average 90-day increase" },
-            { value: "99.4%", label: "Data Accuracy", desc: "Across local mapping indexes" },
-          ].map((s) => (
-            <div key={s.label} className="p-2">
-              <p className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-1">{s.value}</p>
-              <p className="text-sm font-bold text-blue-600 mb-0.5">{s.label}</p>
-              <p className="text-xs text-slate-500 font-medium">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── WHAT IS GYREX? (DATA ARCHITECTURE SECTION) ── */}
-      <section id="data-architecture" className="py-28 relative border-b border-slate-200/80 bg-slate-50/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-4">
-              <Layers className="h-4 w-4" /> System Architecture
-            </div>
-
-            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight mb-6">
-              What is Gyrex?
-            </h2>
-
-            <p className="text-slate-600 text-lg leading-relaxed">
-              Gyrex is a **data-layer patient acquisition and retention system** engineered specifically for healthcare practices. We map patient search behavior, location schemas, and appointment triggers into a continuous practice growth engine.
-            </p>
-          </div>
-
-          {/* 3-Tier Code-Rendered Architecture Cards */}
-          <div className="grid md:grid-cols-3 gap-8">
-            
-            {/* Tier 1 */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow relative">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold mb-6">
-                <Database className="h-6 w-6" />
-              </div>
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-2">Layer 01</span>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Google Signal Layer</h3>
-              <p className="text-sm text-slate-600 leading-relaxed mb-6">
-                Direct integration with Google Business Profile APIs to map category hierarchies, sub-specialty tags, and geographical search boundaries.
-              </p>
-              <ul className="space-y-2.5 text-xs text-slate-500 border-t border-slate-100 pt-4">
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Specialty Category Alignment</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Geo-Coordinate Signal Sync</li>
-              </ul>
-            </div>
-
-            {/* Tier 2 */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow relative">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold mb-6">
-                <MessageSquare className="h-6 w-6" />
-              </div>
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-2">Layer 02</span>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">WhatsApp Event Flow</h3>
-              <p className="text-sm text-slate-600 leading-relaxed mb-6">
-                Real-time appointment webhooks send automated post-visit feedback requests, routing happy patients straight to 5-star Google Reviews.
-              </p>
-              <ul className="space-y-2.5 text-xs text-slate-500 border-t border-slate-100 pt-4">
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Automated Consultation Webhooks</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Direct 1-Click Review Routing</li>
-              </ul>
-            </div>
-
-            {/* Tier 3 */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow relative">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 font-bold mb-6">
-                <BarChart3 className="h-6 w-6" />
-              </div>
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-2">Layer 03</span>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Geo-Grid Analytics</h3>
-              <p className="text-sm text-slate-600 leading-relaxed mb-6">
-                City-wide rank tracking grid measuring your clinic's search visibility across every neighborhood block in real-time.
-              </p>
-              <ul className="space-y-2.5 text-xs text-slate-500 border-t border-slate-100 pt-4">
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Grid Rank Visibility Heatmaps</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Competitor Velocity Comparison</li>
-              </ul>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── FEATURES GRID ── */}
-      <section id="features" className="py-28 relative bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Core Modules</p>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
-              Complete practice acquisition stack
-            </h2>
-            <p className="text-slate-600 text-base">
-              Every system needed to establish local search dominance, capture reviews, and manage patient intake.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: <Globe className="h-6 w-6 text-blue-600" />,
-                title: "Google Business Optimization",
-                desc: "Align medical categories, keywords, hours, and location signals to rank higher in local search maps."
-              },
-              {
-                icon: <Star className="h-6 w-6 text-amber-500" />,
-                title: "WhatsApp Review Automation",
-                desc: "Trigger automated WhatsApp messages post-visit, converting happy patients into 5-star Google reviews."
-              },
-              {
-                icon: <MessageSquare className="h-6 w-6 text-emerald-600" />,
-                title: "Smart Review Response System",
-                desc: "Craft professional, empathetic, and compliant replies to patient feedback at scale."
-              },
-              {
-                icon: <BarChart3 className="h-6 w-6 text-indigo-600" />,
-                title: "Geo-Grid Rank Tracker",
-                desc: "Monitor your exact search rank across grid points in your city for specialty searches like 'pediatrician near me'."
-              },
-              {
-                icon: <Phone className="h-6 w-6 text-blue-600" />,
-                title: "WhatsApp Patient Campaigns",
-                desc: "Broadcast care reminders, seasonal health checkups, and clinic announcements with high open rates."
-              },
-              {
-                icon: <Calendar className="h-6 w-6 text-purple-600" />,
-                title: "Appointment Workflows",
-                desc: "Automated confirmations, reminders, and waitlist management to minimize clinic no-shows."
-              },
-              {
-                icon: <Users className="h-6 w-6 text-rose-500" />,
-                title: "Patient Relationship Data",
-                desc: "Centralize consultation records, feedback history, and communication logs in one structured CRM."
-              },
-              {
-                icon: <Zap className="h-6 w-6 text-amber-500" />,
-                title: "Competitor Benchmark Engine",
-                desc: "Track nearby medical practices, their review speed, and keyword rankings in real-time."
-              },
-              {
-                icon: <Activity className="h-6 w-6 text-cyan-600" />,
-                title: "Patient Intake Assistant",
-                desc: "Deploy a 24/7 web assistant that handles initial inquiries, symptom checklists, and booking requests."
-              }
-            ].map((f) => (
-              <div
-                key={f.title}
-                className="group bg-white rounded-2xl border border-slate-200/90 p-7 hover:border-blue-500/50 hover:shadow-xl transition-all duration-300"
-              >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  {f.icon}
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{f.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── MIDDLE CTA SECTION (RICH BLUE THEME) ── */}
-      <section className="py-20 relative overflow-hidden bg-slate-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-10 sm:p-16 text-center text-white shadow-2xl overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-            
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
-              Stop losing patients to local competitors.
-            </h2>
-            <p className="text-blue-100 max-w-xl mx-auto mb-10 text-base">
-              Run a free 60-second scan of your Google Business Profile to uncover missing keywords, location schema errors, and review bottlenecks.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/local-seo/free-audit">
-                <Button className="h-13 px-8 rounded-xl font-bold text-base bg-white text-blue-700 hover:bg-blue-50 shadow-xl border border-white">
-                  Run Free Clinic Audit <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS / PROCESS ── */}
-      <section id="process" className="py-28 relative bg-white border-t border-slate-200/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Implementation</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-4">
-              Deploy Gyrex in 3 steps
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "01",
-                icon: <Search className="h-6 w-6 text-blue-600" />,
-                title: "1. Audit Data Layer",
-                desc: "We analyze your Google Business Profile, keyword coverage, and local map rank against top competitors."
-              },
-              {
-                step: "02",
-                icon: <Database className="h-6 w-6 text-indigo-600" />,
-                title: "2. Sync Data Engine",
-                desc: "Connect your clinic profile and WhatsApp flow. Gyrex aligns your medical tags, location schema, and review channels."
-              },
-              {
-                step: "03",
-                icon: <TrendingUp className="h-6 w-6 text-emerald-600" />,
-                title: "3. Track & Scale",
-                desc: "Monitor rank improvements, review accumulation, and patient inquiries on your central analytics dashboard."
-              }
-            ].map((s) => (
-              <div key={s.step} className="bg-slate-50 rounded-2xl border border-slate-200 p-8 relative">
-                <div className="text-4xl font-black text-blue-200 mb-4">{s.step}</div>
-                <h3 className="text-lg font-bold text-slate-900 mb-3">{s.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS / RESULTS ── */}
-      <section className="py-28 border-t border-slate-200/80 bg-slate-50/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Proven Impact</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-4">
-              Trusted by medical practices nationwide
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Dr. Rahul Sharma",
-                role: "Orthopedic Specialist, Mumbai",
-                quote: "We moved from page 3 to the top 3 on Google maps for 'knee specialist near me'. Patient inquiries went up significantly.",
-                stat: "+68 Google Reviews in 60 days"
-              },
-              {
-                name: "Dr. Sneha Joshi",
-                role: "Dental Practice Director, Pune",
-                quote: "The post-appointment WhatsApp feedback workflow streamlined our review growth. Our rating improved from 4.1 to 4.9 naturally.",
-                stat: "Rating Increased 4.1 → 4.9"
-              },
-              {
-                name: "Dr. Arjun Mehta",
-                role: "Pediatric Clinic Head, Delhi",
-                quote: "Gyrex provided an exact data audit showing why our profile was suppressed. Fixing our medical categories changed our local reach within weeks.",
-                stat: "Top 3 Local Grid Rank"
-              }
-            ].map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col justify-between shadow-sm">
-                <div>
-                  <div className="flex gap-1 mb-6 text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
                     ))}
                   </div>
-                  <p className="text-slate-700 text-sm leading-relaxed mb-6">"{t.quote}"</p>
+                )}
+              </form>
+              <p className="text-[11px] text-slate-400 mt-2">Instant 60-second scan · Live Google Places API integration</p>
+            </div>
+
+          </div>
+
+          {/* Floating Interactive 3D Dashboard Showcase */}
+          <div className="mt-14 relative max-w-5xl mx-auto">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200/80 grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Heatmap Widget */}
+              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">5×5 Geo Rank Heatmap</span>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Top 3 Rank</span>
                 </div>
+                <div className="grid grid-cols-5 gap-1.5 aspect-square bg-white p-2 rounded-xl border border-slate-200/50">
+                  {[1, 1, 2, 3, 2, 1, 1, 2, 2, 3, 2, 1, 1, 1, 2, 3, 2, 1, 2, 3, 2, 3, 2, 3, 3].map((rank, i) => (
+                    <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center font-black text-xs text-emerald-700">
+                      {rank}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium text-center">Rank #1–#3 across 25 neighborhood nodes</p>
+              </div>
+
+              {/* WhatsApp Review Widget */}
+              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3 flex flex-col justify-between">
                 <div>
-                  <p className="text-slate-900 font-bold text-sm">{t.name}</p>
-                  <p className="text-xs text-slate-500 mb-4">{t.role}</p>
-                  <div className="pt-4 border-t border-slate-100 text-xs font-semibold text-blue-600">
-                    {t.stat}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">WhatsApp 5-Star Pipeline</span>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">98% Open Rate</span>
+                  </div>
+                  <div className="bg-emerald-600/10 border border-emerald-500/20 p-3 rounded-xl space-y-2">
+                    <p className="text-xs font-semibold text-emerald-900">Dr. Vinay Kumar Rai Clinic</p>
+                    <p className="text-[11px] text-slate-600 leading-snug">"Thank you for visiting! How was your consultation today?"</p>
+                    <div className="flex gap-1 text-amber-400">
+                      {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />)}
+                    </div>
                   </div>
                 </div>
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Google Review Output</span>
+                  <span className="text-xs font-bold text-emerald-600">+33 Reviews / mo</span>
+                </div>
               </div>
-            ))}
+
+              {/* Competitor Gap Card */}
+              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Competitor Gap Matrix</span>
+                    <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Target #1 Rank</span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-slate-600">Review Gap to #1</span>
+                      <span className="font-bold text-red-600">+705 Reviews</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-slate-600">Map Pack Reach</span>
+                      <span className="font-bold text-emerald-600">+15% Growth</span>
+                    </div>
+                  </div>
+                </div>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-xs font-bold shadow-xs">
+                  Automate Gap Fix
+                </Button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SOCIAL PROOF & METRICS BAR ── */}
+      <section className="bg-white py-10 border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
+            Engineered For Medical Practices, Dentists & Dermatologists
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100">
+              <span className="text-3xl sm:text-4xl font-black text-slate-900">500+</span>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Active Clinics</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100">
+              <span className="text-3xl sm:text-4xl font-black text-emerald-600">4.9 ★</span>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Average Clinic Rating</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100">
+              <span className="text-3xl sm:text-4xl font-black text-blue-600">98%</span>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">WhatsApp Open Rate</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100">
+              <span className="text-3xl sm:text-4xl font-black text-purple-600">+70%</span>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Review Conversion</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── BOTTOM CTA SECTION ── */}
-      <section className="py-24 relative bg-gradient-to-b from-white to-blue-50/50 border-t border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 text-center">
-          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight mb-6">
-            Ready to grow your clinic's local reach?
+      {/* ── 4-PILLAR FEATURE ENGINE CARDS (GREXA.AI INSPIRED) ── */}
+      <section id="features" className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Growth Modules</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Built for Maximum Patient Acquisition</h2>
+            <p className="text-sm text-slate-600">Automate your entire digital patient growth funnel in one clean platform.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Feature 1 */}
+            <div className="bg-white p-8 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-md transition-all space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">1. 5-Star WhatsApp Review Engine</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Automatically dispatches 2-step feedback surveys via WhatsApp after consultations. Converts 70%+ of happy patients into 5-star Google reviews while keeping negative feedback internal.
+              </p>
+              <div className="pt-2 flex items-center gap-2 text-xs font-bold text-emerald-700">
+                <CheckCircle2 className="w-4 h-4" /> 98% Patient Response Rate
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white p-8 rounded-3xl border border-blue-100 shadow-sm hover:shadow-md transition-all space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">2. 5×5 Geo-Rank Heatmap Tracker</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Simulates 25 virtual searchers across a 5km radius to discover your clinic's exact position for keywords like "Pediatrician near me" or "Skin Specialist".
+              </p>
+              <div className="pt-2 flex items-center gap-2 text-xs font-bold text-blue-700">
+                <CheckCircle2 className="w-4 h-4" /> Real-time Google Map Pack Audit
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white p-8 rounded-3xl border border-amber-100 shadow-sm hover:shadow-md transition-all space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">3. 4-Pillar Competitor Gap Matrix</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Live Google Places API competitor benchmark analyzing review counts, star ratings, and category coverage. Pinpoints the exact review gap required to overtake Rank #1.
+              </p>
+              <div className="pt-2 flex items-center gap-2 text-xs font-bold text-amber-700">
+                <CheckCircle2 className="w-4 h-4" /> Exact Review Volume Benchmark
+              </div>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="bg-white p-8 rounded-3xl border border-purple-100 shadow-sm hover:shadow-md transition-all space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">4. 24/7 Automated Booking Assistant</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Automated WhatsApp assistant answers patient FAQs, explains clinic operating hours, and guides patients to book consultations even when your office is closed.
+              </p>
+              <div className="pt-2 flex items-center gap-2 text-xs font-bold text-purple-700">
+                <CheckCircle2 className="w-4 h-4" /> Zero After-Hours Leads Lost
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── MIDDLE CONVERSION CTA BANNER ── */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+            Want to See How Your Clinic Ranks Against Nearby Competitors Right Now?
           </h2>
-          <p className="text-slate-600 text-base max-w-xl mx-auto mb-10">
-            Join 500+ doctors and clinics using Gyrex to optimize local search presence and manage patient engagement.
+          <p className="text-base text-blue-100 max-w-2xl mx-auto">
+            Run a instant 60-second local search audit on Google Maps across a 5km radius around your clinic.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="pt-2">
             <Link href="/local-seo/free-audit">
-              <Button className="h-14 px-9 rounded-xl font-bold text-base bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/30 border border-blue-500/30">
-                Get Your Free Audit
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl px-8 h-14 text-base shadow-xl flex items-center gap-2.5 mx-auto border border-emerald-400">
+                <MessageSquare className="w-5 h-5 fill-white" />
+                Run Free 60-Second Clinic Audit
               </Button>
             </Link>
-            <Link href="/register">
-              <Button variant="outline" className="h-14 px-9 rounded-xl font-bold text-base border-slate-300 text-slate-700 hover:bg-slate-50">
-                Create Account
+          </div>
+        </div>
+      </section>
+
+      {/* ── CLINIC OWNER ADVANTAGES & INTERACTIVE ROI CALCULATOR ── */}
+      <section id="advantages" className="py-20 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">Financial Impact</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Calculate Your Revenue Growth</h2>
+            <p className="text-sm text-slate-600">Acquiring just 1 extra patient per month pays for your entire Gyrex growth system multiple times over.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            {/* ROI Calculator Card */}
+            <div className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200 space-y-6 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-4">
+                <Calculator className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-bold text-slate-900">Interactive Patient ROI Calculator</h3>
+              </div>
+
+              {/* Slider 1: Consultation / Treatment Fee */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-slate-700">Average Procedure / Treatment Value:</span>
+                  <span className="text-blue-600 font-bold">₹{avgFee.toLocaleString()}</span>
+                </div>
+                <input
+                  type="range"
+                  min="500"
+                  max="25000"
+                  step="500"
+                  value={avgFee}
+                  onChange={(e) => setAvgFee(Number(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              {/* Slider 2: Target New Patients */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-slate-700">Target New Patients / Month:</span>
+                  <span className="text-emerald-600 font-bold">{newPatients} Patients</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="30"
+                  step="1"
+                  value={newPatients}
+                  onChange={(e) => setNewPatients(Number(e.target.value))}
+                  className="w-full accent-emerald-600 cursor-pointer"
+                />
+              </div>
+
+              {/* Calculation Output Box */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2 text-center">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Projected Annual Revenue Increase</p>
+                <p className="text-4xl font-black text-emerald-600">+₹{annualRevenue.toLocaleString()} <span className="text-sm font-semibold text-slate-500">/ year</span></p>
+                <p className="text-[11px] text-slate-400">Based on organic Google Map Pack search conversions</p>
+              </div>
+            </div>
+
+            {/* Advantages Bullet List */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-slate-900">Why Clinic Owners Choose Gyrex</h3>
+                <p className="text-sm text-slate-600">Say goodbye to expensive digital marketing agency retainers.</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">No Marketing Agency Fees</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">Replaces ₹50,000/month digital agency fees with automated organic Google rank tracking.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">Private Reputation Shield</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">Buffers negative feedback privately before it touches Google, protecting your clinic reputation.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">80% Workload Reduction</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">Automates post-consultation review follow-ups, allowing receptionist staff to focus on patients.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── DOCTOR TESTIMONIALS & CASE STUDY (DR. VINAY KUMAR RAI) ── */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 text-center">
+          
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Verified Clinic Case Study</span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trusted by Leading Doctors</h2>
+          </div>
+
+          <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm max-w-3xl mx-auto text-left space-y-6">
+            <div className="flex items-center gap-1 text-amber-400">
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-amber-400" />)}
+            </div>
+
+            <p className="text-base sm:text-lg text-slate-700 italic leading-relaxed">
+              "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #2 on Google Maps within a 5km radius. Patient WhatsApp response rates are incredible."
+            </p>
+
+            <div className="flex items-center justify-between border-t border-slate-100 pt-6">
+              <div>
+                <h4 className="text-base font-bold text-slate-900">Dr. Vinay Kumar Rai</h4>
+                <p className="text-xs text-slate-500">Pediatrician · Pediatric Clinic, South Delhi</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                  Rank #2 on Google Maps
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── BOTTOM CONVERSION CTA BANNER ── */}
+      <section className="py-20 bg-slate-900 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight">
+            Ready to Dominate Local Search in Your Neighborhood?
+          </h2>
+          <p className="text-base text-slate-400 max-w-xl mx-auto">
+            Join 500+ clinics getting more patients automatically. Claim your 14-day risk-free trial today.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <Link href="/register" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-8 h-14 text-base shadow-lg shadow-blue-600/30">
+                Start 14-Day Free Trial
+              </Button>
+            </Link>
+            <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto border-slate-700 text-slate-300 hover:bg-slate-800 rounded-xl px-8 h-14 text-base">
+                Free Google Profile Booster
               </Button>
             </Link>
           </div>
@@ -616,6 +563,21 @@ export default function LandingPage() {
 
       {/* ── FOOTER ── */}
       <Footer />
+
+      {/* ── STICKY MOBILE ACTION BAR (NATIVE APP FEEL) ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 p-3 sm:hidden flex items-center justify-between gap-3 shadow-2xl">
+        <Link href="/login" className="flex-1">
+          <Button variant="outline" className="w-full rounded-xl h-11 text-xs font-bold border-slate-300">
+            Sign In
+          </Button>
+        </Link>
+        <Link href="/local-seo/free-audit" className="flex-1">
+          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 text-xs font-bold shadow-md">
+            Free Audit
+          </Button>
+        </Link>
+      </div>
+
     </div>
   );
 }
