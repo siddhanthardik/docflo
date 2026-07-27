@@ -393,11 +393,11 @@ export default function GBPProfilePage() {
                 size="sm"
                 onClick={handleConnect}
                 disabled={true}
-                title="Only one profile can be connected per plan"
+                title="Only one Google Business Profile can be connected per clinic account"
                 className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs border disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="h-3 w-3 mr-1" />
-                Add Profile
+                Single Profile Connected
               </Button>
             </div>
             <p className="text-blue-200 text-xs mb-2">Average Rating</p>

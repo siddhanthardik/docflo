@@ -11,6 +11,8 @@ export async function getSessionData() {
 
   let doctorId = user.id
   const role = user.role || "DOCTOR"
+  const isSuperAdmin = user.originalRole === "SUPERADMIN" || user.role === "SUPERADMIN"
+  const isImpersonating = !!user.originalAdminId || !!user.impersonate
 
   // If the logged‑in user is a staff member, use the linked doctorId
   if (role === "RECEPTIONIST" || role === "STAFF") {
@@ -31,7 +33,7 @@ export async function getSessionData() {
     // Ignore error if cookies cannot be read (e.g. outside request context)
   }
 
-  return { userId: user.id, doctorId, role, locationId };
+  return { userId: user.id, doctorId, role, isSuperAdmin, isImpersonating, locationId };
 }
 
 export function isDoctor(role: string) {

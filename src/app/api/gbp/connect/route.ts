@@ -23,7 +23,16 @@ export async function GET(req: Request) {
       );
     }
 
-    const { doctorId } = await getSessionData();
+    const { doctorId, isSuperAdmin, isImpersonating } = await getSessionData();
+
+    // Check if clinic already has a connected GBP profile (unless caller is Superadmin / Impersonating)
+    const existingGbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
+    if (existingGbp && !isSuperAdmin && !isImpersonating) {
+      return NextResponse.json(
+        { error: "Only one Google Business Profile can be connected per clinic account. Please disconnect your existing profile first if you wish to connect a new one." },
+        { status: 400 }
+      );
+    }
 
     const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
     if (block) return block;

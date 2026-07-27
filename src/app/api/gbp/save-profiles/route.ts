@@ -22,7 +22,7 @@ function formatAddress(location: any) {
 
 export async function POST(req: Request) {
   try {
-    const { doctorId } = await getSessionData();
+    const { doctorId, isSuperAdmin, isImpersonating } = await getSessionData();
 
     const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
     if (block) return block;
@@ -48,10 +48,10 @@ export async function POST(req: Request) {
       select: { locationName: true }
     });
 
-    if (existingProfiles.length > 0) {
+    if (existingProfiles.length > 0 && !isSuperAdmin && !isImpersonating) {
       const existingName = existingProfiles[0].locationName;
       if (selectedLocations[0] !== existingName) {
-        return NextResponse.json({ error: "Your plan only allows one Google Business Profile. You already have a profile connected." }, { status: 400 });
+        return NextResponse.json({ error: "Only one Google Business Profile can be connected per clinic account. Please disconnect your existing profile first if you wish to connect a new one." }, { status: 400 });
       }
     }
 
