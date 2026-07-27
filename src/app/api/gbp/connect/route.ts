@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
+import { prisma } from "@/lib/prisma";
 
 const GBP_OAUTH_STATE_COOKIE = "gbp_oauth_state";
 const GBP_SCOPE = "https://www.googleapis.com/auth/business.manage";
