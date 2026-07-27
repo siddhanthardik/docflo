@@ -193,20 +193,109 @@ export default function FreeAuditPage() {
     return undefined;
   };
 
-  const getMinPhoneLength = (code: string): number => {
-    // Shorter numbers for some regions (e.g. US = 10, India = 10)
-    const short = ["+1", "+7", "+20", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43", "+44", "+45", "+46", "+47", "+48", "+49", "+51", "+52", "+54", "+55", "+56", "+57", "+60", "+61", "+62", "+63", "+64", "+65", "+66", "+81", "+82", "+84", "+86", "+90", "+91", "+92", "+93", "+94"];
-    return short.includes(code) ? 7 : 5;
+  // ── Country-specific phone length rules (ITU-T E.164) ───────────────────────
+  // Format: [min, max] subscriber digits (excluding country code)
+  const PHONE_RULES: Record<string, { min: number; max: number; hint: string }> = {
+    "+91":  { min: 10, max: 10, hint: "10-digit mobile number" },       // India
+    "+1":   { min: 10, max: 10, hint: "10-digit number (US/Canada)" },  // US / Canada
+    "+44":  { min: 10, max: 10, hint: "10-digit number" },              // UK
+    "+61":  { min:  9, max:  9, hint: "9-digit number" },               // Australia
+    "+92":  { min: 10, max: 10, hint: "10-digit number" },              // Pakistan
+    "+880": { min: 10, max: 10, hint: "10-digit number" },              // Bangladesh
+    "+94":  { min:  9, max:  9, hint: "9-digit number" },               // Sri Lanka
+    "+977": { min:  9, max: 10, hint: "9–10-digit number" },            // Nepal
+    "+93":  { min:  9, max:  9, hint: "9-digit number" },               // Afghanistan
+    "+971": { min:  9, max:  9, hint: "9-digit number" },               // UAE
+    "+966": { min:  9, max:  9, hint: "9-digit number" },               // Saudi Arabia
+    "+974": { min:  8, max:  8, hint: "8-digit number" },               // Qatar
+    "+965": { min:  8, max:  8, hint: "8-digit number" },               // Kuwait
+    "+968": { min:  8, max:  8, hint: "8-digit number" },               // Oman
+    "+973": { min:  8, max:  8, hint: "8-digit number" },               // Bahrain
+    "+962": { min:  9, max:  9, hint: "9-digit number" },               // Jordan
+    "+961": { min:  7, max:  8, hint: "7–8-digit number" },             // Lebanon
+    "+972": { min:  9, max:  9, hint: "9-digit number" },               // Israel
+    "+964": { min: 10, max: 10, hint: "10-digit number" },              // Iraq
+    "+65":  { min:  8, max:  8, hint: "8-digit number" },               // Singapore
+    "+60":  { min:  9, max: 10, hint: "9–10-digit number" },            // Malaysia
+    "+62":  { min:  9, max: 12, hint: "9–12-digit number" },            // Indonesia
+    "+66":  { min:  9, max:  9, hint: "9-digit number" },               // Thailand
+    "+84":  { min:  9, max:  9, hint: "9-digit number" },               // Vietnam
+    "+63":  { min: 10, max: 10, hint: "10-digit number" },              // Philippines
+    "+86":  { min: 11, max: 11, hint: "11-digit number" },              // China
+    "+81":  { min: 10, max: 10, hint: "10-digit number" },              // Japan
+    "+82":  { min: 10, max: 10, hint: "10-digit number" },              // South Korea
+    "+852": { min:  8, max:  8, hint: "8-digit number" },               // Hong Kong
+    "+886": { min:  9, max:  9, hint: "9-digit number" },               // Taiwan
+    "+855": { min:  8, max:  9, hint: "8–9-digit number" },             // Cambodia
+    "+7":   { min: 10, max: 10, hint: "10-digit number" },              // Russia / Kazakhstan
+    "+49":  { min: 10, max: 11, hint: "10–11-digit number" },           // Germany
+    "+33":  { min:  9, max:  9, hint: "9-digit number" },               // France
+    "+39":  { min:  9, max: 11, hint: "9–11-digit number" },            // Italy
+    "+34":  { min:  9, max:  9, hint: "9-digit number" },               // Spain
+    "+31":  { min:  9, max:  9, hint: "9-digit number" },               // Netherlands
+    "+32":  { min:  8, max:  9, hint: "8–9-digit number" },             // Belgium
+    "+41":  { min:  9, max:  9, hint: "9-digit number" },               // Switzerland
+    "+43":  { min:  7, max: 13, hint: "7–13-digit number" },            // Austria
+    "+46":  { min:  7, max:  9, hint: "7–9-digit number" },             // Sweden
+    "+47":  { min:  8, max:  8, hint: "8-digit number" },               // Norway
+    "+45":  { min:  8, max:  8, hint: "8-digit number" },               // Denmark
+    "+358": { min:  9, max:  9, hint: "9-digit number" },               // Finland
+    "+48":  { min:  9, max:  9, hint: "9-digit number" },               // Poland
+    "+40":  { min:  9, max:  9, hint: "9-digit number" },               // Romania
+    "+36":  { min:  9, max:  9, hint: "9-digit number" },               // Hungary
+    "+30":  { min: 10, max: 10, hint: "10-digit number" },              // Greece
+    "+90":  { min: 10, max: 10, hint: "10-digit number" },              // Turkey
+    "+380": { min:  9, max:  9, hint: "9-digit number" },               // Ukraine
+    "+351": { min:  9, max:  9, hint: "9-digit number" },               // Portugal
+    "+420": { min:  9, max:  9, hint: "9-digit number" },               // Czech Republic
+    "+355": { min:  9, max:  9, hint: "9-digit number" },               // Albania
+    "+359": { min:  8, max:  9, hint: "8–9-digit number" },             // Bulgaria
+    "+385": { min:  8, max:  9, hint: "8–9-digit number" },             // Croatia
+    "+381": { min:  8, max:  9, hint: "8–9-digit number" },             // Serbia
+    "+357": { min:  8, max:  8, hint: "8-digit number" },               // Cyprus
+    "+353": { min:  9, max:  9, hint: "9-digit number" },               // Ireland
+    "+372": { min:  7, max:  8, hint: "7–8-digit number" },             // Estonia
+    "+374": { min:  8, max:  8, hint: "8-digit number" },               // Armenia
+    "+994": { min:  9, max:  9, hint: "9-digit number" },               // Azerbaijan
+    "+995": { min:  9, max:  9, hint: "9-digit number" },               // Georgia
+    "+55":  { min: 10, max: 11, hint: "10–11-digit number" },           // Brazil
+    "+52":  { min: 10, max: 10, hint: "10-digit number" },              // Mexico
+    "+54":  { min: 10, max: 10, hint: "10-digit number" },              // Argentina
+    "+57":  { min: 10, max: 10, hint: "10-digit number" },              // Colombia
+    "+56":  { min:  9, max:  9, hint: "9-digit number" },               // Chile
+    "+51":  { min:  9, max:  9, hint: "9-digit number" },               // Peru
+    "+598": { min:  8, max:  9, hint: "8–9-digit number" },             // Uruguay
+    "+27":  { min:  9, max:  9, hint: "9-digit number" },               // South Africa
+    "+234": { min: 10, max: 10, hint: "10-digit number" },              // Nigeria
+    "+254": { min: 10, max: 10, hint: "10-digit number" },              // Kenya
+    "+233": { min:  9, max:  9, hint: "9-digit number" },               // Ghana
+    "+251": { min:  9, max:  9, hint: "9-digit number" },               // Ethiopia
+    "+263": { min:  9, max:  9, hint: "9-digit number" },               // Zimbabwe
+    "+213": { min:  9, max:  9, hint: "9-digit number" },               // Algeria
+    "+212": { min:  9, max:  9, hint: "9-digit number" },               // Morocco
+    "+20":  { min: 10, max: 10, hint: "10-digit number" },              // Egypt
+    "+64":  { min:  8, max:  9, hint: "8–9-digit number" },             // New Zealand
+    "+354": { min:  7, max:  7, hint: "7-digit number" },               // Iceland
+    "+356": { min:  8, max:  8, hint: "8-digit number" },               // Malta
+    "+960": { min:  7, max:  7, hint: "7-digit number" },               // Maldives
+    "+975": { min:  8, max:  8, hint: "8-digit number" },               // Bhutan
+    "+254": { min: 10, max: 10, hint: "10-digit number" },              // Kenya (dupe guard)
   };
+
+  const getPhoneRule = (code: string) =>
+    PHONE_RULES[code] ?? { min: 6, max: 15, hint: "valid phone number" };
 
   const validatePhone = (val: string): string | undefined => {
     if (!val.trim()) return "Please enter your phone number.";
     if (!/^\d+$/.test(val)) return "Phone number must contain digits only.";
-    const min = getMinPhoneLength(countryCode);
-    if (val.length < min) return `Phone number must be at least ${min} digits.`;
-    if (val.length > 15) return "Phone number is too long.";
+    const rule = getPhoneRule(countryCode);
+    if (val.length < rule.min)
+      return `${countryCode} numbers must be exactly ${rule.min === rule.max ? rule.min : `${rule.min}–${rule.max}`} digits. (${rule.hint})`;
+    if (val.length > rule.max)
+      return `${countryCode} numbers must not exceed ${rule.max} digits. (${rule.hint})`;
     return undefined;
   };
+
 
   // ── Blur handlers (mark field as touched) ────────────────────────────────────
   const handleClinicBlur = () => {
@@ -540,7 +629,20 @@ export default function FreeAuditPage() {
                     <div className="relative shrink-0">
                       <select
                         value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
+                        onChange={(e) => {
+                          const newCode = e.target.value;
+                          setCountryCode(newCode);
+                          // Re-validate phone immediately with new country rules
+                          if (touched.phone && phone) {
+                            const rule = PHONE_RULES[newCode] ?? { min: 6, max: 15, hint: "valid phone number" };
+                            let err: string | undefined;
+                            if (phone.length < rule.min)
+                              err = `${newCode} numbers must be exactly ${rule.min === rule.max ? rule.min : `${rule.min}–${rule.max}`} digits. (${rule.hint})`;
+                            else if (phone.length > rule.max)
+                              err = `${newCode} numbers must not exceed ${rule.max} digits. (${rule.hint})`;
+                            setErrors((prev) => ({ ...prev, phone: err }));
+                          }
+                        }}
                         disabled={isScanning}
                         className="appearance-none px-3 pr-7 h-11 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 cursor-pointer"
                       >
