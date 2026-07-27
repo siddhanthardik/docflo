@@ -46,8 +46,6 @@ export async function GET(req: Request) {
 
     if (type && type !== "ALL") {
       where.patientType = type;
-    } else if (!type || type === "ALL") {
-      where.patientType = { in: ["ACTIVE", "INACTIVE"] };
     }
 
     const primaryPractitionerId = searchParams.get("primaryPractitionerId");
