@@ -208,9 +208,9 @@ export class ReviewDispatcherService {
 
     if (requestType === "GOOGLE_REVIEW") {
       const reviewLink = await resolveGoogleReviewLink(doctorId);
-      const defaultReply = `Hi ${patient.firstName}, thank you for choosing ${doctor.clinicName || "our clinic"}! 🌟\n\nIf you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much!`;
+      const defaultReply = `Hi ${patient.firstName}, thank you for choosing ${doctor.clinicName || "our clinic"}! 🌟\n\nIf you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n\n${reviewLink}\n\nThank you so much!`;
       finalMessage = doctor.reviewGoogleInvitationMessage 
-        ? doctor.reviewGoogleInvitationMessage.replace("{link}", reviewLink)
+        ? doctor.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`)
         : defaultReply;
     } else {
       const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;

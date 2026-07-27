@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Use dispatcher service for manual sending
     await ReviewDispatcherService.manualSendReviewRequest(patientId, "", doctorId, overrideCooldown, requestType);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, requestType });
   } catch (error: any) {
     console.error("Failed to send review request:", error);
     

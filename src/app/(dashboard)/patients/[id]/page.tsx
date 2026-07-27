@@ -129,7 +129,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
           throw new Error(data.error || "Failed to send review request");
         }
       } else {
-        const msgType = type === "GOOGLE_REVIEW" ? "Google Review link" : "Feedback survey";
+        const sentType = data.requestType || type;
+        const msgType = sentType === "GOOGLE_REVIEW" ? "Google Review link" : "Feedback survey";
         toast({ title: "Success", description: `${msgType} sent via WhatsApp!` });
         setShowCooldownOverride(false);
       }
