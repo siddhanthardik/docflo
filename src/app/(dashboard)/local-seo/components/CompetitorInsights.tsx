@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus, MessageSquare, Edit3, ShieldAlert, Award, Layers } from "lucide-react";
+import { AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus, MessageSquare, Edit3, ShieldAlert, ShieldCheck, Award, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -172,47 +172,47 @@ function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorRev
   const ratingGap = top1 ? (top1.rating - doctorRating).toFixed(1) : "0.0";
 
   return (
-    <div className="mb-6 p-5 bg-slate-900 text-white rounded-2xl shadow-sm border border-slate-800 space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="mb-6 p-5 bg-white text-gray-900 rounded-2xl shadow-2xs border border-gray-200 space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
         <div className="flex items-center gap-2">
-          <Award className="w-5 h-5 text-amber-400" />
-          <h3 className="font-bold text-sm text-white">4-Pillar Competitor Gap Matrix</h3>
+          <Award className="w-5 h-5 text-indigo-600" />
+          <h3 className="font-bold text-sm text-gray-900">4-Pillar Competitor Gap Matrix</h3>
         </div>
-        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${userRank === 1 ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' : 'bg-rose-900/80 text-rose-300 border border-rose-700'}`}>
+        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${userRank === 1 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
           {userRank === 1 ? "#1 Top Ranked Clinic" : `${clinicsAhead} Clinics Ahead`}
         </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-        <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700/60 space-y-1">
-          <div className="flex items-center justify-between text-slate-400 font-semibold">
+        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1">
+          <div className="flex items-center justify-between text-gray-500 font-semibold">
             <span>Review Count Gap</span>
-            <Layers className="w-3.5 h-3.5 text-indigo-400" />
+            <Layers className="w-3.5 h-3.5 text-indigo-600" />
           </div>
-          <p className="text-xl font-bold text-white">+{reviewGap} reviews</p>
-          <p className="text-[11px] text-amber-400 font-medium">
+          <p className="text-xl font-black text-gray-900">+{reviewGap} reviews</p>
+          <p className="text-[11px] text-amber-700 font-medium">
             {reviewGap > 0 ? `Needed to equal #1 rank (${top1?.name || 'Competitor'})` : "You lead in review count!"}
           </p>
         </div>
 
-        <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700/60 space-y-1">
-          <div className="flex items-center justify-between text-slate-400 font-semibold">
+        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1">
+          <div className="flex items-center justify-between text-gray-500 font-semibold">
             <span>Rating Score Gap</span>
-            <Star className="w-3.5 h-3.5 text-amber-400" />
+            <Star className="w-3.5 h-3.5 text-amber-500" />
           </div>
-          <p className="text-xl font-bold text-white">{parseFloat(ratingGap) > 0 ? `+${ratingGap} ★` : "Strong Rating"}</p>
-          <p className="text-[11px] text-slate-300">
+          <p className="text-xl font-black text-gray-900">{parseFloat(ratingGap) > 0 ? `+${ratingGap} ★` : "Strong Rating"}</p>
+          <p className="text-[11px] text-gray-600">
             Top competitors average {top1?.rating || 4.9}★ ratings.
           </p>
         </div>
 
-        <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700/60 space-y-1">
-          <div className="flex items-center justify-between text-slate-400 font-semibold">
+        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1">
+          <div className="flex items-center justify-between text-gray-500 font-semibold">
             <span>Category Coverage</span>
-            <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <p className="text-xl font-bold text-white">Target 2 More</p>
-          <p className="text-[11px] text-emerald-400 font-medium">
+          <p className="text-xl font-black text-gray-900">Target 2 More</p>
+          <p className="text-[11px] text-emerald-700 font-medium">
             Add secondary categories in GMB Settings.
           </p>
         </div>

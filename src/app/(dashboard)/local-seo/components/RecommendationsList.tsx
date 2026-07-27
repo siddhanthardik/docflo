@@ -176,36 +176,36 @@ export function RecommendationsList() {
   return (
     <div className="space-y-6">
       {/* Optimization Score & Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-white text-gray-900 p-6 sm:p-8 rounded-2xl shadow-2xs border border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2">
-            <span className="bg-amber-400/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full border border-amber-400/30 flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-amber-400" />
+            <span className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-100 flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-blue-600" />
               1-Click Execution Engine
             </span>
-            <span className="text-xs text-slate-400">Algorithmic Scan</span>
+            <span className="text-xs text-gray-400">Algorithmic Scan</span>
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Profile Optimization Health</h2>
-          <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Profile Optimization Health</h2>
+          <p className="text-sm text-gray-600 max-w-xl leading-relaxed">
             Execute these high-impact 1-click tasks to boost your Google Map Pack ranking and capture nearby patient inquiries.
           </p>
         </div>
 
-        <div className="flex items-center gap-6 bg-slate-800/80 p-4 rounded-xl border border-slate-700/60 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-6 bg-gray-50/80 p-4 rounded-xl border border-gray-200/80 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
           <div className="text-center">
-            <span className="text-4xl font-black text-emerald-400">{healthScore}%</span>
-            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Health Score</p>
+            <span className="text-4xl font-black text-emerald-600">{healthScore}%</span>
+            <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mt-0.5">Health Score</p>
           </div>
-          <div className="h-10 w-px bg-slate-700" />
+          <div className="h-10 w-px bg-gray-200" />
           <Button 
             onClick={runScan} 
             disabled={scanning}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-md font-semibold text-xs h-10"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs font-semibold text-xs h-10"
           >
             {scanning ? (
               <><RefreshCcw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Scanning...</>
             ) : (
-              <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Scan Profile</>
+              <><RefreshCcw className="h-3.5 w-3.5 mr-1.5" /> Scan Profile</>
             )}
           </Button>
         </div>

@@ -100,11 +100,20 @@ export async function GET(request: Request) {
     let lat: number | null = null;
     let lng: number | null = null;
 
-    const bName = profileData?.name || account.locationName || "";
-    const bCats = profileData?.categories || profileData?.types || [];
-    const bAddr = profileData?.address || "";
-    const detected = detectSpeciality(bName, bCats, bAddr);
-    const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || "Medical Clinic") : detected.speciality;
+    const insights = (account.insightsData as any) || {};
+    const doctor = await prisma.doctor.findUnique({ where: { id: session.doctorId }, select: { specialty: true, clinicName: true, name: true } });
+
+    const bName = insights.name || profileData?.name || doctor?.clinicName || doctor?.name || account.locationName || "";
+    const rawCategories = insights.categories || profileData?.categories || [];
+    const categoryNames: string[] = Array.isArray(rawCategories) 
+      ? rawCategories.map((c: any) => typeof c === 'string' ? c : (c?.displayName || c?.name || ''))
+      : [insights.primaryCategory, doctor?.specialty].filter(Boolean) as string[];
+
+    const bAddr = insights.formattedAddress || profileData?.address || "";
+    const detected = detectSpeciality(bName, categoryNames, bAddr, doctor?.specialty || "");
+    const primaryCategory = !detected.isUnknown 
+      ? detected.speciality 
+      : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Pediatrician");
 
     // Check if we have coordinates from stored GBP data
     // Try geocoding from address as fallback

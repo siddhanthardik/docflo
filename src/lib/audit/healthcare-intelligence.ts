@@ -113,6 +113,14 @@ const SPECIALITY_DATABASE: Record<string, SpecialityBenchmark> = {
     seasonalOpportunities: ["Sports Season (Jun–Aug)", "Winter Joint Pain (Nov–Jan)"],
     contentOpportunities: ["Exercises for lower back pain", "How many physiotherapy sessions do I need?"]
   },
+  "pediatrics": {
+    speciality: "Pediatrician",
+    expectedRating: 4.8,
+    expectedReviewCount: 150,
+    highValueKeywords: ["Pediatrician Near Me", "Child Specialist", "Pediatric Clinic", "Baby Doctor", "Vaccination Center", "Children's Clinic"],
+    seasonalOpportunities: ["Monsoon Flu & Fever Season (July-September)", "School Immunization Drive (March-April)"],
+    contentOpportunities: ["Childhood vaccination schedule guide", "Monsoon fever care for kids"]
+  },
   "psychiatry": {
     speciality: "Mental Health Clinic",
     expectedRating: 4.7,
@@ -139,6 +147,7 @@ export function detectSpeciality(
 ): SpecialityBenchmark {
   const text = (businessName + " " + categories.join(" ") + " " + address + " " + searchQuery).toLowerCase();
   
+  if (text.includes("pediatr") || text.includes("child") || text.includes("baby") || text.includes("kids") || text.includes("pedia") || text.includes("neonat")) return SPECIALITY_DATABASE["pediatrics"];
   if (text.includes("derma") || text.includes("skin") || text.includes("cosmet") || text.includes("laser") || text.includes("aesthetic") || text.includes("beauty") || text.includes("hair")) return SPECIALITY_DATABASE["dermatology"];
   if (text.includes("urology") || text.includes("urologist")) return SPECIALITY_DATABASE["urology"];
   if (text.includes("ivf") || text.includes("fertility") || text.includes("reproduction") || text.includes("infertility")) return SPECIALITY_DATABASE["ivf"];
