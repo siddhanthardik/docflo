@@ -17,6 +17,7 @@ export interface GbpAccountInsights {
   formattedAddress?: string;
   rating?: number;
   user_ratings_total?: number;
+  responseRate?: number;
   phone?: string;
   website?: string;
   placeId?: string | null;
