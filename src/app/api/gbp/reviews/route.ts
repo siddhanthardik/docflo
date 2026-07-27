@@ -77,13 +77,99 @@ export async function GET(req: Request) {
       orderBy: { reviewDate: "desc" },
     });
 
+    // Fallback & Auto-backfill: If DB has 0 reviews, check insights.reviews or Places API
+    if (storedReviews.length === 0) {
+      let fallbackReviews: any[] = insights.reviews || insights.recentReviews || [];
+
+      if (fallbackReviews.length === 0 && insights.placeId && process.env.GOOGLE_PLACES_API_KEY) {
+        try {
+          const placesService = new PlacesService();
+          const details = await placesService.getPlaceDetails(insights.placeId);
+          if (details.reviews && details.reviews.length > 0) {
+            fallbackReviews = details.reviews.map((r: any) => ({
+              id: `place-rev-${r.time || Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              author_name: r.author_name,
+              reviewerName: r.author_name,
+              rating: r.rating,
+              text: r.text,
+              comment: r.text,
+              relative_time_description: r.relative_time_description,
+              time: r.time,
+              createTime: r.time ? new Date(r.time * 1000).toISOString() : new Date().toISOString(),
+            }));
+            insights.reviews = fallbackReviews;
+            await prisma.gbpAccount.update({
+              where: { id: account.id },
+              data: { insightsData: insights }
+            }).catch(e => console.warn("Failed to update insights with Places reviews:", e));
+          }
+        } catch (err) {
+          console.warn("Could not fetch fresh reviews from Places API:", err);
+        }
+      }
+
+      // Backfill fallback reviews into DB
+      if (fallbackReviews.length > 0) {
+        for (const rev of fallbackReviews) {
+          const rId = rev.id || rev.reviewId || `rev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          await prisma.review.upsert({
+            where: { id: rId },
+            update: {
+              rating: rev.rating || 5,
+              comment: rev.comment || rev.text || "",
+              reply: rev.reply || null,
+              responded: !!(rev.reply || rev.replied || rev.responded),
+              gbpAccountId: account.id,
+            },
+            create: {
+              id: rId,
+              doctorId,
+              gbpAccountId: account.id,
+              reviewerName: rev.reviewerName || rev.author_name || "Google user",
+              rating: rev.rating || 5,
+              comment: rev.comment || rev.text || "",
+              reply: rev.reply || null,
+              responded: !!(rev.reply || rev.replied || rev.responded),
+              source: "GOOGLE",
+              reviewDate: rev.createTime ? new Date(rev.createTime) : new Date(),
+            },
+          }).catch(e => console.warn("Failed to backfill review to DB:", e));
+        }
+
+        // Refetch stored reviews after backfill
+        storedReviews = await prisma.review.findMany({
+          where: { doctorId, source: "GOOGLE" },
+          orderBy: { reviewDate: "desc" },
+        });
+      }
+    }
+
+    // Final list of formatted reviews
+    const finalReviewsList = storedReviews.length > 0 
+      ? storedReviews.map(mapStoredReview)
+      : (insights.reviews || []).map((r: any) => ({
+          id: r.id || r.reviewId || `rev-${Math.random().toString(36).substring(2, 6)}`,
+          author_name: r.author_name || r.reviewerName || "Google user",
+          reviewerName: r.author_name || r.reviewerName || "Google user",
+          rating: r.rating || 5,
+          text: r.text || r.comment || "",
+          comment: r.text || r.comment || "",
+          reply: r.reply || null,
+          replied: !!(r.reply || r.replied || r.responded),
+          responded: !!(r.reply || r.replied || r.responded),
+          source: "GOOGLE",
+          reviewDate: r.createTime || r.reviewDate || new Date().toISOString(),
+          createTime: r.createTime || r.reviewDate || new Date().toISOString(),
+          relative_time_description: r.relative_time_description || new Date().toLocaleDateString(),
+        }));
+
     // Calculate response rate and stats
-    const totalCount = storedReviews.length || insights.user_ratings_total || 0;
-    const respondedCount = storedReviews.filter((r) => r.responded || r.reply).length;
+    const totalCount = finalReviewsList.length || insights.user_ratings_total || 0;
+    const respondedCount = finalReviewsList.filter((r) => r.responded || r.replied || r.reply).length;
     const responseRate = totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0;
     const rawRating = (insights.rating && !isNaN(Number(insights.rating)) && Number(insights.rating) > 0)
       ? Number(insights.rating)
-      : (storedReviews.length > 0 ? (storedReviews.reduce((sum, r) => sum + r.rating, 0) / storedReviews.length) : 0);
+      : (finalReviewsList.length > 0 ? (finalReviewsList.reduce((sum, r) => sum + r.rating, 0) / finalReviewsList.length) : 0);
     const avgRating = (rawRating > 0) ? rawRating.toFixed(1) : "0.0";
 
     // Update insightsData in DB with calculated response rate & user_ratings_total
@@ -106,7 +192,7 @@ export async function GET(req: Request) {
       insights: {
         name: insights.name || "Google Business Profile",
         formattedAddress: insights.formattedAddress || "",
-        rating: insights.rating || 0,
+        rating: Number(avgRating),
         user_ratings_total: totalCount,
         responseRate,
         phone: insights.phone || "",
@@ -115,7 +201,7 @@ export async function GET(req: Request) {
         mapsUri: insights.mapsUri || "",
         newReviewUri: insights.newReviewUri || "",
       },
-      reviews: storedReviews.map(mapStoredReview),
+      reviews: finalReviewsList,
     });
   } catch (error) {
     console.error("Error fetching GBP reviews:", error);
