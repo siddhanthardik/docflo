@@ -32,11 +32,26 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const locationId = url.searchParams.get("locationId") || sessionData.locationId;
     
-    const accountWhere: any = { doctorId };
+    let account = null;
     if (locationId) {
-      accountWhere.id = locationId;
+      account = await prisma.gbpAccount.findFirst({
+        where: {
+          doctorId,
+          OR: [
+            { id: locationId },
+            { locationId: locationId },
+            { locationName: locationId }
+          ]
+        }
+      });
     }
-    const account = await prisma.gbpAccount.findFirst({ where: accountWhere });
+
+    if (!account) {
+      account = await prisma.gbpAccount.findFirst({
+        where: { doctorId },
+        orderBy: { updatedAt: "desc" }
+      });
+    }
 
     if (!account) {
       return NextResponse.json({
