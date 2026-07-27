@@ -53,7 +53,14 @@ export async function GET(req: Request) {
     }
     
     if (locationId) {
-      where.gbpAccountId = locationId;
+      where.AND = [
+        {
+          OR: [
+            { gbpAccountId: locationId },
+            { gbpAccountId: null }
+          ]
+        }
+      ];
     }
 
     if (future === "true") {
