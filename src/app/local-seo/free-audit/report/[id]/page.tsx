@@ -7,6 +7,7 @@ import {
   AlertTriangle, Trophy, ChevronDown, ChevronUp, ArrowRight, X,
   Building2, TrendingUp, Search, ShieldAlert, ShieldCheck, Sparkles, Download,
   ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw
+} from "lucide-react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
