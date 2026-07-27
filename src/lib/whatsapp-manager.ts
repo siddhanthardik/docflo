@@ -261,7 +261,7 @@ class WhatsAppManager {
               orderBy: { createdAt: "desc" }
             });
 
-            const isSurveySent = !!lastSurveyMessage || !!pendingAppointment || patient.reviewRequested;
+            const isSurveySent = !!lastSurveyMessage || !!pendingAppointment;
             const textLower = textMessage.trim().toLowerCase();
             const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
               textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍"));
