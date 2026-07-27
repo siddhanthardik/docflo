@@ -1,6 +1,54 @@
 import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 
+export async function resolveGoogleReviewLink(doctorId: string): Promise<string> {
+  try {
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { clinicName: true, address: true }
+    });
+    const clinicName = doctor?.clinicName || "our clinic";
+
+    // 1. Check GbpAccount insightsData or locationId
+    const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
+    let placeId = (gbp?.insightsData as any)?.placeId;
+
+    // 2. Check latest AuditReport or AuditRequest
+    if (!placeId) {
+      const auditReport = await prisma.auditReport.findFirst({
+        where: { businessName: { contains: clinicName, mode: "insensitive" } },
+        select: { requestId: true }
+      });
+      if (auditReport) {
+        const req = await prisma.auditRequest.findUnique({ where: { id: auditReport.requestId } });
+        if (req?.placeId) placeId = req.placeId;
+      }
+    }
+
+    // 3. Check Google Places API Text Search using clinicName + address
+    if (!placeId) {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (apiKey) {
+        const query = encodeURIComponent(`${clinicName} ${doctor?.address || ""}`);
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`);
+        const data = await res.json();
+        if (data.status === "OK" && data.results && data.results.length > 0) {
+          placeId = data.results[0].place_id;
+        }
+      }
+    }
+
+    if (placeId) {
+      return `https://search.google.com/local/writereview?placeid=${placeId}`;
+    }
+
+    return `https://google.com/search?q=${encodeURIComponent(clinicName)}`;
+  } catch (e) {
+    console.error("[resolveGoogleReviewLink] Error resolving review link:", e);
+    return "https://google.com";
+  }
+}
+
 export class ReviewDispatcherService {
   /**
    * Evaluates recently completed appointments and sends review surveys
@@ -32,10 +80,6 @@ export class ReviewDispatcherService {
       const cutoffTime = new Date();
       cutoffTime.setMinutes(cutoffTime.getMinutes() - delayMinutes);
 
-      // Find appointments that are COMPLETED, have NOT_SENT reviewStatus, 
-      // and their updatedAt is older than the cutoff time (meaning they have been completed for > delayMinutes)
-      // Note: In a stricter environment we'd use a dedicated completedAt timestamp, but updatedAt suffices here 
-      // because once COMPLETED, it usually doesn't get updated frequently.
       const eligibleAppointments = await prisma.appointment.findMany({
         where: {
           doctorId: doctor.id,
@@ -61,22 +105,16 @@ export class ReviewDispatcherService {
         }
 
         if (!isEligible) {
-          // If we don't send it because of cooldown, mark it as SKIPPED by updating reviewStatus to SURVEY_SENT 
-          // (or a new SKIPPED status if we had one, but we'll use a standard approach - let's set it to SURVEY_SENT 
-          // or just update reviewRequested=true to prevent infinite loop checking).
-          // Actually, let's just mark it NOT_SENT and update the `updatedAt`? No, let's just log a skipped event and set reviewRequested=true so we skip it.
-          // Wait, if it's skipped, it shouldn't show as SURVEY_SENT. 
-          // Let's just update `reviewRequested: true` to flag that it was processed, even if skipped.
           await prisma.appointment.update({
             where: { id: appointment.id },
-            data: { reviewRequested: true } // Legacy field acts as processed flag for skipped ones
+            data: { reviewRequested: true }
           });
           continue;
         }
 
         // Send survey
         try {
-          const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your care today! We strive to provide the best possible experience.\n\nWere you happy with your visit? Simply reply *YES*.\nIf there's anything we could have done better, please reply *NO*.`;
+          const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your healthcare. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
           const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
           const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
           const finalMessage = surveyMessage + optOutMsg;
@@ -117,7 +155,7 @@ export class ReviewDispatcherService {
           // Update Status
           await prisma.appointment.update({
             where: { id: appointment.id },
-            data: { reviewStatus: "SURVEY_SENT", reviewRequested: true } // populate legacy field too
+            data: { reviewStatus: "SURVEY_SENT", reviewRequested: true }
           });
 
           // Update Patient cooldown
@@ -159,7 +197,7 @@ export class ReviewDispatcherService {
       }
     }
 
-    const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your care today! We strive to provide the best possible experience.\n\nWere you happy with your visit? Simply reply *YES*.\nIf there's anything we could have done better, please reply *NO*.`;
+    const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"} with your healthcare. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
     const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
     const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
     const finalMessage = surveyMessage + optOutMsg;

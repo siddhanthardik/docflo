@@ -128,7 +128,7 @@ export default function ReviewsSettingsPage() {
                 id="surveyMessage"
                 className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
                 value={settings.reviewSurveyMessage}
-                placeholder="Thank you for visiting today. We hope you had a good experience. If you're happy with your visit, simply reply YES..."
+                placeholder="Hi {firstName}, thank you for trusting our clinic with your healthcare. We truly care about your well-being and hope you are feeling better after your visit. Were you happy with your care? Simply reply YES..."
                 onChange={(e) => setSettings({ ...settings, reviewSurveyMessage: e.target.value })}
               />
               <p className="text-xs text-gray-500">Leave blank to use the default message.</p>

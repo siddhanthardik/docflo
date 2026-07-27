@@ -3,7 +3,7 @@ import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
 import { prisma } from '@/lib/prisma';
-// import { AIAgentsService } from '@/services/ai-agents.service'; // We will import dynamically to avoid circular dependencies
+import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
@@ -225,17 +225,9 @@ class WhatsAppManager {
               const isNo = /^(no|n|nope|nah|never|bad)$/.test(textLower) || textLower.includes("no");
 
               if (isYes) {
-                const gbp = await prisma.gbpAccount.findFirst({ where: { doctorId } });
-                const insights: any = gbp?.insightsData || {};
-                const placeId = insights?.placeId;
-                
+                const reviewLink = await resolveGoogleReviewLink(doctorId);
                 const doctorData = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { clinicName: true, reviewGoogleInvitationMessage: true }});
-                const clinicSearch = encodeURIComponent(doctorData?.clinicName || "clinic");
                 
-                const reviewLink = placeId
-                  ? `https://search.google.com/local/writereview?placeid=${placeId}`
-                  : `https://google.com/search?q=${clinicSearch}`;
-                  
                 const defaultReply = `We are absolutely thrilled to hear that! 🌟 \n\nAs a local clinic, we rely heavily on word-of-mouth. If you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n${reviewLink}\n\nThank you so much, and stay healthy!`;
                 const replyText = doctorData?.reviewGoogleInvitationMessage 
                   ? doctorData.reviewGoogleInvitationMessage.replace("{link}", reviewLink)

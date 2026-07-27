@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 import { ReviewDispatcherService } from "@/services/review-dispatcher.service";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const { doctorId } = await getSessionData();
+    if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctorId = session.user.id;
     const { id: patientId } = await params;
     const body = await req.json().catch(() => ({}));
     const overrideCooldown = body.overrideCooldown || false;
@@ -26,6 +25,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: error.message, isCooldownError: true }, { status: 400 });
     }
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
