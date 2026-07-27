@@ -53,14 +53,25 @@ class WhatsAppManager {
   // Connects or reconnects a doctor's WhatsApp session
   async connect(doctorId: string) {
     console.log(`[WhatsAppManager] Starting connection for doctor: ${doctorId}`);
+    
+    // Clean up any pre-existing dangling socket for this doctor to prevent duplicate connections
+    const existingSock = this.sockets.get(doctorId);
+    if (existingSock) {
+      try {
+        existingSock.ev.removeAllListeners('connection.update');
+        existingSock.ws.close();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      this.sockets.delete(doctorId);
+    }
+
     const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
     let authState;
     try {
       authState = await useMultiFileAuthState(sessionDir);
     } catch (e) {
       console.error(`[WhatsAppManager] Corrupted auth state for ${doctorId}, cannot connect.`, e);
-      // We don't delete the folder automatically here in case it's a temporary read error, 
-      // but if the credentials are truly corrupt, they will need to manually remove and re-link.
       return;
     }
     const { state, saveCreds } = authState;
@@ -72,9 +83,17 @@ class WhatsAppManager {
       browser: ['Gyrex', 'Chrome', '1.0.0'],
       markOnlineOnConnect: false,
       syncFullHistory: false,
+      keepAliveIntervalMs: 30000, // Send keep-alive ping every 30 seconds to prevent idle socket drop
+      connectTimeoutMs: 60000,
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async () => {
+      try {
+        await saveCreds();
+      } catch (e) {
+        console.error(`[WhatsAppManager] Error saving creds for ${doctorId}:`, e);
+      }
+    });
 
     sock.ev.on('connection.update', (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -94,11 +113,11 @@ class WhatsAppManager {
         console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
         
         if (shouldReconnect) {
-          // Delay reconnect to prevent spamming WhatsApp servers (which causes 401 bans) and to allow files to unlock
-          const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 5000;
+          // Delay reconnect to prevent spamming WhatsApp servers and to allow files to unlock
+          const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 3000;
           setTimeout(() => {
-            console.log(`[WhatsAppManager] Reconnecting ${doctorId} now...`);
-            this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Reconnect error for ${doctorId}:`, e));
+            console.log(`[WhatsAppManager] Auto-reconnecting ${doctorId} now...`);
+            this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect error for ${doctorId}:`, e));
           }, delay);
         } else {
           // Genuinely logged out from the phone app (401)
