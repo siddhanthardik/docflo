@@ -20,7 +20,7 @@ export class AIAgentsService {
     doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string }
   ) {
     try {
-      const mode = config?.mode || "handoff"; // handoff vs autonomous
+      const mode = config?.mode || "handoff";
       const tone = config?.tone || "warm_receptionist";
       const customRules = config?.trainingPrompt || config?.customRules || "";
       const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
@@ -29,10 +29,31 @@ export class AIAgentsService {
       const clinicName = doctorProfile?.clinicName || config?.clinicName || "our Clinic";
       const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
 
-      const clinicTimings = config?.clinicTimings || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
+      // Comprehensive OPD Schedule Configuration
+      const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
+      const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
+      const hospitalHours = config?.hospitalHours || config?.hospitalVisitHours || "";
+      const sundayRule = config?.sundayRule || "Closed";
+      const clinicTimings = config?.clinicTimings || [
+        morningOpd ? `Morning OPD: ${morningOpd}` : "",
+        eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
+        hospitalHours ? `Hospital Hours: ${hospitalHours}` : "",
+        `Sunday: ${sundayRule}`
+      ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
+
+      // Fees & Policy Configuration
       const consultationFee = config?.consultationFee || "";
+      const followUpFee = config?.followUpFee || "";
+      const followUpDays = config?.followUpDays || "7 days";
+      const advanceBookingNotice = config?.advanceBookingNotice || "Same day booking allowed";
+      
+      // Services & Vaccination List
       const vaccinationsList = config?.vaccinationsList || "BCG, Polio, Hepatitis B, DTP, Rotavirus, MMR, Flu Shot";
-      const servicesOffered = config?.servicesOffered || "General Consultation, Health Checkup";
+      const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
+
+      // Persona & Language
+      const assistantName = config?.assistantName || "Riya";
+      const languagePref = config?.languagePref || "english"; // "english", "hinglish", "hindi"
 
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
@@ -50,41 +71,52 @@ export class AIAgentsService {
       }
 
       const systemPrompt = `
-You are the elite, warm, polite, and highly professional WhatsApp Senior Clinic Receptionist for ${clinicName} (${doctorName} - ${specialty}).
+You are ${assistantName}, the warm, polite, highly experienced Senior WhatsApp Clinic Receptionist for ${clinicName} (${doctorName} - ${specialty}).
 
-CLINIC INFORMATION:
+CLINIC OPD & SCHEDULE SPECIFICATIONS:
 - Doctor: ${doctorName}
 - Specialty: ${specialty}
 - Clinic Name: ${clinicName}
-- Timings: ${clinicTimings}
-${consultationFee ? `- Consultation Fee: ${consultationFee}` : ""}
-- Services: ${servicesOffered}
-${isPediatrician ? `- Available Vaccinations: ${vaccinationsList}` : ""}
+- Morning OPD Hours: ${morningOpd || "Not Configured / Check Full Schedule"}
+- Evening OPD Hours: ${eveningOpd || "Not Configured / Check Full Schedule"}
+- Hospital Visit / Round Hours: ${hospitalHours || "None"}
+- Full Schedule Summary: ${clinicTimings}
+- Sunday Policy: ${sundayRule}
+
+FEES & POLICY:
+- Consultation Fee: ${consultationFee || "Shared at clinic"}
+${followUpFee ? `- Follow-up Fee: ${followUpFee} (valid within ${followUpDays})` : ""}
+- Booking Notice: ${advanceBookingNotice}
+
+SERVICES & VACCINATION:
+- Services Offered: ${servicesOffered}
+${isPediatrician ? `- Available Pediatric Vaccinations: ${vaccinationsList}` : ""}
 ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 
 CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
-1. **ROLE & PERSONA**: Speak naturally like an experienced, warm, polite Indian clinic receptionist. NEVER sound like a generic robot. Keep responses concise (2 to 4 sentences max).
+1. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
+   - BEFORE offering morning or evening slots to a patient, YOU MUST CHECK the doctor's actual OPD hours.
+   - IF Morning OPD is NOT available (e.g. Doctor is visiting hospital in the morning or morning OPD is closed), DO NOT OFFER MORNING SLOTS. Inform the patient politely: "Dr. ${doctorName} is available for clinic OPD in the Evening from ${eveningOpd || clinicTimings}. (Morning is reserved for hospital visits). Would you like to reserve an evening slot for today or tomorrow?"
+   - IF Evening OPD is NOT available, offer Morning slots ONLY.
+   - IF both Morning & Evening OPD are open, offer both!
 
 2. **APPOINTMENT BOOKING FLOW**:
-   - If the patient expresses desire or replies YES to book an appointment (e.g. "Yes", "Yes. I need appointment", "want to visit tomorrow", "is slot available", "book slot"):
-     * Acknowledge warmly & immediately ask for day and time preference!
-     * Example: "Wonderful! I would be happy to reserve a slot for you with ${doctorName}. Would you like to visit Today or Tomorrow? We have Morning slots (10 AM - 1:30 PM) and Evening slots (5 PM - 8:30 PM) available."
-   - Once they select a time, politely ask for their Full Name to lock in the appointment slot.
+   - When patient requests to book an appointment (e.g. "need appointment", "Yes", "want to visit tomorrow", "is slot available"):
+     * Check OPD timings first as instructed above.
+     * Ask day and time preference according to available OPD shifts.
+   - Once they select a day/time window, ask for their Full Name and Phone Number to reserve the slot.
 
 3. **STRICT VACCINATION RULE**:
    - IF the patient asks about vaccinations ("is vaccine available", "vaccination", "flu shot"):
      * IF this clinic is a Pediatrician / Child Care Clinic (${isPediatrician ? "YES" : "NO"}):
-       Inform them warmly that pediatric vaccinations are available during clinic hours (${clinicTimings}). List popular vaccines if asked (${vaccinationsList}) and immediately ask if they would like to schedule a vaccination visit today or tomorrow.
+       Confirm vaccination availability during OPD hours (${clinicTimings}). List vaccines if asked (${vaccinationsList}) and invite them to schedule a vaccination visit.
      * IF this clinic is NOT a Pediatrician (e.g. Dermatologist, Gynecologist, Orthopedic, Dental):
-       State politely: "Our clinic specializes in ${specialty} and does not provide pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
+       State politely: "Our clinic specializes in ${specialty} and does not offer pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
 
-4. **TIMINGS & FEES INQUIRIES**:
-   - If asked about hours or fees, provide the exact timings (${clinicTimings}) and fee (${consultationFee || "shared during booking"}), then ask if they would like to reserve a consultation slot.
-
-5. **FORMATTING**:
-   - Use clean, elegant WhatsApp formatting (*bold* for key details, bullet points for time slots).
-   - NEVER output generic template disclaimers like "We have received your message and a staff member will get back to you".
-   - End response cleanly. Disclaimer will be attached automatically.
+4. **TONE & FORMATTING**:
+   - Language Style: ${languagePref === "hinglish" ? "Warm natural Indian Hinglish (mixing English & casual polite Hindi words like 'Namaste', 'Ji')" : "Polite, warm, crisp English"}.
+   - Response Length: 2 to 4 sentences max. Clean WhatsApp formatting (*bold* key details).
+   - NEVER output robotic template text like "We have received your message and a staff member will get back to you".
       `;
 
       const prompt = `
@@ -106,14 +138,13 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
 
       let aiReply = response.text || `Hello! Thank you for contacting ${clinicName}. I would be happy to assist you with booking an appointment with ${doctorName}. Would you like to visit today or tomorrow?`;
 
-      // Post-processing guardrail: clean up any legacy disclaimers or restricted phrases
+      // Clean up legacy disclaimers
       aiReply = aiReply
         .replace(/\(I am the clinic's AI assistant.*?\)/gi, "")
         .replace(/Our consultations are 30 minutes in duration\.?/gi, "")
         .replace(/30-minute consultation/gi, "consultation")
         .trim();
 
-      // Ensure clean footer disclaimer is attached
       aiReply += `\n\n${phoneDisclaimer}`;
 
       return aiReply;
@@ -142,12 +173,6 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         
         Custom Guidelines: ${instructions}
         Target Keywords to Weave In Naturally (if relevant): ${targetKeywords}
-        
-        Your Task:
-        - Draft a highly professional, empathetic response.
-        - HIPAA Compliance: Never confirm patient medical condition or disclose health details.
-        - For 4 & 5-star reviews: Express genuine gratitude and naturally weave in 1 target keyword if contextually appropriate.
-        - For 1 to 3-star reviews: De-escalate masterfully, apologize politely, and invite them to email/call the clinic privately.
         
         Respond ONLY with the exact text of the reply. No markdown quotes or extra filler.
       `;
@@ -197,9 +222,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
       const text = response.text || "";
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0]);
-        }
+        if (jsonMatch) return JSON.parse(jsonMatch[0]);
       } catch (e) {}
 
       return {

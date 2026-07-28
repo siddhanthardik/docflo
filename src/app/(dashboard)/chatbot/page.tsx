@@ -365,84 +365,175 @@ export default function AIAgentsHubPage() {
                   <p className="text-[11px] text-gray-500">Autonomous mode provides 24/7 booking link delivery to after-hours WhatsApp inquiries.</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 🕒 OPD SHIFTS & SCHEDULE */}
+                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    1. OPD Shifts & Schedule (Critical)
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Morning OPD Hours</Label>
+                      <Input 
+                        placeholder="10:00 AM - 1:30 PM (or Leave empty if closed)"
+                        value={configDraft.morningOpdHours || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, morningOpdHours: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Evening OPD Hours</Label>
+                      <Input 
+                        placeholder="5:00 PM - 8:30 PM"
+                        value={configDraft.eveningOpdHours || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, eveningOpdHours: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Hospital Visit / Round Hours</Label>
+                      <Input 
+                        placeholder="e.g., Morning 9 AM - 1 PM Hospital Rounds"
+                        value={configDraft.hospitalHours || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, hospitalHours: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Sunday OPD Policy</Label>
+                      <Input 
+                        placeholder="e.g., Closed / Emergency Only"
+                        value={configDraft.sundayRule || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, sundayRule: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 💰 FEES & FOLLOW-UP POLICY */}
+                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                    2. Fees & Follow-up Policy
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">First Visit Fee</Label>
+                      <Input 
+                        placeholder="e.g., ₹500"
+                        value={configDraft.consultationFee || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, consultationFee: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Follow-up Fee</Label>
+                      <Input 
+                        placeholder="e.g., ₹300"
+                        value={configDraft.followUpFee || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, followUpFee: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Follow-up Validity</Label>
+                      <Input 
+                        placeholder="e.g., Within 7 Days"
+                        value={configDraft.followUpDays || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, followUpDays: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 💉 SERVICES & VACCINATIONS */}
+                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                    3. Services & Vaccination Catalog
+                  </h4>
+
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-gray-700">Clinic Timings & Available Days</Label>
+                    <Label className="text-xs font-bold text-gray-700">Available Vaccinations (Pediatricians Only)</Label>
                     <Input 
-                      placeholder="Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM"
-                      value={configDraft.clinicTimings || ""}
-                      onChange={(e) => setConfigDraft({...configDraft, clinicTimings: e.target.value})}
-                      className="text-xs"
+                      placeholder="BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot"
+                      value={configDraft.vaccinationsList || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, vaccinationsList: e.target.value})}
+                      className="text-xs bg-white"
                     />
+                    <p className="text-[11px] text-gray-500">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Non-pediatricians will politely inform patients that child vaccines are not provided.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-gray-700">Consultation Fee</Label>
+                    <Label className="text-xs font-bold text-gray-700">Services & Treatments Offered</Label>
                     <Input 
-                      placeholder="₹500 (First Visit) | ₹300 (Follow-up)"
-                      value={configDraft.consultationFee || ""}
-                      onChange={(e) => setConfigDraft({...configDraft, consultationFee: e.target.value})}
-                      className="text-xs"
+                      placeholder="General OPD Consultation, Growth Tracking, Nebulization, In-clinic Procedures"
+                      value={configDraft.servicesOffered || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, servicesOffered: e.target.value})}
+                      className="text-xs bg-white"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Available Vaccinations (Pediatricians Only)</Label>
-                  <Input 
-                    placeholder="BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot"
-                    value={configDraft.vaccinationsList || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, vaccinationsList: e.target.value})}
-                    className="text-xs"
-                  />
-                  <p className="text-[11px] text-gray-500">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Other specialties will politely inform patients that pediatric vaccines are not provided.</p>
-                </div>
+                {/* 🤖 PERSONA & INSTRUCTIONS */}
+                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                    4. Receptionist Persona & Language
+                  </h4>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Services Offered</Label>
-                  <Input 
-                    placeholder="General Consultation, Vaccination, Nebulization, Growth Tracking"
-                    value={configDraft.servicesOffered || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, servicesOffered: e.target.value})}
-                    className="text-xs"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Assistant Name</Label>
+                      <Input 
+                        placeholder="e.g., Riya"
+                        value={configDraft.assistantName || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, assistantName: e.target.value})}
+                        className="text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700">Language Style</Label>
+                      <Select 
+                        value={configDraft.languagePref || "english"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, languagePref: v})}
+                      >
+                        <SelectTrigger className="bg-white text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="english">Polite & Warm English</SelectItem>
+                          <SelectItem value="hinglish">Natural Indian Hinglish (Namaste / Ji)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Doctor Custom Instructions & Guidelines</Label>
-                  <Textarea 
-                    placeholder="E.g. Sunday clinic is closed. Walk-ins accepted before 4 PM. Please bring past medical records."
-                    value={configDraft.trainingPrompt || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, trainingPrompt: e.target.value})}
-                    className="resize-none text-xs"
-                    rows={3}
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-semibold text-slate-700">Emergency Escalation Triggers</Label>
+                    <Input 
+                      placeholder="severe pain, bleeding, chest pain, trauma, emergency"
+                      value={configDraft.emergencyTriggers || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, emergencyTriggers: e.target.value})}
+                      className="text-xs bg-white"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Emergency Escalation Keywords</Label>
-                  <Input 
-                    placeholder="severe pain, bleeding, chest pain, trauma, emergency"
-                    value={configDraft.emergencyTriggers || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, emergencyTriggers: e.target.value})}
-                    className="text-xs"
-                  />
-                  <p className="text-[11px] text-gray-500">If a patient message contains any of these terms, the AI immediately halts and alerts staff.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Receptionist Tone of Voice</Label>
-                  <Select 
-                    value={configDraft.tone || "warm_receptionist"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, tone: v})}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="warm_receptionist">Warm & Helpful Receptionist (Recommended)</SelectItem>
-                      <SelectItem value="professional">Professional & Medical</SelectItem>
-                      <SelectItem value="concise">Concise & Direct</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-semibold text-slate-700">Doctor Custom Guidelines & Rules</Label>
+                    <Textarea 
+                      placeholder="E.g., Sunday OPD closed. Walk-ins accepted before 4 PM. Please bring past medical reports."
+                      value={configDraft.trainingPrompt || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, trainingPrompt: e.target.value})}
+                      className="resize-none text-xs bg-white"
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </>
             )}
