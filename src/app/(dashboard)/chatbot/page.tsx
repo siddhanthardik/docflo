@@ -20,6 +20,8 @@ export default function AIAgentsHubPage() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [configDraft, setConfigDraft] = useState<any>({});
   const [savingConfig, setSavingConfig] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   const fetchAgents = async () => {
     try {
@@ -37,8 +39,24 @@ export default function AIAgentsHubPage() {
     }
   };
 
+  const fetchLogs = async () => {
+    try {
+      setLoadingLogs(true);
+      const res = await fetch("/api/ai-agents/logs");
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.logs || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
   useEffect(() => {
     fetchAgents();
+    fetchLogs();
   }, []);
 
   const toggleAgent = async (agentType: string, currentStatus: boolean) => {
@@ -230,6 +248,68 @@ export default function AIAgentsHubPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Live AI Conversation Training Log */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Bot className="w-5 h-5 text-indigo-600" />
+              Live AI Conversation Training & Audit Log
+            </h3>
+            <p className="text-xs text-slate-500">Inspect real-time patient messages, AI assistant replies, and conversation turns to continuously audit and train your AI employee.</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchLogs} 
+            disabled={loadingLogs}
+            className="text-xs font-bold gap-2"
+          >
+            <RefreshCcw className={`w-3.5 h-3.5 ${loadingLogs ? "animate-spin" : ""}`} />
+            Refresh Logs
+          </Button>
+        </div>
+
+        {logs.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-slate-600">No active AI assistant messages logged yet.</p>
+            <p className="text-[11px] text-slate-400">Incoming WhatsApp patient queries will be logged here in real time for audit & prompt tuning.</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+            {logs.map((log) => (
+              <div key={log.id} className="p-4 rounded-2xl border border-slate-200/70 bg-slate-50/50 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                  <span className="font-bold text-slate-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    {log.patientName} {log.patientPhone ? `(${log.patientPhone})` : ""}
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-400">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200/80">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Incoming Message:</p>
+                    <p className="text-slate-800 font-medium whitespace-pre-wrap">"{log.patientMessage}"</p>
+                  </div>
+
+                  <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                    <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      AI Assistant Reply:
+                    </p>
+                    <p className="text-slate-900 font-medium whitespace-pre-wrap">{log.aiResponse}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Deep Agent Configuration Dialog */}

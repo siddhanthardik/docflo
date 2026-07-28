@@ -252,20 +252,31 @@ class WhatsAppManager {
             }
 
             // Check recent outgoing chat message to see if a review survey was sent
+            // ── Check if incoming message is a booking request ────────────────
+            const textLower = textMessage.trim().toLowerCase();
+            const isBookingRequest = /appointment|book|visit|schedule|consult|slot|timing|fee|doctor|vaccine|vaccination/i.test(textLower);
+
+            // Check if an actual Google Review Survey was sent to this patient in the last 24 hours
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const lastSurveyMessage = await prisma.chatMessage.findFirst({
               where: {
                 conversationId: conversation.id,
                 direction: "OUTGOING",
-                content: { contains: "reply" }
+                createdAt: { gte: twentyFourHoursAgo },
+                OR: [
+                  { content: { contains: "5-star" } },
+                  { content: { contains: "feedback" } },
+                  { content: { contains: "rate your experience" } }
+                ]
               },
               orderBy: { createdAt: "desc" }
             });
 
-            const isSurveySent = !!lastSurveyMessage || !!pendingAppointment;
-            const textLower = textMessage.trim().toLowerCase();
+            // ONLY run Review Survey Interceptor if an actual survey was sent in last 24 hours AND it is NOT a booking request
+            const isSurveySent = !isBookingRequest && !!lastSurveyMessage;
             const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
-              textLower.includes("yes") || textLower.includes("good") || textLower.includes("great") || textLower.includes("happy") || textLower.includes("satisfied") || textLower.includes("thank") || textLower.includes("👍"));
-            const isNo = isSurveySent && (/^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower.includes("no") || textLower.includes("bad") || textLower.includes("poor") || textLower.includes("disappointed"));
+              textLower === "yes" || textLower === "yeah" || textLower === "sure" || textLower === "ok" || textLower === "okay");
+            const isNo = isSurveySent && (/^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower === "no" || textLower === "bad" || textLower === "poor");
 
             if (isYes) {
               const doctorData = await prisma.doctor.findUnique({ 
