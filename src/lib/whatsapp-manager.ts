@@ -264,6 +264,21 @@ class WhatsAppManager {
 
             const isLastMsgFromAI = lastOutgoingMsg?.senderName === "AI Assistant";
 
+            // Check if an actual Google Review Survey was sent to this patient in the last 24 hours
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const lastSurveyMessage = await prisma.chatMessage.findFirst({
+              where: {
+                conversationId: conversation.id,
+                direction: "OUTGOING",
+                createdAt: { gte: twentyFourHoursAgo },
+                OR: [
+                  { content: { contains: "5-star" } },
+                  { content: { contains: "rate your experience" } }
+                ]
+              },
+              orderBy: { createdAt: "desc" }
+            });
+
             // ONLY run Review Survey Interceptor if an actual review survey invitation was sent AND the last message was NOT from AI Assistant AND it is NOT a booking request
             const isSurveySent = !isLastMsgFromAI && !isBookingRequest && !!lastSurveyMessage;
             const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
