@@ -92,127 +92,135 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 // ─── Gyrex Platform Features Sticky Sidebar ────────────────────────────────
+// ─── Official SVG Icons ───────────────────────────────────────────────────────
+function WhatsAppSVG() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-emerald-500 shrink-0">
+      <path d="M12.012 2c-5.506 0-9.989 4.478-9.989 9.984 0 1.758.459 3.474 1.33 4.982L2 22l5.176-1.348a9.96 9.96 0 004.836 1.232h.005c5.506 0 9.989-4.478 9.989-9.985 0-2.667-1.037-5.176-2.922-7.062A9.924 9.924 0 0012.012 2zm5.871 14.186c-.247.697-1.428 1.331-1.968 1.396-.54.065-1.246.09-2.008-.152-.46-.146-1.054-.34-1.821-.672-3.232-1.396-5.328-4.664-5.49-4.88-.162-.216-1.31-1.745-1.31-3.33 0-1.585.831-2.366 1.127-2.69.296-.324.647-.405.863-.405.216 0 .432.002.621.011.202.01.472-.077.737.558.271.647.92 2.247.999 2.41.081.162.135.351.027.568-.108.216-.162.351-.324.54-.162.189-.34.422-.486.567-.162.162-.331.339-.142.664.189.324.84 1.385 1.802 2.242 1.237 1.101 2.278 1.442 2.602 1.604.324.162.513.135.702-.081.189-.216.81-0.945 1.026-1.269.216-.324.432-.27.729-.162.297.108 1.89.891 2.214 1.053.324.162.54.243.621.378.081.135.081.783-.166 1.48z"/>
+    </svg>
+  );
+}
+
+function GoogleGSVG() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+    </svg>
+  );
+}
+
+// ─── Gyrex Platform Features Sticky Sidebar ────────────────────────────────
 function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
   return (
-    <div className="sticky top-24 rounded-3xl border border-slate-800 bg-[#0B0F19] text-white p-6 shadow-xl transition-all">
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-bold text-lg text-white tracking-tight">Gyrex Pro</span>
-        <span className="px-3 py-1 rounded-full bg-white/10 text-slate-200 text-[11px] font-medium border border-white/10">
-          14-Day Free Trial
-        </span>
-      </div>
-
-      {/* Headline & Subtitle */}
-      <h3 className="text-xl font-bold text-white leading-tight mb-2">
-        Automate Your Clinic Growth with Gyrex
-      </h3>
-      <p className="text-xs text-slate-400 leading-relaxed mb-4">
-        Automate your clinic growth with Gyrex to increase patient flow and outrank local competition.
-      </p>
-
-      {/* Pricing Recessed Box */}
-      <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-xl font-bold text-white">₹0</span>
-            <span className="text-xs text-slate-400 font-normal">for 14 days</span>
+    <div className="sticky top-24 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all">
+      {/* Header Banner - Gyrex Indigo Theme */}
+      <div className="p-6 bg-indigo-600 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-bold text-lg text-white tracking-tight">Gyrex Pro</span>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500 text-xs font-medium text-indigo-50 border border-indigo-400">
+              14-Day Free Trial
+            </span>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-medium border border-emerald-500/30">
-            Risk Free
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="line-through text-slate-500 font-normal">₹5,000/mo</span>
-          <span className="text-rose-400 font-bold text-sm">₹2,499/mo</span>
+          <h3 className="text-xl font-bold leading-tight mb-2">Automate Your Clinic Growth with Gyrex</h3>
+          <p className="text-sm text-indigo-100 leading-relaxed font-normal">
+            Automate your clinic growth with Gyrex to increase patient flow and outrank local competition.
+          </p>
         </div>
       </div>
 
-      {/* Primary CTA Button */}
-      <Link
-        href="/register"
-        className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-indigo-600/30 text-center mb-5"
-      >
-        <span>Start 14-Day Free Trial</span>
-      </Link>
-
-      {/* Features Divider */}
-      <div className="relative border-t border-slate-800/80 my-5 text-center">
-        <span className="relative -top-2.5 px-3 bg-[#0B0F19] text-slate-500 text-[11px] font-medium uppercase tracking-wider">
-          Features
-        </span>
+      {/* Pricing / Trial offer */}
+      <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="text-3xl font-bold text-slate-900 tracking-tight">₹0</span>
+          <span className="text-sm font-medium text-slate-600">for 14 days</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="line-through decoration-slate-300 font-normal">Regular ₹5,000/mo</span>
+          <span className="text-rose-600 font-bold text-sm">₹2,499/mo</span>
+          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded-md text-[10px] ml-auto">Risk Free</span>
+        </div>
       </div>
 
       {/* 2x2 Feature Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {/* Tile 1 */}
-        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Phone className="w-3.5 h-3.5" />
+      <div className="p-6 space-y-4 border-b border-slate-100 bg-white">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Features</p>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {/* Tile 1: WhatsApp Reviews */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+            <div className="flex items-center gap-1.5 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+              <WhatsAppSVG />
             </div>
-            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
+            <p className="text-xs font-semibold text-slate-800 leading-snug">
+              Automated WhatsApp Reviews
+            </p>
           </div>
-          <p className="text-xs font-semibold text-slate-200 leading-snug">
-            Automated WhatsApp Reviews
-          </p>
-        </div>
 
-        {/* Tile 2 */}
-        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-              <Activity className="w-3.5 h-3.5" />
+          {/* Tile 2: Review Auto-Responder */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+            <div className="flex items-center gap-1.5 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-blue-500 text-white flex items-center justify-center">
+                <Activity className="w-3.5 h-3.5" />
+              </div>
+              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center">
+                <Zap className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5" />
-            </div>
+            <p className="text-xs font-semibold text-slate-800 leading-snug">
+              Review Auto-Responder
+            </p>
           </div>
-          <p className="text-xs font-semibold text-slate-200 leading-snug">
-            Review Auto-Responder
-          </p>
-        </div>
 
-        {/* Tile 3 */}
-        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
-              <Globe className="w-3.5 h-3.5" />
+          {/* Tile 3: Weekly Google Profile Optimizer */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+            <div className="flex items-center gap-1.5 mb-3">
+              <GoogleGSVG />
             </div>
-            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
+            <p className="text-xs font-semibold text-slate-800 leading-snug">
+              Weekly Google Profile Optimizer
+            </p>
           </div>
-          <p className="text-xs font-semibold text-slate-200 leading-snug">
-            Weekly Google Profile Optimizer
-          </p>
-        </div>
 
-        {/* Tile 4 */}
-        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <TrendingUp className="w-3.5 h-3.5" />
+          {/* Tile 4: Competitor Rank Tracker */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+            <div className="flex items-center gap-1.5 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5" />
+              </div>
+              <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                <BarChart3 className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <div className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
-              <BarChart3 className="w-3.5 h-3.5" />
-            </div>
+            <p className="text-xs font-semibold text-slate-800 leading-snug">
+              Competitor Rank Tracker
+            </p>
           </div>
-          <p className="text-xs font-semibold text-slate-200 leading-snug">
-            Competitor Rank Tracker
-          </p>
         </div>
       </div>
 
-      {/* Card Footer */}
-      <Link
-        href="/register"
-        className="text-slate-400 hover:text-white text-xs font-medium transition-colors text-center block"
-      >
-        Learn More &gt;
-      </Link>
+      {/* CTA Button */}
+      <div className="p-6 bg-slate-50/50">
+        <Link
+          href="/register"
+          className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm"
+        >
+          <span>Start 14-Day Free Trial</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+        <Link
+          href="/register"
+          className="text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors text-center block mt-3"
+        >
+          Learn More &gt;
+        </Link>
+      </div>
     </div>
   );
 }
