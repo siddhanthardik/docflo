@@ -448,18 +448,18 @@ export default function FreeAuditPage() {
 
       {/* ── Main Section ─────────────────────────────────────────────────── */}
       <main className="flex-1 flex items-center justify-center px-4 py-6 sm:py-10 md:py-12">
-        <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
+        <div className="w-full max-w-6xl mx-auto flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
 
-          {/* LEFT: Value proposition */}
-          <div className="space-y-6 pt-2">
+          {/* LEFT / TOP: Value proposition Header */}
+          <div className="space-y-6 pt-2 w-full lg:col-start-1 lg:row-start-1">
             <div>
               {/* SINGLE PROMINENT 100% FREE BADGE */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800 mb-4 shadow-sm">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800 mb-4 shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 100% FREE • Google Business Profile Diagnostic
               </div>
 
-              <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-[1.12] tracking-tight mb-4">
+              <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-[1.12] tracking-tight">
                 Is your clinic{" "}
                 <span className="relative inline-block">
                   <span className="relative z-10">invisible</span>
@@ -476,18 +476,14 @@ export default function FreeAuditPage() {
                 </span>
                 ?
               </h1>
-
-              <p className="text-base text-slate-600 leading-relaxed max-w-lg">
-                Get a consultant-grade Google Business Profile audit. We show you exactly why nearby competitors are outranking you and what to fix first.
-              </p>
             </div>
 
-            {/* Steps */}
-            <div className="space-y-4">
+            {/* Desktop Steps (Left column under heading) */}
+            <div className="hidden lg:block space-y-4 pt-2">
               {VALUE_PROPS.map((vp, i) => (
-                <div key={i} className="flex items-start gap-4 p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-black text-blue-600">{vp.num}</span>
+                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-black text-indigo-600">{vp.num}</span>
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-900">{vp.title}</p>
@@ -499,16 +495,16 @@ export default function FreeAuditPage() {
 
           </div>
 
-          {/* RIGHT: Form card */}
-          <div className="w-full">
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xl shadow-slate-200/60 overflow-hidden">
+          {/* RIGHT / MOBILE TOP: Form card (Placed directly below heading on mobile!) */}
+          <div className="w-full lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-300/40 overflow-hidden">
 
               {/* Card header */}
-              <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white">
+              <div className="px-6 py-5 border-b border-indigo-700 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 text-white">
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                   Analyse your Google Business Profile
                 </h2>
-                <p className="text-xs text-blue-100 mt-1 font-medium">
+                <p className="text-xs text-indigo-100 mt-1 font-medium">
                   Takes 60 seconds. Results are instant.
                 </p>
               </div>
@@ -518,7 +514,7 @@ export default function FreeAuditPage() {
                 {/* Step 1: GBP Search */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">1</span>
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">1</span>
                     Find your business on Google
                   </label>
                   <div className="relative">
@@ -536,7 +532,7 @@ export default function FreeAuditPage() {
                       className={`w-full pl-10 pr-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                         errors.clinic && touched.clinic
                           ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
-                          : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                          : "border-slate-200 bg-slate-50/50 focus:border-indigo-600 focus:ring-indigo-600/20"
                       }`}
                     />
 
@@ -545,7 +541,7 @@ export default function FreeAuditPage() {
                       <div ref={dropdownRef} className="absolute left-0 right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-slate-200 shadow-2xl z-50 overflow-hidden text-left">
                         {isLoadingSuggestions && (
                           <div className="px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
-                            <Activity className="h-4 w-4 animate-spin text-blue-600" />
+                            <Activity className="h-4 w-4 animate-spin text-indigo-600" />
                             Searching…
                           </div>
                         )}
@@ -554,10 +550,10 @@ export default function FreeAuditPage() {
                             key={place.place_id}
                             type="button"
                             onClick={() => handleSelectPlace(place)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left border-b border-slate-50 last:border-0"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                              <Building2 className="h-4 w-4 text-blue-600" />
+                            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                              <Building2 className="h-4 w-4 text-indigo-600" />
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{place.structured_formatting.main_text}</p>
@@ -594,7 +590,7 @@ export default function FreeAuditPage() {
                 {/* Step 2: Name */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">2</span>
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">2</span>
                     Your name
                   </label>
                   <input
@@ -607,7 +603,7 @@ export default function FreeAuditPage() {
                     className={`w-full px-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                       errors.name && touched.name
                         ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
-                        : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                        : "border-slate-200 bg-slate-50/50 focus:border-indigo-600 focus:ring-indigo-600/20"
                     }`}
                   />
                   {errors.name && touched.name && (
@@ -620,7 +616,7 @@ export default function FreeAuditPage() {
                 {/* Step 3: Phone */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">3</span>
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">3</span>
                     WhatsApp / Phone number
                   </label>
                   <div className="flex gap-2">
@@ -631,7 +627,6 @@ export default function FreeAuditPage() {
                         onChange={(e) => {
                           const newCode = e.target.value;
                           setCountryCode(newCode);
-                          // Re-validate phone immediately with new country rules
                           if (touched.phone && phone) {
                             const rule = PHONE_RULES[newCode] ?? { min: 6, max: 15, hint: "valid phone number" };
                             let err: string | undefined;
@@ -643,7 +638,7 @@ export default function FreeAuditPage() {
                           }
                         }}
                         disabled={isScanning}
-                        className="appearance-none px-3 pr-7 h-11 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 cursor-pointer"
+                        className="appearance-none px-3 pr-7 h-11 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/20 cursor-pointer"
                       >
                         {ALL_COUNTRY_CODES.map((c, i) => (
                           <option key={`${c.iso}-${c.code}-${i}`} value={c.code}>
@@ -666,7 +661,7 @@ export default function FreeAuditPage() {
                       className={`flex-1 px-4 h-11 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                         errors.phone && touched.phone
                           ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
-                          : "border-slate-200 bg-slate-50/50 focus:border-blue-600 focus:ring-blue-600/20"
+                          : "border-slate-200 bg-slate-50/50 focus:border-indigo-600 focus:ring-indigo-600/20"
                       }`}
                     />
                   </div>
@@ -688,7 +683,7 @@ export default function FreeAuditPage() {
                 <button
                   type="submit"
                   disabled={isScanning}
-                  className="w-full h-12 py-3 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 mt-2"
+                  className="w-full h-12 py-3 rounded-xl font-black text-base text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 mt-2"
                 >
                   {isScanning ? (
                     <>
