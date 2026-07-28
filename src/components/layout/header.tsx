@@ -22,18 +22,21 @@ export function Header() {
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 shadow-sm print:hidden shrink-0">
+    <header className="flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 shadow-xs print:hidden shrink-0">
       {/* Left: Mobile Brand Logo or Welcome text */}
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard" className="md:hidden flex items-center shrink-0">
+      <div className="flex items-center gap-2.5">
+        <Link href="/admin" className="lg:hidden flex items-center gap-2 shrink-0">
           <GyrexLogo size="sm" />
+          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
+            Admin
+          </span>
         </Link>
 
-        <div className="hidden sm:block font-[family-name:var(--font-poppins)]">
-          <p className="text-base sm:text-lg md:text-[20px] text-gray-900 font-medium leading-tight truncate">
-            {mounted ? greeting : "Welcome"}, <span className="font-semibold">{name}</span> 👋
+        <div className="hidden sm:block">
+          <p className="text-base sm:text-lg text-slate-900 font-bold leading-tight truncate tracking-tight">
+            {mounted ? greeting : "Welcome"}, <span className="text-indigo-600">{name}</span> 👋
           </p>
-          <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
+          <p className="text-xs text-slate-500 mt-0.5 font-normal hidden md:block">
             {mounted ? new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : "Loading date..."}
           </p>
         </div>
@@ -43,13 +46,13 @@ export function Header() {
       <div className="flex items-center gap-2.5 sm:gap-3">
         <NotificationBell />
 
-        <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+        <div className="flex items-center gap-2 pl-2.5 border-l border-slate-200/60">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
             {initials}
           </div>
           <div className="hidden lg:block truncate">
-            <p className="text-xs font-semibold text-gray-900 leading-tight truncate">{name}</p>
-            <p className="text-[10px] text-gray-400 leading-tight">Clinic Dashboard</p>
+            <p className="text-xs font-bold text-slate-900 leading-tight truncate">{name}</p>
+            <p className="text-[10px] font-medium text-slate-500 leading-tight">{session?.user?.role || "SUPERADMIN"}</p>
           </div>
         </div>
       </div>

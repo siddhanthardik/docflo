@@ -1,4 +1,5 @@
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { AdminMobileNav } from "@/components/layout/AdminMobileNav";
 import { Header } from "@/components/layout/header";
 import { SessionProvider } from "next-auth/react";
 import { redirect } from "next/navigation";
@@ -25,11 +26,17 @@ export default async function AdminLayout({
   return (
     <SessionProvider>
       <LocationProvider>
-        <div className="flex h-screen bg-gray-50">
-          <AdminSidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+          {/* Desktop Sidebar (hidden on mobile) */}
+          <div className="hidden lg:flex shrink-0 h-full">
+            <AdminSidebar />
+          </div>
+
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
             <Header />
-            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 lg:pb-6">{children}</main>
+            {/* Native Mobile Bottom Navigation Bar */}
+            <AdminMobileNav />
           </div>
         </div>
       </LocationProvider>
