@@ -223,7 +223,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
   /**
    * 4. LOCAL SEO COPILOT AGENT
    */
-  static async runLocalSeoCopilot(doctorId: string, config: any) {
+  static async runLocalSeoCopilot(doctorIdOrOptions: any, config?: any) {
     try {
       const keywords = config?.keywords || "Best Clinic, Doctor Near Me";
       const focus = config?.focus || "all";
