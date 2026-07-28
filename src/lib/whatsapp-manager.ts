@@ -373,7 +373,9 @@ class WhatsAppManager {
               select: { 
                 enableAIAutoResponder: true,
                 phone: true,
-                clinicName: true
+                name: true,
+                clinicName: true,
+                specialty: true
               }
             });
 
@@ -400,7 +402,12 @@ class WhatsAppManager {
                 textMessage,
                 history,
                 agentConfig.config as any,
-                clinicPhone
+                clinicPhone,
+                {
+                  doctorName: doctorInfo?.name,
+                  clinicName: doctorInfo?.clinicName,
+                  specialty: doctorInfo?.specialty
+                }
               );
 
               if (aiReply) {

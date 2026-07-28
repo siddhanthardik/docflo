@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, Sparkles, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, Sparkles, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,31 @@ export default function AIAgentsHubPage() {
     } finally {
       setSavingConfig(false);
     }
+  const copyDoctorTemplate = () => {
+    const template = `📋 GYREX CLINIC AI ASSISTANT SETUP TEMPLATE
+(Fill in your clinic details below and reply via WhatsApp)
+
+🏥 Clinic Name: [e.g. City Pediatrics & Child Care]
+👨‍⚕️ Doctor Name(s): [e.g. Dr. R. K. Sharma]
+🩺 Specialty: [e.g. Pediatrician & Child Specialist]
+
+🕒 Clinic Timings & Days:
+• Mon - Sat: 10:00 AM - 1:30 PM | 5:00 PM - 8:30 PM
+• Sunday: Closed / Emergency Only
+
+💰 Consultation Fee:
+• ₹500 (First Visit) | ₹300 (Follow-up)
+
+💉 Vaccinations Available (Pediatrics Only):
+• BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot
+
+🏥 Services Offered:
+• Newborn Care, Growth Tracking, Child Consultation, Nebulization
+
+📞 Emergency Contact: [+91 98765 43210]`;
+
+    navigator.clipboard.writeText(template);
+    toast({ title: "WhatsApp Template Copied! 📋", description: "Forward this template to doctors via WhatsApp to collect their clinic variables." });
   };
 
   const agentDefinitions = [
@@ -222,6 +247,27 @@ export default function AIAgentsHubPage() {
             {/* 1. WHATSAPP BOOKING AGENT CONFIG */}
             {activeAgent?.type === "APPOINTMENT" && (
               <>
+                {/* 1-Click WhatsApp Setup Template Button for Doctors */}
+                <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      Doctor Setup WhatsApp Template
+                    </h4>
+                    <p className="text-[11px] text-slate-600">Forward this pre-formatted template to doctors via WhatsApp to collect their clinic variables.</p>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={copyDoctorTemplate}
+                    className="shrink-0 text-xs font-bold border-indigo-200 bg-white hover:bg-indigo-50 text-indigo-700 gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy Template
+                  </Button>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-gray-700">Conversational Handling Mode</Label>
                   <Select 
@@ -237,16 +283,58 @@ export default function AIAgentsHubPage() {
                   <p className="text-[11px] text-gray-500">Autonomous mode provides 24/7 booking link delivery to after-hours WhatsApp inquiries.</p>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-gray-700">Clinic Timings & Available Days</Label>
+                    <Input 
+                      placeholder="Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM"
+                      value={configDraft.clinicTimings || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, clinicTimings: e.target.value})}
+                      className="text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-gray-700">Consultation Fee</Label>
+                    <Input 
+                      placeholder="₹500 (First Visit) | ₹300 (Follow-up)"
+                      value={configDraft.consultationFee || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, consultationFee: e.target.value})}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Clinic Rules & System Training Prompt</Label>
+                  <Label className="text-xs font-bold text-gray-700">Available Vaccinations (Pediatricians Only)</Label>
+                  <Input 
+                    placeholder="BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot"
+                    value={configDraft.vaccinationsList || ""}
+                    onChange={(e) => setConfigDraft({...configDraft, vaccinationsList: e.target.value})}
+                    className="text-xs"
+                  />
+                  <p className="text-[11px] text-gray-500">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Other specialties will politely inform patients that pediatric vaccines are not provided.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Services Offered</Label>
+                  <Input 
+                    placeholder="General Consultation, Vaccination, Nebulization, Growth Tracking"
+                    value={configDraft.servicesOffered || ""}
+                    onChange={(e) => setConfigDraft({...configDraft, servicesOffered: e.target.value})}
+                    className="text-xs"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Doctor Custom Instructions & Guidelines</Label>
                   <Textarea 
-                    placeholder="E.g., Consultations are 30 minutes long. Walk-ins accepted before 4 PM. We do not perform major surgeries on Sundays. Doctor available 10 AM to 6 PM."
+                    placeholder="E.g. Sunday clinic is closed. Walk-ins accepted before 4 PM. Please bring past medical records."
                     value={configDraft.trainingPrompt || ""}
                     onChange={(e) => setConfigDraft({...configDraft, trainingPrompt: e.target.value})}
                     className="resize-none text-xs"
-                    rows={4}
+                    rows={3}
                   />
-                  <p className="text-[11px] text-gray-500">Feed custom clinic procedures so the AI answers patient questions with 100% accuracy.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -261,15 +349,15 @@ export default function AIAgentsHubPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Tone of Voice</Label>
+                  <Label className="text-xs font-bold text-gray-700">Receptionist Tone of Voice</Label>
                   <Select 
-                    value={configDraft.tone || "professional"} 
+                    value={configDraft.tone || "warm_receptionist"} 
                     onValueChange={(v) => setConfigDraft({...configDraft, tone: v})}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="warm_receptionist">Warm & Helpful Receptionist (Recommended)</SelectItem>
                       <SelectItem value="professional">Professional & Medical</SelectItem>
-                      <SelectItem value="friendly">Warm & Empathetic</SelectItem>
                       <SelectItem value="concise">Concise & Direct</SelectItem>
                     </SelectContent>
                   </Select>

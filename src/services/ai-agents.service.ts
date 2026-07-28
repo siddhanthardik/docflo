@@ -9,24 +9,36 @@ const MODEL_NAME = "gemini-3.5-flash";
 export class AIAgentsService {
   /**
    * 1. WHATSAPP AI BOOKING ASSISTANT
-   * Analyzes WhatsApp messages and decides on the action to take.
+   * Professional Receptionist & Patient Coordinator for Clinic
    */
   static async runAppointmentAgent(
     doctorId: string,
     incomingMessage: string,
     conversationHistory: string[],
     config: any,
-    clinicPhone?: string
+    clinicPhone?: string,
+    doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string }
   ) {
     try {
       const mode = config?.mode || "handoff"; // handoff vs autonomous
-      const tone = config?.tone || "professional";
-      const customRules = config?.trainingPrompt || config?.customRules || "Answer questions politely, empathetically, and assist patients with clinic details or bookings.";
+      const tone = config?.tone || "warm_receptionist";
+      const customRules = config?.trainingPrompt || config?.customRules || "";
       const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
+      
+      const doctorName = doctorProfile?.doctorName || config?.doctorName || "the Doctor";
+      const clinicName = doctorProfile?.clinicName || config?.clinicName || "our Clinic";
+      const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
+
+      const clinicTimings = config?.clinicTimings || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
+      const consultationFee = config?.consultationFee || "";
+      const vaccinationsList = config?.vaccinationsList || "BCG, Polio, Hepatitis B, DTP, Rotavirus, MMR, Flu Shot";
+      const servicesOffered = config?.servicesOffered || "General Consultation, Health Checkup";
+
+      const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
       const phoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
-        ? `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number ${clinicPhone.trim()})`
-        : `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number)`;
+        ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
+        : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
 
       // Emergency Trigger Check
       const lowerMsg = incomingMessage.toLowerCase();
@@ -34,38 +46,58 @@ export class AIAgentsService {
       const isEmergency = triggers.some((t: string) => lowerMsg.includes(t));
 
       if (isEmergency) {
-        return `⚠️ **Emergency Alert**: If you are experiencing a medical emergency, severe bleeding, or chest pain, please call emergency services immediately or visit the nearest emergency room. Our staff has been alerted to your message.\n\n${phoneDisclaimer}`;
+        return `⚠️ *Emergency Alert*: If you are experiencing a medical emergency, severe bleeding, or chest pain, please call emergency services immediately or visit the nearest emergency room.\n\n${phoneDisclaimer}`;
       }
 
       const systemPrompt = `
-        You are an elite, highly intelligent AI WhatsApp Medical Assistant & Patient Coordinator for our clinic using Gemini 3.5 Flash.
-        Conversational Tone: ${tone}.
-        
-        Clinic Rules & Custom Training Guidelines:
-        "${customRules}"
+You are the elite, warm, polite, and highly professional WhatsApp Senior Clinic Receptionist for ${clinicName} (${doctorName} - ${specialty}).
 
-        Your Objective:
-        1. Read the patient's incoming message and conversation history.
-        2. Provide exceptionally smart, empathetic, polite, professional, and clear assistance.
-        3. Help patients schedule appointments, select dates/times, inquire about hours, or learn about clinic services.
-        
-        CRITICAL RESTRICTIONS & GUARDRAILS (STRICTLY ENFORCED):
-        - NEVER mention "30 minutes" or "30-minute consultation" or consultation duration under any circumstances.
-        - NEVER mention "walk-ins", "walk-in consultation", or "accept walk-ins" unless the patient explicitly asks if walk-ins are allowed.
-        - NEVER output generic template disclaimers like "We would be happy to assist you in scheduling a 30-minute consultation..." or "Our consultations are 30 minutes in duration."
-        - Do NOT provide medical prescriptions or medical diagnosis under any circumstances. If the patient describes illness or symptoms (e.g. fever, cold, pain), express genuine warmth & empathy, and recommend scheduling a consultation with doctor.
-        - Always end your response with: "\n\n${phoneDisclaimer}".
+CLINIC INFORMATION:
+- Doctor: ${doctorName}
+- Specialty: ${specialty}
+- Clinic Name: ${clinicName}
+- Timings: ${clinicTimings}
+${consultationFee ? `- Consultation Fee: ${consultationFee}` : ""}
+- Services: ${servicesOffered}
+${isPediatrician ? `- Available Vaccinations: ${vaccinationsList}` : ""}
+${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
+
+CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
+1. **ROLE & PERSONA**: Speak naturally like an experienced, warm, polite Indian clinic receptionist. NEVER sound like a generic robot. Keep responses concise (2 to 4 sentences max).
+
+2. **APPOINTMENT BOOKING FLOW**:
+   - If the patient expresses desire to book an appointment (e.g. "need appointment", "want to visit tomorrow", "is slot available", "book slot"):
+     * Acknowledge warmly.
+     * Ask which day and time window works best: Morning or Evening?
+     * Example: "Hello! I would be glad to help you schedule an appointment with ${doctorName}. Would you like to visit Today or Tomorrow? We have Morning slots (10 AM - 1:30 PM) and Evening slots (5 PM - 8:30 PM) available."
+   - Once they select a time, politely ask for their Full Name to lock in the appointment slot.
+
+3. **STRICT VACCINATION RULE**:
+   - IF the patient asks about vaccinations ("is vaccine available", "vaccination", "flu shot"):
+     * IF this clinic is a Pediatrician / Child Care Clinic (${isPediatrician ? "YES" : "NO"}):
+       Inform them warmly that pediatric vaccinations are available during clinic hours (${clinicTimings}). List popular vaccines if asked (${vaccinationsList}) and immediately ask if they would like to schedule a vaccination visit today or tomorrow.
+     * IF this clinic is NOT a Pediatrician (e.g. Dermatologist, Gynecologist, Orthopedic, Dental):
+       State politely: "Our clinic specializes in ${specialty} and does not provide pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
+
+4. **TIMINGS & FEES INQUIRIES**:
+   - If asked about hours or fees, provide the exact timings (${clinicTimings}) and fee (${consultationFee || "shared during booking"}), then ask if they would like to reserve a consultation slot.
+
+5. **FORMATTING**:
+   - Use clean, elegant WhatsApp formatting (*bold* for key details, bullet points for time slots).
+   - NEVER output generic template disclaimers like "We have received your message and a staff member will get back to you".
+   - End response cleanly. Disclaimer will be attached automatically.
       `;
 
       const prompt = `
-        System Instructions: ${systemPrompt}
+System Instructions:
+${systemPrompt}
 
-        Conversation History:
-        ${conversationHistory.join("\n")}
+Conversation History:
+${conversationHistory.join("\n")}
 
-        Patient's New Message: "${incomingMessage}"
+Patient's New Message: "${incomingMessage}"
 
-        Provide your direct WhatsApp response to the patient based on these instructions.
+Write your direct, crisp, professional WhatsApp reply to the patient:
       `;
 
       const response = await ai.models.generateContent({
@@ -73,16 +105,13 @@ export class AIAgentsService {
         contents: prompt,
       });
 
-      let aiReply = response.text || "Thank you for your message. A staff member will get back to you shortly.";
+      let aiReply = response.text || `Hello! Thank you for contacting ${clinicName}. I would be happy to assist you with booking an appointment with ${doctorName}. Would you like to visit today or tomorrow?`;
 
       // Post-processing guardrail: clean up any legacy disclaimers or restricted phrases
       aiReply = aiReply
         .replace(/\(I am the clinic's AI assistant.*?\)/gi, "")
         .replace(/Our consultations are 30 minutes in duration\.?/gi, "")
-        .replace(/Please note that we also accept walk-ins.*?\./gi, "")
-        .replace(/We would be happy to assist you in scheduling a 30-minute consultation.*?\./gi, "")
         .replace(/30-minute consultation/gi, "consultation")
-        .replace(/30 minutes/gi, "")
         .trim();
 
       // Ensure clean footer disclaimer is attached
@@ -92,19 +121,18 @@ export class AIAgentsService {
     } catch (error) {
       console.error("Error in Appointment Agent:", error);
       const fallbackPhoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
-        ? `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number ${clinicPhone.trim()})`
-        : `(I am the clinic's AI assistant. To speak with human please call directly on the clinic number)`;
-      return `Thank you for your message. We have received it and a staff member will get back to you shortly.\n\n${fallbackPhoneDisclaimer}`;
+        ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
+        : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
+      return `Hello! Thank you for reaching out to our clinic. I am here to assist you with booking an appointment or answering any clinic questions. Would you like to schedule a visit today or tomorrow?\n\n${fallbackPhoneDisclaimer}`;
     }
   }
 
   /**
    * 2. REVIEW MANAGER AGENT
-   * Drafts a response to a Google Review incorporating target keywords naturally.
    */
   static async runReviewAgent(reviewText: string, rating: number, config: any) {
     try {
-      const instructions = config.instructions || "Always thank the patient by name, mention Gyrex Clinic, and invite negative reviewers to contact us privately.";
+      const instructions = config.instructions || "Always thank the patient by name, mention clinic, and invite negative reviewers to contact us privately.";
       const targetKeywords = config.targetKeywords || "Root Canal, Laser Treatment, Pediatric Care";
       
       const prompt = `
@@ -139,7 +167,6 @@ export class AIAgentsService {
 
   /**
    * 3. PROFILE UPDATER AGENT
-   * Generates content for a GBP Post.
    */
   static async runProfileAgent(config: any) {
     try {
@@ -148,20 +175,13 @@ export class AIAgentsService {
       const ctaType = config.ctaType || "LEARN_MORE";
       
       const prompt = `
-        You are a master Digital Marketing Director for a premium clinic using Gemini 3.5 Flash.
-        Write an engaging, conversion-optimized Google Business Profile post (100-150 words).
+        You are a Google Business Profile Content Strategist using Gemini 3.5 Flash.
+        Create an engaging GBP Update Post for a healthcare clinic.
+        Focus Areas: ${focusAreas}
+        Brand Voice: ${brandVoice}
+        CTA Button: ${ctaType}
         
-        Focus Topics: ${focusAreas}
-        Brand Voice Guidelines: ${brandVoice}
-        CTA Button Type: ${ctaType}
-        
-        Format the output EXACTLY as a JSON object with this structure (no markdown codeblocks, raw JSON only):
-        {
-          "title": "Catchy internal title",
-          "content": "The actual text of the post with emojis and a clear call to action.",
-          "postType": "STANDARD",
-          "ctaType": "${ctaType}"
-        }
+        Output only the post text (100-150 words). Include 1-2 relevant hashtags at the end.
       `;
 
       const response = await ai.models.generateContent({
@@ -169,74 +189,10 @@ export class AIAgentsService {
         contents: prompt,
       });
 
-      let jsonStr = response.text || "{}";
-      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
-      
-      return JSON.parse(jsonStr);
+      return response.text?.trim() || "Stay healthy with regular checkups at our clinic. Book your consultation today!";
     } catch (error) {
       console.error("Error in Profile Agent:", error);
-      return null;
-    }
-  }
-
-  /**
-   * 4. LOCAL SEO COPILOT AGENT
-   * Generates deep recommendations based on GBP state and target keywords.
-   */
-  static async runLocalSeoCopilot(profileData: any, config: any) {
-    try {
-      const focus = config.focus || "all";
-      const keywords = config.keywords || "Best clinic near me, specialist near me";
-      
-      const prompt = `
-        You are a master Local SEO Strategist and Technical Consultant using Gemini 3.5 Flash.
-        
-        Target Keywords to Monitor: ${keywords}
-        Focus Area: ${focus}
-        
-        GBP Data Summary:
-        ${JSON.stringify(profileData, null, 2)}
-        
-        Generate 3-5 high-impact, actionable SEO tasks for this week.
-        Format output EXACTLY as a JSON array of objects with no codeblocks or markdown:
-        [
-          {
-            "category": "PROFILE" | "REVIEWS" | "CITATIONS" | "CONTENT" | "KEYWORDS",
-            "title": "Short actionable title",
-            "description": "Detailed explanation of what to do and why it matters.",
-            "priority": "HIGH" | "MEDIUM" | "LOW",
-            "impact": "Brief description of estimated impact"
-          }
-        ]
-      `;
-
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-      });
-
-      let jsonStr = response.text || "[]";
-      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
-      
-      return JSON.parse(jsonStr);
-    } catch (error) {
-      console.error("Error in Local SEO Copilot Agent:", error);
-      return [
-        {
-          category: "PROFILE",
-          title: "Optimize Business Description for Target Keywords",
-          description: "Your current Google Business Profile description lacks primary local keywords. Rewrite the first 250 characters to prominently feature your primary specialty and city name to improve local relevance.",
-          priority: "HIGH",
-          impact: "Directly boosts ranking for 'Best specialty near me' searches."
-        },
-        {
-          category: "REVIEWS",
-          title: "Implement a Review Response Strategy",
-          description: "Replying to all reviews (especially with keywords naturally integrated) signals active management to Google's algorithm and builds patient trust.",
-          priority: "MEDIUM",
-          impact: "Improves conversion rate and slightly boosts local prominence."
-        }
-      ];
+      return "Schedule your regular health checkup at our clinic today!";
     }
   }
 }
