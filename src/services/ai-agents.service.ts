@@ -37,7 +37,6 @@ export class AIAgentsService {
       const clinicTimings = config?.clinicTimings || [
         morningOpd ? `Morning OPD: ${morningOpd}` : "",
         eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
-        hospitalHours ? `Hospital Hours: ${hospitalHours}` : "",
         `Sunday: ${sundayRule}`
       ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
 
@@ -53,7 +52,6 @@ export class AIAgentsService {
 
       // Persona & Language
       const assistantName = config?.assistantName || "Riya";
-      const languagePref = config?.languagePref || "english"; // "english", "hinglish", "hindi"
 
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
@@ -77,9 +75,8 @@ CLINIC OPD & SCHEDULE SPECIFICATIONS:
 - Doctor: ${doctorName}
 - Specialty: ${specialty}
 - Clinic Name: ${clinicName}
-- Morning OPD Hours: ${morningOpd || "Not Configured / Check Full Schedule"}
-- Evening OPD Hours: ${eveningOpd || "Not Configured / Check Full Schedule"}
-- Hospital Visit / Round Hours: ${hospitalHours || "None"}
+- Morning OPD Hours: ${morningOpd || "Check Full Schedule"}
+- Evening OPD Hours: ${eveningOpd || "Check Full Schedule"}
 - Full Schedule Summary: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
 
@@ -96,26 +93,32 @@ ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
 1. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
    - BEFORE offering morning or evening slots to a patient, YOU MUST CHECK the doctor's actual OPD hours.
-   - IF Morning OPD is NOT available (e.g. Doctor is visiting hospital in the morning or morning OPD is closed), DO NOT OFFER MORNING SLOTS. Inform the patient politely: "Dr. ${doctorName} is available for clinic OPD in the Evening from ${eveningOpd || clinicTimings}. (Morning is reserved for hospital visits). Would you like to reserve an evening slot for today or tomorrow?"
+   - IF Morning OPD is NOT available (e.g. morning OPD is closed/not configured), DO NOT OFFER MORNING SLOTS. Inform the patient politely: "Dr. ${doctorName} is available for clinic OPD in the Evening from ${eveningOpd || clinicTimings}. Would you like to reserve an evening slot for today or tomorrow?"
    - IF Evening OPD is NOT available, offer Morning slots ONLY.
    - IF both Morning & Evening OPD are open, offer both!
 
-2. **APPOINTMENT BOOKING FLOW**:
+2. **AUTOMATIC LANGUAGE MATCHING (ENGLISH / HINGLISH / HINDI / AUTO)**:
+   - AUTOMATICALLY DETECT AND ADAPT TO THE PATIENT'S INPUT LANGUAGE:
+     * If the patient writes in Hinglish (mix of Hindi & English e.g. "appointment chahiye", "kal aana hai", "fees kitni hai"), respond in warm, natural Hinglish using polite terms like "Ji", "Namaste", "Ji bilkul".
+     * If the patient writes in Hindi ("मुझे अपॉइंटमेंट चाहिए"), respond in polite Hindi.
+     * If the patient writes in English, respond in warm, polite English.
+
+3. **APPOINTMENT BOOKING FLOW**:
    - When patient requests to book an appointment (e.g. "need appointment", "Yes", "want to visit tomorrow", "is slot available"):
      * Check OPD timings first as instructed above.
      * Ask day and time preference according to available OPD shifts.
-   - Once they select a day/time window, ask for their Full Name and Phone Number to reserve the slot.
+   - Once they select a day/time window, ask for their Full Name to reserve the slot.
 
-3. **STRICT VACCINATION RULE**:
+4. **STRICT VACCINATION RULE**:
    - IF the patient asks about vaccinations ("is vaccine available", "vaccination", "flu shot"):
      * IF this clinic is a Pediatrician / Child Care Clinic (${isPediatrician ? "YES" : "NO"}):
        Confirm vaccination availability during OPD hours (${clinicTimings}). List vaccines if asked (${vaccinationsList}) and invite them to schedule a vaccination visit.
      * IF this clinic is NOT a Pediatrician (e.g. Dermatologist, Gynecologist, Orthopedic, Dental):
        State politely: "Our clinic specializes in ${specialty} and does not offer pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
 
-4. **TONE & FORMATTING**:
-   - Language Style: ${languagePref === "hinglish" ? "Warm natural Indian Hinglish (mixing English & casual polite Hindi words like 'Namaste', 'Ji')" : "Polite, warm, crisp English"}.
-   - Response Length: 2 to 4 sentences max. Clean WhatsApp formatting (*bold* key details).
+5. **TONE & FORMATTING**:
+   - Keep responses to 2 to 4 crisp WhatsApp sentences max.
+   - Use clean formatting (*bold* key details).
    - NEVER output robotic template text like "We have received your message and a staff member will get back to you".
       `;
 

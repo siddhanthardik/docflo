@@ -502,13 +502,15 @@ export default function AIAgentsHubPage() {
                     <div className="space-y-1.5">
                       <Label className="text-[11px] font-semibold text-slate-700">Language Style</Label>
                       <Select 
-                        value={configDraft.languagePref || "english"} 
+                        value={configDraft.languagePref || "auto"} 
                         onValueChange={(v) => setConfigDraft({...configDraft, languagePref: v})}
                       >
                         <SelectTrigger className="bg-white text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="english">Polite & Warm English</SelectItem>
+                          <SelectItem value="auto">Auto-Detect & Match Patient Language (Recommended)</SelectItem>
                           <SelectItem value="hinglish">Natural Indian Hinglish (Namaste / Ji)</SelectItem>
+                          <SelectItem value="english">Polite & Warm English</SelectItem>
+                          <SelectItem value="hindi">Pure Polite Hindi</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
