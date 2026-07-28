@@ -3,8 +3,33 @@ import { prisma } from "@/lib/prisma";
 
 // Initialize Gemini (Ensure GEMINI_API_KEY is in .env)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-// We use Gemini 3.5 Flash for high-speed, highly accurate agentic tasks
-const MODEL_NAME = "gemini-3.5-flash";
+
+// Fallback Model Cascade: Ensures 100% uptime even if a specific model tier experiences high demand (503)
+const CANDIDATE_MODELS = [
+  "gemini-flash-latest",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash"
+];
+
+async function generateWithFallback(prompt: string): Promise<string> {
+  let lastError: any = null;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+      });
+      if (response.text?.trim()) {
+        return response.text.trim();
+      }
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[AIAgentsService] Model ${modelName} failed (${err.message}). Trying next fallback...`);
+    }
+  }
+  throw lastError || new Error("All Gemini models unavailable");
+}
 
 export class AIAgentsService {
   /**
@@ -29,10 +54,9 @@ export class AIAgentsService {
       const clinicName = doctorProfile?.clinicName || config?.clinicName || "our Clinic";
       const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
 
-      // Comprehensive OPD Schedule Configuration
+      // OPD Schedule Configuration
       const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
       const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
-      const hospitalHours = config?.hospitalHours || config?.hospitalVisitHours || "";
       const sundayRule = config?.sundayRule || "Closed";
       const clinicTimings = config?.clinicTimings || [
         morningOpd ? `Morning OPD: ${morningOpd}` : "",
@@ -91,32 +115,38 @@ ${isPediatrician ? `- Available Pediatric Vaccinations: ${vaccinationsList}` : "
 ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 
 CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
-1. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
+1. **HANDLE PATIENT SYMPTOMS & HEALTH QUESTIONS (e.g. "I have fever what should I do?")**:
+   - If the patient describes symptoms (fever, cough, pain, stomach ache, rash):
+     * Acknowledge warmly and empathetically.
+     * State that as a receptionist, you recommend an in-person OPD consultation with Dr. ${doctorName} for proper diagnosis.
+     * Check OPD timings (${clinicTimings}) and offer an immediate OPD consultation slot for today or tomorrow!
+
+2. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
    - BEFORE offering morning or evening slots to a patient, YOU MUST CHECK the doctor's actual OPD hours.
    - IF Morning OPD is NOT available (e.g. morning OPD is closed/not configured), DO NOT OFFER MORNING SLOTS. Inform the patient politely: "Dr. ${doctorName} is available for clinic OPD in the Evening from ${eveningOpd || clinicTimings}. Would you like to reserve an evening slot for today or tomorrow?"
    - IF Evening OPD is NOT available, offer Morning slots ONLY.
    - IF both Morning & Evening OPD are open, offer both!
 
-2. **AUTOMATIC LANGUAGE MATCHING (ENGLISH / HINGLISH / HINDI / AUTO)**:
+3. **AUTOMATIC LANGUAGE MATCHING (ENGLISH / HINGLISH / HINDI / AUTO)**:
    - AUTOMATICALLY DETECT AND ADAPT TO THE PATIENT'S INPUT LANGUAGE:
      * If the patient writes in Hinglish (mix of Hindi & English e.g. "appointment chahiye", "kal aana hai", "fees kitni hai"), respond in warm, natural Hinglish using polite terms like "Ji", "Namaste", "Ji bilkul".
      * If the patient writes in Hindi ("मुझे अपॉइंटमेंट चाहिए"), respond in polite Hindi.
      * If the patient writes in English, respond in warm, polite English.
 
-3. **APPOINTMENT BOOKING FLOW**:
-   - When patient requests to book an appointment (e.g. "need appointment", "Yes", "want to visit tomorrow", "is slot available"):
+4. **APPOINTMENT BOOKING FLOW**:
+   - When patient requests to book an appointment or replies YES (e.g. "need appointment", "Yes", "want to visit tomorrow", "is slot available", "Namaste"):
      * Check OPD timings first as instructed above.
      * Ask day and time preference according to available OPD shifts.
    - Once they select a day/time window, ask for their Full Name to reserve the slot.
 
-4. **STRICT VACCINATION RULE**:
+5. **STRICT VACCINATION RULE**:
    - IF the patient asks about vaccinations ("is vaccine available", "vaccination", "flu shot"):
      * IF this clinic is a Pediatrician / Child Care Clinic (${isPediatrician ? "YES" : "NO"}):
        Confirm vaccination availability during OPD hours (${clinicTimings}). List vaccines if asked (${vaccinationsList}) and invite them to schedule a vaccination visit.
      * IF this clinic is NOT a Pediatrician (e.g. Dermatologist, Gynecologist, Orthopedic, Dental):
        State politely: "Our clinic specializes in ${specialty} and does not offer pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
 
-5. **TONE & FORMATTING**:
+6. **TONE & FORMATTING**:
    - Keep responses to 2 to 4 crisp WhatsApp sentences max.
    - Use clean formatting (*bold* key details).
    - NEVER output robotic template text like "We have received your message and a staff member will get back to you".
@@ -134,12 +164,7 @@ Patient's New Message: "${incomingMessage}"
 Write your direct, crisp, professional WhatsApp reply to the patient:
       `;
 
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-      });
-
-      let aiReply = response.text || `Hello! Thank you for contacting ${clinicName}. I would be happy to assist you with booking an appointment with ${doctorName}. Would you like to visit today or tomorrow?`;
+      let aiReply = await generateWithFallback(prompt);
 
       // Clean up legacy disclaimers
       aiReply = aiReply
@@ -151,8 +176,8 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
       aiReply += `\n\n${phoneDisclaimer}`;
 
       return aiReply;
-    } catch (error) {
-      console.error("Error in Appointment Agent:", error);
+    } catch (error: any) {
+      console.error("Error in Appointment Agent:", error?.message || error);
       const fallbackPhoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
         ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
         : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
@@ -169,7 +194,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
       const targetKeywords = config?.targetKeywords || "Root Canal, Laser Treatment, Pediatric Care";
       
       const prompt = `
-        You are an elite Reputation Management Specialist replying to a Google Business Review on behalf of the clinic owner using Gemini 3.5 Flash.
+        You are an elite Reputation Management Specialist replying to a Google Business Review on behalf of the clinic owner using Gemini API.
         
         Review Rating: ${rating} Stars
         Review Text: "${reviewText}"
@@ -180,12 +205,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         Respond ONLY with the exact text of the reply. No markdown quotes or extra filler.
       `;
 
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-      });
-
-      return response.text?.trim() || "Thank you for your feedback.";
+      return await generateWithFallback(prompt);
     } catch (error) {
       console.error("Error in Review Agent:", error);
       return "Thank you for your review and feedback.";
@@ -202,7 +222,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
       const ctaType = config?.ctaType || "LEARN_MORE";
       
       const prompt = `
-        You are a Google Business Profile Content Strategist using Gemini 3.5 Flash.
+        You are a Google Business Profile Content Strategist.
         Create an engaging GBP Update Post for a healthcare clinic.
         Focus Areas: ${focusAreas}
         Brand Voice: ${brandVoice}
@@ -217,12 +237,7 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         }
       `;
 
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-      });
-
-      const text = response.text || "";
+      const text = await generateWithFallback(prompt);
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) return JSON.parse(jsonMatch[0]);
@@ -254,18 +269,13 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
       const focus = config?.focus || "all";
 
       const prompt = `
-        You are a Local SEO Copilot using Gemini 3.5 Flash.
+        You are a Local SEO Copilot.
         Analyze target keywords: ${keywords} (Focus Priority: ${focus}).
         Provide 3 prioritized action items to improve local Google Maps rank.
         Return JSON array format: [{"title": "Action Title", "impact": "HIGH", "description": "Action details"}]
       `;
 
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-      });
-
-      const text = response.text || "";
+      const text = await generateWithFallback(prompt);
       try {
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) return JSON.parse(jsonMatch[0]);
