@@ -132,8 +132,8 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
    */
   static async runReviewAgent(reviewText: string, rating: number, config: any) {
     try {
-      const instructions = config.instructions || "Always thank the patient by name, mention clinic, and invite negative reviewers to contact us privately.";
-      const targetKeywords = config.targetKeywords || "Root Canal, Laser Treatment, Pediatric Care";
+      const instructions = config?.instructions || "Always thank the patient by name, mention clinic, and invite negative reviewers to contact us privately.";
+      const targetKeywords = config?.targetKeywords || "Root Canal, Laser Treatment, Pediatric Care";
       
       const prompt = `
         You are an elite Reputation Management Specialist replying to a Google Business Review on behalf of the clinic owner using Gemini 3.5 Flash.
@@ -170,9 +170,9 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
    */
   static async runProfileAgent(config: any) {
     try {
-      const focusAreas = config.focusAreas || "General Care, Preventive Health, Clinic Updates";
-      const brandVoice = config.brandVoice || "Informative healthcare tone, max 2 emojis, end with booking phone number.";
-      const ctaType = config.ctaType || "LEARN_MORE";
+      const focusAreas = config?.focusAreas || "General Care, Preventive Health, Clinic Updates";
+      const brandVoice = config?.brandVoice || "Informative healthcare tone, max 2 emojis, end with booking phone number.";
+      const ctaType = config?.ctaType || "LEARN_MORE";
       
       const prompt = `
         You are a Google Business Profile Content Strategist using Gemini 3.5 Flash.
@@ -181,7 +181,13 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         Brand Voice: ${brandVoice}
         CTA Button: ${ctaType}
         
-        Output only the post text (100-150 words). Include 1-2 relevant hashtags at the end.
+        Output JSON format only:
+        {
+          "title": "Short Catchy Post Headline",
+          "content": "Full post content body (100-150 words)",
+          "postType": "STANDARD",
+          "ctaType": "${ctaType}"
+        }
       `;
 
       const response = await ai.models.generateContent({
@@ -189,10 +195,65 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         contents: prompt,
       });
 
-      return response.text?.trim() || "Stay healthy with regular checkups at our clinic. Book your consultation today!";
+      const text = response.text || "";
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {}
+
+      return {
+        title: "Schedule Your Regular Health Checkup",
+        content: "Stay proactive about your health! Visit our clinic for comprehensive health checkups and personalized care. Book your appointment today.",
+        postType: "STANDARD",
+        ctaType: ctaType || "LEARN_MORE"
+      };
     } catch (error) {
       console.error("Error in Profile Agent:", error);
-      return "Schedule your regular health checkup at our clinic today!";
+      return {
+        title: "Health & Wellness Consultation",
+        content: "Schedule your consultation with our specialist doctors today.",
+        postType: "STANDARD",
+        ctaType: "LEARN_MORE"
+      };
+    }
+  }
+
+  /**
+   * 4. LOCAL SEO COPILOT AGENT
+   */
+  static async runLocalSeoCopilot(doctorId: string, config: any) {
+    try {
+      const keywords = config?.keywords || "Best Clinic, Doctor Near Me";
+      const focus = config?.focus || "all";
+
+      const prompt = `
+        You are a Local SEO Copilot using Gemini 3.5 Flash.
+        Analyze target keywords: ${keywords} (Focus Priority: ${focus}).
+        Provide 3 prioritized action items to improve local Google Maps rank.
+        Return JSON array format: [{"title": "Action Title", "impact": "HIGH", "description": "Action details"}]
+      `;
+
+      const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: prompt,
+      });
+
+      const text = response.text || "";
+      try {
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) return JSON.parse(jsonMatch[0]);
+      } catch (e) {}
+
+      return [
+        { title: "Optimize GBP Business Title", impact: "HIGH", description: "Add main specialty and location to GBP business title." },
+        { title: "Increase Weekly Review Velocity", impact: "HIGH", description: "Send automated WhatsApp review requests to recent patients." },
+        { title: "Publish Weekly Google Updates", impact: "MEDIUM", description: "Post weekly posts highlighting key clinic treatments." }
+      ];
+    } catch (error) {
+      console.error("Error in Local SEO Copilot Agent:", error);
+      return [];
     }
   }
 }

@@ -404,9 +404,9 @@ class WhatsAppManager {
                 agentConfig.config as any,
                 clinicPhone,
                 {
-                  doctorName: doctorInfo?.name,
-                  clinicName: doctorInfo?.clinicName,
-                  specialty: doctorInfo?.specialty
+                  doctorName: doctorInfo?.name || undefined,
+                  clinicName: doctorInfo?.clinicName || undefined,
+                  specialty: doctorInfo?.specialty || undefined
                 }
               );
 
