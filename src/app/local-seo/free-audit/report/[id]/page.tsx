@@ -275,7 +275,7 @@ function SearchGridVisualization({
   const searchKeyword = specialty ? `${specialty}` : "Doctor & Clinic";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
       <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -501,24 +501,24 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
           <div className="flex-1 min-w-0 space-y-6">
 
             {/* ── SECTION 1: Hero Diagnostic Banner ─────────────────────── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
               
               {/* Business Info Header */}
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-2xl shrink-0">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-2xl shrink-0 shadow-xs">
                     {getInitials(businessName)}
                   </div>
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 mb-1.5">{businessName}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">{businessName}</h1>
                     <div className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500 font-normal">
                       {address && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-slate-600">
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 border border-slate-200/60 rounded-lg text-slate-600">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {address}
                         </span>
                       )}
                       {rating !== "N/A" && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 rounded text-amber-700 font-medium">
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-lg text-amber-800 font-medium">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {rating} ({reviewsCount} reviews)
                         </span>
                       )}
@@ -528,16 +528,16 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Red Warning Bar */}
-              <div className="px-6 py-3 bg-rose-50 border-b border-rose-100 flex items-center justify-between gap-3">
+              <div className="px-6 py-3 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-500" />
-                  <span className="text-[13px] font-medium text-rose-700">Diagnostic Complete · {issueCount} Ranking Obstacles Found</span>
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span className="text-[13px] font-semibold text-rose-700">Diagnostic Complete · {issueCount} Ranking Obstacles Found</span>
                 </div>
               </div>
 
               {/* Core Diagnosis Headline & Metrics */}
               <div className="p-6 sm:p-8">
-                <h2 className="text-xl sm:text-3xl font-semibold text-slate-900 leading-snug mb-3">
+                <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug mb-3 tracking-tight">
                   {userRankNum === 1 ? (
                     <>
                       <span className="text-indigo-600">{businessName}</span> is currently the{" "}
@@ -551,29 +551,29 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   )}
                 </h2>
                 <p className="text-sm text-slate-600 leading-relaxed mb-6 font-normal max-w-3xl">
-                  Right now, when patients in {city} search for <span className="font-medium text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">"{specialty}"</span>, {userRankNum === 1 ? "your clinic leads local search results, but competitors are closing the gap." : "your competitors appear ahead on Google Maps. You can fix this profile gap starting today."}
+                  Right now, when patients in {city} search for <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">"{specialty}"</span>, {userRankNum === 1 ? "your clinic leads local search results, but competitors are closing the gap." : "your competitors appear ahead on Google Maps. You can fix this profile gap starting today."}
                 </p>
 
                 {/* 3 Metric Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                  <div className="p-5 rounded-xl bg-rose-50 border border-rose-100 text-center">
-                    <div className="text-4xl font-semibold text-rose-600">{clinicsAheadStr}</div>
-                    <div className="text-[11px] font-medium text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
+                  <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
+                    <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
                   </div>
-                  <div className="p-5 rounded-xl bg-amber-50 border border-amber-100 text-center">
-                    <div className="text-4xl font-semibold text-amber-600">{issueCount}</div>
-                    <div className="text-[11px] font-medium text-amber-700 uppercase tracking-wider mt-1">Ranking Issues</div>
+                  <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-4xl font-extrabold text-amber-600">{issueCount}</div>
+                    <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider mt-1">Ranking Issues</div>
                   </div>
-                  <div className="p-5 rounded-xl bg-indigo-50 border border-indigo-100 text-center">
-                    <div className="text-4xl font-semibold text-indigo-600">{profilePct}%</div>
-                    <div className="text-[11px] font-medium text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
+                  <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
+                    <div className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
                   </div>
                 </div>
 
                 {/* Clean CTA button */}
                 <Link
                   href="/register"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-[0.99]"
                 >
                   <span>Fix My Google Profile Automatically</span>
                   <ArrowRight className="w-4 h-4" />
@@ -591,25 +591,25 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             />
 
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
                       <Trophy className="w-4 h-4" />
                     </div>
-                    <h2 className="text-lg font-semibold text-slate-800">Who's beating you on Google</h2>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Who's beating you on Google</h2>
                   </div>
                   <p className="text-sm text-slate-500 font-normal">
-                    Search comparison for <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{specialty}</span> in {city}
+                    Search comparison for <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">{specialty}</span> in {city}
                   </p>
                 </div>
                 {userRankNum === 1 ? (
-                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-semibold rounded-lg border border-emerald-200 flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> #1 Top Ranked Clinic
                   </span>
                 ) : (
-                  <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-medium rounded-lg border border-rose-100 flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-semibold rounded-lg border border-rose-100 flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {clinicsAheadStr} Clinics Ahead
                   </span>
                 )}
@@ -618,33 +618,33 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500 tracking-wider">
-                      <th className="px-6 py-3 text-left">Business Name</th>
-                      <th className="px-4 py-3 text-left">Rating</th>
-                      <th className="px-4 py-3 text-left">Reviews</th>
-                      <th className="px-6 py-3 text-right">Map Rank</th>
+                    <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-500 tracking-wider">
+                      <th className="px-6 py-3.5 text-left">Business Name</th>
+                      <th className="px-4 py-3.5 text-left">Rating</th>
+                      <th className="px-4 py-3.5 text-left">Reviews</th>
+                      <th className="px-6 py-3.5 text-right">Map Rank</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {allTableRows.map((c: any, i: number) => {
                       if (c.isYou) {
                         return (
-                          <tr key={`you-${i}`} className="bg-indigo-50/50 border-t-2 border-b-2 border-indigo-100">
-                            <td className="px-6 py-4 font-semibold text-indigo-900 flex items-center gap-2 text-sm">
+                          <tr key={`you-${i}`} className="bg-indigo-50/60 border-t-2 border-b-2 border-indigo-100">
+                            <td className="px-6 py-4 font-bold text-indigo-950 flex items-center gap-2 text-sm">
                               <div className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
                               </div>
-                              {c.name} <span className="text-[10px] font-medium text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded">(YOU)</span>
+                              {c.name} <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 border border-indigo-200/60 px-2 py-0.5 rounded-md">(YOU)</span>
                             </td>
                             <td className="px-4 py-4">
-                              <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
+                              <span className="inline-flex items-center gap-1 text-amber-800 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
                                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
                               </span>
                             </td>
-                            <td className="px-4 py-4 font-medium text-rose-600 text-sm">{c.reviewCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
+                            <td className="px-4 py-4 font-bold text-rose-600 text-sm">{c.reviewCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
                             <td className="px-6 py-4 text-right">
-                              <span className={`inline-flex items-center gap-1 font-semibold text-sm px-2.5 py-1 rounded border ${
+                              <span className={`inline-flex items-center gap-1 font-bold text-sm px-2.5 py-1 rounded-lg border ${
                                 userRankNum === 1 
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                   : "bg-rose-50 text-rose-700 border-rose-100"
@@ -656,17 +656,17 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                         );
                       }
                       return (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        <tr key={i} className="hover:bg-slate-50/80 transition-colors">
                           <td className="px-6 py-4 font-medium text-slate-800">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span>{c.name}</span>
+                              <span className="font-semibold text-slate-900">{c.name}</span>
                               {Number(c.reviewCount) <= 5 ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title="Google Maps ranked this profile higher due to sub-specialty title keywords">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100" title="Google Maps ranked this profile higher due to sub-specialty title keywords">
                                   Title Keyword Match
                                 </span>
                               ) : null}
                               {c.distanceKm != null ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
                                   <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
                                 </span>
                               ) : null}
@@ -677,9 +677,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
                             </span>
                           </td>
-                          <td className="px-4 py-4 font-medium text-emerald-600">{c.reviewCount} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
+                          <td className="px-4 py-4 font-semibold text-emerald-600">{c.reviewCount} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
                           <td className="px-6 py-4 text-right">
-                            <span className="inline-flex items-center justify-center w-6 h-6 font-semibold text-slate-600 text-xs bg-slate-100 rounded border border-slate-200">
+                            <span className="inline-flex items-center justify-center w-6 h-6 font-bold text-slate-600 text-xs bg-slate-100 rounded-md border border-slate-200">
                               #{c.rank}
                             </span>
                           </td>
@@ -692,38 +692,39 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 4: Why You're Losing Patients (Issues) ───────────── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 font-bold">
                       <ShieldAlert className="w-4 h-4" />
                     </div>
-                    <h2 className="text-lg font-semibold text-slate-800">Why {businessName} isn't ranking</h2>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Why {businessName} isn't ranking</h2>
                   </div>
                   <p className="text-sm text-slate-500 font-normal">Profile gaps identified by our diagnostic engine</p>
                 </div>
-                <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-medium rounded-lg border border-rose-100">
+                <span className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[11px] font-semibold rounded-lg border border-rose-100">
                   {issueCount} Action Items
                 </span>
               </div>
 
-              <div className="p-6 space-y-3 bg-slate-50">
+              <div className="p-6 space-y-3 bg-slate-50/50">
                 {issues.map((item, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-white border border-rose-100 flex items-start gap-3 shadow-sm">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
+                  <div key={i} className="p-4 rounded-2xl bg-white border border-rose-100/80 flex items-start gap-3 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
                       <XCircle className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{item.issue}</p>
-                      <p className="text-[13px] text-slate-500 mt-1 leading-relaxed font-normal">{item.evidence}</p>
+                      <p className="text-sm font-bold text-slate-900">{item.issue}</p>
+                      <p className="text-[13px] text-slate-600 mt-1 leading-relaxed font-normal">{item.evidence}</p>
                     </div>
                   </div>
-                ))}              </div>
+                ))}
+              </div>
             </div>
 
             {/* ── SECTION 5: Profile Completeness Checklist ───────────────── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
