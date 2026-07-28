@@ -94,67 +94,125 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 // ─── Gyrex Platform Features Sticky Sidebar ────────────────────────────────
 function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
   return (
-    <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all">
-      {/* Header Banner - Standard Blue */}
-      <div className="p-6 bg-indigo-600 text-white relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500 text-xs font-medium text-indigo-50 mb-3 border border-indigo-400">
-            <Building2 className="w-3.5 h-3.5 text-indigo-100" /> Platform Features
+    <div className="sticky top-24 rounded-3xl border border-slate-800 bg-[#0B0F19] text-white p-6 shadow-xl transition-all">
+      {/* Top Header */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-bold text-lg text-white tracking-tight">Gyrex Pro</span>
+        <span className="px-3 py-1 rounded-full bg-white/10 text-slate-200 text-[11px] font-medium border border-white/10">
+          14-Day Free Trial
+        </span>
+      </div>
+
+      {/* Headline & Subtitle */}
+      <h3 className="text-xl font-bold text-white leading-tight mb-2">
+        Automate Your Clinic Growth with Gyrex
+      </h3>
+      <p className="text-xs text-slate-400 leading-relaxed mb-4">
+        Automate your clinic growth with Gyrex to increase patient flow and outrank local competition.
+      </p>
+
+      {/* Pricing Recessed Box */}
+      <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 mb-4">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-white">₹0</span>
+            <span className="text-xs text-slate-400 font-normal">for 14 days</span>
           </div>
-          <h3 className="text-xl font-semibold leading-tight mb-2">Turn searchers into booked patients.</h3>
-          <p className="text-sm text-indigo-100 leading-relaxed font-normal">
-            Automate local SEO, generate WhatsApp reviews, and manage your clinic.
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-medium border border-emerald-500/30">
+            Risk Free
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="line-through text-slate-500 font-normal">₹5,000/mo</span>
+          <span className="text-rose-400 font-bold text-sm">₹2,499/mo</span>
+        </div>
+      </div>
+
+      {/* Primary CTA Button */}
+      <Link
+        href="/register"
+        className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-indigo-600/30 text-center mb-5"
+      >
+        <span>Start 14-Day Free Trial</span>
+      </Link>
+
+      {/* Features Divider */}
+      <div className="relative border-t border-slate-800/80 my-5 text-center">
+        <span className="relative -top-2.5 px-3 bg-[#0B0F19] text-slate-500 text-[11px] font-medium uppercase tracking-wider">
+          Features
+        </span>
+      </div>
+
+      {/* 2x2 Feature Cards Grid */}
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        {/* Tile 1 */}
+        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Phone className="w-3.5 h-3.5" />
+            </div>
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-slate-200 leading-snug">
+            Automated WhatsApp Reviews
+          </p>
+        </div>
+
+        {/* Tile 2 */}
+        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+              <Activity className="w-3.5 h-3.5" />
+            </div>
+            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <Zap className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-slate-200 leading-snug">
+            Review Auto-Responder
+          </p>
+        </div>
+
+        {/* Tile 3 */}
+        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+              <Globe className="w-3.5 h-3.5" />
+            </div>
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-slate-200 leading-snug">
+            Weekly Google Profile Optimizer
+          </p>
+        </div>
+
+        {/* Tile 4 */}
+        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <TrendingUp className="w-3.5 h-3.5" />
+            </div>
+            <div className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+              <BarChart3 className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-slate-200 leading-snug">
+            Competitor Rank Tracker
           </p>
         </div>
       </div>
 
-      {/* Pricing / Trial offer */}
-      <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-3xl font-bold text-slate-900 tracking-tight">₹0</span>
-          <span className="text-sm font-medium text-slate-600">for 14 days</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="line-through decoration-slate-300 font-normal">Regular ₹2,999/mo</span>
-          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded-md text-[10px]">Risk Free</span>
-        </div>
-      </div>
-
-      {/* Actual Gyrex Features */}
-      <div className="p-6 space-y-4 border-b border-slate-100 bg-white">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Platform Capabilities</p>
-        {[
-          { title: "Automated WhatsApp Reviews", desc: "Collect more 5-star Google reviews." },
-          { title: "GBP Auto-Optimization Engine", desc: "Fix missing categories automatically." },
-          { title: "Weekly Medical Profile Updates", desc: "Signal active engagement to Google." },
-          { title: "WhatsApp Appointment Assistant", desc: "Convert map searchers to appointments." },
-          { title: "Multi-Location Rank Tracker", desc: "Monitor your rank in real-time." }
-        ].map((f, i) => (
-          <div key={i} className="flex items-start gap-3 group">
-            <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-              <Check className="w-3 h-3 stroke-2" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800 leading-snug">{f.title}</p>
-              <p className="text-[12px] font-normal text-slate-500 leading-relaxed mt-0.5">{f.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* CTA Button */}
-      <div className="p-6 bg-slate-50/50">
-        <Link
-          href="/register"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm"
-        >
-          <span>Start 14-Day Free Trial</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-        <p className="text-center text-[11px] font-medium text-slate-500 mt-3 flex items-center justify-center gap-1.5">
-          <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> No credit card required · Setup in 2 mins
-        </p>
-      </div>
+      {/* Card Footer */}
+      <Link
+        href="/register"
+        className="text-slate-400 hover:text-white text-xs font-medium transition-colors text-center block"
+      >
+        Learn More &gt;
+      </Link>
     </div>
   );
 }
