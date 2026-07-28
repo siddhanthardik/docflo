@@ -8,12 +8,15 @@ export interface SpecialityBenchmark {
   isUnknown?: boolean;
 }
 
-// ── Helper to format raw slugs (e.g. "plastic_surgeon" → "Plastic Surgeon") ──
+// ── Helper to format raw Google Places API category slugs ───────────────────
 function formatSlugToTitle(slug: string): string {
   if (!slug) return "";
   return slug
     .split("_")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map(word => {
+      if (word.toLowerCase() === "and") return "&";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(" ");
 }
 
@@ -29,26 +32,45 @@ function generateDynamicKeywords(category: string): string[] {
   ];
 }
 
-// ── Main export: 100% Dynamic Specialty Detection Engine ─────────────────────
-// Uses Google Places API (New v1) live primaryTypeDisplayName directly.
-// Strictly isolated from user search bar queries (searchQuery).
+// ── Strict Clinical Medical Root Matchers ONLY ────────────────────────────────
+// Casual conversational words (like "baby", "skin", "knee", "tooth", "cough") are 100% BANNED.
+// We match ONLY explicit medical roots.
+const CLINICAL_MEDICAL_RULES: Array<{ label: string; matchers: string[] }> = [
+  { label: "Obstetrician & Gynecologist", matchers: ["gynaecolog", "gynecolog", "obstetr", "gynac", "obstetrician", "women's health"] },
+  { label: "Pediatrician", matchers: ["paediatr", "pediatr", "neonatolog", "pediatrician", "paediatrician"] },
+  { label: "Dermatologist", matchers: ["dermatolog", "dermatologist", "tricholog"] },
+  { label: "Orthopedic Surgeon", matchers: ["orthopaed", "orthoped", "orthopedist", "orthopaedist"] },
+  { label: "Cardiologist", matchers: ["cardiol", "cardiologist"] },
+  { label: "Dental Clinic", matchers: ["dentist", "dental", "endodont", "orthodont"] },
+  { label: "ENT Specialist", matchers: ["otolaryngol", "ent specialist", "ent doctor", "ent clinic"] },
+  { label: "Ophthalmologist", matchers: ["ophthalmol", "eye surgeon", "eye specialist"] },
+  { label: "Urologist", matchers: ["urolog", "urologist"] },
+  { label: "Nephrologist", matchers: ["nephrol", "nephrologist"] },
+  { label: "Neurologist", matchers: ["neurol", "neurologist"] },
+  { label: "Gastroenterologist", matchers: ["gastroenterol", "gastroenterologist"] },
+  { label: "Pulmonologist", matchers: ["pulmonol", "pulmonologist"] },
+  { label: "Endocrinologist", matchers: ["endocrinol", "endocrinologist"] },
+  { label: "Physiotherapist", matchers: ["physiother", "physiotherapist"] },
+  { label: "Psychiatrist", matchers: ["psychiatr", "psychiatrist"] },
+  { label: "Oncologist", matchers: ["oncolog", "oncologist"] },
+];
+
+// ── Main export: 100% Dynamic Bulletproof Specialty Detection Engine ──────
 export function detectSpeciality(
   businessName: string,
   categories: string[] = [],
   address: string = "",
-  primaryTypeSlug?: string | null,           // e.g. "plastic_surgeon", "pediatrician"
-  primaryTypeDisplayName?: string | null,    // e.g. "Plastic Surgeon", "Pediatrician"
-  reviewsText: string[] = []                 // Patient review snippets
+  primaryTypeSlug?: string | null,           // e.g. "obstetrician_gynecologist", "pediatrician"
+  primaryTypeDisplayName?: string | null,    // e.g. "Obstetrician-gynecologist", "Pediatrician"
+  reviewsText: string[] = []                 // Patient review text snippets
 ): SpecialityBenchmark {
 
   const genericSlugs = ["doctor", "medical_clinic", "health", "point_of_interest", "establishment", "consultant", "service"];
 
-  // ── Priority 1: Google Places API v1 Live Display Name Authority ─────────
-  // If Google explicitly gives us a human category name (e.g. "Plastic Surgeon", "Pediatrician", "Dermatologist"),
-  // USE IT DIRECTLY. This supports ALL 4,000+ Google Business Profile categories dynamically.
+  // ── 1. Google Places API Primary Category Display Name Authority ─────────
   if (primaryTypeDisplayName && !genericSlugs.includes(primaryTypeDisplayName.toLowerCase().trim())) {
     const categoryLabel = primaryTypeDisplayName.trim();
-    console.log(`[Specialty Intelligence] Live Google Display Name Authority: "${categoryLabel}"`);
+    console.log(`[Bulletproof Specialty Engine] Priority 1 (Google API Primary Category): "${categoryLabel}"`);
 
     return {
       speciality: categoryLabel,
@@ -60,12 +82,10 @@ export function detectSpeciality(
     };
   }
 
-  // ── Priority 2: Google Places API v1 Slug Conversion ─────────────────────
-  // If primaryType is a specific slug (e.g. "plastic_surgeon", "orthodontist", "nephrologist"),
-  // convert it dynamically to Title Case ("Plastic Surgeon", "Orthodontist").
+  // ── 2. Google Places API Primary Category Slug Conversion ────────────────
   if (primaryTypeSlug && !genericSlugs.includes(primaryTypeSlug.toLowerCase().trim())) {
     const categoryLabel = formatSlugToTitle(primaryTypeSlug);
-    console.log(`[Specialty Intelligence] Live Google Primary Slug: "${primaryTypeSlug}" → "${categoryLabel}"`);
+    console.log(`[Bulletproof Specialty Engine] Priority 2 (Google API Primary Slug): "${primaryTypeSlug}" → "${categoryLabel}"`);
 
     return {
       speciality: categoryLabel,
@@ -77,77 +97,48 @@ export function detectSpeciality(
     };
   }
 
-  // ── Priority 3: Dynamic NLP Search strictly across official profile data ─
-  // ONLY reads official clinic title, categories, and reviews. ZERO search query leakage.
-  const fullCorpus = [
-    businessName,
-    categories.join(" "),
-    reviewsText.join(" ")
-  ].join(" ").toLowerCase();
+  // ── 3. Google Places API Secondary Categories (types[]) ──────────────────
+  const specificGoogleCategories = categories.filter(cat => !genericSlugs.includes(cat.toLowerCase().trim()));
+  if (specificGoogleCategories.length > 0) {
+    const chosenCategory = formatSlugToTitle(specificGoogleCategories[0]);
+    console.log(`[Bulletproof Specialty Engine] Priority 3 (Google API Secondary Category): "${specificGoogleCategories[0]}" → "${chosenCategory}"`);
 
-  // Distinct Medical Specialty Detection Rules (Supporting both British/Indian & American spellings)
-  let detectedLabel: string | null = null;
-
-  if (fullCorpus.includes("plastic") || fullCorpus.includes("cosmetic surgeon") || fullCorpus.includes("rhinoplasty") || fullCorpus.includes("liposuction")) {
-    detectedLabel = "Plastic & Cosmetic Surgeon";
-  } else if (fullCorpus.includes("paediatr") || fullCorpus.includes("pediatr") || fullCorpus.includes("neonat") || fullCorpus.includes("child doctor") || fullCorpus.includes("baby") || fullCorpus.includes("bal rog") || fullCorpus.includes("shishu")) {
-    detectedLabel = "Pediatrician";
-  } else if (fullCorpus.includes("derma") || fullCorpus.includes("skin specialist") || fullCorpus.includes("acne") || fullCorpus.includes("skincare")) {
-    detectedLabel = "Dermatologist";
-  } else if (fullCorpus.includes("dentist") || fullCorpus.includes("dental") || fullCorpus.includes("teeth") || fullCorpus.includes("tooth") || fullCorpus.includes("root canal") || fullCorpus.includes("orthodon")) {
-    detectedLabel = "Dental Clinic";
-  } else if (fullCorpus.includes("ivf") || fullCorpus.includes("fertility") || fullCorpus.includes("infertility")) {
-    detectedLabel = "Fertility Clinic";
-  } else if (fullCorpus.includes("gynaec") || fullCorpus.includes("gynec") || fullCorpus.includes("obstet") || fullCorpus.includes("pregnancy") || fullCorpus.includes("pcos")) {
-    detectedLabel = "Gynaecology Clinic";
-  } else if (fullCorpus.includes("orthopaed") || fullCorpus.includes("orthoped") || fullCorpus.includes("knee replacement") || fullCorpus.includes("bone doctor") || fullCorpus.includes("joint pain") || fullCorpus.includes("sports injury")) {
-    detectedLabel = "Orthopedic Clinic";
-  } else if (fullCorpus.includes("cardio") || fullCorpus.includes("heart doctor") || fullCorpus.includes("ecg") || fullCorpus.includes("chest pain")) {
-    detectedLabel = "Cardiology Clinic";
-  } else if (fullCorpus.includes("urol") || fullCorpus.includes("kidney stone") || fullCorpus.includes("prostate")) {
-    detectedLabel = "Urology Clinic";
-  } else if (fullCorpus.includes("ent") || fullCorpus.includes("ear nose") || fullCorpus.includes("sinus") || fullCorpus.includes("tonsil") || fullCorpus.includes("hearing")) {
-    detectedLabel = "ENT Clinic";
-  } else if (fullCorpus.includes("eye doctor") || fullCorpus.includes("lasik") || fullCorpus.includes("cataract") || fullCorpus.includes("ophthal")) {
-    detectedLabel = "Eye Clinic";
-  } else if (fullCorpus.includes("physio") || fullCorpus.includes("rehab") || fullCorpus.includes("back pain")) {
-    detectedLabel = "Physiotherapy Clinic";
-  } else if (fullCorpus.includes("diabet") || fullCorpus.includes("hba1c") || fullCorpus.includes("insulin") || fullCorpus.includes("endocrinol")) {
-    detectedLabel = "Diabetes Clinic";
-  } else if (fullCorpus.includes("diagnostic") || fullCorpus.includes("pathology") || fullCorpus.includes("mri") || fullCorpus.includes("blood test") || fullCorpus.includes("lab")) {
-    detectedLabel = "Diagnostic Lab";
-  } else if (fullCorpus.includes("neurol") || fullCorpus.includes("neuro") || fullCorpus.includes("brain")) {
-    detectedLabel = "Neurology Clinic";
-  } else if (fullCorpus.includes("pulmon") || fullCorpus.includes("chest") || fullCorpus.includes("asthma") || fullCorpus.includes("lung")) {
-    detectedLabel = "Pulmonology Clinic";
-  } else if (fullCorpus.includes("gastro") || fullCorpus.includes("liver") || fullCorpus.includes("endoscopy") || fullCorpus.includes("stomach")) {
-    detectedLabel = "Gastroenterology Clinic";
-  } else if (fullCorpus.includes("nephrol") || fullCorpus.includes("dialysis") || fullCorpus.includes("renal")) {
-    detectedLabel = "Nephrology Clinic";
-  } else if (fullCorpus.includes("hospital") || fullCorpus.includes("multispecialty")) {
-    detectedLabel = "Hospital";
-  }
-
-  if (detectedLabel) {
-    console.log(`[Specialty Intelligence] Dynamic NLP Extracted Category: "${detectedLabel}"`);
     return {
-      speciality: detectedLabel,
+      speciality: chosenCategory,
       expectedRating: 4.5,
       expectedReviewCount: 100,
-      highValueKeywords: generateDynamicKeywords(detectedLabel),
+      highValueKeywords: generateDynamicKeywords(chosenCategory),
       seasonalOpportunities: ["Annual Preventive Health Checkups"],
-      contentOpportunities: [`Patient guide to ${detectedLabel} care`],
+      contentOpportunities: [`Patient guide to ${chosenCategory} care`],
     };
   }
 
-  // ── Priority 4: Conservative General Fallback ──────────────────────────────
-  console.log(`[Specialty Intelligence] General Medical Clinic Fallback for "${businessName}"`);
+  // ── 4. Strict Clinical Medical Root Term Match (Name & Reviews ONLY) ──────
+  // ZERO casual word matching. Only strict medical terms (e.g. "gynaecolog", "obstetr", "pediatr").
+  const fullCorpus = [businessName, reviewsText.join(" ")].join(" ").toLowerCase();
+
+  for (const rule of CLINICAL_MEDICAL_RULES) {
+    if (rule.matchers.some(matcher => fullCorpus.includes(matcher))) {
+      console.log(`[Bulletproof Specialty Engine] Priority 4 (Strict Clinical Term Match): "${rule.label}"`);
+      return {
+        speciality: rule.label,
+        expectedRating: 4.5,
+        expectedReviewCount: 100,
+        highValueKeywords: generateDynamicKeywords(rule.label),
+        seasonalOpportunities: ["Annual Preventive Health Checkups"],
+        contentOpportunities: [`Patient guide to ${rule.label} care`],
+      };
+    }
+  }
+
+  // ── 5. Clean Medical Specialist Fallback ──────────────────────────────────
+  console.log(`[Bulletproof Specialty Engine] Priority 5 (Default Medical Practice) for "${businessName}"`);
   return {
-    speciality: "General Medical Clinic",
+    speciality: "Medical Specialist",
     isUnknown: true,
     expectedRating: 4.5,
     expectedReviewCount: 100,
-    highValueKeywords: ["Doctor Near Me", "Clinic Near Me", "General Physician"],
+    highValueKeywords: ["Medical Specialist Near Me", "Clinic Near Me", "Specialist Consultation"],
     seasonalOpportunities: ["Annual Health Checkups"],
     contentOpportunities: ["Importance of regular health checkups"]
   };
