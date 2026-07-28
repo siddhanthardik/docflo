@@ -704,6 +704,21 @@ export default function FreeAuditPage() {
               </form>
             </div>
 
+            {/* Mobile Steps (Displayed right below the form card on mobile screens) */}
+            <div className="lg:hidden space-y-3 pt-2">
+              {VALUE_PROPS.map((vp, i) => (
+                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-black text-indigo-600">{vp.num}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{vp.title}</p>
+                    <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{vp.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
 
         </div>
