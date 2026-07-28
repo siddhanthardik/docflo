@@ -86,6 +86,8 @@ export default function AIAgentsHubPage() {
     } finally {
       setSavingConfig(false);
     }
+  };
+
   const copyDoctorTemplate = () => {
     const template = `📋 GYREX CLINIC AI ASSISTANT SETUP TEMPLATE
 (Fill in your clinic details below and reply via WhatsApp)
