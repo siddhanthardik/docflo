@@ -127,7 +127,7 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
           </div>
           <h3 className="text-xl font-bold leading-tight mb-2">Automate Your Clinic Growth with Gyrex</h3>
           <p className="text-sm text-indigo-100 leading-relaxed font-normal">
-            Automate your clinic growth with Gyrex to increase patient flow and outrank local competition.
+            To increase patient flow and outrank local competition.
           </p>
         </div>
       </div>
@@ -812,6 +812,28 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
         </div>
 
+      </div>
+
+      {/* ── Native App Mobile Sticky Bottom Bar (App-like UX) ─────────────── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+        <div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-base font-bold text-slate-900">₹0</span>
+            <span className="text-[11px] text-slate-500 font-normal">for 14 days</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <span className="line-through text-slate-400 font-normal">₹5,000</span>
+            <span className="text-rose-600 font-bold">₹2,499/mo</span>
+            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 font-medium rounded text-[9px]">Risk Free</span>
+          </div>
+        </div>
+        <Link
+          href="/register"
+          className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md flex items-center gap-1.5 shrink-0 transition-transform active:scale-95"
+        >
+          <span>Start 14-Day Free Trial</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
     </div>
