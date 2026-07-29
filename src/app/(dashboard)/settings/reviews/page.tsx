@@ -42,6 +42,7 @@ export default function ReviewsAndMessagingSettingsPage() {
     reviewDelayMinutes: 45,
     reviewSurveyMessage: "",
     reviewGoogleInvitationMessage: "",
+    googleReviewLink: "",
 
     // Category 3: Invoices & Receipts
     enableInvoiceMessages: true,
@@ -67,6 +68,7 @@ export default function ReviewsAndMessagingSettingsPage() {
           reviewDelayMinutes: data.reviewDelayMinutes ?? 45,
           reviewSurveyMessage: data.reviewSurveyMessage || "",
           reviewGoogleInvitationMessage: data.reviewGoogleInvitationMessage || "",
+          googleReviewLink: data.googleReviewLink || "",
           enableBookingConfirmation: data.enableBookingConfirmation ?? true,
           enable24hReminder: data.enable24hReminder ?? true,
           enable2hReminder: data.enable2hReminder ?? false,
@@ -342,6 +344,43 @@ export default function ReviewsAndMessagingSettingsPage() {
                       onChange={(e) => setSettings({ ...settings, reviewGoogleInvitationMessage: e.target.value })}
                     />
                     <p className="text-[11px] text-gray-400">Must include <code className="text-indigo-600 font-bold">{`{link}`}</code> where the Google Review URL should be inserted.</p>
+                  </div>
+
+                  {/* Google Review Link */}
+                  <div className="space-y-2 pt-2 border-t border-gray-100">
+                    <Label htmlFor="googleReviewLink" className="text-xs font-semibold text-gray-700">Specific Google Review Link</Label>
+                    <div className="flex gap-2">
+                      <input
+                        id="googleReviewLink"
+                        type="url"
+                        className="flex-1 rounded-lg border border-gray-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                        placeholder="https://search.google.com/local/writereview?placeid=..."
+                        value={settings.googleReviewLink}
+                        onChange={(e) => setSettings({ ...settings, googleReviewLink: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/gbp/resolve-link");
+                            const data = await res.json();
+                            if (res.ok && data.link) {
+                              setSettings(s => ({ ...s, googleReviewLink: data.link }));
+                              toast({ title: "Link Fetched", description: "Google review link successfully resolved." });
+                            } else {
+                              throw new Error(data.error || "Could not find a link for this clinic.");
+                            }
+                          } catch(e: any) {
+                            toast({ title: "Error", description: e.message, variant: "destructive" });
+                          }
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-colors whitespace-nowrap"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Fetch Automatically
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400">This exact link will be used when `{`{link}`} ` is replaced above. Leave blank to let the system generate it magically on the fly.</p>
                   </div>
                 </div>
               </div>

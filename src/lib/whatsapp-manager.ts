@@ -324,29 +324,17 @@ class WhatsAppManager {
             });
 
             const isLastMsgFromAI = lastOutgoingMsg?.senderName === "AI Assistant";
+            const lastMsgContent = lastOutgoingMsg?.content?.toLowerCase() || "";
 
-            // Check if an actual Google Review Survey was sent to this patient in the last 24 hours
-            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const lastSurveyMessage = await prisma.chatMessage.findFirst({
-              where: {
-                conversationId: conversation.id,
-                direction: "OUTGOING",
-                createdAt: { gte: twentyFourHoursAgo },
-                OR: [
-                  { content: { contains: "5-star" } },
-                  { content: { contains: "rate your experience" } }
-                ]
-              },
-              orderBy: { createdAt: "desc" }
-            });
+            // Context-Aware Intent Detection
+            const isSurveyContext = !isLastMsgFromAI && (lastMsgContent.includes("happy with your care") || lastMsgContent.includes("rate your experience") || lastMsgContent.includes("reply *yes*") || lastMsgContent.includes("opt out"));
+            const isConfirmationContext = !isLastMsgFromAI && (lastMsgContent.includes("reminder") || lastMsgContent.includes("appointment tomorrow"));
 
-            // ONLY run Review Survey Interceptor if an actual review survey invitation was sent AND the last message was NOT from AI Assistant AND it is NOT a booking request
-            const isSurveySent = !isLastMsgFromAI && !isBookingRequest && !!lastSurveyMessage;
-            const isYes = isSurveySent && (/^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
-              textLower === "yes" || textLower === "yeah" || textLower === "sure" || textLower === "ok" || textLower === "okay");
-            const isNo = isSurveySent && (/^(no|n|nope|nah|never|bad)$/i.test(textLower) || textLower === "no" || textLower === "bad" || textLower === "poor");
+            const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
+              textLower === "yes" || textLower === "yeah" || textLower === "sure" || textLower === "ok" || textLower === "okay";
+            const isNo = /^(no|n|nope|nah|never|bad|2)$/i.test(textLower) || textLower === "no" || textLower === "bad" || textLower === "poor";
 
-            if (isYes) {
+            if (isSurveyContext && isYes) {
               const doctorData = await prisma.doctor.findUnique({ 
                 where: { id: doctorId }, 
                 select: { clinicName: true, reviewGoogleInvitationMessage: true, enableGoogleReviewAutoDispatch: true }
@@ -380,8 +368,8 @@ class WhatsAppManager {
               }
 
               return; // Don't pass to AI agent
-            } else if (isNo) {
-                const replyText = `We are so sorry to hear that we didn't meet your expectations today. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
+            } else if (isSurveyContext && isNo) {
+                const replyText = `We are so sorry to hear that we didn't meet your expectations. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
                 await sock.sendMessage(remoteJid, { text: replyText });
                 await prisma.chatMessage.create({
                   data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic" }
@@ -404,7 +392,7 @@ class WhatsAppManager {
 
             // Check if patient is confirming an appointment
             const textLowerConfirm = textMessage.trim().toLowerCase();
-            const isConfirming = /^(confirm|yes|i confirm|confirmed|ok|okay)$/.test(textLowerConfirm) || textLowerConfirm.includes("confirm");
+            const isConfirming = isConfirmationContext && (isYes || textLowerConfirm.includes("confirm"));
 
             if (isConfirming && patient) {
               // Find nearest upcoming unconfirmed appointment

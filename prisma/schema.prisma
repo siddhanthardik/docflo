@@ -75,6 +75,7 @@ model Doctor {
   reviewDelayMinutes            Int     @default(45)
   reviewSurveyMessage           String?
   reviewGoogleInvitationMessage String?
+  googleReviewLink              String?
 
   // Granular Automated Message Toggles
   enableBookingConfirmation      Boolean @default(true)
@@ -309,22 +310,22 @@ model StaffMember {
 }
 
 model Conversation {
-  id            String        @id @default(cuid())
-  doctorId      String
-  patientPhone  String
-  patientName   String?
-  patientId     String?
-  status        ChatStatus    @default(OPEN)
-  assignedToId  String?
-  lastMessageAt DateTime      @default(now())
-  unreadCount   Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               String            @id @default(cuid())
+  doctorId         String
+  patientPhone     String
+  patientName      String?
+  patientId        String?
+  status           ChatStatus        @default(OPEN)
+  assignedToId     String?
+  lastMessageAt    DateTime          @default(now())
+  unreadCount      Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   messages         ChatMessage[]
   aiAgentFeedbacks AIAgentFeedback[]
-  assignedTo       StaffMember?  @relation(fields: [assignedToId], references: [id])
-  doctor           Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  patient          Patient?      @relation(fields: [patientId], references: [id])
+  assignedTo       StaffMember?      @relation(fields: [assignedToId], references: [id])
+  doctor           Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient          Patient?          @relation(fields: [patientId], references: [id])
 
   @@unique([doctorId, patientPhone])
   @@map("conversations")
@@ -354,7 +355,7 @@ model AIAgentFeedback {
   messageId       String?
   patientMessage  String   @db.Text
   aiResponse      String   @db.Text
-  status          String   // "APPROVED" | "CORRECTED"
+  status          String // "APPROVED" | "CORRECTED"
   correctedReply  String?  @db.Text
   customRuleAdded String?  @db.Text
   createdAt       DateTime @default(now())
@@ -438,7 +439,7 @@ model Campaign {
   segmentValue String?
   status       CampaignStatus      @default(DRAFT)
   mediaUrl     String?
-  mediaType    String?             // e.g. "IMAGE", "PDF"
+  mediaType    String? // e.g. "IMAGE", "PDF"
   ctaText      String?
   ctaLink      String?
   scheduledAt  DateTime?
@@ -860,9 +861,9 @@ model PlatformUser {
   kycDocuments         Json?
   bankDetails          Json?
 
-  assignedLeads     AuditLead[]
-  referredDoctors   Doctor[]
-  affiliatePayouts  AffiliatePayout[]
+  assignedLeads    AuditLead[]
+  referredDoctors  Doctor[]
+  affiliatePayouts AffiliatePayout[]
 
   @@map("platform_users")
 }
@@ -1289,38 +1290,38 @@ model SearchGridSnapshot {
 }
 
 model AffiliatePayout {
-  id             String       @id @default(cuid())
-  affiliateId    String
-  amount         Float
-  status         String       @default("PENDING") // PENDING, PAID
-  paidAt         DateTime?
-  referenceId    String? // Transaction reference
-  notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id          String    @id @default(cuid())
+  affiliateId String
+  amount      Float
+  status      String    @default("PENDING") // PENDING, PAID
+  paidAt      DateTime?
+  referenceId String? // Transaction reference
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  affiliate      PlatformUser @relation(fields: [affiliateId], references: [id])
-  
+  affiliate PlatformUser @relation(fields: [affiliateId], references: [id])
+
   @@index([affiliateId])
   @@map("affiliate_payouts")
 }
 
 model PackagePrice {
-  id                     String   @id @default(cuid())
-  packageId              String
-  countryCode            String   // e.g. "IN", "US", "GLOBAL"
-  currency               String   // e.g. "INR", "USD"
-  priceMonthly           Float    @default(0)
-  priceQuarterly         Float    @default(0)
-  priceYearly            Float    @default(0)
-  razorpayMonthlyPlanId  String?
+  id                      String   @id @default(cuid())
+  packageId               String
+  countryCode             String // e.g. "IN", "US", "GLOBAL"
+  currency                String // e.g. "INR", "USD"
+  priceMonthly            Float    @default(0)
+  priceQuarterly          Float    @default(0)
+  priceYearly             Float    @default(0)
+  razorpayMonthlyPlanId   String?
   razorpayQuarterlyPlanId String?
-  razorpayYearlyPlanId   String?
-  stripeMonthlyPriceId   String?
-  stripeQuarterlyPriceId String?
-  stripeYearlyPriceId    String?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  razorpayYearlyPlanId    String?
+  stripeMonthlyPriceId    String?
+  stripeQuarterlyPriceId  String?
+  stripeYearlyPriceId     String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
@@ -1329,15 +1330,15 @@ model PackagePrice {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  doctorId    String
-  title       String
-  message     String
-  type        String   // "INFO", "WARNING", "SUCCESS", "ERROR", "BILLING"
-  isRead      Boolean  @default(false)
-  actionUrl   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  doctorId  String
+  title     String
+  message   String
+  type      String // "INFO", "WARNING", "SUCCESS", "ERROR", "BILLING"
+  isRead    Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
@@ -1348,7 +1349,7 @@ model Notification {
 
 model WebhookEvent {
   id              String   @id @default(cuid())
-  gateway         String   // "RAZORPAY", "STRIPE"
+  gateway         String // "RAZORPAY", "STRIPE"
   eventId         String   @unique
   eventType       String
   payload         Json
@@ -1361,4 +1362,3 @@ model WebhookEvent {
   @@index([processed])
   @@map("webhook_events")
 }
-

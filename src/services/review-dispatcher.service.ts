@@ -4,8 +4,13 @@ import { whatsappManager } from "@/lib/whatsapp-manager";
 export async function resolveGoogleReviewLink(doctorId: string): Promise<string> {
   const doctor = await prisma.doctor.findUnique({
     where: { id: doctorId },
-    select: { clinicName: true, address: true, city: true }
+    select: { clinicName: true, address: true, city: true, googleReviewLink: true }
   });
+  
+  if (doctor?.googleReviewLink) {
+    return doctor.googleReviewLink;
+  }
+
   const clinicName = doctor?.clinicName || "";
 
   // 1. Check GbpAccount connected to THIS doctor
@@ -214,7 +219,7 @@ export class ReviewDispatcherService {
 
     if (requestType === "GOOGLE_REVIEW") {
       const reviewLink = await resolveGoogleReviewLink(doctorId);
-      const defaultReply = `Hi ${patient.firstName}, thank you for choosing ${doctor.clinicName || "our clinic"}! 🌟\n\nIf you have 60 seconds, it would mean the world to our staff if you could share your experience on Google:\n\n${reviewLink}\n\nThank you so much!`;
+      const defaultReply = `Hi ${patient.firstName}, we hope you had a wonderful experience with us. If you feel we took great care of you, sharing a quick review on Google helps other patients find the care they need:\n\n${reviewLink}`;
       finalMessage = doctor.reviewGoogleInvitationMessage 
         ? doctor.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`)
         : defaultReply;
