@@ -138,6 +138,9 @@ export async function POST(request: Request) {
       centerLng = extracted.lng;
     }
 
+    const requestSpacing = body.radiusStep ? parseInt(body.radiusStep, 10) : SPACING_METERS;
+    const finalSpacing = isNaN(requestSpacing) ? SPACING_METERS : requestSpacing;
+
     // Run unified 25-point GeoGrid around the exact clinic GPS
     const gridData = await unifiedGeoGrid(
       searchKeyword,
@@ -147,7 +150,7 @@ export async function POST(request: Request) {
       businessName,
       apiKey,
       GRID_SIZE,
-      SPACING_METERS
+      finalSpacing
     );
 
     const compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
@@ -161,7 +164,7 @@ export async function POST(request: Request) {
         gridSize: GRID_SIZE,
         centerLat,
         centerLng,
-        spacingMeters: SPACING_METERS,
+        spacingMeters: finalSpacing,
         businessName,
         keyword: searchKeyword,
         json: gridData.ranks, // Array of { lat, lng, row, col, rank, found }
@@ -176,7 +179,7 @@ export async function POST(request: Request) {
         gridSize: GRID_SIZE,
         centerLat,
         centerLng,
-        spacingMeters: SPACING_METERS,
+        spacingMeters: finalSpacing,
         businessName,
         cached: false,
         cacheAge: 0,

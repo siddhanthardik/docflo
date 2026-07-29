@@ -656,9 +656,16 @@ export async function unifiedGeoGrid(
   const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
     let urlStr = "";
     if (useLocationBias) {
+      // Clean "near me" from the keyword because Nearby Search expects a raw category/keyword
+      const cleanKeyword = specialtyLabel.replace(/near me/gi, "").trim();
+      
+      // Scale radius dynamically based on grid spacing to ensure we capture competitors at the edges.
+      // If spacing is 500m, radius is 1000m. If spacing is 2000m, radius is 3000m.
+      const searchRadius = Math.max(1000, spacingMeters * 1.5);
+      
       // Nearby Search strictly enforces the lat/lng center point and ranks by prominence/distance.
       // This is exactly how tools like GrexaAI perform a GeoGrid.
-      urlStr = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&keyword=${encodeURIComponent(specialtyLabel)}&key=${apiKey}`;
+      urlStr = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${searchRadius}&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}`;
     } else {
       const textQuery = `${specialtyLabel} in ${searchPhraseContext}`;
       urlStr = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(textQuery)}&key=${apiKey}`;

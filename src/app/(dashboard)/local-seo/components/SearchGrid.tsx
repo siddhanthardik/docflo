@@ -32,7 +32,7 @@ function getRankLabel(rank: number, found: boolean): string {
 export function SearchGrid() {
   const [keywordInput, setKeywordInput] = useState<string>("");
   const [activeKeyword, setActiveKeyword] = useState<string>("");
-  const [gridRadiusStep, setGridRadiusStep] = useState<number>(500); // 200m, 500m, 1000m
+  const [gridRadiusStep, setGridRadiusStep] = useState<number>(1000); // 200m, 500m, 1km, 2km
   
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
@@ -211,6 +211,7 @@ export function SearchGrid() {
               { label: "200m", val: 200 },
               { label: "500m", val: 500 },
               { label: "1km", val: 1000 },
+              { label: "2km", val: 2000 },
             ].map((r) => (
               <button
                 key={r.val}
