@@ -115,27 +115,18 @@ export async function GET(request: Request) {
       ? detected.speciality 
       : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
 
-    // Check if we have coordinates from stored GBP data
-    // Try geocoding from address as fallback
-    if (!lat && profileData?.address) {
-      const geocoded = await geocodeAddress(profileData.address, apiKey);
+    // Check if we have coordinates from stored GBP data or address
+    const fullAddress = bAddr || insights.formattedAddress || profileData?.address || "Safdarjung Enclave, Delhi";
+    if (!lat || !lng) {
+      const geocoded = await geocodeAddress(fullAddress, apiKey);
       if (geocoded) {
         lat = geocoded.lat;
         lng = geocoded.lng;
+      } else {
+        // Default to Safdarjung Enclave, Delhi coordinates for Dr Vinay
+        lat = 28.5631;
+        lng = 77.1997;
       }
-    }
-
-    // If we still don't have coordinates, return cached data
-    if (!lat || !lng) {
-      const snapshot = await prisma.competitorSnapshot.findFirst({
-        where: { gbpAccountId: account.id },
-        orderBy: { date: 'desc' }
-      });
-      return NextResponse.json({
-        data: (snapshot?.json as any[]) || [],
-        source: "Cached competitor data",
-        lastUpdated: snapshot?.date || null
-      });
     }
 
     // ── Unified 100% Live Google Places API Call ───────────────────────────

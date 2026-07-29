@@ -575,7 +575,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   href="/register"
                   className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-[0.99]"
                 >
-                  <span>Fix My Google Profile Automatically</span>
+                  <span>Fix My Google Profile</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
