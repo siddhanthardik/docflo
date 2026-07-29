@@ -37,7 +37,7 @@ function generateDynamicKeywords(category: string): string[] {
 // We match ONLY explicit medical roots.
 const CLINICAL_MEDICAL_RULES: Array<{ label: string; matchers: string[] }> = [
   { label: "Obstetrician & Gynecologist", matchers: ["gynaecolog", "gynecolog", "obstetr", "gynac", "obstetrician", "women's health"] },
-  { label: "Pediatrician", matchers: ["paediatr", "pediatr", "neonatolog", "pediatrician", "paediatrician"] },
+  { label: "Pediatrician", matchers: ["paediatr", "pediatr", "neonatolog", "pediatrician", "paediatrician", "child specialist", "children's clinic", "childrens clinic", "child clinic"] },
   { label: "Dermatologist", matchers: ["dermatolog", "dermatologist", "tricholog"] },
   { label: "Orthopedic Surgeon", matchers: ["orthopaed", "orthoped", "orthopedist", "orthopaedist"] },
   { label: "Cardiologist", matchers: ["cardiol", "cardiologist"] },
