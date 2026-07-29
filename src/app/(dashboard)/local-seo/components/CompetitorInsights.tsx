@@ -21,10 +21,11 @@ interface Competitor {
   name: string;
   rating: number;
   reviewCount: number;
-  distanceMeters: number;
+  distanceMeters: number | null;
   isOpenNow?: boolean;
   primaryType?: string;
 }
+
 
 function RankBadge({ rank }: { rank: number }) {
   const isGood = rank <= 3;
@@ -267,19 +268,23 @@ export function CompetitorInsights() {
   const userRank = youMatch?.rank || 2;
 
   // Filter out places > 5 km and build unified list sorted strictly by Map Rank
-  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou && (c.distanceMeters == null || c.distanceMeters <= 5000));
+  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou && (
+    c.distanceMeters == null || c.distanceMeters <= 5000
+  ));
   
   const allRows = [
     ...competitorRowsOnly.map((c, i) => ({
       placeId: c.placeId || `comp-${i}`,
       name: c.name,
-      rating: Number(c.rating) || 4.8,
+      rating: Number(c.rating) || 0,
       reviewCount: Number(c.reviewCount) || 0,
-      distanceMeters: c.distanceMeters != null ? c.distanceMeters : 1000,
+      // null = real unknown (API couldn't calculate), never fake
+      distanceMeters: c.distanceMeters != null ? c.distanceMeters : null,
       rank: c.rank || i + 1,
       isYou: false,
       primaryType: c.primaryType
     })),
+
     {
       placeId: "you-row",
       name: doctorName,
@@ -368,7 +373,9 @@ export function CompetitorInsights() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1">{comp.name}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {comp.distanceMeters < 1000
+                  {comp.distanceMeters == null
+                    ? <span className="italic">Distance unknown</span>
+                    : comp.distanceMeters < 1000
                     ? `${comp.distanceMeters}m away`
                     : `${(comp.distanceMeters / 1000).toFixed(1)}km away`}
                 </p>

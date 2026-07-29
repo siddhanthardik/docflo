@@ -4,6 +4,8 @@ import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleNormalizer } from "@/services/normalization/GoogleNormalizer";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
+import { searchCompetitorsWithRank, buildLocalSearchQuery } from "@/lib/audit/google-places";
+
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -115,27 +117,57 @@ export async function GET(request: Request) {
       ? detected.speciality 
       : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
 
-    // Check if we have coordinates from stored GBP data or address
-    const fullAddress = bAddr || insights.formattedAddress || profileData?.address || "Safdarjung Enclave, Delhi";
+    // Extract GPS coordinates — priority: profileSnapshot lat/lng → insightsData location → geocode
+    const fullAddress = bAddr || insights.formattedAddress || profileData?.address || "";
+    const insightLocation = (insights.location as any);
+    if (typeof insightLocation?.latitude === "number" && typeof insightLocation?.longitude === "number") {
+      lat = insightLocation.latitude;
+      lng = insightLocation.longitude;
+      console.log(`[Competitors] Using GPS from insightsData.location: ${lat},${lng}`);
+    } else if (typeof profileData?.lat === "number" && typeof profileData?.lng === "number") {
+      lat = profileData.lat;
+      lng = profileData.lng;
+      console.log(`[Competitors] Using GPS from profileSnapshot: ${lat},${lng}`);
+    } else if (typeof profileData?.location?.latitude === "number") {
+      lat = profileData.location.latitude;
+      lng = profileData.location.longitude;
+      console.log(`[Competitors] Using GPS from profileSnapshot.location: ${lat},${lng}`);
+    }
+
     if (!lat || !lng) {
       const geocoded = await geocodeAddress(fullAddress, apiKey);
       if (geocoded) {
         lat = geocoded.lat;
         lng = geocoded.lng;
+        console.log(`[Competitors] GPS geocoded from address: ${lat},${lng}`);
       } else {
-        // Default to Safdarjung Enclave, Delhi coordinates for Dr Vinay
+        // Hard fallback — flag it so we can debug
         lat = 28.5631;
         lng = 77.1997;
+        console.warn(`[Competitors] WARNING: Using hardcoded fallback GPS. Address was: "${fullAddress}"`);
       }
     }
 
-    // ── Unified 100% Live Google Places API Call ───────────────────────────
-    const { searchCompetitorsWithRank } = await import("@/lib/audit/google-places");
+    // Build hyper-local search query: "Pediatrician near Safdarjung Enclave, New Delhi"
+    // NOT pincode-based
+    const localQuery = buildLocalSearchQuery(primaryCategory, fullAddress);
+    console.log(`[Competitors] Search query: "${localQuery}"`);
+
+    // ── Live Google Places API call ───────────────────────────────────────────
     const searchRes = await searchCompetitorsWithRank(
       primaryCategory,
       account.locationId || "",
       bName,
-      { lat, lng }
+      { lat, lng },
+      // Extract neighborhood+city for the locationContext param
+      (() => {
+        const parts = fullAddress.split(",").map((p: string) => p.trim()).filter(Boolean)
+          .filter((p: string) => !/^india$/i.test(p))
+          .filter((p: string) => !/\d{5,}/.test(p));
+        if (parts.length >= 3) return `${parts[parts.length - 3]}, ${parts[parts.length - 2]}`;
+        if (parts.length >= 2) return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
+        return undefined;
+      })()
     );
 
     const userRating = Number(insights.rating) || 4.9;
@@ -151,26 +183,30 @@ export async function GET(request: Request) {
       return true;
     });
 
-    // Structure normalized items for dashboard rendering
+    // Structure normalized items for dashboard rendering.
+    // Rank = real Google text-search position (googlePosition).
+    // distanceMeters = real Haversine meters (null if unknown — shown as "—" in UI).
     const updatedNormalized = [
       {
         id: "you",
         name: bName,
         rating: userRating,
         reviewCount: userReviews,
-        rank: searchRes.userRank > 0 ? searchRes.userRank : 2,
+        rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
         isYou: true,
-        distanceKm: 0,
+        distanceMeters: 0,
         placeId: account.locationId || ""
       },
       ...validCompetitors.map((comp: any, idx: number) => ({
         id: comp.placeId || `comp-${idx}`,
         name: comp.name,
-        rating: comp.rating || 4.8,
-        reviewCount: comp.reviewCount || 50,
-        rank: idx >= (searchRes.userRank - 1) ? idx + 2 : idx + 1,
+        rating: comp.rating,
+        reviewCount: comp.reviewCount,
+        // Real Google search position — not fake index arithmetic
+        rank: comp.googlePosition ?? (idx + 1),
         isYou: false,
-        distanceKm: comp.distanceKm || 1.5,
+        // Real meters from Haversine — null means unknown, UI will show "—"
+        distanceMeters: comp.distanceKm != null ? Math.round(comp.distanceKm * 1000) : null,
         placeId: comp.placeId || ""
       }))
     ].sort((a, b) => a.rank - b.rank);

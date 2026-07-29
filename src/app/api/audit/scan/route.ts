@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { fetchPlaceDetails, searchCompetitorsWithRank } from "@/lib/audit/google-places";
+import { fetchPlaceDetails, searchCompetitorsWithRank, buildLocalSearchQuery } from "@/lib/audit/google-places";
 
 export async function POST(req: Request) {
   try {
@@ -97,10 +97,29 @@ async function processAuditAsync(auditId: string, data: any) {
       ? gbpDisplayCategory
       : specialityData.speciality;
 
-    console.log(`[Audit] Competitor search query: "${specialtyLabel}" (city context: "${cityStr}")`);
+    // Build hyper-local search query: "Pediatrician near Safdarjung Enclave, New Delhi"
+    // NOT pincode-based — this is what real patients type on Google Maps
+    const localSearchQuery = buildLocalSearchQuery(specialtyLabel, locationStr);
+    console.log(`[Audit] Competitor search: "${localSearchQuery}" (from address: "${locationStr}")`);
+
+    // Extract neighborhood context for locationContext param
+    const addressParts2 = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean)
+      .filter((p: string) => !/^india$/i.test(p))
+      .filter((p: string) => !/\d{5,}/.test(p));
+    const locationContext = addressParts2.length >= 3
+      ? `${addressParts2[addressParts2.length - 3]}, ${addressParts2[addressParts2.length - 2]}`
+      : addressParts2.length >= 2
+      ? `${addressParts2[addressParts2.length - 2]}, ${addressParts2[addressParts2.length - 1]}`
+      : undefined;
 
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
-    const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(specialtyLabel, data.placeId || "", actualName, targetLocation);
+    const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(
+      specialtyLabel,
+      data.placeId || "",
+      actualName,
+      targetLocation,
+      locationContext
+    );
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     
