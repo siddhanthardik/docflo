@@ -19,7 +19,7 @@ import {
 import { useLocationContext } from "@/contexts/LocationContext";
 
 export default function RecommendationsPage() {
-  const { connected, activeLocation: activeAccount, isLoading: contextLoading } = useLocationContext();
+  const { connected, activeLocation: activeAccount, isLoading: contextLoading, refresh } = useLocationContext();
   
   // Modals state
   const [editingModal, setEditingModal] = useState<"description" | "category" | "hours" | "photos" | null>(null);
@@ -44,7 +44,8 @@ export default function RecommendationsPage() {
         })
       });
       if (res.ok) {
-        window.location.reload();
+        setEditingModal(null);
+        await refresh();
       }
     } catch (e) {
       console.error(e);

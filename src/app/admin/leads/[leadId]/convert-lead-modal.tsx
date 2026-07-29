@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { convertToCustomer } from "../convert-actions";
 import { toast } from "sonner";
 import { Loader2, Copy, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ConvertLeadModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
   const [password, setPassword] = useState("");
   const [result, setResult] = useState<{email: string, password: string} | null>(null);
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
 
   const handleConvert = async () => {
     if (!selectedPackage) {
@@ -61,7 +63,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
   const handleClose = () => {
     if (result) {
       // If we successfully converted, refresh the page to show new state
-      window.location.reload();
+      router.refresh();
     }
     onClose();
   };

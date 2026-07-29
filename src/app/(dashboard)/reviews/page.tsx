@@ -46,7 +46,7 @@ function formatTimeAgo(dateStr: string) {
 }
 
 export default function ReviewsPage() {
-  const { connected, activeLocation, activeLocationId, isLoading: contextLoading } = useLocationContext();
+  const { connected, activeLocation, activeLocationId, isLoading: contextLoading, refresh } = useLocationContext();
   const [reviews, setReviews] = useState<any[]>(null as any);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -225,7 +225,7 @@ export default function ReviewsPage() {
         toast.success("Reply posted successfully to Google!");
         setDraftingReplyFor(null);
         setReplyText("");
-        window.location.reload(); // Reload to reflect changes
+        await refresh(); // Reload to reflect changes
       } else {
         const errorData = await res.json().catch(() => null);
         toast.error(`Failed to post: ${errorData?.error || res.statusText}`);

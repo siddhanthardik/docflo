@@ -15,6 +15,7 @@ interface LocationContextType {
   activeLocationId: string | null;
   setActiveLocationId: (id: string | null) => void;
   isLoading: boolean;
+  refresh: () => Promise<void>;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -26,33 +27,37 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchLocations = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/gbp/profiles");
+      const data = await res.json();
+      if (data && data.connected) {
+        setConnected(true);
+        if (Array.isArray(data.accounts)) {
+          setAccounts(data.accounts);
+          
+          const savedLocationId = localStorage.getItem("gyrex_active_location");
+          if (savedLocationId && data.accounts.some((p: GbpAccount) => p.id === savedLocationId)) {
+            setActiveLocationId(savedLocationId);
+          } else if (data.accounts.length > 0 && !activeLocationId) {
+            setActiveLocationId(data.accounts[0].id);
+          }
+        }
+      } else {
+        setConnected(false);
+        setAccounts([]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch available locations for the user
   useEffect(() => {
-    setIsLoading(true);
-    fetch("/api/gbp/profiles")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.connected) {
-          setConnected(true);
-          if (Array.isArray(data.accounts)) {
-            setAccounts(data.accounts);
-            
-            // Try to load saved preference from localStorage
-            const savedLocationId = localStorage.getItem("gyrex_active_location");
-            if (savedLocationId && data.accounts.some((p: GbpAccount) => p.id === savedLocationId)) {
-              setActiveLocationId(savedLocationId);
-            } else if (data.accounts.length > 0) {
-              // Auto-select first if none saved
-              setActiveLocationId(data.accounts[0].id);
-            }
-          }
-        } else {
-          setConnected(false);
-          setAccounts([]);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    fetchLocations();
   }, []);
 
   // Save to localStorage and cookie when changed
@@ -75,6 +80,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         activeLocationId,
         setActiveLocationId,
         isLoading,
+        refresh: fetchLocations,
       }}
     >
       {children}

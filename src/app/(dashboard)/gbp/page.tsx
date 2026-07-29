@@ -205,7 +205,7 @@ function formatNum(n: number) {
 }
 
 export default function GBPProfilePage() {
-  const { connected, activeLocation: activeAccount, isLoading: contextLoading } = useLocationContext();
+  const { connected, activeLocation: activeAccount, isLoading: contextLoading, refresh } = useLocationContext();
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -231,8 +231,8 @@ export default function GBPProfilePage() {
     try {
       await fetch("/api/gbp/sync", { method: "POST" });
       // If we need to refetch context, we would need to reload window or expose a fetch method on Context.
-      // For now, reload window so context pulls fresh state
-      window.location.reload();
+      // For now, call refresh() so context pulls fresh state
+      await refresh();
     } catch (e) { /* silent */ }
     finally { setSyncing(false); }
   };

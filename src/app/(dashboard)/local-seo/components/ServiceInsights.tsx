@@ -78,7 +78,7 @@ function getRecommendations(primaryCategory: string): string[] {
 }
 
 export default function ServiceInsights() {
-  const { data: servicesData, isLoading, error } = useLocalSeoModule<any>('services');
+  const { data: servicesData, isLoading, error, refetch } = useLocalSeoModule<any>('services');
 
   const services = servicesData?.services || [];
   const primaryCategory = servicesData?.primaryCategory || "Medical Clinic";
@@ -222,12 +222,16 @@ export default function ServiceInsights() {
                   key={idx}
                   onClick={async () => {
                     try {
-                      await fetch('/api/local-seo/services', {
+                      const res = await fetch('/api/local-seo/services', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ serviceName: rec })
                       });
-                      window.location.reload();
+                      if (res.ok) {
+                        await refetch();
+                      } else {
+                        console.error("Failed to add service");
+                      }
                     } catch (e) {
                       console.error(e);
                     }
