@@ -112,9 +112,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not determine clinic neighborhood. Please ensure your GBP profile has a valid address." }, { status: 400 });
     }
 
-    const { neighborhood, searchPhrase, lat: centerLat, lng: centerLng } = extracted;
+    // Try to get exact clinic GPS
+    let centerLat = profileData?.lat || profileData?.location?.latitude;
+    let centerLng = profileData?.lng || profileData?.location?.longitude;
 
-    // Run unified 25-point GeoGrid
+    const { neighborhood, searchPhrase } = extracted;
+
+    // If GPS missing from profile, geocode the address
+    if (!centerLat || !centerLng) {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+          const loc = data.results[0].geometry.location;
+          centerLat = loc.lat;
+          centerLng = loc.lng;
+        }
+      } catch (e) {}
+    }
+
+    // Hard fallback to extracted neighborhood centroid
+    if (!centerLat || !centerLng) {
+      centerLat = extracted.lat;
+      centerLng = extracted.lng;
+    }
+
+    // Run unified 25-point GeoGrid around the exact clinic GPS
     const gridData = await unifiedGeoGrid(
       searchKeyword,
       searchPhrase,

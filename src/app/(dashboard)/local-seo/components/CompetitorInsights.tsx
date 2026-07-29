@@ -267,10 +267,8 @@ export function CompetitorInsights() {
   const primaryCategory = overviewData?.primaryCategory || "Pediatrician";
   const userRank = youMatch?.rank || 2;
 
-  // Filter out places > 5 km and build unified list sorted strictly by Map Rank
-  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou && (
-    c.distanceMeters == null || c.distanceMeters <= 5000
-  ));
+  // Build unified list sorted strictly by Map Rank (showing all results returned by API)
+  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou);
   
   const allRows = [
     ...competitorRowsOnly.map((c, i) => ({
@@ -311,7 +309,7 @@ export function CompetitorInsights() {
           <p>Google&apos;s local search order is based on <strong>3 factors</strong>: <strong>Proximity</strong> (distance from search location), <strong>Relevance</strong> (category &amp; keyword match), and <strong>Prominence</strong> (reviews, profile completeness). A clinic 300m away with 42 reviews can rank above a clinic 1.2km away with 784 reviews — <em>because proximity is Google&apos;s strongest local signal</em>. This list shows the real order from Google&apos;s Places API for your area.</p>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-400">Results within 5km · Ordered by Google Search position · Distances from neighborhood center</p>
+          <p className="text-xs text-gray-400">Ordered by pure Google Search rank · Distances from your clinic</p>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -325,7 +323,7 @@ export function CompetitorInsights() {
 
       {/* Table header */}
       <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-        <div>Business · Distance from neighborhood center</div>
+        <div>Business · Distance from your clinic</div>
         <div className="text-center w-16">Rating</div>
         <div className="text-center w-16">Reviews</div>
         <div className="text-center w-16" title="Real position in Google Search for your specialty near your location">Google Position ↑</div>

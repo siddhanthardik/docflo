@@ -107,32 +107,31 @@ async function processAuditAsync(auditId: string, data: any) {
     let gridData = null;
     let compositeData = null;
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
-    let centroidLoc = targetLocation;
     let locationContext = undefined;
 
     const extracted = await extractNeighborhood(locationStr, apiKey);
     if (extracted) {
       locationContext = extracted.searchPhrase;
-      centroidLoc = { lat: extracted.lat, lng: extracted.lng };
-      
-      // Run unified 25-point GeoGrid
-      console.log(`[Audit] Running 25-point GeoGrid around ${locationContext}`);
-      gridData = await unifiedGeoGrid(
-        specialtyLabel,
-        locationContext,
-        extracted.lat,
-        extracted.lng,
-        actualName,
-        apiKey
-      );
-      compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
+      if (targetLocation) {
+        // Run unified 25-point GeoGrid around the clinic's exact GPS
+        console.log(`[Audit] Running 25-point GeoGrid around clinic location`);
+        gridData = await unifiedGeoGrid(
+          specialtyLabel,
+          locationContext,
+          targetLocation.lat,
+          targetLocation.lng,
+          actualName,
+          apiKey
+        );
+        compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
+      }
     }
 
     const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(
       specialtyLabel,
       data.placeId || "",
       actualName,
-      centroidLoc,
+      targetLocation, // Use clinic location to calculate competitor distances
       locationContext
     );
 

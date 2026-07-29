@@ -154,15 +154,11 @@ export async function GET(request: Request) {
     console.log(`[Competitors] Search query: "${localQuery}"`);
 
     const extracted = await extractNeighborhood(fullAddress, apiKey);
-    let searchLat = lat;
-    let searchLng = lng;
     let locationContext = undefined;
 
     if (extracted) {
-      searchLat = extracted.lat;
-      searchLng = extracted.lng;
       locationContext = extracted.searchPhrase;
-      console.log(`[Competitors] Using neighborhood centroid for search: ${searchLat}, ${searchLng}`);
+      console.log(`[Competitors] Using neighborhood for organic text search: ${locationContext}`);
     }
 
     // ── Live Google Places API call ───────────────────────────────────────────
@@ -170,7 +166,7 @@ export async function GET(request: Request) {
       primaryCategory,
       account.locationId || "",
       bName,
-      { lat: searchLat, lng: searchLng },
+      { lat, lng }, // Pass clinic's exact GPS so UI calculates distances correctly
       locationContext
     );
 

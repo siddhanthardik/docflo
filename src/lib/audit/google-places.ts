@@ -257,14 +257,10 @@ export async function searchCompetitorsWithRank(
       maxResultCount: 20,
     };
 
-    if (location?.lat && location?.lng) {
-      requestBody.locationBias = {
-        circle: {
-          center: { latitude: location.lat, longitude: location.lng },
-          radius: 5000,
-        },
-      };
-    }
+    // DO NOT use locationBias for the primary organic search.
+    // The text query itself (e.g. "Pediatrician near Green Park, New Delhi") 
+    // provides the geographic intent. Using locationBias artificially skews 
+    // results towards the exact GPS coordinate, punishing high-authority clinics.
 
     const res = await fetch(v1Url, {
       method: "POST",
@@ -306,6 +302,8 @@ export async function searchCompetitorsWithRank(
             body: JSON.stringify({
               textQuery,
               maxResultCount: 20,
+              // Fallback to locationBias only if we couldn't find the user organically
+              // and we absolutely need to find where they sit in a tighter 3km radius.
               locationBias: {
                 circle: {
                   center: { latitude: location.lat, longitude: location.lng },
@@ -379,10 +377,6 @@ export async function searchCompetitorsWithRank(
             p.location.latitude,
             p.location.longitude
           );
-          if (distanceKm > 5) {
-            console.log(`[Competitor Filter] Excluded "${pName}" — ${distanceKm.toFixed(1)}km > 5km radius`);
-            continue;
-          }
         }
 
         competitors.push({
@@ -455,7 +449,6 @@ export async function searchCompetitorsWithRank(
           r.geometry.location.lat,
           r.geometry.location.lng
         );
-        if (distanceKm > 5) continue;
       }
 
       competitors.push({
@@ -563,15 +556,17 @@ export async function unifiedGeoGrid(
 
   // Function to search from a specific point
   const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
-    // We use Text Search because it's what patients use. E.g. "Pediatrician in Safdarjung Enclave, New Delhi"
-    const textQuery = encodeURIComponent(`${specialtyLabel} in ${searchPhraseContext}`);
+    // True "Near Me" grid search simulates a patient just typing "Pediatrician"
+    // while standing at the lat/lng. We do NOT append the neighborhood to the text query,
+    // otherwise the text intent overrides the GPS intent.
+    const textQuery = useLocationBias ? specialtyLabel : `${specialtyLabel} in ${searchPhraseContext}`;
     
     // Fallback: Classic Text Search (which allows location/radius)
     const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
-    url.searchParams.set("query", `${specialtyLabel} in ${searchPhraseContext}`);
+    url.searchParams.set("query", textQuery);
     if (useLocationBias) {
       url.searchParams.set("location", `${lat},${lng}`);
-      url.searchParams.set("radius", "5000"); // 5km to ensure we get results
+      url.searchParams.set("radius", "1000"); // 1km radius for tight grid points
     }
     url.searchParams.set("key", apiKey);
 
@@ -635,6 +630,6 @@ export function calculateCompositeRank(gridRanks: {rank: number}[], centroidRank
   if (stdDev < 2) confidence = "high";
   else if (stdDev < 5) confidence = "medium";
 
-  return { compositeRank, confidence, avgGridRank, stdDev };
+  return { compositeRank, confidence, avgGridRank, stdDev, organicRank, centroidRank };
 }
 

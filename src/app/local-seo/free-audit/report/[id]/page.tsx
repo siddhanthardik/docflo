@@ -470,7 +470,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
   // City extraction
   const addressParts = address.split(",").map((s: string) => s.trim());
-  const city = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "your area";
+  const city = compIntel?.searchContext || (addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "your area");
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
@@ -602,7 +602,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
                       <Trophy className="w-4 h-4" />
                     </div>
-                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Who's beating you on Google</h2>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Organic Neighborhood Search</h2>
                   </div>
                   <p className="text-sm text-slate-500 font-normal">
                     Search comparison for <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">{specialty}</span> in {city}
