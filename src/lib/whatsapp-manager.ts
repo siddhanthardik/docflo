@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -124,7 +124,7 @@ class WhatsAppManager {
         auth: state,
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
-        browser: ['Gyrex', 'Chrome', '1.0.0'],
+        browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: false,
         syncFullHistory: false,
         keepAliveIntervalMs: 30000,
@@ -158,7 +158,9 @@ class WhatsAppManager {
             statusCode === 405 || 
             statusCode === 401;
 
-          const shouldReconnect = !isTerminalAuthFailure && statusCode !== DisconnectReason.connectionClosed;
+          // We SHOULD reconnect if the connection was simply closed (428) or timed out.
+          // We only avoid reconnecting if it was a definitive auth failure.
+          const shouldReconnect = !isTerminalAuthFailure;
           
           console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
           
