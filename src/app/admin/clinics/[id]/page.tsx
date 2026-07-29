@@ -16,6 +16,7 @@ export default async function ClinicDetailsPage({ params }: { params: Promise<{ 
     where: { id: clinicId },
     include: {
       package: true,
+      gbpAccounts: true,
       paymentTransactions: {
         orderBy: { createdAt: "desc" }
       },

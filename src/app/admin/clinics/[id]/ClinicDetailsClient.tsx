@@ -171,6 +171,59 @@ export function ClinicDetailsClient({
               </div>
             </div>
           </div>
+
+          {/* Superadmin GBP Profile Reset Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Google Business Profile Integration</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Manage the connected Google Business Profile for this clinic tenant. If the clinic faces authentication or location sync errors, you can un-link and reset their GBP profile with owner permission.
+            </p>
+
+            {clinic.gbpAccounts && clinic.gbpAccounts.length > 0 ? (
+              <div className="p-4 bg-emerald-50/50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full mb-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Active Connection
+                  </span>
+                  <p className="text-sm font-bold text-slate-900">
+                    {clinic.gbpAccounts[0].locationName || "Google Business Location"}
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  onClick={async () => {
+                    if (!confirm("SUPERADMIN ACTION: Ensure you have explicit permission from clinic owner. Disconnect GBP profile for this clinic?")) return;
+                    setLoading(true);
+                    try {
+                      const res = await fetch(`/api/gbp/disconnect?doctorId=${clinic.id}`, { method: "DELETE" });
+                      if (res.ok) {
+                        toast({ title: "GBP Profile Reset!", description: "Disconnected GBP Profile for this clinic cleanly." });
+                        setClinic({ ...clinic, gbpAccounts: [] });
+                        router.refresh();
+                      } else {
+                        toast({ title: "Error", description: "Failed to disconnect GBP profile.", variant: "destructive" });
+                      }
+                    } catch {
+                      toast({ title: "Error", description: "Network error", variant: "destructive" });
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50"
+                >
+                  Disconnect GBP Profile
+                </Button>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 font-medium">
+                No Google Business Profile currently connected for this clinic.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
