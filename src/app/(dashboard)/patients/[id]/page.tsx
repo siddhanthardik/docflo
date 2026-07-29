@@ -124,7 +124,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     }
     
     const newTags = [...(patient.tags || []), cleanTag];
-    await updatePatient(patient.id, { tags: newTags });
+    await updatePatient({ tags: newTags });
     setNewTagInput("");
     setIsAddingTag(false);
   };
@@ -356,7 +356,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                       <button
                         onClick={async () => {
                           const newTags = patient.tags.filter((t: string) => t !== tag);
-                          await updatePatient(patient.id, { tags: newTags });
+                          await updatePatient({ tags: newTags });
                         }}
                         className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
                       >

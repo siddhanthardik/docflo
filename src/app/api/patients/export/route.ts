@@ -9,7 +9,7 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (session.accountType !== "DOCTOR") {
+    if (session.role !== "DOCTOR") {
       return new NextResponse("Forbidden: Only clinic owners can export patients", { status: 403 });
     }
 
@@ -18,7 +18,10 @@ export async function GET() {
         doctorId: session.doctorId,
       },
       include: {
-        tags: true,
+        appointments: {
+          take: 1,
+          orderBy: { date: 'desc' }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
@@ -36,15 +39,25 @@ export async function GET() {
     ];
 
     const rows = patients.map(p => {
+      let age = "";
+      if (p.dateOfBirth) {
+        const diff = Date.now() - new Date(p.dateOfBirth).getTime();
+        age = Math.floor(diff / 31557600000).toString();
+      }
+      
+      const lastVisit = p.appointments && p.appointments.length > 0 
+        ? new Date(p.appointments[0].date).toISOString() 
+        : "";
+
       return [
         p.id,
-        p.name,
+        `${p.firstName} ${p.lastName}`,
         p.phone || "",
         p.gender || "",
-        p.age || "",
-        p.lastVisit ? p.lastVisit.toISOString() : "",
+        age,
+        lastVisit,
         p.createdAt.toISOString(),
-        p.tags.map(t => t.name).join(", "),
+        p.tags ? p.tags.join(", ") : "",
       ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
     });
 

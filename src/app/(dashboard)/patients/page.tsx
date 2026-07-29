@@ -75,7 +75,7 @@ export default function PatientsPage() {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          {session?.user?.accountType === "DOCTOR" && (
+          {session?.user?.role === "DOCTOR" && (
             <button
               onClick={handleExport}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
