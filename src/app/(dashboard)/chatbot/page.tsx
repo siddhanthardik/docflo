@@ -459,8 +459,8 @@ export default function AIAgentsHubPage() {
 
       {/* Deep Agent Configuration Dialog */}
       <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] w-full max-h-[100dvh] h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 sm:rounded-2xl border-0 sm:border flex flex-col bg-slate-50">
+          <DialogHeader className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Settings className="h-5 w-5 text-indigo-600" />
               Configure & Train: {activeAgent?.name}
@@ -470,32 +470,11 @@ export default function AIAgentsHubPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4 space-y-5">
+          <div className="flex-1 p-4 space-y-5 overflow-y-auto">
             {/* 1. WHATSAPP BOOKING AGENT CONFIG */}
             {activeAgent?.type === "APPOINTMENT" && (
               <>
-                {/* 1-Click WhatsApp Setup Template Button for Doctors */}
-                <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      Doctor Setup WhatsApp Template
-                    </h4>
-                    <p className="text-[11px] text-slate-600">Forward this pre-formatted template to doctors via WhatsApp to collect their clinic variables.</p>
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={copyDoctorTemplate}
-                    className="shrink-0 text-xs font-bold border-indigo-200 bg-white hover:bg-indigo-50 text-indigo-700 gap-1.5"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    Copy Template
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
+                <div className="space-y-2 p-4 bg-white rounded-2xl border border-slate-200/80">
                   <Label className="text-xs font-bold text-gray-700">Conversational Handling Mode</Label>
                   <Select 
                     value={configDraft.mode || "handoff"} 
@@ -511,7 +490,7 @@ export default function AIAgentsHubPage() {
                 </div>
 
                 {/* 🕒 OPD SHIFTS & SCHEDULE */}
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-indigo-600" />
                     1. OPD Shifts & Schedule (Critical)
@@ -560,8 +539,7 @@ export default function AIAgentsHubPage() {
                   </div>
                 </div>
 
-                {/* 💰 FEES & FOLLOW-UP POLICY */}
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-indigo-600" />
                     2. Fees & Follow-up Policy
@@ -598,8 +576,7 @@ export default function AIAgentsHubPage() {
                   </div>
                 </div>
 
-                {/* 💉 SERVICES & VACCINATIONS */}
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
                     3. Services & Vaccination Catalog
@@ -627,8 +604,7 @@ export default function AIAgentsHubPage() {
                   </div>
                 </div>
 
-                {/* 🤖 PERSONA & INSTRUCTIONS */}
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <Bot className="w-3.5 h-3.5 text-indigo-600" />
                     4. Receptionist Persona & Language
@@ -818,9 +794,9 @@ export default function AIAgentsHubPage() {
             )}
           </div>
           
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsConfigOpen(false)}>Cancel</Button>
-            <Button onClick={saveConfig} disabled={savingConfig} className="bg-indigo-600 hover:bg-indigo-700 font-bold">
+          <DialogFooter className="p-4 bg-white border-t border-slate-100 sticky bottom-0 z-10 shrink-0 gap-2 flex flex-col sm:flex-row">
+            <Button variant="outline" onClick={() => setIsConfigOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button onClick={saveConfig} disabled={savingConfig} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 font-bold">
               {savingConfig ? "Deploying Prompt..." : "Save & Train Agent"}
             </Button>
           </DialogFooter>
