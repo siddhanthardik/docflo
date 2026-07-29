@@ -509,6 +509,30 @@ export default function FreeAuditPage() {
                 </p>
               </div>
 
+              {isScanning ? (
+                <div className="px-6 py-12 flex flex-col items-center justify-center text-center min-h-[400px]">
+                  <div className="relative w-24 h-24 mb-8">
+                    <div className="absolute inset-0 border-4 border-indigo-100 rounded-full animate-pulse" />
+                    <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin" />
+                    <Search className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+                  </div>
+                  <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Running Deep Local SEO Audit</h3>
+                  <div className="h-6">
+                    <p className="text-sm font-semibold text-indigo-600 animate-pulse">
+                      Scanning Google Business Profile & Competitor Search Data...
+                    </p>
+                  </div>
+                  <div className="w-full max-w-xs h-1.5 bg-gray-100 rounded-full mt-8 overflow-hidden relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-1/3 bg-indigo-600 rounded-full animate-[ping_2s_infinite]" style={{ animation: "progress 2s ease-in-out infinite" }} />
+                    <style>{`
+                      @keyframes progress {
+                        0% { left: -33%; }
+                        100% { left: 100%; }
+                      }
+                    `}</style>
+                  </div>
+                </div>
+              ) : (
               <form onSubmit={handleScan} className="px-6 py-6 space-y-5">
 
                 {/* Step 1: GBP Search */}
@@ -702,6 +726,7 @@ export default function FreeAuditPage() {
                   No credit card required. No spam. Instant diagnostic.
                 </p>
               </form>
+              )}
             </div>
 
             {/* Mobile Steps (Displayed right below the form card on mobile screens) */}

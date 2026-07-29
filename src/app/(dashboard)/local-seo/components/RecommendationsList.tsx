@@ -237,30 +237,7 @@ export function RecommendationsList() {
       </div>
 
       {/* Pending Recommendations */}
-      {scanning ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 sm:p-24 text-center shadow-2xs flex flex-col items-center justify-center min-h-[400px]">
-          <div className="relative w-24 h-24 mb-8">
-            <div className="absolute inset-0 border-4 border-indigo-100 rounded-full animate-pulse" />
-            <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin" />
-            <Search className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
-          </div>
-          <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Running Deep Local SEO Audit</h3>
-          <div className="h-6">
-            <p className="text-sm font-semibold text-indigo-600 animate-pulse">
-              Scanning Google Business Profile & Competitor Search Data...
-            </p>
-          </div>
-          <div className="w-64 max-w-full h-1.5 bg-gray-100 rounded-full mt-8 overflow-hidden relative">
-            <div className="absolute left-0 top-0 bottom-0 w-1/3 bg-indigo-600 rounded-full animate-[ping_2s_infinite]" style={{ animation: "progress 2s ease-in-out infinite" }} />
-            <style>{`
-              @keyframes progress {
-                0% { left: -33%; }
-                100% { left: 100%; }
-              }
-            `}</style>
-          </div>
-        </div>
-      ) : filteredRecs.length === 0 ? (
+      {filteredRecs.length === 0 && !scanning ? (
         <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center shadow-2xs">
           <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
