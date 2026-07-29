@@ -92,8 +92,8 @@ export async function POST(request: Request) {
       ? account.locationId
       : `locations/${account.locationId}`;
 
-    // First fetch current services
-    const readMask = "serviceItems";
+    // First fetch current services and categories
+    const readMask = "serviceItems,categories";
     const url = `https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?readMask=${readMask}`;
     
     const getRes = await fetch(url, {
@@ -104,10 +104,12 @@ export async function POST(request: Request) {
     const gbpData = await getRes.json();
     
     const serviceItems = gbpData.serviceItems || [];
+    const primaryCategoryId = gbpData.categories?.primaryCategory?.name || "";
     
     // Add the new service (Free-form)
     serviceItems.push({
       freeFormServiceItem: {
+        category: primaryCategoryId,
         label: {
           displayName: newServiceName,
           languageCode: "en"
@@ -129,8 +131,7 @@ export async function POST(request: Request) {
     if (!patchRes.ok) {
       const err = await patchRes.text();
       console.error("Failed to patch services:", err);
-      // For UX, return success even if Google API is finicky, or throw
-      // We will just return success so the UI updates optimistically if it fails in dev
+      return NextResponse.json({ error: "Failed to add service to Google", details: err }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, message: "Service added successfully" });
