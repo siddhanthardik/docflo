@@ -53,17 +53,13 @@ export default function IntegrationsPage() {
       }
 
       // 3. Google Business Profile status
-      const gbpRes = await fetch("/api/gbp/insights");
+      const gbpRes = await fetch("/api/gbp/status");
       if (gbpRes.ok) {
         const gbpData = await gbpRes.json();
-        if (gbpData.account && gbpData.account.locationName) {
-          setGbpStatus({
-            connected: true,
-            locationName: gbpData.account.locationName,
-          });
-        } else {
-          setGbpStatus({ connected: false });
-        }
+        setGbpStatus({
+          connected: !!gbpData.connected,
+          locationName: gbpData.locationName || null,
+        });
       }
     } catch (error) {
       console.error("Failed to load integrations status:", error);
