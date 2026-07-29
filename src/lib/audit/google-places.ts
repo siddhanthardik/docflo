@@ -393,6 +393,15 @@ export async function searchCompetitorsWithRank(
 
 
 
+        let distKm = null;
+        if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
+          distKm = calculateDistanceKm(location.lat, location.lng, p.location.latitude, p.location.longitude);
+          if (distKm > 5) {
+            console.log(`[Competitor Filter] Excluded: "${pName}" — too far away (${distKm}km)`);
+            continue;
+          }
+        }
+
         competitors.push({
           name: pName,
           rating: p.rating ?? null,
@@ -487,6 +496,15 @@ export async function searchCompetitorsWithRank(
         continue;
       }
 
+      let distKm = null;
+      if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
+        distKm = calculateDistanceKm(location.lat, location.lng, r.geometry.location.lat, r.geometry.location.lng);
+        if (distKm > 5) {
+          console.log(`[Competitor Filter Classic] Excluded: "${pName}" — too far away (${distKm}km)`);
+          continue;
+        }
+      }
+
       competitors.push({
         name: r.name,
         rating: r.rating ?? null,
@@ -517,17 +535,23 @@ export async function extractNeighborhood(address: string, apiKey: string): Prom
       const loc = data.results[0].geometry.location;
       const components = data.results[0].address_components;
       
-      let geoNeighborhood = "";
+      let level1 = "";
+      let level2 = "";
       let geoCity = "";
       
       for (const comp of components) {
-        if (comp.types.includes("sublocality") || comp.types.includes("sublocality_level_1") || comp.types.includes("neighborhood")) {
-          if (!geoNeighborhood) geoNeighborhood = comp.long_name;
+        if (comp.types.includes("sublocality_level_1")) {
+          level1 = comp.long_name;
+        } else if (comp.types.includes("sublocality_level_2") || comp.types.includes("neighborhood") || comp.types.includes("sublocality")) {
+          if (!level2) level2 = comp.long_name;
         }
+        
         if (comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")) {
           if (!geoCity) geoCity = comp.long_name;
         }
       }
+      
+      const geoNeighborhood = level1 || level2;
       
       if (geoNeighborhood && geoCity) {
         return {
