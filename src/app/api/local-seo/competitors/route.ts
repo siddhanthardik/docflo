@@ -4,8 +4,7 @@ import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleNormalizer } from "@/services/normalization/GoogleNormalizer";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood } from "@/lib/audit/google-places";
-
+import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood, fetchPlaceDetails } from "@/lib/audit/google-places";
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -112,14 +111,38 @@ export async function GET(request: Request) {
       : [insights.primaryCategory, doctor?.specialty].filter(Boolean) as string[];
 
     const bAddr = insights.formattedAddress || profileData?.address || "";
-    const gbpPrimarySlug = insights.primaryCategory || profileData?.primaryCategory || null;
-    const detected = detectSpeciality(bName, categoryNames, bAddr, gbpPrimarySlug, null, []);
-    const primaryCategory = !detected.isUnknown 
+    
+    // Fetch live Google Places data for exact category matching, same as Audit Report
+    let placeData = null;
+    if (account.locationId) {
+      placeData = await fetchPlaceDetails(account.locationId);
+    }
+    
+    const actualName = placeData?.name || bName;
+    const actualCategories = placeData?.types || categoryNames;
+    const locationStr = placeData?.formattedAddress || bAddr;
+    const gbpPrimarySlug = placeData?.primaryType || insights.primaryCategory || profileData?.primaryCategory || null;
+    const gbpDisplayName = placeData?.primaryTypeDisplayName || null;
+
+    const detected = detectSpeciality(
+      actualName, 
+      actualCategories, 
+      locationStr, 
+      gbpPrimarySlug, 
+      gbpDisplayName, 
+      placeData?.reviewsText || []
+    );
+    
+    let primaryCategory = !detected.isUnknown 
       ? detected.speciality 
-      : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
+      : (gbpDisplayName || insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
+
+    if (gbpDisplayName && gbpDisplayName.toLowerCase() !== "doctor") {
+      primaryCategory = gbpDisplayName;
+    }
 
     // Extract GPS coordinates — priority: profileSnapshot lat/lng → insightsData location → geocode
-    const fullAddress = bAddr || insights.formattedAddress || profileData?.address || "";
+    const fullAddress = locationStr || insights.formattedAddress || profileData?.address || "";
     const insightLocation = (insights.location as any);
     if (typeof insightLocation?.latitude === "number" && typeof insightLocation?.longitude === "number") {
       lat = insightLocation.latitude;
