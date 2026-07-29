@@ -166,7 +166,16 @@ export function PatientTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {patients.map((patient) => (
+              {patients.map((patient) => {
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const lastActivityDate = patient.appointments && patient.appointments[0] 
+                  ? new Date(patient.appointments[0].date) 
+                  : new Date(patient.createdAt);
+                const isInactive = patient.patientType === "INACTIVE" || lastActivityDate < oneYearAgo;
+                const displayStatus = isInactive ? "INACTIVE" : "ACTIVE";
+
+                return (
                 <TableRow
                   key={patient.id}
                   className="group cursor-pointer hover:bg-slate-50 transition-colors border-b border-gray-100 last:border-0"
@@ -184,12 +193,12 @@ export function PatientTable({
                           </p>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                              patient.patientType === "INACTIVE"
+                              displayStatus === "INACTIVE"
                                 ? "bg-amber-100 text-amber-700"
                                 : "bg-emerald-100 text-emerald-700"
                             }`}
                           >
-                            {patient.patientType || "ACTIVE"}
+                            {displayStatus}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 font-medium">
@@ -304,7 +313,7 @@ export function PatientTable({
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
 

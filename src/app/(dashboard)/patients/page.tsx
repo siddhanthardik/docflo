@@ -4,9 +4,11 @@ import { useState } from "react";
 import { PatientTable } from "@/components/patients/patient-table";
 import { PatientForm } from "@/components/patients/patient-form";
 import { usePatients } from "@/hooks/use-patients";
-import { Plus, Users, UserCheck, UserX } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Plus, Users, UserCheck, UserX, Download } from "lucide-react";
 
 export default function PatientsPage() {
+  const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("ALL");
   const [page, setPage] = useState(1);
@@ -53,6 +55,10 @@ export default function PatientsPage() {
     setPage(1);
   };
 
+  const handleExport = () => {
+    window.location.href = "/api/patients/export";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       {/* Page Header */}
@@ -68,74 +74,26 @@ export default function PatientsPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleCreate}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Add New Patient
-        </button>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div 
-          onClick={() => handleTabChange("ALL")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-sm ${activeTab === "ALL" ? "bg-white border-indigo-500 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 hover:border-gray-200"}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-              <Users className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Total Patients
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {activeTab === "ALL" ? pagination.totalCount : "--"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div 
-          onClick={() => handleTabChange("ACTIVE")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-sm ${activeTab === "ACTIVE" ? "bg-white border-emerald-500 ring-2 ring-emerald-500/20" : "bg-white border-gray-100 hover:border-gray-200"}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-              <UserCheck className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Active Patients
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {activeTab === "ACTIVE" ? pagination.totalCount : "--"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div 
-          onClick={() => handleTabChange("INACTIVE")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-sm ${activeTab === "INACTIVE" ? "bg-white border-amber-500 ring-2 ring-amber-500/20" : "bg-white border-gray-100 hover:border-gray-200"}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-              <UserX className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Inactive Patients
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {activeTab === "INACTIVE" ? pagination.totalCount : "--"}
-              </p>
-            </div>
-          </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {session?.user?.accountType === "DOCTOR" && (
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
+          )}
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Patient
+          </button>
         </div>
       </div>
+
 
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">

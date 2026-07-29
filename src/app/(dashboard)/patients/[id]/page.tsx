@@ -106,8 +106,29 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [sendingReview, setSendingReview] = useState(false);
   const [showCooldownOverride, setShowCooldownOverride] = useState(false);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
 
   const [pendingType, setPendingType] = useState<"SURVEY" | "GOOGLE_REVIEW">("GOOGLE_REVIEW");
+
+  const handleAddTag = async () => {
+    if (!newTagInput.trim() || !patient) {
+      setIsAddingTag(false);
+      return;
+    }
+    const cleanTag = newTagInput.trim();
+    if (patient.tags?.includes(cleanTag)) {
+      setNewTagInput("");
+      setIsAddingTag(false);
+      return;
+    }
+    
+    const newTags = [...(patient.tags || []), cleanTag];
+    await updatePatient(patient.id, { tags: newTags });
+    setNewTagInput("");
+    setIsAddingTag(false);
+  };
+
 
   const handleSendReviewRequest = async (overrideCooldown = false, type: "SURVEY" | "GOOGLE_REVIEW" = "GOOGLE_REVIEW") => {
     if (!patient) return;
@@ -173,6 +194,14 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const fullName = `${patient.firstName} ${patient.lastName}`;
   const avatarColor = getAvatarColor(fullName);
 
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const lastActivityDate = patient.appointments && patient.appointments[0] 
+    ? new Date(patient.appointments[0].date) 
+    : new Date(patient.createdAt);
+  const isInactive = patient.patientType === "INACTIVE" || lastActivityDate < oneYearAgo;
+  const displayStatus = isInactive && patient.patientType !== "LEAD" && patient.patientType !== "ARCHIVED" ? "INACTIVE" : patient.patientType;
+
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32 md:pb-12">
       {/* Header */}
@@ -224,13 +253,13 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                     <div className={`flex h-24 w-24 items-center justify-center rounded-2xl ${avatarColor} text-3xl font-bold shadow-lg ring-4 ring-white`}>
                       {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
                     </div>
-                    {patient.patientType && (
+                    {displayStatus && (
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                        ${patient.patientType === "LEAD" ? "bg-purple-100 text-purple-700" :
-                          patient.patientType === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
-                          patient.patientType === "INACTIVE" ? "bg-amber-100 text-amber-700" :
+                        ${displayStatus === "LEAD" ? "bg-purple-100 text-purple-700" :
+                          displayStatus === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
+                          displayStatus === "INACTIVE" ? "bg-amber-100 text-amber-700" :
                           "bg-red-100 text-red-700"}`}>
-                        {patient.patientType}
+                        {displayStatus}
                       </span>
                     )}
                   </div>
@@ -316,18 +345,56 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* Tags Card */}
-              {patient.tags && patient.tags.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {patient.tags.map((tag: string) => (
-                      <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Tags</h3>
                 </div>
-              )}
+                <div className="flex flex-wrap gap-2">
+                  {patient.tags?.map((tag: string) => (
+                    <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200">
+                      {tag}
+                      <button
+                        onClick={async () => {
+                          const newTags = patient.tags.filter((t: string) => t !== tag);
+                          await updatePatient(patient.id, { tags: newTags });
+                        }}
+                        className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <XCircle className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {isAddingTag ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddTag();
+                          if (e.key === "Escape") {
+                            setIsAddingTag(false);
+                            setNewTagInput("");
+                          }
+                        }}
+                        onBlur={handleAddTag}
+                        placeholder="Tag name"
+                        className="h-6 w-24 px-2 text-xs rounded-md border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAddingTag(true)}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New tag
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

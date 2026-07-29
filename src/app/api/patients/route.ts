@@ -45,7 +45,30 @@ export async function GET(req: Request) {
     }
 
     if (type && type !== "ALL") {
-      where.patientType = type;
+      if (type === "ACTIVE") {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const typeCondition = {
+          OR: [
+            { patientType: "ACTIVE", appointments: { some: { date: { gte: oneYearAgo } } } },
+            { patientType: "ACTIVE", appointments: { none: {} }, createdAt: { gte: oneYearAgo } }
+          ]
+        };
+        where.AND = where.AND ? [...where.AND, typeCondition] : [typeCondition];
+      } else if (type === "INACTIVE") {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const typeCondition = {
+          OR: [
+            { patientType: "INACTIVE" },
+            { patientType: "ACTIVE", appointments: { none: { date: { gte: oneYearAgo } } }, createdAt: { lt: oneYearAgo } },
+            { patientType: "ACTIVE", appointments: { none: {} }, createdAt: { lt: oneYearAgo } }
+          ]
+        };
+        where.AND = where.AND ? [...where.AND, typeCondition] : [typeCondition];
+      } else {
+        where.patientType = type;
+      }
     }
 
     const primaryPractitionerId = searchParams.get("primaryPractitionerId");
