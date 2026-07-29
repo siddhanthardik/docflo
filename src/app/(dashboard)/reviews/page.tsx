@@ -327,20 +327,6 @@ export default function ReviewsPage() {
             </div>
           </div>
 
-          {/* AI Auditor Tip */}
-          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border border-indigo-100 p-5">
-            <div className="flex items-start gap-3">
-              <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
-                <Bot className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-indigo-900 mb-1">Local SEO Tip</h3>
-                <p className="text-xs text-indigo-700 leading-relaxed">
-                  Google rewards active profiles. Replying to reviews with relevant local keywords (e.g. "dental implant specialist in Bandra") helps your clinic rank higher in Maps.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* RIGHT PANEL - REVIEWS FEED */}
