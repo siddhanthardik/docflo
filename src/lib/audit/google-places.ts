@@ -300,6 +300,8 @@ export async function searchCompetitorsWithRank(
         }
       }
 
+      const userRank = finalUserRank;
+
       const competitors: CompetitorData[] = [];
       for (const p of rawPlaces) {
         // Strict Specialty Validation Guard
