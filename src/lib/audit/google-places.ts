@@ -360,24 +360,33 @@ export async function searchCompetitorsWithRank(
         const pName = p.displayName?.text || "";
 
         // --- Dynamic Strict Specialty Filter ---
-        // Extract the core root of the target query (e.g. "gynaecologist" -> "gynaecolog", "pediatrician" -> "pediatr")
-        // and ensure the competitor has some matching signal in their name or category, blocking obvious unrelated fields.
-        const coreQuery = query.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6);
-        
-        const isMatch = 
-          pType.toLowerCase().includes(coreQuery) || 
-          pLabel.toLowerCase().includes(coreQuery) || 
-          pName.toLowerCase().includes(coreQuery) ||
-          query.toLowerCase().includes(pType.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6));
+        const excludeKeywords = [
+          'surgeon', 'surgery', 'physician', 'gastro', 'neuro', 'derma', 'uro', 'onco', 
+          'psych', 'ent ', 'eye', 'ophthalm', 'cardio', 'ortho', 'dental', 'dentist', 
+          'gynec', 'gynaec', 'diabetes', 'ivf', 'fertility', 'pediatr', 'paediatr', 'clinic'
+        ];
 
-        // Hard exclusion blocks for wildly different specialties
-        const isUnrelated = 
-          (/gynaec|gynec/i.test(query) && /orthopaed|dental|dentist|cardiolog|neurolog|paediatr|pediatr/i.test(pName + pLabel)) ||
-          (/pediatr|paediatr/i.test(query) && /gynaec|gynec|orthopaed|dental|dentist|cardiolog/i.test(pName + pLabel)) ||
-          (/orthopaed/i.test(query) && /gynaec|gynec|paediatr|pediatr|dental|dentist/i.test(pName + pLabel)) ||
-          (/dentist|dental/i.test(query) && /gynaec|gynec|paediatr|pediatr|orthopaed|cardiolog/i.test(pName + pLabel));
+        let isUnrelated = false;
+        const qStr = query.toLowerCase();
+        const cStr = (pName + " " + pLabel).toLowerCase();
 
-        if (isUnrelated && !isMatch) {
+        for (const kw of excludeKeywords) {
+          if (kw === 'clinic') continue; // Clinic is too generic to block
+          
+          if (cStr.includes(kw)) {
+            if ((kw === 'gynec' || kw === 'gynaec' || kw === 'ivf' || kw === 'fertility') && 
+                (qStr.includes('gynec') || qStr.includes('gynaec') || qStr.includes('ivf') || qStr.includes('fertility'))) continue;
+            if ((kw === 'pediatr' || kw === 'paediatr') && (qStr.includes('pediatr') || qStr.includes('paediatr'))) continue;
+            if ((kw === 'dental' || kw === 'dentist') && (qStr.includes('dental') || qStr.includes('dentist'))) continue;
+            
+            if (!qStr.includes(kw)) {
+              isUnrelated = true;
+              break;
+            }
+          }
+        }
+
+        if (isUnrelated) {
           console.log(`[Competitor Filter] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
           continue;
         }
@@ -449,20 +458,31 @@ export async function searchCompetitorsWithRank(
       const pLabel = r.types?.join(" ") || ""; // Classic API returns types array
 
       // --- Dynamic Strict Specialty Filter ---
-      const coreQuery = query.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6);
-      
-      const isMatch = 
-        pLabel.toLowerCase().includes(coreQuery) || 
-        pName.toLowerCase().includes(coreQuery) ||
-        query.toLowerCase().includes(pLabel.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6));
+      const excludeKeywords = [
+        'surgeon', 'surgery', 'physician', 'gastro', 'neuro', 'derma', 'uro', 'onco', 
+        'psych', 'ent ', 'eye', 'ophthalm', 'cardio', 'ortho', 'dental', 'dentist', 
+        'gynec', 'gynaec', 'diabetes', 'ivf', 'fertility', 'pediatr', 'paediatr'
+      ];
 
-      const isUnrelated = 
-        (/gynaec|gynec/i.test(query) && /orthopaed|dental|dentist|cardiolog|neurolog|paediatr|pediatr/i.test(pName + pLabel)) ||
-        (/pediatr|paediatr/i.test(query) && /gynaec|gynec|orthopaed|dental|dentist|cardiolog/i.test(pName + pLabel)) ||
-        (/orthopaed/i.test(query) && /gynaec|gynec|paediatr|pediatr|dental|dentist/i.test(pName + pLabel)) ||
-        (/dentist|dental/i.test(query) && /gynaec|gynec|paediatr|pediatr|orthopaed|cardiolog/i.test(pName + pLabel));
+      let isUnrelated = false;
+      const qStr = query.toLowerCase();
+      const cStr = (pName + " " + pLabel).toLowerCase();
 
-      if (isUnrelated && !isMatch) {
+      for (const kw of excludeKeywords) {
+        if (cStr.includes(kw)) {
+          if ((kw === 'gynec' || kw === 'gynaec' || kw === 'ivf' || kw === 'fertility') && 
+              (qStr.includes('gynec') || qStr.includes('gynaec') || qStr.includes('ivf') || qStr.includes('fertility'))) continue;
+          if ((kw === 'pediatr' || kw === 'paediatr') && (qStr.includes('pediatr') || qStr.includes('paediatr'))) continue;
+          if ((kw === 'dental' || kw === 'dentist') && (qStr.includes('dental') || qStr.includes('dentist'))) continue;
+          
+          if (!qStr.includes(kw)) {
+            isUnrelated = true;
+            break;
+          }
+        }
+      }
+
+      if (isUnrelated) {
         console.log(`[Competitor Filter Classic] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
         continue;
       }
@@ -488,52 +508,59 @@ export async function searchCompetitorsWithRank(
 // ── Unified GeoGrid Logic ──
 
 export async function extractNeighborhood(address: string, apiKey: string): Promise<{ neighborhood: string; city: string; searchPhrase: string; lat: number; lng: number } | null> {
-  const parts = address
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .filter((p) => !/^india$/i.test(p))
-    .filter((p) => !/\d{5,}/.test(p));
-
-  let neighborhood = "";
-  let city = "";
-  let searchPhrase = "";
-
-  if (parts.length >= 3) {
-    neighborhood = parts[parts.length - 3];
-    city = parts[parts.length - 2];
-    searchPhrase = `${neighborhood}, ${city}`;
-  } else if (parts.length === 2) {
-    neighborhood = parts[0];
-    city = parts[1];
-    searchPhrase = `${neighborhood}, ${city}`;
-  } else if (parts.length === 1) {
-    neighborhood = parts[0];
-    city = parts[0];
-    searchPhrase = neighborhood;
-  } else {
-    return null; // Cannot extract neighborhood
-  }
-
-  // Geocode the extracted neighborhood string to find its centroid
-  const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchPhrase)}&key=${apiKey}`;
+  // Geocode the full address to extract structured components
+  const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
   try {
     const res = await fetch(geoUrl);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
       const loc = data.results[0].geometry.location;
-      return {
-        neighborhood,
-        city,
-        searchPhrase,
-        lat: loc.lat,
-        lng: loc.lng,
-      };
+      const components = data.results[0].address_components;
+      
+      let geoNeighborhood = "";
+      let geoCity = "";
+      
+      for (const comp of components) {
+        if (comp.types.includes("sublocality") || comp.types.includes("sublocality_level_1") || comp.types.includes("neighborhood")) {
+          if (!geoNeighborhood) geoNeighborhood = comp.long_name;
+        }
+        if (comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")) {
+          if (!geoCity) geoCity = comp.long_name;
+        }
+      }
+      
+      if (geoNeighborhood && geoCity) {
+        return {
+          neighborhood: geoNeighborhood,
+          city: geoCity,
+          searchPhrase: `${geoNeighborhood}, ${geoCity}`,
+          lat: loc.lat,
+          lng: loc.lng,
+        };
+      } else if (geoCity) {
+        return {
+          neighborhood: geoCity,
+          city: geoCity,
+          searchPhrase: geoCity,
+          lat: loc.lat,
+          lng: loc.lng,
+        };
+      }
     }
   } catch (err) {
     console.error("[Geocode] Error extracting neighborhood:", err);
   }
-  return null;
+  
+  // Fallback if Geocoding fails to yield components
+  const parts = address.split(",").map(p => p.trim()).filter(Boolean);
+  const fallback = parts.length >= 2 ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}` : address;
+  return {
+    neighborhood: fallback,
+    city: fallback,
+    searchPhrase: fallback,
+    lat: 0,
+    lng: 0
+  };
 }
 
 export function offsetCoord(lat: number, lng: number, dNorth: number, dEast: number) {
