@@ -56,36 +56,73 @@ export async function GET(req: Request) {
         : spec.toLowerCase().includes("gynae") || spec.toLowerCase().includes("women") ? `"Women's Health Clinic", "Maternity Hospital", or "Gynaecologist"`
         : `"Specialist Clinic", "Urgent Care", or "Health Center"`;
 
-      const initialTasks = [
-        {
+      const initialTasks = [];
+
+      if (!insights.phone) {
+        initialTasks.push({
+          category: "PROFILE",
+          title: "Add Direct Phone Line",
+          description: "Your profile is missing a phone number. Adding one allows patients to call your clinic directly from search results.",
+          priority: "CRITICAL",
+          impact: "+40% Call Conversions",
+        });
+      }
+
+      if (!insights.website) {
+        initialTasks.push({
+          category: "PROFILE",
+          title: "Add Official Website Link",
+          description: "Google relies on your website to verify your medical authority. Add a secure website link to boost your ranking.",
+          priority: "HIGH",
+          impact: "+30% Local Trust Score",
+        });
+      }
+
+      if (!insights.regularHours) {
+        initialTasks.push({
+          category: "PROFILE",
+          title: "Verify Operating & Festival Hours",
+          description: "Profiles without business hours cannot rank for 'open now' searches.",
+          priority: "HIGH",
+          impact: "+20% Map Pack Visibility",
+        });
+      }
+
+      if (!insights.description || insights.description.length < 50) {
+        initialTasks.push({
+          category: "PROFILE",
+          title: "Write a Detailed Clinic Description",
+          description: "A comprehensive description containing your medical specialties helps Google understand your business better.",
+          priority: "MEDIUM",
+          impact: "+15% Profile Completeness",
+        });
+      }
+
+      if (!insights.categories || !insights.categories.additionalCategories || insights.categories.additionalCategories.length === 0) {
+        initialTasks.push({
           category: "PROFILE",
           title: "Add Secondary Categories to Google Profile",
           description: `Expand profile reach by adding secondary categories such as ${categoryExample} to rank in multi-keyword patient searches.`,
           priority: "HIGH",
           impact: "+15% Map Pack Visibility",
-        },
-        {
-          category: "REVIEWS",
-          title: "Reply to Unanswered Patient Reviews",
-          description: "Google rewards active accounts. Replying to patient reviews with relevant healthcare keywords boosts local ranking authority.",
-          priority: "HIGH",
-          impact: "+12% Local Trust Score",
-        },
-        {
-          category: "CONTENT",
-          title: "Publish Weekly Google Business Post",
-          description: "Keep your clinic active by sharing health tips or clinic updates once every 7 days.",
-          priority: "MEDIUM",
-          impact: "+8% Patient Engagement",
-        },
-        {
-          category: "PROFILE",
-          title: "Verify Operating & Festival Hours",
-          description: "Ensure your clinic's business hours, holiday schedule, and primary phone number are up to date.",
-          priority: "MEDIUM",
-          impact: "+5% Profile Completeness",
-        }
-      ];
+        });
+      }
+
+      initialTasks.push({
+        category: "REVIEWS",
+        title: "Reply to Unanswered Patient Reviews",
+        description: "Google rewards active accounts. Replying to patient reviews with relevant healthcare keywords boosts local ranking authority.",
+        priority: "HIGH",
+        impact: "+12% Local Trust Score",
+      });
+
+      initialTasks.push({
+        category: "CONTENT",
+        title: "Publish Weekly Google Business Post",
+        description: "Keep your clinic active by sharing health tips or clinic updates once every 7 days.",
+        priority: "MEDIUM",
+        impact: "+8% Patient Engagement",
+      });
 
       for (const task of initialTasks) {
         await prisma.seoRecommendation.create({
