@@ -16,6 +16,7 @@ export interface GooglePlaceDetails {
   lat?: number;
   lng?: number;
   reviewsText?: string[];             // patient review text snippets for specialty classification
+  photoUrl?: string | null;
 }
 
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -58,6 +59,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       "location",
       "currentOpeningHours",
       "reviews",
+      "photos",
     ].join(",");
 
     const res = await fetch(newApiUrl, {
@@ -82,7 +84,10 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
           ? r.reviews.map((rev: any) => rev.text?.text || rev.originalText?.text || "").filter(Boolean)
           : [];
 
-        console.log(`[Places API v1] ${r.displayName?.text} → primaryType: "${primaryTypeSlug}", displayName: "${primaryTypeLabel}", reviewsCount: ${reviewsText.length}`);
+        const firstPhoto = r.photos?.[0]?.name;
+        const photoUrl = firstPhoto ? `https://places.googleapis.com/v1/${firstPhoto}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}` : null;
+
+        console.log(`[Places API v1] ${r.displayName?.text} → primaryType: "${primaryTypeSlug}", displayName: "${primaryTypeLabel}", reviewsCount: ${reviewsText.length}, hasPhoto: ${!!photoUrl}`);
 
         return {
           placeId,
@@ -100,6 +105,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
           lat: r.location?.latitude,
           lng: r.location?.longitude,
           reviewsText,
+          photoUrl
         };
       }
 
@@ -119,7 +125,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
     url.searchParams.set("place_id", placeId);
     url.searchParams.set(
       "fields",
-      "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours,reviews"
+      "name,geometry,formatted_address,formatted_phone_number,website,rating,user_ratings_total,types,business_status,current_opening_hours,reviews,photos"
     );
     url.searchParams.set("key", apiKey);
 
@@ -141,6 +147,11 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       ? r.reviews.map((rev: any) => rev.text || "").filter(Boolean)
       : [];
 
+    let photoUrl = null;
+    if (r.photos && r.photos.length > 0) {
+      photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${r.photos[0].photo_reference}&key=${apiKey}`;
+    }
+
     return {
       placeId,
       name: r.name || "",
@@ -149,14 +160,15 @@ export async function fetchPlaceDetails(placeId: string): Promise<GooglePlaceDet
       rating: r.rating || null,
       reviewCount: r.user_ratings_total || null,
       types: r.types || [],
-      primaryType: r.types?.[0] || null,
+      primaryType: r.types && r.types.length > 0 ? r.types[0] : null,
       primaryTypeDisplayName: null,
       businessStatus: r.business_status || null,
-      phone: r.formatted_phone_number || null,
-      hasOpeningHours: !!r.current_opening_hours,
+      phone: r.international_phone_number || r.formatted_phone_number || null,
+      hasOpeningHours: !!r.opening_hours,
       lat: r.geometry?.location?.lat,
       lng: r.geometry?.location?.lng,
-      reviewsText,
+      reviewsText: r.reviews ? r.reviews.map((rev: any) => rev.text).filter(Boolean) : [],
+      photoUrl
     };
   } catch (error) {
     console.error("[Places Classic API] Error:", error);

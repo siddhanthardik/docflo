@@ -157,12 +157,17 @@ async function processAuditAsync(auditId: string, data: any) {
     let websiteScore = 0;
     
     if (placeData) {
-      // Profile Completeness (max 100)
-      if (placeData.name) gbpScore += 20;
-      if (placeData.formattedAddress) gbpScore += 20;
-      if (placeData.website) gbpScore += 20;
-      if (placeData.types && placeData.types.length > 0) gbpScore += 20;
-      if (placeData.rating && placeData.reviewCount && placeData.reviewCount > 0) gbpScore += 20;
+      let items = 0;
+      if (placeData.name) items++; // 1
+      if (placeData.formattedAddress) items++; // 2
+      if (placeData.website) items++; // 3
+      if (placeData.phone) items++; // 4
+      if (placeData.hasOpeningHours) items++; // 5
+      if (placeData.types && placeData.types.length > 0) items++; // 6
+      if (placeData.rating && placeData.reviewCount && placeData.reviewCount > 0) items++; // 7
+      if (placeData.photoUrl) items++; // 8
+      
+      gbpScore = Math.min(100, Math.round((items / 8) * 100));
 
       // Reputation / Trust Score (max 100)
       if (placeData.rating && placeData.reviewCount) {
@@ -239,7 +244,8 @@ async function processAuditAsync(auditId: string, data: any) {
           website: placeData?.website || "Not Available",
           rating: placeData?.rating || "Not Available",
           reviews: placeData?.reviewCount || "Not Available",
-          businessStatus: placeData?.businessStatus || "Not Available"
+          businessStatus: placeData?.businessStatus || "Not Available",
+          photoUrl: placeData?.photoUrl || null
         },
         
         // 2. Business Snapshot (KPI Cards with observed vs benchmark)
@@ -316,7 +322,7 @@ async function processAuditAsync(auditId: string, data: any) {
             { name: "Rating Benchmark (4.5★+)", present: (placeData?.rating || 0) >= 4.5 },
             { name: "Review Count Benchmark Match", present: (placeData?.reviewCount || 0) >= compAvgReviews },
             { name: "Patient Reviews Verified (10+)", present: (placeData?.reviewCount || 0) >= 10 },
-            { name: "Clinic Photos & Media Published", present: (placeData?.types?.length || 0) > 1 || (placeData?.rating || 0) >= 4.0 },
+            { name: "Clinic Photos & Media Published", present: !!placeData?.photoUrl },
           ]
         },
 

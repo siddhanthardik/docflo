@@ -508,9 +508,17 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               {/* Business Info Header */}
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-2xl shrink-0 shadow-xs">
-                    {getInitials(businessName)}
-                  </div>
+                  {overview?.photoUrl ? (
+                    <img 
+                      src={overview.photoUrl} 
+                      alt={businessName} 
+                      className="w-16 h-16 rounded-2xl object-cover shrink-0 shadow-xs border border-slate-200"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-2xl shrink-0 shadow-xs">
+                      {getInitials(businessName)}
+                    </div>
+                  )}
                   <div>
                     <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">{businessName}</h1>
                     <div className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500 font-normal">
