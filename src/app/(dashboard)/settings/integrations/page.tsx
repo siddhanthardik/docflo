@@ -214,13 +214,12 @@ export default function IntegrationsPage() {
                     Disconnect GBP Profile
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleConnectGBP}
+                  <a
+                    href="/gbp"
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 inline-flex items-center gap-1.5 transition-all"
                   >
-                    Connect GBP Profile <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                    Go to GBP Profile Page <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
                 )}
               </div>
             </div>

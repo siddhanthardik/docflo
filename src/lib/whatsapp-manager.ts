@@ -108,7 +108,13 @@ class WhatsAppManager {
         this.sockets.delete(doctorId);
 
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const isTerminalAuthFailure = 
+          statusCode === DisconnectReason.loggedOut || 
+          statusCode === DisconnectReason.badSession || 
+          statusCode === 405 || 
+          statusCode === 401;
+
+        const shouldReconnect = !isTerminalAuthFailure && statusCode !== DisconnectReason.connectionClosed;
         
         console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
         
@@ -120,9 +126,10 @@ class WhatsAppManager {
             this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect error for ${doctorId}:`, e));
           }, delay);
         } else {
-          // Genuinely logged out from the phone app (401)
-          console.log(`[WhatsAppManager] Device logged out for ${doctorId}. Clearing session.`);
+          // Terminal session failure / Logged out (401 / 405)
+          console.log(`[WhatsAppManager] Terminal auth failure or device logged out for ${doctorId} (code ${statusCode}). Clearing session.`);
           this.qrCodes.delete(doctorId);
+          this.sockets.delete(doctorId);
           // Delete auth folder safely
           if (fs.existsSync(sessionDir)) {
             try {
