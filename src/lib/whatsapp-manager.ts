@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -120,11 +120,15 @@ class WhatsAppManager {
       }
       const { state, saveCreds } = authState;
 
+      const { version, isLatest } = await fetchLatestBaileysVersion();
+      console.log(`[WhatsAppManager] using WA v${version.join('.')}, isLatest: ${isLatest}`);
+
       const sock = makeWASocket({
+        version,
         auth: state,
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
-        browser: ['Mac OS', 'Safari', '15.3.0'],
+        browser: Browsers.macOS('Desktop'),
         markOnlineOnConnect: false,
         syncFullHistory: false,
         keepAliveIntervalMs: 30000,
