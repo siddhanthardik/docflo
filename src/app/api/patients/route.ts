@@ -21,14 +21,8 @@ export async function GET(req: Request) {
     };
     
     if (locationId) {
-      where.AND = [
-        {
-          OR: [
-            { gbpAccountId: locationId },
-            { gbpAccountId: null }
-          ]
-        }
-      ];
+      // Intentionally skipping location-based filtering for patients 
+      // as one doctor account equals one clinic in the system architecture.
     }
 
     if (search) {
@@ -145,7 +139,6 @@ export async function POST(req: Request) {
             : null,
           doctorId,
           primaryPractitionerId: validatedData.primaryPractitionerId || undefined,
-          gbpAccountId: locationId || undefined,
           tags: validatedData.tags || [],
         },
       });

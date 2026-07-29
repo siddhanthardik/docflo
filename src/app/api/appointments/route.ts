@@ -52,14 +52,8 @@ export async function GET(req: Request) {
     }
     
     if (locationId) {
-      where.AND = [
-        {
-          OR: [
-            { gbpAccountId: locationId },
-            { gbpAccountId: null }
-          ]
-        }
-      ];
+      // Intentionally skipping location-based filtering for appointments
+      // as one doctor account equals one clinic in the system architecture.
     }
 
     if (future === "true") {
@@ -263,7 +257,6 @@ export async function POST(req: Request) {
         patientId,
         doctorId,
         practitionerId: targetPractitionerId || undefined,
-        gbpAccountId: locationId || undefined,
         date: appointmentDate,
         startTime: startDateTime,
         endTime: endDateTime,
