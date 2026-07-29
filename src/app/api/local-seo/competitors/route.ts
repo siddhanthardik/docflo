@@ -112,7 +112,8 @@ export async function GET(request: Request) {
       : [insights.primaryCategory, doctor?.specialty].filter(Boolean) as string[];
 
     const bAddr = insights.formattedAddress || profileData?.address || "";
-    const detected = detectSpeciality(bName, categoryNames, bAddr, doctor?.specialty || "");
+    const gbpPrimarySlug = insights.primaryCategory || profileData?.primaryCategory || null;
+    const detected = detectSpeciality(bName, categoryNames, bAddr, gbpPrimarySlug, null, []);
     const primaryCategory = !detected.isUnknown 
       ? detected.speciality 
       : (insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
