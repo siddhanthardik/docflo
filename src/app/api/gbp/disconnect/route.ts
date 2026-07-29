@@ -17,15 +17,10 @@ export async function DELETE(req: Request) {
     
     // Check if session user is SUPERADMIN when targeting another doctor
     if (targetDoctorId && targetDoctorId !== session.user.id) {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true }
-      });
-
-      if (user?.role !== "SUPERADMIN" && user?.role !== "ADMIN") {
+      const userRole = (session.user as any)?.role;
+      if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
         return NextResponse.json({ error: "Forbidden: Superadmin permission required" }, { status: 403 });
       }
-
       doctorId = targetDoctorId;
     }
 
