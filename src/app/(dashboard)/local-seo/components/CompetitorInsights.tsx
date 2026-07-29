@@ -165,12 +165,15 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
 }
 
 // 4-Pillar Side-by-Side Competitive Benchmark Matrix
-function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorReviewCount = 45, userRank = 5 }: { competitors: Competitor[]; doctorRating?: number; doctorReviewCount?: number; userRank?: number }) {
-  const top1 = competitors[0];
+function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorReviewCount = 45, userRank = 5 }: { competitors: any[]; doctorRating?: number; doctorReviewCount?: number; userRank?: number }) {
+  const top1MapRank = competitors[0];
   const clinicsAhead = Math.max(0, userRank - 1);
+  const competitorsOnly = competitors.filter(c => !c.isYou);
+  const topReviewComp = [...competitorsOnly].sort((a, b) => b.reviewCount - a.reviewCount)[0];
 
-  const reviewGap = top1 ? Math.max(0, top1.reviewCount - doctorReviewCount) : 0;
-  const ratingGap = top1 ? (top1.rating - doctorRating).toFixed(1) : "0.0";
+  const reviewGap = topReviewComp ? Math.max(0, topReviewComp.reviewCount - doctorReviewCount) : 0;
+  const avgCompRating = competitorsOnly.length > 0 ? (competitorsOnly.reduce((sum, c) => sum + (c.rating || 0), 0) / competitorsOnly.length).toFixed(1) : "4.9";
+  const ratingGap = (parseFloat(avgCompRating) - doctorRating).toFixed(1);
 
   return (
     <div className="mb-6 p-5 bg-white text-gray-900 rounded-2xl shadow-2xs border border-gray-200 space-y-4">
@@ -192,7 +195,7 @@ function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorRev
           </div>
           <p className="text-xl font-black text-gray-900">+{reviewGap} reviews</p>
           <p className="text-[11px] text-amber-700 font-medium">
-            {reviewGap > 0 ? `Needed to equal #1 rank (${top1?.name || 'Competitor'})` : "You lead in review count!"}
+            {reviewGap > 0 ? `Needed to equal top competitor (${topReviewComp?.name || 'Competitor'})` : "You lead in review count!"}
           </p>
         </div>
 
@@ -203,7 +206,7 @@ function CompetitiveBenchmarkMatrix({ competitors, doctorRating = 4.8, doctorRev
           </div>
           <p className="text-xl font-black text-gray-900">{parseFloat(ratingGap) > 0 ? `+${ratingGap} ★` : "Strong Rating"}</p>
           <p className="text-[11px] text-gray-600">
-            Top competitors average {top1?.rating || 4.9}★ ratings.
+            Top competitors average {avgCompRating}★ ratings.
           </p>
         </div>
 
@@ -302,12 +305,8 @@ export function CompetitorInsights() {
       {/* 4-Pillar Side-by-Side Competitive Benchmark Matrix */}
       <CompetitiveBenchmarkMatrix competitors={allRows} doctorRating={doctorRating} doctorReviewCount={doctorReviewCount} userRank={userRank} />
 
-      {/* Google ranking explanation + Refresh */}
+      {/* Refresh */}
       <div className="flex flex-col gap-2 mb-4">
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-800 leading-relaxed">
-          <p className="font-bold mb-1">📍 How Google Ranks Local Clinics</p>
-          <p>Google&apos;s local search order is based on <strong>3 factors</strong>: <strong>Proximity</strong> (distance from search location), <strong>Relevance</strong> (category &amp; keyword match), and <strong>Prominence</strong> (reviews, profile completeness). A clinic 300m away with 42 reviews can rank above a clinic 1.2km away with 784 reviews — <em>because proximity is Google&apos;s strongest local signal</em>. This list shows the real order from Google&apos;s Places API for your area.</p>
-        </div>
         <div className="flex justify-between items-center">
           <p className="text-xs text-gray-400">Top Competitors for {primaryCategory} in your area</p>
           <button

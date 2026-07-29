@@ -10,15 +10,28 @@ export async function GET(request: Request) {
     const account = await prisma.gbpAccount.findFirst({ where: { doctorId: session.doctorId, lastSyncAt: { not: null } }, orderBy: { updatedAt: 'desc' } });
     if (!account) return NextResponse.json({ error: "No GBP Account connected" }, { status: 400 });
 
-    const snapshot = await prisma.gbpReviewSnapshot.findFirst({
-      where: { gbpAccountId: account.id },
-      orderBy: { date: 'desc' }
+    const reviews = await prisma.review.findMany({
+      where: { doctorId: session.doctorId },
+      orderBy: { reviewDate: 'desc' }
     });
 
+    const totalReviewCount = reviews.length;
+    const averageRating = totalReviewCount > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviewCount : 0;
+    
+    // Map to expected format
+    const mappedReviews = reviews.map(r => ({
+      ...r,
+      reviewReply: r.reply ? { comment: r.reply } : (r.responded ? { comment: "Responded" } : null)
+    }));
+
     return NextResponse.json({
-      data: snapshot?.json || null,
-      source: "Google Business Profile Reviews API",
-      lastUpdated: snapshot?.date || null
+      data: {
+        averageRating,
+        totalReviewCount,
+        reviews: mappedReviews,
+      },
+      source: "Database Live",
+      lastUpdated: new Date()
     });
   } catch (error: any) {
     console.error("Reputation API Error:", error);

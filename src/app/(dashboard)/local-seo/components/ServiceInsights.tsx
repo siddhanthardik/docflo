@@ -104,9 +104,18 @@ export default function ServiceInsights() {
       }
       groups[categoryId].services.push(serviceName);
     });
+
+    // Also add additional categories as services so they show up
+    additionalCategories.forEach((cat: any) => {
+      const catName = cat.displayName;
+      if (!groups[primaryCategory]) groups[primaryCategory] = { name: primaryCategory, services: [] };
+      if (!groups[primaryCategory].services.includes(catName)) {
+        groups[primaryCategory].services.push(catName);
+      }
+    });
     
     return Object.values(groups);
-  }, [services, primaryCategory]);
+  }, [services, primaryCategory, additionalCategories]);
 
   const existingServiceNames = useMemo(() => 
     services.map((s: any) => (
@@ -158,7 +167,7 @@ export default function ServiceInsights() {
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-              Active Services ({services.length})
+              Active Services ({services.length + additionalCategories.length})
             </h4>
           </div>
 
@@ -191,21 +200,7 @@ export default function ServiceInsights() {
             </div>
           )}
 
-          {/* Additional Categories */}
-          {additionalCategories.length > 0 && (
-            <div className="mt-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Additional Business Categories
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {additionalCategories.map((cat: any, idx: number) => (
-                  <span key={idx} className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-medium">
-                    {cat.displayName}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* AI Recommendations */}
@@ -223,17 +218,26 @@ export default function ServiceInsights() {
           <div className="flex flex-wrap gap-2">
             {recommendations.length > 0 ? (
               recommendations.map((rec, idx) => (
-                <a
+                <button
                   key={idx}
-                  href="https://business.google.com/edit"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/local-seo/services', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ serviceName: rec })
+                      });
+                      window.location.reload();
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-full text-xs font-semibold hover:bg-blue-50 transition-colors shadow-sm"
-                  title="Click to add in Google Business Profile"
+                  title="Click to add service"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   {rec}
-                </a>
+                </button>
               ))
             ) : (
               <p className="text-sm text-blue-700 font-medium">
