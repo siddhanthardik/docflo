@@ -124,7 +124,7 @@ class WhatsAppManager {
         auth: state,
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
-        browser: Browsers.ubuntu('Chrome'),
+        browser: ['Mac OS', 'Safari', '15.3.0'],
         markOnlineOnConnect: false,
         syncFullHistory: false,
         keepAliveIntervalMs: 30000,
