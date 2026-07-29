@@ -1,3 +1,5 @@
+import { CLINICAL_MEDICAL_RULES } from "./healthcare-intelligence";
+
 export interface GooglePlaceDetails {
   placeId: string;
   name: string;
@@ -386,6 +388,21 @@ export async function searchCompetitorsWithRank(
           }
         }
 
+        // --- Positive Relevance Filter (Like GrexaAI strictness) ---
+        if (!isUnrelated) {
+          const targetRule = CLINICAL_MEDICAL_RULES.find(rule => 
+            qStr.includes(rule.label.toLowerCase()) || 
+            rule.matchers.some(m => qStr.includes(m))
+          );
+          
+          if (targetRule) {
+            const hasPositiveMatch = targetRule.matchers.some(m => cStr.includes(m)) || cStr.includes(targetRule.label.toLowerCase());
+            if (!hasPositiveMatch) {
+              isUnrelated = true;
+            }
+          }
+        }
+
         if (isUnrelated) {
           console.log(`[Competitor Filter] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
           continue;
@@ -487,6 +504,21 @@ export async function searchCompetitorsWithRank(
           if (!qStr.includes(kw)) {
             isUnrelated = true;
             break;
+          }
+        }
+      }
+
+      // --- Positive Relevance Filter (Like GrexaAI strictness) ---
+      if (!isUnrelated) {
+        const targetRule = CLINICAL_MEDICAL_RULES.find(rule => 
+          qStr.includes(rule.label.toLowerCase()) || 
+          rule.matchers.some(m => qStr.includes(m))
+        );
+        
+        if (targetRule) {
+          const hasPositiveMatch = targetRule.matchers.some(m => cStr.includes(m)) || cStr.includes(targetRule.label.toLowerCase());
+          if (!hasPositiveMatch) {
+            isUnrelated = true;
           }
         }
       }

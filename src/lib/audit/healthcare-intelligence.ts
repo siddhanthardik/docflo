@@ -35,7 +35,7 @@ function generateDynamicKeywords(category: string): string[] {
 // ── Strict Clinical Medical Root Matchers ONLY ────────────────────────────────
 // Casual conversational words (like "baby", "skin", "knee", "tooth", "cough") are 100% BANNED.
 // We match ONLY explicit medical roots.
-const CLINICAL_MEDICAL_RULES: Array<{ label: string; matchers: string[] }> = [
+export const CLINICAL_MEDICAL_RULES: Array<{ label: string; matchers: string[] }> = [
   { label: "Obstetrician & Gynecologist", matchers: ["gynaecolog", "gynecolog", "obstetr", "gynac", "obstetrician", "women's health"] },
   { label: "Pediatrician", matchers: ["paediatr", "pediatr", "neonatolog", "pediatrician", "paediatrician", "child specialist", "children's clinic", "childrens clinic", "child clinic"] },
   { label: "Dermatologist", matchers: ["dermatolog", "dermatologist", "tricholog"] },
