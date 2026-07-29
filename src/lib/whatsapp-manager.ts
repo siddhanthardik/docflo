@@ -9,6 +9,7 @@ class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
   private qrCodes: Map<string, string> = new Map(); // doctorId -> QR string
   private connectingDoctors: Set<string> = new Set(); // Guard against duplicate connect attempts
+  private activeConnections: Set<string> = new Set(); // Tracks fully opened connections
 
   constructor() {
     // Ensure auth folder exists
@@ -34,6 +35,7 @@ class WhatsAppManager {
 
     this.qrCodes.delete(doctorId);
     this.connectingDoctors.delete(doctorId);
+    this.activeConnections.delete(doctorId);
 
     const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
     if (fs.existsSync(sessionDir)) {
@@ -154,6 +156,7 @@ class WhatsAppManager {
         if (connection === 'close') {
           this.sockets.delete(doctorId);
           this.connectingDoctors.delete(doctorId);
+          this.activeConnections.delete(doctorId);
 
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isTerminalAuthFailure = 
@@ -194,6 +197,7 @@ class WhatsAppManager {
           this.sockets.set(doctorId, sock);
           this.qrCodes.delete(doctorId);
           this.connectingDoctors.delete(doctorId);
+          this.activeConnections.add(doctorId);
         }
       });
 
@@ -524,7 +528,7 @@ class WhatsAppManager {
 
   isConnected(doctorId: string): boolean {
     const sock = this.sockets.get(doctorId);
-    return !!sock && !!sock.user && !this.qrCodes.has(doctorId);
+    return !!sock && this.activeConnections.has(doctorId) && !this.qrCodes.has(doctorId);
   }
 
   async logout(doctorId: string) {
@@ -534,7 +538,7 @@ class WhatsAppManager {
   // Helper to send outbound messages manually (from inbox or campaigns)
   async sendMessage(doctorId: string, phone: string, text: string) {
     const sock = this.sockets.get(doctorId);
-    if (!sock || !sock.user) {
+    if (!sock || !this.activeConnections.has(doctorId)) {
       throw new Error("WhatsApp is not connected or device is logged out. Please connect your device in WhatsApp Settings.");
     }
     
