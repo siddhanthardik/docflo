@@ -23,6 +23,46 @@ export default function AIAgentsHubPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
+  const [activeFeedbackId, setActiveFeedbackId] = useState<string | null>(null);
+  const [correctedReplyDraft, setCorrectedReplyDraft] = useState("");
+  const [customRuleDraft, setCustomRuleDraft] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  const handleFeedback = async (log: any, status: "APPROVED" | "CORRECTED") => {
+    try {
+      setSubmittingFeedback(true);
+      const res = await fetch("/api/ai-agents/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: log.conversationId,
+          messageId: log.id,
+          patientMessage: log.patientMessage,
+          aiResponse: log.aiResponse,
+          status,
+          correctedReply: status === "CORRECTED" ? correctedReplyDraft : null,
+          customRuleAdded: status === "CORRECTED" ? customRuleDraft : null,
+        }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: status === "APPROVED" ? "Verified Golden Response! 👍" : "AI Retrained Successfully! 🚀",
+          description: status === "APPROVED" ? "Response marked as golden training data." : "Custom rule added and deployed to AI agent."
+        });
+        setActiveFeedbackId(null);
+        setCorrectedReplyDraft("");
+        setCustomRuleDraft("");
+        fetchLogs();
+        fetchAgents();
+      }
+    } catch (e) {
+      toast({ title: "Failed to submit feedback", variant: "destructive" });
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   const fetchAgents = async () => {
     try {
       setLoading(true);
@@ -274,34 +314,145 @@ export default function AIAgentsHubPage() {
           </div>
         ) : (
           <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-            {logs.map((log) => (
-              <div key={log.id} className="p-4 rounded-2xl border border-slate-200/70 bg-slate-50/50 space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                  <span className="font-bold text-slate-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    {log.patientName} {log.patientPhone ? `(${log.patientPhone})` : ""}
-                  </span>
-                  <span className="text-[11px] font-medium text-slate-400">
-                    {new Date(log.timestamp).toLocaleString()}
-                  </span>
-                </div>
+            {logs.map((log) => {
+              const isApproved = log.feedbackStatus === "APPROVED";
+              const isCorrected = log.feedbackStatus === "CORRECTED";
+              const isEditing = activeFeedbackId === log.id;
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="p-3 bg-white rounded-xl border border-slate-200/80">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Incoming Message:</p>
-                    <p className="text-slate-800 font-medium whitespace-pre-wrap">"{log.patientMessage}"</p>
+              return (
+                <div key={log.id} className={`p-4 rounded-2xl border transition-all ${
+                  isApproved ? "border-emerald-200 bg-emerald-50/20" :
+                  isCorrected ? "border-purple-200 bg-purple-50/20" :
+                  "border-slate-200/70 bg-slate-50/50"
+                } space-y-3 text-xs`}>
+                  <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span className="font-bold text-slate-800">
+                        {log.patientName} {log.patientPhone ? `(${log.patientPhone})` : ""}
+                      </span>
+                      {isApproved && (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Golden Response
+                        </span>
+                      )}
+                      {isCorrected && (
+                        <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-purple-600" /> Trained Rule Deployed
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-400">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </span>
                   </div>
 
-                  <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
-                    <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-indigo-600" />
-                      AI Assistant Reply:
-                    </p>
-                    <p className="text-slate-900 font-medium whitespace-pre-wrap">{log.aiResponse}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-white rounded-xl border border-slate-200/80">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Incoming Message:</p>
+                      <p className="text-slate-800 font-medium whitespace-pre-wrap">"{log.patientMessage}"</p>
+                    </div>
+
+                    <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                      <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-indigo-600" />
+                        AI Assistant Reply:
+                      </p>
+                      <p className="text-slate-900 font-medium whitespace-pre-wrap">{log.aiResponse}</p>
+                    </div>
                   </div>
+
+                  {/* Feedback & Retraining Action Bar */}
+                  <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={isApproved ? "default" : "outline"}
+                        size="sm"
+                        disabled={submittingFeedback}
+                        onClick={() => handleFeedback(log, "APPROVED")}
+                        className={`text-xs font-bold gap-1.5 h-8 ${isApproved ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"}`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {isApproved ? "Approved Response" : "👍 Approve Response"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant={isEditing ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (isEditing) {
+                            setActiveFeedbackId(null);
+                          } else {
+                            setActiveFeedbackId(log.id);
+                            setCorrectedReplyDraft(log.correctedReply || "");
+                            setCustomRuleDraft(log.customRuleAdded || "");
+                          }
+                        }}
+                        className={`text-xs font-bold gap-1.5 h-8 ${isEditing ? "bg-purple-600 text-white" : "border-purple-200 text-purple-700 hover:bg-purple-50"}`}
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        {isEditing ? "Cancel Retraining" : "👎 Modify & Train AI"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Inline AI Retraining Drawer */}
+                  {isEditing && (
+                    <div className="p-4 bg-white rounded-2xl border border-purple-200 space-y-3 mt-2">
+                      <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                        Retrain AI Assistant for Future Patient Queries
+                      </h4>
+
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-semibold text-slate-700">What should the AI have replied instead?</Label>
+                        <Textarea
+                          placeholder="e.g., Namaste! Dr. Sharma ke paas kal evening OPD mein slots available hain..."
+                          value={correctedReplyDraft}
+                          onChange={(e) => setCorrectedReplyDraft(e.target.value)}
+                          className="text-xs bg-slate-50 resize-none"
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-semibold text-slate-700">Add a Custom Instruction / Rule for the AI</Label>
+                        <Input
+                          placeholder="e.g., Always ask patient temperature before confirming fever appointment"
+                          value={customRuleDraft}
+                          onChange={(e) => setCustomRuleDraft(e.target.value)}
+                          className="text-xs bg-slate-50"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActiveFeedbackId(null)}
+                          className="text-xs font-bold"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={submittingFeedback}
+                          onClick={() => handleFeedback(log, "CORRECTED")}
+                          className="text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Save & Train AI Engine
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

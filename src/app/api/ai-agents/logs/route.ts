@@ -20,6 +20,15 @@ export async function GET() {
     const conversationIds = conversations.map(c => c.id);
     const convMap = new Map(conversations.map(c => [c.id, c]));
 
+    // Fetch feedbacks for this doctor
+    const feedbacks = await prisma.aIAgentFeedback.findMany({
+      where: { doctorId },
+      orderBy: { createdAt: "desc" },
+      take: 100
+    });
+
+    const feedbackMap = new Map(feedbacks.map(f => [f.messageId || f.conversationId, f]));
+
     // Fetch recent AI Assistant messages
     const aiMessages = await prisma.chatMessage.findMany({
       where: {
@@ -27,10 +36,10 @@ export async function GET() {
         senderName: "AI Assistant"
       },
       orderBy: { createdAt: "desc" },
-      take: 20
+      take: 30
     });
 
-    // Pair each AI message with the preceding INCOMING patient message
+    // Pair each AI message with preceding INCOMING patient message and feedback status
     const logs = await Promise.all(
       aiMessages.map(async (msg) => {
         const precedingPatientMsg = await prisma.chatMessage.findFirst({
@@ -43,14 +52,19 @@ export async function GET() {
         });
 
         const conv = convMap.get(msg.conversationId);
+        const fb = feedbackMap.get(msg.id) || feedbackMap.get(msg.conversationId);
 
         return {
           id: msg.id,
+          conversationId: msg.conversationId,
           patientName: conv?.patientName || "Patient",
           patientPhone: conv?.patientPhone || "",
           patientMessage: precedingPatientMsg?.content || "N/A",
           aiResponse: msg.content,
-          timestamp: msg.createdAt
+          timestamp: msg.createdAt,
+          feedbackStatus: fb?.status || null, // "APPROVED" | "CORRECTED" | null
+          correctedReply: fb?.correctedReply || null,
+          customRuleAdded: fb?.customRuleAdded || null
         };
       })
     );

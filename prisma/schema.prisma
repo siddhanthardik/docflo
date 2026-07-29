@@ -71,6 +71,7 @@ model Doctor {
   auditLead              AuditLead?
   subscriptionHistories  SubscriptionHistory[]
   notifications          Notification[]
+  aiAgentFeedbacks       AIAgentFeedback[]
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -323,10 +324,11 @@ model Conversation {
   unreadCount   Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  messages      ChatMessage[]
-  assignedTo    StaffMember?  @relation(fields: [assignedToId], references: [id])
-  doctor        Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  patient       Patient?      @relation(fields: [patientId], references: [id])
+  messages         ChatMessage[]
+  aiAgentFeedbacks AIAgentFeedback[]
+  assignedTo       StaffMember?  @relation(fields: [assignedToId], references: [id])
+  doctor           Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient          Patient?      @relation(fields: [patientId], references: [id])
 
   @@unique([doctorId, patientPhone])
   @@map("conversations")
@@ -344,7 +346,29 @@ model ChatMessage {
   readAt         DateTime?
   conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@index([conversationId, senderName, createdAt(sort: Desc)])
+  @@index([createdAt])
   @@map("chat_messages")
+}
+
+model AIAgentFeedback {
+  id              String   @id @default(cuid())
+  doctorId        String
+  conversationId  String
+  messageId       String?
+  patientMessage  String   @db.Text
+  aiResponse      String   @db.Text
+  status          String   // "APPROVED" | "CORRECTED"
+  correctedReply  String?  @db.Text
+  customRuleAdded String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  doctor       Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, createdAt(sort: Desc)])
+  @@index([conversationId])
+  @@map("ai_agent_feedbacks")
 }
 
 model ServiceType {

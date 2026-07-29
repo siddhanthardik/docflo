@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
+import { memoryCache } from "@/lib/memory-cache";
 
 // Initialize Gemini (Ensure GEMINI_API_KEY is in .env)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
