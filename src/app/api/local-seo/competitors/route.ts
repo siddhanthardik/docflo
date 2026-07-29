@@ -173,15 +173,7 @@ export async function GET(request: Request) {
     const userRating = Number(insights.rating) || 4.9;
     const userReviews = Number(insights.user_ratings_total) || 78;
 
-    // Filter out non-matching specialties (e.g., General Physicians, Surgeons for Pediatricians)
-    const validCompetitors = (searchRes.competitors || []).filter((comp: any) => {
-      if (/pediatr|paediatr|child/i.test(primaryCategory)) {
-        const isNonPed = /physician|surgeon|dermatolog|orthopaed|dental|dentist/i.test(comp.name);
-        const isPed = /pediatr|paediatr|child|baby|bal/i.test(comp.name);
-        if (isNonPed && !isPed) return false;
-      }
-      return true;
-    });
+    const validCompetitors = searchRes.competitors || [];
 
     // Structure normalized items for dashboard rendering.
     // Rank = real Google text-search position (googlePosition).

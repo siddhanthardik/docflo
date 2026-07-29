@@ -227,10 +227,10 @@ export async function searchCompetitorsWithRank(
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 
-  // Build hyper-local text query: "Pediatrician near Safdarjung Enclave, New Delhi"
-  // NOT pincode-based. This matches how real patients search on Google Maps.
+  // Build hyper-local text query: "Pediatrician in Safdarjung Enclave, New Delhi"
+  // This matches how real patients search on Google Maps for competitors in an area.
   const textQuery = locationContext
-    ? `${query} near ${locationContext}`
+    ? `${query} in ${locationContext}`
     : query;
 
   console.log(`[Competitor Search v1] query: "${textQuery}"`);
@@ -353,19 +353,27 @@ export async function searchCompetitorsWithRank(
         const pType = p.primaryType || "";
         const pName = p.displayName?.text || "";
 
-        // Specialty filter: for Pediatrician queries, filter out unrelated categories
-        if (/pediatr|paediatr|child/i.test(query)) {
-          const isPed =
-            /pediatr|paediatr|child|baby|bal/i.test(pType) ||
-            /pediatr|paediatr|child|baby|bal/i.test(pLabel) ||
-            /pediatr|paediatr|child|baby|bal/i.test(pName);
-          const isHardNonPed =
-            /physician|general.?practitioner|surgeon|dermatolog|orthopaed|dental|dentist/i.test(pName) ||
-            /physician|surgeon|dermatolog|orthopaed|dental/i.test(pLabel);
-          if (isHardNonPed && !isPed) {
-            console.log(`[Competitor Filter] Excluded: "${pName}" (${pLabel}) — not a pediatrician`);
-            continue;
-          }
+        // --- Dynamic Strict Specialty Filter ---
+        // Extract the core root of the target query (e.g. "gynaecologist" -> "gynaecolog", "pediatrician" -> "pediatr")
+        // and ensure the competitor has some matching signal in their name or category, blocking obvious unrelated fields.
+        const coreQuery = query.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6);
+        
+        const isMatch = 
+          pType.toLowerCase().includes(coreQuery) || 
+          pLabel.toLowerCase().includes(coreQuery) || 
+          pName.toLowerCase().includes(coreQuery) ||
+          query.toLowerCase().includes(pType.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6));
+
+        // Hard exclusion blocks for wildly different specialties
+        const isUnrelated = 
+          (/gynaec|gynec/i.test(query) && /orthopaed|dental|dentist|cardiolog|neurolog|paediatr|pediatr/i.test(pName + pLabel)) ||
+          (/pediatr|paediatr/i.test(query) && /gynaec|gynec|orthopaed|dental|dentist|cardiolog/i.test(pName + pLabel)) ||
+          (/orthopaed/i.test(query) && /gynaec|gynec|paediatr|pediatr|dental|dentist/i.test(pName + pLabel)) ||
+          (/dentist|dental/i.test(query) && /gynaec|gynec|paediatr|pediatr|orthopaed|cardiolog/i.test(pName + pLabel));
+
+        if (isUnrelated && !isMatch) {
+          console.log(`[Competitor Filter] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
+          continue;
         }
 
         // Real Haversine distance — no fake fallback
@@ -440,6 +448,28 @@ export async function searchCompetitorsWithRank(
       classicPos++;
       if (targetPlaceId && r.place_id === targetPlaceId) continue;
       if (cleanTargetName.length > 2 && r.name?.toLowerCase().includes(cleanTargetName)) continue;
+
+      const pName = r.name || "";
+      const pLabel = r.types?.join(" ") || ""; // Classic API returns types array
+
+      // --- Dynamic Strict Specialty Filter ---
+      const coreQuery = query.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6);
+      
+      const isMatch = 
+        pLabel.toLowerCase().includes(coreQuery) || 
+        pName.toLowerCase().includes(coreQuery) ||
+        query.toLowerCase().includes(pLabel.toLowerCase().replace(/ist|y|ic|al|s|ian$/g, '').substring(0, 6));
+
+      const isUnrelated = 
+        (/gynaec|gynec/i.test(query) && /orthopaed|dental|dentist|cardiolog|neurolog|paediatr|pediatr/i.test(pName + pLabel)) ||
+        (/pediatr|paediatr/i.test(query) && /gynaec|gynec|orthopaed|dental|dentist|cardiolog/i.test(pName + pLabel)) ||
+        (/orthopaed/i.test(query) && /gynaec|gynec|paediatr|pediatr|dental|dentist/i.test(pName + pLabel)) ||
+        (/dentist|dental/i.test(query) && /gynaec|gynec|paediatr|pediatr|orthopaed|cardiolog/i.test(pName + pLabel));
+
+      if (isUnrelated && !isMatch) {
+        console.log(`[Competitor Filter Classic] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
+        continue;
+      }
 
       let distanceKm: number | undefined;
       if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
@@ -556,10 +586,10 @@ export async function unifiedGeoGrid(
 
   // Function to search from a specific point
   const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
-    // True "Near Me" grid search simulates a patient just typing "Pediatrician"
+    // True "Near Me" grid search simulates a patient just typing "Pediatrician near me"
     // while standing at the lat/lng. We do NOT append the neighborhood to the text query,
     // otherwise the text intent overrides the GPS intent.
-    const textQuery = useLocationBias ? specialtyLabel : `${specialtyLabel} in ${searchPhraseContext}`;
+    const textQuery = useLocationBias ? `${specialtyLabel} near me` : `${specialtyLabel} in ${searchPhraseContext}`;
     
     // Fallback: Classic Text Search (which allows location/radius)
     const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
