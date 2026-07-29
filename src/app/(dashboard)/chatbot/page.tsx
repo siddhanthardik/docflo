@@ -93,7 +93,7 @@ export default function AIAgentsHubPage() {
         body: JSON.stringify({ agentType: activeAgent.agentType, config: configDraft }),
       });
       if (res.ok) {
-        toast({ title: "Agent Training & Config Saved! ✨", description: "Updated prompt instructions deployed to Gemini 3.5 Flash engine." });
+        toast({ title: "Agent Training & Config Saved! ✨", description: "Updated prompt instructions deployed to AI engine." });
         setAgents(agents.map(a => a.agentType === activeAgent.agentType ? { ...a, config: configDraft } : a));
         setIsConfigOpen(false);
       } else {
@@ -141,7 +141,7 @@ export default function AIAgentsHubPage() {
       color: "text-blue-600",
       bg: "bg-blue-50",
       desc: "Connects to your clinic WhatsApp Business number to handle after-hours inquiries, answer slot questions, and share booking links 24/7.",
-      metrics: "Gemini 3.5 Flash · 24/7 Live",
+      metrics: "24/7 Live",
     },
     {
       type: "REVIEW",
@@ -150,7 +150,7 @@ export default function AIAgentsHubPage() {
       color: "text-emerald-600",
       bg: "bg-emerald-50",
       desc: "Analyzes incoming Google Business Profile reviews and drafts HIPAA-compliant, keyword-rich responses to boost Maps ranking.",
-      metrics: "Gemini 3.5 Flash · Auto-Drafting",
+      metrics: "Auto-Drafting",
     },
     {
       type: "PROFILE",
@@ -159,7 +159,7 @@ export default function AIAgentsHubPage() {
       color: "text-purple-600",
       bg: "bg-purple-50",
       desc: "Generates engaging Google Updates and service highlights on your configured schedule to maintain Google Maps freshness.",
-      metrics: "Gemini 3.5 Flash · Scheduled",
+      metrics: "Scheduled",
     },
     {
       type: "LOCAL_SEO_COPILOT",
@@ -168,7 +168,7 @@ export default function AIAgentsHubPage() {
       color: "text-amber-600",
       bg: "bg-amber-50",
       desc: "Conducts weekly competitive keyword audits and generates prioritized 1-click execution tasks to outrank local competitors.",
-      metrics: "Gemini 3.5 Flash · Algorithmic",
+      metrics: "Algorithmic",
     }
   ];
 
@@ -185,12 +185,6 @@ export default function AIAgentsHubPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-500/30 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              Powered by Gemini 3.5 Flash
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <Bot className="h-8 w-8 text-indigo-400" /> Autonomous AI Agents Hub
           </h1>
@@ -321,7 +315,7 @@ export default function AIAgentsHubPage() {
               Configure & Train: {activeAgent?.name}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Train this Gemini 3.5 Flash AI agent with custom clinic guidelines, system prompts, and operational rules.
+              Train this AI agent with custom clinic guidelines, system prompts, and operational rules.
             </DialogDescription>
           </DialogHeader>
           
