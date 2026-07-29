@@ -182,7 +182,6 @@ class WhatsAppManager {
                 actionUrl: "/settings/whatsapp",
               }
             }).catch(err => console.error(`[WhatsAppManager] Failed to create notification:`, err));
-          }
         } else if (connection === 'open') {
           console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
           this.sockets.set(doctorId, sock);
@@ -190,13 +189,8 @@ class WhatsAppManager {
           this.connectingDoctors.delete(doctorId);
         }
       });
-    } catch (err) {
-      console.error(`[WhatsAppManager] Unhandled error during connect for ${doctorId}:`, err);
-      this.connectingDoctors.delete(doctorId);
-    }
-  }
 
-    sock.ev.on('messages.upsert', async (m) => {
+      sock.ev.on('messages.upsert', async (m) => {
       console.log(`[WhatsAppManager] Raw upsert type: ${m.type}, messages count: ${m.messages.length}`);
       
       // Ignore outgoing messages or updates
@@ -501,6 +495,10 @@ class WhatsAppManager {
         }
       }
     });
+    } catch (err) {
+      console.error(`[WhatsAppManager] Unhandled error during connect for ${doctorId}:`, err);
+      this.connectingDoctors.delete(doctorId);
+    }
   }
 
   getQR(doctorId: string): string | null {
