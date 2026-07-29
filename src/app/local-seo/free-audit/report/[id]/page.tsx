@@ -400,20 +400,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  // Ensure we show 5-6 distinct, non-duplicate diagnostic action items
-  const supplementalIssues: Issue[] = [
-    { issue: "Google Posts inactivity detected.", evidence: "Zero Google Posts published in the last 30 days lowers freshness ranking signals.", impact: "Medium" },
-    { issue: "Native medical services catalog unverified.", evidence: "Listing individual treatments natively on Google increases rank for treatment-specific searches.", impact: "Medium" },
-    { issue: "Unanswered patient questions on Google Q&A.", evidence: "Unanswered questions on your Google Business Profile reduce engagement and conversion.", impact: "Medium" },
-    { issue: "Missing location geotags on clinic photos.", evidence: "Google uses geotagged photo metadata to verify physical street proximity to searching patients.", impact: "Medium" }
-  ];
-
-  for (const supp of supplementalIssues) {
-    if (issues.length >= 5) break;
-    if (!issueTitles.has(supp.issue)) {
-      issues.push(supp);
-      issueTitles.add(supp.issue);
-    }
+  // Only show authentic issues generated from the backend API.
+  if (issues.length === 0) {
+    issues.push({
+      issue: "Your profile is highly optimized.",
+      evidence: "Our diagnostic engine did not find any major ranking gaps. Keep collecting reviews and posting updates to maintain your top position.",
+      impact: "Low"
+    });
   }
 
   const issueCount      = issues.length;

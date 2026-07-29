@@ -270,11 +270,24 @@ async function processAuditAsync(auditId: string, data: any) {
             !placeData?.website 
               ? { issue: "No website link found on Google Maps.", evidence: "Google relies on website structure and EEAT signals to verify medical authority.", impact: "High" }
               : null,
-            (placeData?.types?.length || 0) <= 1
-              ? { issue: "Secondary medical categories missing.", evidence: "Nearby competitors use an average of 3 categories to capture multi-specialty patient searches.", impact: "High" }
+            (placeData?.types?.length || 0) <= 2
+              ? { issue: "Secondary medical categories missing.", evidence: "Nearby competitors use an average of 3-4 categories to capture multi-specialty patient searches.", impact: "High" }
               : null,
-            { issue: "No recent Google Posts verified.", evidence: "Profiles without weekly posts appear inactive to Google's freshness ranking algorithm.", impact: "Medium" },
-            { issue: "Native medical services catalog unverified.", evidence: "Listing individual treatments natively on Google increases rank for treatment-specific searches.", impact: "Medium" }
+            (placeData?.rating && placeData.rating < specialityData.expectedRating)
+              ? { issue: `Rating below local benchmark (${placeData.rating} vs ${specialityData.expectedRating}).`, evidence: "Patients are proven to filter out clinics with ratings lower than their immediate local peers.", impact: "High" }
+              : null,
+            !placeData?.name?.toLowerCase().includes(specialityData.speciality.toLowerCase())
+              ? { issue: `Primary keyword "${specialityData.speciality}" not found in business title.`, evidence: "Profiles missing the exact specialty keyword in their title struggle to rank for broad category searches.", impact: "High" }
+              : null,
+            !placeData?.photoUrl
+              ? { issue: "No clinic photos or media published.", evidence: "Profiles with interior and exterior photos receive 42% more requests for directions on Google Maps.", impact: "Medium" }
+              : null,
+            !placeData?.phone
+              ? { issue: "No direct phone line connected.", evidence: "Without a listed phone number, you are missing out on immediate mobile tap-to-call conversions.", impact: "Critical" }
+              : null,
+            !placeData?.hasOpeningHours
+              ? { issue: "Missing business hours.", evidence: "Profiles without hours cannot rank for 'open now' searches.", impact: "Medium" }
+              : null
           ].filter(Boolean) : [
             { issue: "Insufficient Google Data.", evidence: "We could not verify your clinic details on Google Maps.", impact: "Critical" }
           ]
