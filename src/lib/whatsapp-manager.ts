@@ -8,12 +8,40 @@ import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
   private qrCodes: Map<string, string> = new Map(); // doctorId -> QR string
+  private connectingDoctors: Set<string> = new Set(); // Guard against duplicate connect attempts
 
   constructor() {
     // Ensure auth folder exists
     const authDir = path.join(process.cwd(), 'auth_info');
     if (!fs.existsSync(authDir)) {
       fs.mkdirSync(authDir, { recursive: true });
+    }
+  }
+
+  // Safely wipes session directory and resets memory states for a clean slate
+  clearSession(doctorId: string) {
+    console.log(`[WhatsAppManager] Purging session state for doctor: ${doctorId}`);
+    const existingSock = this.sockets.get(doctorId);
+    if (existingSock) {
+      try {
+        existingSock.ev.removeAllListeners('connection.update');
+        existingSock.ws.close();
+      } catch (e) {
+        // Ignore socket close errors
+      }
+      this.sockets.delete(doctorId);
+    }
+
+    this.qrCodes.delete(doctorId);
+    this.connectingDoctors.delete(doctorId);
+
+    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+    if (fs.existsSync(sessionDir)) {
+      try {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      } catch (err) {
+        console.error(`[WhatsAppManager] Failed to delete session dir for ${doctorId}:`, err);
+      }
     }
   }
 
@@ -36,14 +64,11 @@ class WhatsAppManager {
   normalizePhone(phone: string): string {
     if (!phone) return "";
     
-    // If it explicitly starts with a '+', the user provided a country code.
-    // We just strip all non-digits (including the '+').
     if (phone.trim().startsWith('+')) {
       return phone.replace(/\D/g, '');
     }
     
     let cleanPhone = phone.replace(/\D/g, '');
-    // If it's exactly 10 digits and no country code was provided, default to India (91)
     if (cleanPhone.length === 10) {
       cleanPhone = `91${cleanPhone}`;
     }
@@ -52,110 +77,124 @@ class WhatsAppManager {
 
   // Connects or reconnects a doctor's WhatsApp session
   async connect(doctorId: string) {
-    console.log(`[WhatsAppManager] Starting connection for doctor: ${doctorId}`);
-    
-    // Clean up any pre-existing dangling socket for this doctor to prevent duplicate connections
-    const existingSock = this.sockets.get(doctorId);
-    if (existingSock) {
-      try {
-        existingSock.ev.removeAllListeners('connection.update');
-        existingSock.ws.close();
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-      this.sockets.delete(doctorId);
-    }
-
-    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
-    let authState;
-    try {
-      authState = await useMultiFileAuthState(sessionDir);
-    } catch (e) {
-      console.error(`[WhatsAppManager] Corrupted auth state for ${doctorId}, cannot connect.`, e);
+    if (this.connectingDoctors.has(doctorId)) {
+      console.log(`[WhatsAppManager] Connection already in progress for ${doctorId}, skipping duplicate request.`);
       return;
     }
-    const { state, saveCreds } = authState;
 
-    const sock = makeWASocket({
-      auth: state,
-      printQRInTerminal: false,
-      generateHighQualityLinkPreview: false,
-      browser: ['Gyrex', 'Chrome', '1.0.0'],
-      markOnlineOnConnect: false,
-      syncFullHistory: false,
-      keepAliveIntervalMs: 30000, // Send keep-alive ping every 30 seconds to prevent idle socket drop
-      connectTimeoutMs: 60000,
-    });
-
-    sock.ev.on('creds.update', async () => {
-      try {
-        await saveCreds();
-      } catch (e) {
-        console.error(`[WhatsAppManager] Error saving creds for ${doctorId}:`, e);
-      }
-    });
-
-    sock.ev.on('connection.update', (update) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        console.log(`[WhatsAppManager] New QR for doctor ${doctorId}`);
-        this.qrCodes.set(doctorId, qr);
-      }
-
-      if (connection === 'close') {
-        // ALWAYS remove socket on connection close so isConnected() immediately returns false
-        this.sockets.delete(doctorId);
-
-        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const isTerminalAuthFailure = 
-          statusCode === DisconnectReason.loggedOut || 
-          statusCode === DisconnectReason.badSession || 
-          statusCode === 405 || 
-          statusCode === 401;
-
-        const shouldReconnect = !isTerminalAuthFailure && statusCode !== DisconnectReason.connectionClosed;
-        
-        console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
-        
-        if (shouldReconnect) {
-          // Delay reconnect to prevent spamming WhatsApp servers and to allow files to unlock
-          const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 3000;
-          setTimeout(() => {
-            console.log(`[WhatsAppManager] Auto-reconnecting ${doctorId} now...`);
-            this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect error for ${doctorId}:`, e));
-          }, delay);
-        } else {
-          // Terminal session failure / Logged out (401 / 405)
-          console.log(`[WhatsAppManager] Terminal auth failure or device logged out for ${doctorId} (code ${statusCode}). Clearing session.`);
-          this.qrCodes.delete(doctorId);
-          this.sockets.delete(doctorId);
-          // Delete auth folder safely
-          if (fs.existsSync(sessionDir)) {
-            try {
-              fs.rmSync(sessionDir, { recursive: true, force: true });
-            } catch (err) {
-              console.error(`[WhatsAppManager] Failed to delete session dir for ${doctorId}`, err);
-            }
-          }
-          
-          // Notify the clinic owner immediately with a professional alert
-          prisma.notification.create({
-            data: {
-              doctorId,
-              title: "WhatsApp Business Disconnected ⚠️",
-              message: "Your WhatsApp Business device has been disconnected. All automated patient reminders, review requests, and AI receptionist responses are currently paused. Please reconnect your device in Settings to resume automated messaging.",
-              type: "ERROR",
-              actionUrl: "/settings/whatsapp",
-            }
-          }).catch(err => console.error(`[WhatsAppManager] Failed to create disconnection notification for ${doctorId}`, err));
+    this.connectingDoctors.add(doctorId);
+    console.log(`[WhatsAppManager] Starting fresh connection for doctor: ${doctorId}`);
+    
+    try {
+      // Clean up any pre-existing dangling socket
+      const existingSock = this.sockets.get(doctorId);
+      if (existingSock) {
+        try {
+          existingSock.ev.removeAllListeners('connection.update');
+          existingSock.ws.close();
+        } catch (e) {
+          // Ignore cleanup errors
         }
-      } else if (connection === 'open') {
-        console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
-        this.sockets.set(doctorId, sock);
-        this.qrCodes.delete(doctorId); // Clear QR once connected
+        this.sockets.delete(doctorId);
       }
-    });
+
+      const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+      
+      // If creds file is missing or corrupted, wipe directory completely to force clean QR generation
+      const credsPath = path.join(sessionDir, 'creds.json');
+      if (fs.existsSync(sessionDir) && !fs.existsSync(credsPath)) {
+        try {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+        } catch (e) {
+          // Ignore
+        }
+      }
+
+      let authState;
+      try {
+        authState = await useMultiFileAuthState(sessionDir);
+      } catch (e) {
+        console.error(`[WhatsAppManager] Corrupted auth state for ${doctorId}, purging session and retrying...`, e);
+        this.clearSession(doctorId);
+        authState = await useMultiFileAuthState(sessionDir);
+      }
+      const { state, saveCreds } = authState;
+
+      const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        generateHighQualityLinkPreview: false,
+        browser: ['Gyrex', 'Chrome', '1.0.0'],
+        markOnlineOnConnect: false,
+        syncFullHistory: false,
+        keepAliveIntervalMs: 30000,
+        connectTimeoutMs: 60000,
+      });
+
+      sock.ev.on('creds.update', async () => {
+        try {
+          await saveCreds();
+        } catch (e) {
+          console.error(`[WhatsAppManager] Error saving creds for ${doctorId}:`, e);
+        }
+      });
+
+      sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+          console.log(`[WhatsAppManager] New QR generated for doctor ${doctorId}`);
+          this.qrCodes.set(doctorId, qr);
+        }
+
+        if (connection === 'close') {
+          this.sockets.delete(doctorId);
+          this.connectingDoctors.delete(doctorId);
+
+          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const isTerminalAuthFailure = 
+            statusCode === DisconnectReason.loggedOut || 
+            statusCode === DisconnectReason.badSession || 
+            statusCode === 405 || 
+            statusCode === 401;
+
+          const shouldReconnect = !isTerminalAuthFailure && statusCode !== DisconnectReason.connectionClosed;
+          
+          console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
+          
+          if (shouldReconnect) {
+            const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 3000;
+            setTimeout(() => {
+              console.log(`[WhatsAppManager] Auto-reconnecting ${doctorId} now...`);
+              this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect error for ${doctorId}:`, e));
+            }, delay);
+          } else {
+            // Terminal failure (405/401): Wipe session files on disk so next attempt generates fresh QR
+            console.log(`[WhatsAppManager] Terminal auth failure for ${doctorId} (code ${statusCode}). Purging corrupted session on disk.`);
+            this.clearSession(doctorId);
+            
+            prisma.notification.create({
+              data: {
+                doctorId,
+                title: "WhatsApp Business Disconnected ⚠️",
+                message: "Your WhatsApp Business device has been disconnected. Please scan the QR code in Settings to reconnect.",
+                type: "ERROR",
+                actionUrl: "/settings/whatsapp",
+              }
+            }).catch(err => console.error(`[WhatsAppManager] Failed to create notification:`, err));
+          }
+        } else if (connection === 'open') {
+          console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
+          this.sockets.set(doctorId, sock);
+          this.qrCodes.delete(doctorId);
+          this.connectingDoctors.delete(doctorId);
+        }
+      });
+    } catch (err) {
+      console.error(`[WhatsAppManager] Unhandled error during connect for ${doctorId}:`, err);
+      this.connectingDoctors.delete(doctorId);
+    }
+  }
 
     sock.ev.on('messages.upsert', async (m) => {
       console.log(`[WhatsAppManager] Raw upsert type: ${m.type}, messages count: ${m.messages.length}`);
@@ -474,17 +513,7 @@ class WhatsAppManager {
   }
 
   async logout(doctorId: string) {
-    const sock = this.sockets.get(doctorId);
-    if (sock) {
-      try { sock.logout(); } catch (e) {}
-    }
-    
-    this.sockets.delete(doctorId);
-    this.qrCodes.delete(doctorId);
-    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
-    if (fs.existsSync(sessionDir)) {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
-    }
+    this.clearSession(doctorId);
   }
 
   // Helper to send outbound messages manually (from inbox or campaigns)
