@@ -124,30 +124,6 @@ export function BillingClient({
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      {/* Active Subscription Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1.5 uppercase tracking-wider">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              {subscriptionStatus === "ACTIVE" ? "Active Subscription" : subscriptionStatus}
-            </span>
-          </div>
-          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            Current Plan: <span className="text-indigo-400 uppercase">{currentPackage?.name || "Free Trial"}</span>
-          </h2>
-          <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-            Your clinic is currently operating on the <span className="font-semibold text-white">{currentPackage?.name || "Free Trial"}</span> plan with full automated features.
-          </p>
-        </div>
-
-        <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700/60 shrink-0 w-full sm:w-auto flex flex-col sm:flex-row items-center gap-4">
-          <div className="text-center sm:text-left">
-            <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Self-Managed Billing</p>
-            <p className="text-lg font-bold text-white mt-0.5">Automated Auto-Renewal</p>
-          </div>
-        </div>
-      </div>
 
       {/* Pricing Controls & Period Selector */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs p-6">

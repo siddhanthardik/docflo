@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { StaffManagement } from "@/components/staff/staff-management"
+import { SettingsTabs } from "@/components/settings/settings-tabs"
 import { redirect } from "next/navigation"
 import { Users } from "lucide-react"
 
@@ -29,6 +30,8 @@ export default async function StaffPage() {
           </span>
         </div>
       </div>
+
+      <SettingsTabs />
 
       {/* Main Content */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { BillingClient } from "./BillingClient";
+import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 export default async function BillingPage() {
   const session = await auth();
@@ -64,6 +65,8 @@ export default async function BillingPage() {
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Billing & Subscription</h1>
         <p className="text-gray-500 mt-1">Manage your plan and payment methods.</p>
       </div>
+
+      <SettingsTabs />
 
       <BillingClient 
         currentPackage={safeDoctorPackage} 

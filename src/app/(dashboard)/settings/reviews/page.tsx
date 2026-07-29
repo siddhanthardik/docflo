@@ -141,15 +141,6 @@ export default function ReviewsAndMessagingSettingsPage() {
             <div className="absolute right-0 top-0 -mt-8 -mr-8 h-48 w-48 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                    Automated Communication Hub
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
-                    {activeTogglesCount} / 8 Message Triggers Active
-                  </span>
-                </div>
                 <h2 className="text-xl font-bold tracking-tight">Master Messaging Engine</h2>
                 <p className="text-sm text-indigo-100 max-w-xl">
                   Turn automated WhatsApp messaging on or off across your clinic. You can also customize individual triggers below.
