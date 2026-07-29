@@ -193,15 +193,6 @@ export default function AIAgentsHubPage() {
       metrics: "Auto-Drafting",
     },
     {
-      type: "PROFILE",
-      name: "Profile Updater",
-      icon: Megaphone,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-      desc: "Generates engaging Google Updates and service highlights on your configured schedule to maintain Google Maps freshness.",
-      metrics: "Scheduled",
-    },
-    {
       type: "LOCAL_SEO_COPILOT",
       name: "Local SEO Copilot",
       icon: TrendingUp,
@@ -235,7 +226,7 @@ export default function AIAgentsHubPage() {
       </div>
 
       {/* Agents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {agentDefinitions.map((def) => {
           const agentData = agents.find(a => a.agentType === def.type) || { enabled: false, config: {} };
           const Icon = def.icon;

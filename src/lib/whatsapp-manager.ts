@@ -215,6 +215,16 @@ class WhatsAppManager {
           const patientPhone = this.normalizePhone(rawPhone);
           console.log(`[WhatsAppManager] Message from ${patientPhone} (raw: ${remoteJid}) to doctor ${doctorId}: ${textMessage}`);
 
+          // --- Spam Filter ---
+          const spamKeywords = ["balde vs gavi", "keep playing", "ow.ly", "youtu.be", "bit.ly", "t.me", "earn money", "crypto", "bitcoin", "casino"];
+          const textLowerForSpam = textMessage.toLowerCase();
+          const isSpam = spamKeywords.some(keyword => textLowerForSpam.includes(keyword));
+          
+          if (isSpam) {
+            console.log(`[WhatsAppManager] Blocked incoming spam message from ${patientPhone}`);
+            continue; // Skip processing this message entirely
+          }
+
           // --- Process the incoming message via AI Agents ---
           try {
             // Find patient
