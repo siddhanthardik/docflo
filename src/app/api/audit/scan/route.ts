@@ -131,7 +131,7 @@ async function processAuditAsync(auditId: string, data: any) {
       specialtyLabel,
       data.placeId || "",
       actualName,
-      targetLocation, // Use clinic location to calculate competitor distances
+      targetLocation,
       locationContext
     );
 
@@ -286,7 +286,7 @@ async function processAuditAsync(auditId: string, data: any) {
               rating: c.rating || "N/A",
               reviewCount: c.reviewCount || 0,
               rank: i + 1,
-              distanceKm: c.distanceKm,
+
               categories: "Unknown",
               website: "Unknown"
             })),

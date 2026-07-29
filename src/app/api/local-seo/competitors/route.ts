@@ -177,7 +177,6 @@ export async function GET(request: Request) {
 
     // Structure normalized items for dashboard rendering.
     // Rank = real Google text-search position (googlePosition).
-    // distanceMeters = real Haversine meters (null if unknown — shown as "—" in UI).
     const updatedNormalized = [
       {
         id: "you",
@@ -186,7 +185,6 @@ export async function GET(request: Request) {
         reviewCount: userReviews,
         rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
         isYou: true,
-        distanceMeters: 0,
         placeId: account.locationId || ""
       },
       ...validCompetitors.map((comp: any, idx: number) => ({
@@ -197,8 +195,6 @@ export async function GET(request: Request) {
         // Real Google search position — not fake index arithmetic
         rank: comp.googlePosition ?? (idx + 1),
         isYou: false,
-        // Real meters from Haversine — null means unknown, UI will show "—"
-        distanceMeters: comp.distanceKm != null ? Math.round(comp.distanceKm * 1000) : null,
         placeId: comp.placeId || ""
       }))
     ].sort((a, b) => a.rank - b.rank);

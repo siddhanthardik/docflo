@@ -605,7 +605,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     <h2 className="text-lg font-bold text-slate-900 tracking-tight">Top Area Competitors</h2>
                   </div>
                   <p className="text-sm text-slate-500 font-normal">
-                    Search comparison for <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">{specialty}</span> in {city}
+                    Search comparison for <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">Best {specialty}</span> in {city}
                   </p>
                 </div>
                 {userRankNum === 1 ? (
@@ -669,11 +669,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                                   Title Keyword Match
                                 </span>
                               ) : null}
-                              {c.distanceKm != null ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" /> {c.distanceKm} km away
-                                </span>
-                              ) : null}
+
                             </div>
                           </td>
                           <td className="px-4 py-4">

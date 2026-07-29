@@ -323,7 +323,7 @@ export function CompetitorInsights() {
 
       {/* Table header */}
       <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-        <div>Business · Distance from your clinic</div>
+        <div>Business</div>
         <div className="text-center w-16">Rating</div>
         <div className="text-center w-16">Reviews</div>
         <div className="text-center w-16" title="Real position in Google Search for your specialty near your location">Google Position ↑</div>
@@ -373,13 +373,7 @@ export function CompetitorInsights() {
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1">{comp.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {comp.distanceMeters == null
-                    ? <span className="italic">Distance unknown</span>
-                    : comp.distanceMeters < 1000
-                    ? `${comp.distanceMeters}m away`
-                    : `${(comp.distanceMeters / 1000).toFixed(1)}km away`}
-                </p>
+
               </div>
               <div className="flex items-center gap-6 md:gap-0">
                 <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">

@@ -167,7 +167,7 @@ export interface CompetitorData {
   rating: number | null;
   reviewCount: number | null;
   placeId: string;
-  distanceKm?: number;     // Real Haversine distance in km, undefined = unknown
+
   googlePosition: number;  // Real 1-based position in Google search results list
 }
 
@@ -227,11 +227,11 @@ export async function searchCompetitorsWithRank(
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 
-  // Build hyper-local text query: "Pediatrician in Safdarjung Enclave, New Delhi"
-  // This matches how real patients search on Google Maps for competitors in an area.
+  // Build hyper-local text query: "Best Pediatrician in Safdarjung Enclave, New Delhi"
+  // This triggers Google's Prominence algorithm for authentic SEO audits.
   const textQuery = locationContext
-    ? `${query} in ${locationContext}`
-    : query;
+    ? `Best ${query} in ${locationContext}`
+    : `Best ${query}`;
 
   console.log(`[Competitor Search v1] query: "${textQuery}"`);
 
@@ -257,10 +257,16 @@ export async function searchCompetitorsWithRank(
       maxResultCount: 20,
     };
 
-    // DO NOT use locationBias for the primary organic search.
-    // The text query itself (e.g. "Pediatrician near Green Park, New Delhi") 
-    // provides the geographic intent. Using locationBias artificially skews 
-    // results towards the exact GPS coordinate, punishing high-authority clinics.
+    // Use a broad locationBias to ground the search to the correct city/area
+    // without overriding the "Best" Prominence algorithm.
+    if (location?.lat && location?.lng) {
+      requestBody.locationBias = {
+        circle: {
+          center: { latitude: location.lat, longitude: location.lng },
+          radius: 5000,
+        },
+      };
+    }
 
     const res = await fetch(v1Url, {
       method: "POST",
@@ -376,23 +382,13 @@ export async function searchCompetitorsWithRank(
           continue;
         }
 
-        // Real Haversine distance — no fake fallback
-        let distanceKm: number | undefined;
-        if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
-          distanceKm = calculateDistanceKm(
-            location.lat,
-            location.lng,
-            p.location.latitude,
-            p.location.longitude
-          );
-        }
+
 
         competitors.push({
           name: pName,
           rating: p.rating ?? null,
           reviewCount: p.userRatingCount ?? null,
           placeId: p.id || "",
-          distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
           googlePosition: googlePos, // Real Google list position
         });
 
@@ -471,22 +467,11 @@ export async function searchCompetitorsWithRank(
         continue;
       }
 
-      let distanceKm: number | undefined;
-      if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
-        distanceKm = calculateDistanceKm(
-          location.lat,
-          location.lng,
-          r.geometry.location.lat,
-          r.geometry.location.lng
-        );
-      }
-
       competitors.push({
         name: r.name,
         rating: r.rating ?? null,
         reviewCount: r.user_ratings_total ?? null,
         placeId: r.place_id,
-        distanceKm: distanceKm !== undefined ? Math.round(distanceKm * 10) / 10 : undefined,
         googlePosition: classicPos,
       });
 
