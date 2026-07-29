@@ -474,20 +474,6 @@ export default function AIAgentsHubPage() {
             {/* 1. WHATSAPP BOOKING AGENT CONFIG */}
             {activeAgent?.type === "APPOINTMENT" && (
               <>
-                <div className="space-y-2 p-4 bg-white rounded-2xl border border-slate-200/80">
-                  <Label className="text-xs font-bold text-gray-700">Conversational Handling Mode</Label>
-                  <Select 
-                    value={configDraft.mode || "handoff"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, mode: v})}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="handoff">Handoff Mode (Draft replies for staff review)</SelectItem>
-                      <SelectItem value="autonomous">Autonomous Mode (Auto-reply on WhatsApp 24/7)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-gray-500">Autonomous mode provides 24/7 booking link delivery to after-hours WhatsApp inquiries.</p>
-                </div>
 
                 {/* 🕒 OPD SHIFTS & SCHEDULE */}
                 <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
