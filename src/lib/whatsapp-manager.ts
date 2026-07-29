@@ -182,6 +182,7 @@ class WhatsAppManager {
                 actionUrl: "/settings/whatsapp",
               }
             }).catch(err => console.error(`[WhatsAppManager] Failed to create notification:`, err));
+          }
         } else if (connection === 'open') {
           console.log(`[WhatsAppManager] Connection OPEN for doctor ${doctorId}`);
           this.sockets.set(doctorId, sock);
