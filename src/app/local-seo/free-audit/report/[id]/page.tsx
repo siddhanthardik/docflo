@@ -274,7 +274,7 @@ function SearchGridVisualization({
   const avgCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "avg").length;
   const poorCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "poor").length;
   const totalGrid = gridRanks.length;
-  const searchKeyword = specialty ? `${specialty}` : "Doctor & Clinic";
+  const searchKeyword = specialty ? `${specialty} near me` : "Doctor & Clinic near me";
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">

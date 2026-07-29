@@ -654,22 +654,18 @@ export async function unifiedGeoGrid(
 
   // Function to search from a specific point
   const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
-    // True "Near Me" grid search simulates a patient just typing "Pediatrician near me"
-    // while standing at the lat/lng. We do NOT append the neighborhood to the text query,
-    // otherwise the text intent overrides the GPS intent.
-    const textQuery = useLocationBias ? `${specialtyLabel} near me` : `${specialtyLabel} in ${searchPhraseContext}`;
-    
-    // Fallback: Classic Text Search (which allows location/radius)
-    const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
-    url.searchParams.set("query", textQuery);
+    let urlStr = "";
     if (useLocationBias) {
-      url.searchParams.set("location", `${lat},${lng}`);
-      url.searchParams.set("radius", "1000"); // 1km radius for tight grid points
+      // Nearby Search strictly enforces the lat/lng center point and ranks by prominence/distance.
+      // This is exactly how tools like GrexaAI perform a GeoGrid.
+      urlStr = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&keyword=${encodeURIComponent(specialtyLabel)}&key=${apiKey}`;
+    } else {
+      const textQuery = `${specialtyLabel} in ${searchPhraseContext}`;
+      urlStr = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(textQuery)}&key=${apiKey}`;
     }
-    url.searchParams.set("key", apiKey);
 
     try {
-      const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+      const res = await fetch(urlStr, { headers: { Accept: "application/json" } });
       if (!res.ok) return 21;
       const data = await res.json();
       if (data.status !== "OK" || !data.results) return 21;
