@@ -2,51 +2,11 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
+import { extractNeighborhood, unifiedGeoGrid, calculateCompositeRank } from "@/lib/audit/google-places";
 
 const GRID_SIZE = 5;
 const SPACING_METERS = 500;
 const CACHE_HOURS = 24;
-
-// Offset lat/lng by meters
-function offsetCoord(lat: number, lng: number, dNorth: number, dEast: number) {
-  const R = 6378137; // Earth radius in meters
-  const dLat = dNorth / R;
-  const dLng = dEast / (R * Math.cos((Math.PI * lat) / 180));
-  return {
-    lat: lat + (dLat * 180) / Math.PI,
-    lng: lng + (dLng * 180) / Math.PI,
-  };
-}
-
-// Search for the business rank at a given lat/lng using Places Text Search
-async function getRankAtPoint(
-  lat: number,
-  lng: number,
-  businessName: string,
-  category: string,
-  apiKey: string
-): Promise<number> {
-  const query = encodeURIComponent(category);
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&rankby=distance&type=doctor&keyword=${query}&key=${apiKey}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return 0;
-    const data = await res.json();
-    const results: any[] = data.results || [];
-
-    const nameLower = businessName.toLowerCase().replace(/[^a-z0-9\s]/g, "");
-    const idx = results.findIndex((r: any) => {
-      const rName = (r.name || "").toLowerCase().replace(/[^a-z0-9\s]/g, "");
-      return rName.includes(nameLower.split(" ").slice(0, 3).join(" ")) ||
-             nameLower.includes(rName.split(" ").slice(0, 2).join(" "));
-    });
-
-    return idx >= 0 ? idx + 1 : 0; // 0 = not found
-  } catch {
-    return 0;
-  }
-}
 
 export async function GET(request: Request) {
   try {
@@ -146,55 +106,27 @@ export async function POST(request: Request) {
     const searchKeyword = body.keyword || primaryCategory;
     const address = profileData?.address || "";
 
-    // Geocode address to get center lat/lng
-    let centerLat = 0;
-    let centerLng = 0;
-
-    if (address) {
-      const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-      const geoRes = await fetch(geoUrl);
-      const geoData = await geoRes.json();
-      if (geoData.results?.length > 0) {
-        centerLat = geoData.results[0].geometry.location.lat;
-        centerLng = geoData.results[0].geometry.location.lng;
-      }
+    // Geocode address to get center lat/lng using unified extractNeighborhood
+    const extracted = await extractNeighborhood(address, apiKey);
+    if (!extracted) {
+      return NextResponse.json({ error: "Could not determine clinic neighborhood. Please ensure your GBP profile has a valid address." }, { status: 400 });
     }
 
-    if (!centerLat || !centerLng) {
-      return NextResponse.json({ error: "Could not determine clinic location. Please ensure your GBP profile has a valid address." }, { status: 400 });
-    }
+    const { neighborhood, searchPhrase, lat: centerLat, lng: centerLng } = extracted;
 
-    // Build 5x5 grid
-    const half = Math.floor(GRID_SIZE / 2);
-    const gridPoints: any[] = [];
+    // Run unified 25-point GeoGrid
+    const gridData = await unifiedGeoGrid(
+      searchKeyword,
+      searchPhrase,
+      centerLat,
+      centerLng,
+      businessName,
+      apiKey,
+      GRID_SIZE,
+      SPACING_METERS
+    );
 
-    for (let row = 0; row < GRID_SIZE; row++) {
-      for (let col = 0; col < GRID_SIZE; col++) {
-        const dNorth = (half - row) * SPACING_METERS;
-        const dEast = (col - half) * SPACING_METERS;
-        const { lat, lng } = offsetCoord(centerLat, centerLng, dNorth, dEast);
-        gridPoints.push({ row, col, lat, lng });
-      }
-    }
-
-    // Fetch ranks concurrently in batches of 5
-    const batchSize = 5;
-    const results: any[] = [];
-
-    for (let i = 0; i < gridPoints.length; i += batchSize) {
-      const batch = gridPoints.slice(i, i + batchSize);
-      const batchResults = await Promise.all(
-        batch.map(async (point) => {
-          const rank = await getRankAtPoint(point.lat, point.lng, businessName, searchKeyword, apiKey);
-          return { ...point, rank, found: rank > 0 };
-        })
-      );
-      results.push(...batchResults);
-      // Small delay between batches to respect rate limits
-      if (i + batchSize < gridPoints.length) {
-        await new Promise((r) => setTimeout(r, 300));
-      }
-    }
+    const compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
 
     // Save to DB
     await prisma.searchGridSnapshot.create({
@@ -208,13 +140,15 @@ export async function POST(request: Request) {
         spacingMeters: SPACING_METERS,
         businessName,
         keyword: searchKeyword,
-        json: results,
+        json: gridData.ranks, // Array of { lat, lng, row, col, rank, found }
       },
     });
 
     return NextResponse.json({
       data: {
-        grid: results,
+        grid: gridData.ranks,
+        compositeData,
+        searchContext: searchPhrase,
         gridSize: GRID_SIZE,
         centerLat,
         centerLng,

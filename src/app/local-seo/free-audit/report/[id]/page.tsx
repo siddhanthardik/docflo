@@ -231,36 +231,38 @@ function SearchGridVisualization({
   city, 
   businessName = "Your Clinic", 
   mapRank = 5, 
-  reviewsCount = 45 
+  reviewsCount = 45,
+  gridData = null,
+  searchContext = ""
 }: { 
   specialty: string; 
   city: string; 
   businessName?: string; 
   mapRank?: number; 
   reviewsCount?: number; 
+  gridData?: { rank: number; row: number; col: number }[] | null;
+  searchContext?: string;
 }) {
   const gridRanks = useMemo(() => {
-    let seed = 0;
-    const str = businessName + (specialty || "");
-    for (let i = 0; i < str.length; i++) {
-      seed = (seed << 5) - seed + str.charCodeAt(i);
-      seed |= 0;
+    // If we have real backend grid data, map it directly
+    if (gridData && gridData.length > 0) {
+      return gridData.map(node => {
+        const rank = node.rank;
+        const status: "good" | "avg" | "poor" = rank <= 5 ? "good" : rank <= 20 ? "avg" : "poor";
+        return { rank, status, row: node.row, col: node.col };
+      }).sort((a, b) => {
+        // Sort by row then col so it lays out in a 5x5 grid
+        if (a.row !== b.row) return a.row - b.row;
+        return a.col - b.col;
+      });
     }
 
-    const centerR = 1;
-    const centerC = 1;
-    const baseRank = Math.max(1, Math.min(mapRank, 15));
+    // Fallback if no grid data available (should not happen with new logic, but safe to keep as simple fallback)
     const nodes: { rank: number; status: "good" | "avg" | "poor" }[] = [];
-
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 5; c++) {
-        const dist = Math.sqrt(Math.pow(r - centerR, 2) + Math.pow(c - centerC, 2));
-        const noise = (Math.abs(Math.sin(seed + r * 5 + c * 3)) * 2.2);
-        
-        let rank = Math.round(baseRank + dist * (reviewsCount > 100 ? 3.0 : 4.8) + noise);
-        if (r === centerR && c === centerC) rank = baseRank;
-        
-        rank = Math.max(1, rank);
+        let rank = r === 2 && c === 2 ? mapRank : mapRank + Math.floor(Math.random() * 5);
+        if (rank > 21) rank = 21;
         const status: "good" | "avg" | "poor" = rank <= 5 ? "good" : rank <= 20 ? "avg" : "poor";
         nodes.push({ rank, status });
       }
@@ -285,7 +287,7 @@ function SearchGridVisualization({
             <h2 className="text-lg font-semibold text-slate-800">Google Maps Local Pack Visibility Grid</h2>
           </div>
           <p className="text-sm text-slate-500 font-normal">
-            Local 5×5 map search radius for <span className="font-semibold text-slate-800">"{searchKeyword}"</span> in {city || "your area"}
+            Local 5×5 map search radius around <span className="font-semibold text-slate-800">"{searchKeyword}"</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
@@ -586,8 +588,10 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               specialty={specialty} 
               city={city} 
               businessName={businessName} 
-              mapRank={userRankNum} 
+              mapRank={compIntel?.compositeData?.compositeRank || userRankNum} 
               reviewsCount={Number(reviewsCount) || 0} 
+              gridData={compIntel?.gridData}
+              searchContext={compIntel?.searchContext || city}
             />
 
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}

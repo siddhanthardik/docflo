@@ -4,7 +4,7 @@ import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleNormalizer } from "@/services/normalization/GoogleNormalizer";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { searchCompetitorsWithRank, buildLocalSearchQuery } from "@/lib/audit/google-places";
+import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood } from "@/lib/audit/google-places";
 
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
@@ -153,21 +153,25 @@ export async function GET(request: Request) {
     const localQuery = buildLocalSearchQuery(primaryCategory, fullAddress);
     console.log(`[Competitors] Search query: "${localQuery}"`);
 
+    const extracted = await extractNeighborhood(fullAddress, apiKey);
+    let searchLat = lat;
+    let searchLng = lng;
+    let locationContext = undefined;
+
+    if (extracted) {
+      searchLat = extracted.lat;
+      searchLng = extracted.lng;
+      locationContext = extracted.searchPhrase;
+      console.log(`[Competitors] Using neighborhood centroid for search: ${searchLat}, ${searchLng}`);
+    }
+
     // ── Live Google Places API call ───────────────────────────────────────────
     const searchRes = await searchCompetitorsWithRank(
       primaryCategory,
       account.locationId || "",
       bName,
-      { lat, lng },
-      // Extract neighborhood+city for the locationContext param
-      (() => {
-        const parts = fullAddress.split(",").map((p: string) => p.trim()).filter(Boolean)
-          .filter((p: string) => !/^india$/i.test(p))
-          .filter((p: string) => !/\d{5,}/.test(p));
-        if (parts.length >= 3) return `${parts[parts.length - 3]}, ${parts[parts.length - 2]}`;
-        if (parts.length >= 2) return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
-        return undefined;
-      })()
+      { lat: searchLat, lng: searchLng },
+      locationContext
     );
 
     const userRating = Number(insights.rating) || 4.9;

@@ -311,7 +311,7 @@ export function CompetitorInsights() {
           <p>Google&apos;s local search order is based on <strong>3 factors</strong>: <strong>Proximity</strong> (distance from search location), <strong>Relevance</strong> (category &amp; keyword match), and <strong>Prominence</strong> (reviews, profile completeness). A clinic 300m away with 42 reviews can rank above a clinic 1.2km away with 784 reviews — <em>because proximity is Google&apos;s strongest local signal</em>. This list shows the real order from Google&apos;s Places API for your area.</p>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-400">Results within 5km · Ordered by Google Search position · Distances from your clinic</p>
+          <p className="text-xs text-gray-400">Results within 5km · Ordered by Google Search position · Distances from neighborhood center</p>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -325,7 +325,7 @@ export function CompetitorInsights() {
 
       {/* Table header */}
       <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-        <div>Business · Distance from your clinic</div>
+        <div>Business · Distance from neighborhood center</div>
         <div className="text-center w-16">Rating</div>
         <div className="text-center w-16">Reviews</div>
         <div className="text-center w-16" title="Real position in Google Search for your specialty near your location">Google Position ↑</div>

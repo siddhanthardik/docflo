@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { fetchPlaceDetails, searchCompetitorsWithRank, buildLocalSearchQuery } from "@/lib/audit/google-places";
+import { fetchPlaceDetails, searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood, unifiedGeoGrid, calculateCompositeRank } from "@/lib/audit/google-places";
 
 export async function POST(req: Request) {
   try {
@@ -102,24 +102,49 @@ async function processAuditAsync(auditId: string, data: any) {
     const localSearchQuery = buildLocalSearchQuery(specialtyLabel, locationStr);
     console.log(`[Audit] Competitor search: "${localSearchQuery}" (from address: "${locationStr}")`);
 
-    // Extract neighborhood context for locationContext param
-    const addressParts2 = locationStr.split(",").map((p: string) => p.trim()).filter(Boolean)
-      .filter((p: string) => !/^india$/i.test(p))
-      .filter((p: string) => !/\d{5,}/.test(p));
-    const locationContext = addressParts2.length >= 3
-      ? `${addressParts2[addressParts2.length - 3]}, ${addressParts2[addressParts2.length - 2]}`
-      : addressParts2.length >= 2
-      ? `${addressParts2[addressParts2.length - 2]}, ${addressParts2[addressParts2.length - 1]}`
-      : undefined;
-
+    // Extract neighborhood context for locationContext param and GeoGrid
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY || "";
+    let gridData = null;
+    let compositeData = null;
     const targetLocation = placeData?.lat && placeData?.lng ? { lat: placeData.lat, lng: placeData.lng } : undefined;
+    let centroidLoc = targetLocation;
+    let locationContext = undefined;
+
+    const extracted = await extractNeighborhood(locationStr, apiKey);
+    if (extracted) {
+      locationContext = extracted.searchPhrase;
+      centroidLoc = { lat: extracted.lat, lng: extracted.lng };
+      
+      // Run unified 25-point GeoGrid
+      console.log(`[Audit] Running 25-point GeoGrid around ${locationContext}`);
+      gridData = await unifiedGeoGrid(
+        specialtyLabel,
+        locationContext,
+        extracted.lat,
+        extracted.lng,
+        actualName,
+        apiKey
+      );
+      compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
+    }
+
     const { competitors: competitorsData, userRank } = await searchCompetitorsWithRank(
       specialtyLabel,
       data.placeId || "",
       actualName,
-      targetLocation,
+      centroidLoc,
       locationContext
     );
+
+    // If no grid could be generated (no neighborhood), use userRank as fallback
+    if (!compositeData) {
+      compositeData = {
+        compositeRank: userRank,
+        confidence: "low",
+        avgGridRank: userRank,
+        stdDev: 0
+      };
+    }
 
     await prisma.auditRequest.update({ where: { id: auditId }, data: { progress: 85 } });
     
@@ -250,8 +275,11 @@ async function processAuditAsync(auditId: string, data: any) {
           ]
         },
 
-        // 4. Competitor Intelligence
+        // 4. Competitor Intelligence (includes GeoGrid)
         competitorIntelligence: {
+          gridData: gridData ? gridData.ranks : null,
+          compositeData,
+          searchContext: locationContext || cityStr,
           competitors: [
             ...competitorsData.map((c, i) => ({
               name: c.name,

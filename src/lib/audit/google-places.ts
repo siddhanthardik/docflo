@@ -476,3 +476,165 @@ export async function searchCompetitorsWithRank(
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 }
+
+// ── Unified GeoGrid Logic ──
+
+export async function extractNeighborhood(address: string, apiKey: string): Promise<{ neighborhood: string; city: string; searchPhrase: string; lat: number; lng: number } | null> {
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !/^india$/i.test(p))
+    .filter((p) => !/\d{5,}/.test(p));
+
+  let neighborhood = "";
+  let city = "";
+  let searchPhrase = "";
+
+  if (parts.length >= 3) {
+    neighborhood = parts[parts.length - 3];
+    city = parts[parts.length - 2];
+    searchPhrase = `${neighborhood}, ${city}`;
+  } else if (parts.length === 2) {
+    neighborhood = parts[0];
+    city = parts[1];
+    searchPhrase = `${neighborhood}, ${city}`;
+  } else if (parts.length === 1) {
+    neighborhood = parts[0];
+    city = parts[0];
+    searchPhrase = neighborhood;
+  } else {
+    return null; // Cannot extract neighborhood
+  }
+
+  // Geocode the extracted neighborhood string to find its centroid
+  const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchPhrase)}&key=${apiKey}`;
+  try {
+    const res = await fetch(geoUrl);
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      const loc = data.results[0].geometry.location;
+      return {
+        neighborhood,
+        city,
+        searchPhrase,
+        lat: loc.lat,
+        lng: loc.lng,
+      };
+    }
+  } catch (err) {
+    console.error("[Geocode] Error extracting neighborhood:", err);
+  }
+  return null;
+}
+
+export function offsetCoord(lat: number, lng: number, dNorth: number, dEast: number) {
+  const R = 6378137; // Earth radius in meters
+  const dLat = dNorth / R;
+  const dLng = dEast / (R * Math.cos((Math.PI * lat) / 180));
+  return {
+    lat: lat + (dLat * 180) / Math.PI,
+    lng: lng + (dLng * 180) / Math.PI,
+  };
+}
+
+export async function unifiedGeoGrid(
+  specialtyLabel: string,
+  searchPhraseContext: string,
+  centerLat: number,
+  centerLng: number,
+  businessName: string,
+  apiKey: string,
+  gridSize = 5,
+  spacingMeters = 500
+): Promise<{ ranks: {lat: number, lng: number, row: number, col: number, rank: number, found: boolean}[], centroidRank: number, organicRank: number }> {
+  
+  // 1. Generate 5x5 grid points
+  const half = Math.floor(gridSize / 2);
+  const gridPoints: any[] = [];
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
+      const dNorth = (half - row) * spacingMeters;
+      const dEast = (col - half) * spacingMeters;
+      const { lat, lng } = offsetCoord(centerLat, centerLng, dNorth, dEast);
+      gridPoints.push({ row, col, lat, lng });
+    }
+  }
+
+  // Function to search from a specific point
+  const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
+    // We use Text Search because it's what patients use. E.g. "Pediatrician in Safdarjung Enclave, New Delhi"
+    const textQuery = encodeURIComponent(`${specialtyLabel} in ${searchPhraseContext}`);
+    
+    // Fallback: Classic Text Search (which allows location/radius)
+    const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+    url.searchParams.set("query", `${specialtyLabel} in ${searchPhraseContext}`);
+    if (useLocationBias) {
+      url.searchParams.set("location", `${lat},${lng}`);
+      url.searchParams.set("radius", "5000"); // 5km to ensure we get results
+    }
+    url.searchParams.set("key", apiKey);
+
+    try {
+      const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+      if (!res.ok) return 21;
+      const data = await res.json();
+      if (data.status !== "OK" || !data.results) return 21;
+
+      const cleanTargetName = businessName.toLowerCase().replace(/[^a-z0-9\s]/g, "");
+      
+      const idx = data.results.findIndex((r: any) => {
+        const rName = (r.name || "").toLowerCase().replace(/[^a-z0-9\s]/g, "");
+        return rName.includes(cleanTargetName.split(" ").slice(0, 3).join(" ")) ||
+               cleanTargetName.includes(rName.split(" ").slice(0, 2).join(" "));
+      });
+
+      return idx >= 0 ? idx + 1 : 21; // 21 means not found in top 20
+    } catch {
+      return 21;
+    }
+  };
+
+  // 2. Fetch ranks for 25 points concurrently in batches
+  const batchSize = 5;
+  const ranks: any[] = [];
+  for (let i = 0; i < gridPoints.length; i += batchSize) {
+    const batch = gridPoints.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (point) => {
+        const rank = await searchFromPoint(point.lat, point.lng, true);
+        return { ...point, rank, found: rank <= 20 };
+      })
+    );
+    ranks.push(...batchResults);
+    if (i + batchSize < gridPoints.length) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  // 3. Get organic rank (no location bias)
+  const organicRank = await searchFromPoint(centerLat, centerLng, false);
+  
+  // 4. Centroid rank is the center of the grid
+  const centroidRank = ranks.find(r => r.row === half && r.col === half)?.rank || 21;
+
+  return { ranks, centroidRank, organicRank };
+}
+
+export function calculateCompositeRank(gridRanks: {rank: number}[], centroidRank: number, organicRank: number) {
+  const avgGridRank = gridRanks.reduce((sum, r) => sum + r.rank, 0) / gridRanks.length;
+  const compositeRank = Math.round(0.45 * avgGridRank + 0.35 * centroidRank + 0.20 * organicRank);
+  
+  // Calculate variance (std dev)
+  const allRanks = [...gridRanks.map(r => r.rank), centroidRank, organicRank];
+  const mean = allRanks.reduce((sum, r) => sum + r, 0) / allRanks.length;
+  const variance = allRanks.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / allRanks.length;
+  const stdDev = Math.sqrt(variance);
+
+  let confidence: "high" | "medium" | "low" = "low";
+  if (stdDev < 2) confidence = "high";
+  else if (stdDev < 5) confidence = "medium";
+
+  return { compositeRank, confidence, avgGridRank, stdDev };
+}
+
