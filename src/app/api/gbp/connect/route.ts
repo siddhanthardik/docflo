@@ -51,7 +51,7 @@ export async function GET(req: Request) {
     googleAuthUrl.searchParams.set("include_granted_scopes", "true");
     googleAuthUrl.searchParams.set("state", state);
 
-    const response = NextResponse.redirect(googleAuthUrl.toString());
+    const response = NextResponse.json({ url: googleAuthUrl.toString() });
     response.cookies.set(GBP_OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
       sameSite: "lax",
