@@ -303,9 +303,19 @@ export async function searchCompetitorsWithRank(
       const userRank = finalUserRank;
 
       const competitors: CompetitorData[] = [];
-      for (const p of rawPlaces) {
-        if (targetPlaceId && p.id === targetPlaceId) continue;
-        if (targetName && p.displayName?.text?.toLowerCase().trim() === targetName.toLowerCase().trim()) continue;
+        // Strict Specialty Validation Guard
+        const pLabel = p.primaryTypeDisplayName?.text || p.primaryTypeDisplayName || "";
+        const pType = p.primaryType || "";
+        const pName = p.displayName?.text || "";
+
+        if (/pediatr|paediatr|child/i.test(query)) {
+          const isPed = /pediatr|paediatr|child|baby|bal/i.test(pType) || /pediatr|paediatr|child|baby|bal/i.test(pLabel) || /pediatr|paediatr|child|baby|bal/i.test(pName);
+          const isNonPed = /physician|surgeon|dermatolog|orthopaed|dental|dentist/i.test(pName) || /physician|surgeon|dermatolog|orthopaed|dental/i.test(pLabel);
+          if (isNonPed && !isPed) {
+            console.log(`[Competitor Search Filter] Filtered out non-pediatrician: "${pName}" (${pLabel}) for target query "${query}"`);
+            continue;
+          }
+        }
 
         let distanceKm: number | undefined;
         if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
