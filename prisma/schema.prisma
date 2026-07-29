@@ -47,10 +47,6 @@ model Doctor {
   razorpaySubscriptionId String?
   packageId              String?
   package                Package?                @relation(fields: [packageId], references: [id])
-  gcalAccessToken        String?
-  gcalRefreshToken       String?
-  gcalCalendarId         String?                 @default("primary")
-  gcalConnectedAt        DateTime?
   salesRepId             String? // ID of the SALES or AFFILIATE user who onboarded this customer
   salesRep               PlatformUser?           @relation(fields: [salesRepId], references: [id])
   appointments           Appointment[]

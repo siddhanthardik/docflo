@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
-import { syncAppointmentToGCal } from "@/lib/gcal";
 
 // ---------- Helper functions ----------
 
@@ -291,11 +290,6 @@ export async function POST(req: Request) {
         },
       },
     });
-
-    // --- Google Calendar Real-Time Sync ---
-    syncAppointmentToGCal(appointment.id).catch((err) =>
-      console.error("Failed to sync appointment to GCal:", err)
-    );
 
     // --- WhatsApp Notification Logic ---
     try {

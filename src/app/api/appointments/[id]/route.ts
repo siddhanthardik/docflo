@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData, isDoctor } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
-import { syncAppointmentToGCal, deleteGCalAppointmentEvent } from "@/lib/gcal";
 
 // Helper to check if a date is in the past (using clinic timezone)
 function isPast(date: Date, timezone: string): boolean {
@@ -216,11 +215,6 @@ export async function PUT(
       console.error("Failed to send WhatsApp notification for update:", waError);
     }
 
-    // Sync with Google Calendar on update
-    syncAppointmentToGCal(updated.id).catch((err) =>
-      console.error("Failed to sync updated appointment to GCal:", err)
-    );
-
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error("Error updating appointment:", error);
@@ -242,11 +236,6 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
     }
-
-    // Delete Google Calendar Event
-    await deleteGCalAppointmentEvent(id).catch((err) =>
-      console.error("Failed to delete GCal event:", err)
-    );
 
     await prisma.appointment.delete({ where: { id } });
     return NextResponse.json({ message: "Appointment deleted" });
