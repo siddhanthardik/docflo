@@ -69,8 +69,7 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 0; }
         .container { max-width: 580px; margin: 40px auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .header { background: #0066FF; padding: 32px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .header { padding: 40px 32px 24px; text-align: center; border-bottom: 1px solid #f1f5f9; }
         .content { padding: 32px; }
         .content p { font-size: 15px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
         .btn-container { text-align: center; margin: 32px 0; }
@@ -82,8 +81,7 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
     <body>
       <div class="container">
         <div class="header">
-          <img src="${baseUrl}/icon-192.png" alt="Gyrex Logo" width="56" height="56" style="display: block; margin: 0 auto 16px auto; border-radius: 14px;" />
-          <h1>Gyrex</h1>
+          <img src="${baseUrl}/logo.svg" alt="Gyrex Logo" height="36" style="display: block; margin: 0 auto; height: 36px; width: auto;" />
         </div>
         <div class="content">
           <p>Hello <strong>${firstName}</strong>,</p>
