@@ -7,8 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Fallback Model Cascade: Ensures 100% uptime even if a specific model tier experiences high demand (503)
 const CANDIDATE_MODELS = [
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b"
+  "gemini-3.5-flash"
 ];
 
 async function generateWithFallback(prompt: string): Promise<string> {
