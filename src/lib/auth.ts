@@ -140,7 +140,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: platformUser.name, 
                 role: platformUser.role,
                 createdAt: platformUser.createdAt,
-                emailVerified: null,
+                emailVerified: (platformUser as any).emailVerified || null,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -158,6 +158,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: true,
             role: true,
             createdAt: true,
+            emailVerified: true,
           },
         });
 
@@ -176,7 +177,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: doctor.name, 
                 role: doctor.role,
                 createdAt: doctor.createdAt,
-                emailVerified: null,
+                emailVerified: doctor.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -195,6 +196,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             doctorId: true,
             createdAt: true,
+            emailVerified: true,
           },
         });
 
@@ -214,7 +216,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: staff.role, 
                 doctorId: staff.doctorId,
                 createdAt: staff.createdAt,
-                emailVerified: null,
+                emailVerified: staff.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
               };
             }
@@ -229,7 +231,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === "update" && session?.emailVerified) {
+        token.emailVerified = session.emailVerified;
+      }
       if (user) {
         token.role = user.role;
         token.doctorId = user.doctorId;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
@@ -11,6 +12,7 @@ function VerifyEmailContent() {
   const router = useRouter();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
+  const { update } = useSession();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -33,6 +35,7 @@ function VerifyEmailContent() {
         const data = await res.json();
         if (res.ok) {
           setStatus("success");
+          await update({ emailVerified: new Date().toISOString() });
           setTimeout(() => {
             router.push("/dashboard");
           }, 3000);
@@ -116,12 +119,14 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-      </div>
-    }>
-      <VerifyEmailContent />
-    </Suspense>
+    <SessionProvider>
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        </div>
+      }>
+        <VerifyEmailContent />
+      </Suspense>
+    </SessionProvider>
   );
 }
