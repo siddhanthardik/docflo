@@ -122,6 +122,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             isActive: true,
             createdAt: true,
+            emailVerified: true,
           },
         });
 
