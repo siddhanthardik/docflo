@@ -82,6 +82,7 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
     <body>
       <div class="container">
         <div class="header">
+          <img src="${baseUrl}/icon-192.png" alt="Gyrex Logo" width="56" height="56" style="display: block; margin: 0 auto 16px auto; border-radius: 14px;" />
           <h1>Gyrex</h1>
         </div>
         <div class="content">
