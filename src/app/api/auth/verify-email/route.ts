@@ -27,11 +27,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update Doctor record to mark emailVerified
-    await prisma.doctor.updateMany({
-      where: { email },
-      data: { emailVerified: new Date() },
-    });
+    const now = new Date();
+    await Promise.all([
+      prisma.doctor.updateMany({ where: { email }, data: { emailVerified: now } }),
+      prisma.staffMember.updateMany({ where: { email }, data: { emailVerified: now } }),
+      prisma.platformUser.updateMany({ where: { email }, data: { emailVerified: now } })
+    ]);
 
     // Delete used verification token
     await prisma.emailVerificationToken.delete({

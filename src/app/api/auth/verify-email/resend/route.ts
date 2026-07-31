@@ -15,13 +15,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if doctor exists
-    const doctor = await prisma.doctor.findUnique({
-      where: { email },
-      select: { name: true, emailVerified: true },
-    });
+    // Check all user types for verification status
+    let user = await prisma.doctor.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+    if (!user) {
+      user = await prisma.staffMember.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+    }
+    if (!user) {
+      user = await prisma.platformUser.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+    }
 
-    if (doctor?.emailVerified) {
+    if (user?.emailVerified) {
       return NextResponse.json(
         { message: "Your email address is already verified." },
         { status: 200 }
@@ -54,7 +57,7 @@ export async function POST(req: Request) {
     });
 
     // Send email using Resend Service
-    await sendVerificationEmail(email, rawToken, doctor?.name);
+    await sendVerificationEmail(email, rawToken, user?.name);
 
     return NextResponse.json(
       { message: "Verification email sent successfully." },
