@@ -57,7 +57,7 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
   const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
-  const recipientName = name ? name : "Doctor";
+  const firstName = name ? name.trim().split(" ")[0] : "Doctor";
 
   const html = `
     <!DOCTYPE html>
@@ -86,7 +86,7 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
           <h1>Gyrex</h1>
         </div>
         <div class="content">
-          <p>Hello <strong>${recipientName}</strong>,</p>
+          <p>Hello <strong>${firstName}</strong>,</p>
           <p>Thank you for signing up for Gyrex! Please confirm your email address to activate your clinic account and verify your identity.</p>
           
           <div class="btn-container">
