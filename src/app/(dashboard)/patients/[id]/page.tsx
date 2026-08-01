@@ -235,12 +235,20 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 Edit
               </button>
               <button
+                onClick={() => handleSendReviewRequest(false, "SURVEY")}
+                disabled={sendingReview}
+                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50"
+              >
+                <Star className="h-4 w-4" />
+                {sendingReview && pendingType === "SURVEY" ? "Sending..." : "Send Survey"}
+              </button>
+              <button
                 onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
                 disabled={sendingReview}
                 className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending Link..." : "Send Google Review"}
+                {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending..." : "Send Google Review"}
               </button>
               <button
                 onClick={handleToggleBlock}
@@ -297,12 +305,20 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                   {/* Mobile Action Buttons */}
                   <div className="mt-6 flex md:hidden items-center gap-2 w-full">
                     <button
-                      onClick={() => handleSendReviewRequest(false)}
+                      onClick={() => handleSendReviewRequest(false, "SURVEY")}
+                      disabled={sendingReview}
+                      className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-indigo-600 bg-white px-4 py-3 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+                    >
+                      <Star className="h-4 w-4" />
+                      {sendingReview && pendingType === "SURVEY" ? "Sending..." : "Send Survey"}
+                    </button>
+                    <button
+                      onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
                       disabled={sendingReview}
                       className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
                       <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                      {sendingReview ? "Sending..." : "Send Review Survey"}
+                      {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending..." : "Google Review"}
                     </button>
                     <button
                       onClick={() => setIsEditModalOpen(true)}
