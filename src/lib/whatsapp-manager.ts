@@ -555,7 +555,8 @@ class WhatsAppManager {
                        // Notify patient via WhatsApp
                        if (apt.patient?.phone) {
                          const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                         const msg = `⚠️ *Appointment Update*\n\nHi ${apt.patient.firstName}, unfortunately your appointment on ${apt.date.toDateString()} has been cancelled by the clinic. Please reply here if you would like to book a new slot.`;
+                         const docName = doctorInfo?.name || "the doctor";
+                         const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because Dr. ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
                          await sock.sendMessage(patientJid, { text: msg });
                          console.log(`[WhatsAppManager] Sent cancellation to ${patientJid}`);
                        }
@@ -614,6 +615,60 @@ class WhatsAppManager {
                     }
                   } catch (e) {
                     console.error("[WhatsAppManager] Reschedule Error:", e);
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                  }
+                }
+
+                // 3. Intercept Patient Messaging Tag
+                const messagePatientRegex = /\[MESSAGE_PATIENT:\s*([^,]+),\s*([^\]]+)\]/i;
+                const msgMatch = aiReply.match(messagePatientRegex);
+                
+                if (msgMatch && isStaff) {
+                  const [fullTag, targetPhone, msgContent] = msgMatch;
+                  try {
+                    const cleanPhone = targetPhone.replace(/\D/g, '');
+                    const patientJid = `${cleanPhone}@s.whatsapp.net`;
+                    
+                    // Send message via Baileys
+                    await sock.sendMessage(patientJid, { text: msgContent.trim() });
+                    console.log(`[WhatsAppManager] AI relayed message to patient ${patientJid}`);
+                    
+                    // Create conversation/message records so AI remembers context
+                    let patientConvo = await prisma.conversation.findUnique({
+                      where: { doctorId_patientPhone: { doctorId, patientPhone: cleanPhone } }
+                    });
+                    
+                    if (!patientConvo) {
+                      const patientRecord = await prisma.patient.findFirst({ where: { phone: cleanPhone, doctorId } });
+                      patientConvo = await prisma.conversation.create({
+                        data: {
+                          doctorId,
+                          patientPhone: cleanPhone,
+                          patientName: patientRecord ? `${patientRecord.firstName} ${patientRecord.lastName}` : "Patient",
+                          patientId: patientRecord ? patientRecord.id : null,
+                          status: "OPEN"
+                        }
+                      });
+                    }
+                    
+                    await prisma.chatMessage.create({
+                      data: {
+                        conversationId: patientConvo.id,
+                        direction: "OUTGOING",
+                        messageType: "text",
+                        content: msgContent.trim(),
+                        senderName: "Clinic"
+                      }
+                    });
+                    
+                    await prisma.conversation.update({
+                      where: { id: patientConvo.id },
+                      data: { lastMessageAt: new Date() }
+                    });
+
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                  } catch (e) {
+                    console.error("[WhatsAppManager] Message Relay Error:", e);
                     finalAiReply = finalAiReply.replace(fullTag, "").trim();
                   }
                 }

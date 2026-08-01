@@ -223,7 +223,8 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         const timeStr = new Date(apt.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         const dateStr = new Date(apt.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         const patientName = apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : "Unknown Patient";
-        return `- [ID: ${apt.id}] ${dateStr} at ${timeStr} | ${patientName} | Status: ${apt.status}`;
+        const patientPhone = apt.patient?.phone || "N/A";
+        return `- [ID: ${apt.id}] ${dateStr} at ${timeStr} | ${patientName} (Phone: ${patientPhone}) | Status: ${apt.status}`;
       });
 
       const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -249,7 +250,8 @@ INSTRUCTIONS:
 3. **Be Helpful & Natural**: Do not sound robotic or blunt. Say things like "Right away, Doctor" or "Here is your schedule for tomorrow."
 4. **CANCELLATIONS**: If the doctor asks you to cancel a specific appointment, politely confirm the cancellation in your text and you MUST append this exact technical tag at the very end of your message: \`[CANCEL_APPOINTMENT: ID]\` where ID is the exact ID of the appointment.
 5. **RESCHEDULING**: If the doctor asks you to reschedule a specific appointment to a new date/session, you MUST append this exact technical tag at the very end of your message: \`[RESCHEDULE_APPOINTMENT: ID, YYYY-MM-DD, Session]\` where Session is "Morning" or "Evening".
-6. Only use the cancellation/reschedule tags when explicitly instructed to by the doctor in the current message.
+6. **MESSAGING PATIENTS**: If the doctor asks you to relay a message to a patient, ask them a question, or see if they can reschedule (e.g. "Ask Samriddhi if she can come on Friday"), you MUST append this exact technical tag at the very end of your message: \`[MESSAGE_PATIENT: Phone_Number, Your_Message_Text]\`. Use the patient's Phone number from the schedule above. Write the message professionally as the clinic receptionist acting on behalf of the doctor.
+7. Only use the technical tags when explicitly needed based on the doctor's instructions.
       `;
 
       const prompt = `
