@@ -490,13 +490,13 @@ class WhatsAppManager {
 
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const tomorrowEnd = new Date(today);
-                tomorrowEnd.setDate(tomorrowEnd.getDate() + 2);
+                const weekEnd = new Date(today);
+                weekEnd.setDate(weekEnd.getDate() + 7);
                 
                 const appointments = await prisma.appointment.findMany({
                   where: {
                     doctorId,
-                    date: { gte: today, lt: tomorrowEnd },
+                    date: { gte: today, lt: weekEnd },
                     status: { not: "CANCELLED" }
                   },
                   include: { patient: true, practitioner: true },
