@@ -201,6 +201,68 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
   }
 
   /**
+   * 1.5. WHATSAPP INTERNAL STAFF ASSISTANT
+   * Personal AI Assistant for the Clinic Doctor & Staff
+   */
+  static async runStaffAssistantAgent(
+    doctorId: string,
+    incomingMessage: string,
+    conversationHistory: string[],
+    appointments: any[],
+    doctorProfile?: { doctorName?: string }
+  ) {
+    try {
+      const doctorName = doctorProfile?.doctorName || "Doctor";
+      
+      // Format the schedule context for the AI
+      const scheduleLines = appointments.map(apt => {
+        const timeStr = new Date(apt.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(apt.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const patientName = apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : "Unknown Patient";
+        return `- [ID: ${apt.id}] ${dateStr} at ${timeStr} | ${patientName} | Status: ${apt.status}`;
+      });
+
+      const scheduleContext = scheduleLines.length > 0 
+        ? scheduleLines.join("\n") 
+        : "There are no appointments scheduled for today or tomorrow.";
+
+      const systemPrompt = `
+You are the Internal Personal Assistant for ${doctorName} and their clinic staff.
+You are communicating directly with the Doctor/Staff on WhatsApp. Your tone should be highly efficient, polite, and executive. Do not act like a patient receptionist.
+
+Here is the clinic schedule for Today and Tomorrow:
+<SCHEDULE>
+${scheduleContext}
+</SCHEDULE>
+
+INSTRUCTIONS:
+1. Answer the doctor's questions about the schedule accurately based ONLY on the provided <SCHEDULE>.
+2. Keep your answers brief and directly to the point.
+3. **CANCELLATIONS**: If the doctor asks you to cancel a specific appointment, you MUST append this exact technical tag at the very end of your message: \`[CANCEL_APPOINTMENT: ID]\` where ID is the exact ID of the appointment.
+4. **RESCHEDULING**: If the doctor asks you to reschedule a specific appointment to a new date/session, append this exact technical tag: \`[RESCHEDULE_APPOINTMENT: ID, YYYY-MM-DD, Session]\` where Session is "Morning" or "Evening".
+5. Only use the cancellation/reschedule tags when explicitly instructed to by the doctor in the current message.
+      `;
+
+      const prompt = `
+System Instructions:
+${systemPrompt}
+
+Conversation History:
+${conversationHistory.join("\n")}
+
+Staff's New Message: "${incomingMessage}"
+
+Write your direct, crisp WhatsApp reply to the staff member:
+      `;
+
+      const aiReply = await generateWithFallback(prompt);
+      return aiReply.trim();
+    } catch (error: any) {
+      console.error("Error in Staff Assistant Agent:", error?.message || error);
+      return "I'm sorry Doctor, I am currently experiencing a technical issue and cannot access the schedule right now. Please check the dashboard directly.";
+    }
+  }
+  /**
    * 2. REVIEW MANAGER AGENT
    */
   static async runReviewAgent(reviewText: string, rating: number, config: any) {

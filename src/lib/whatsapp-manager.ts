@@ -235,32 +235,58 @@ class WhatsAppManager {
 
           // --- Process the incoming message via AI Agents ---
           try {
-            // Find patient
-            let patient = await prisma.patient.findFirst({
-              where: { phone: patientPhone, doctorId },
+            // 1. Fetch Doctor and Practitioners to detect Staff
+            const doctorInfo = await prisma.doctor.findUnique({
+              where: { id: doctorId },
+              select: { 
+                enableAIAutoResponder: true,
+                phone: true,
+                name: true,
+                clinicName: true,
+                specialty: true
+              }
             });
 
-            // If no patient exists, auto-create as a Patient
-            if (!patient) {
-              patient = await prisma.patient.create({
-                data: {
-                  doctorId,
-                  firstName: "Patient",
-                  lastName: `+${patientPhone}`,
-                  phone: patientPhone,
-                  patientType: "ACTIVE",
-                  tags: ["WhatsApp"]
-                }
+            const practitioners = await prisma.practitioner.findMany({
+              where: { doctorId, isActive: true },
+              select: { phone: true, name: true, isOwner: true }
+            });
+
+            const staffPhones = [doctorInfo?.phone, ...practitioners.map(p => p.phone)]
+              .filter(Boolean)
+              .map(p => this.normalizePhone(p as string));
+              
+            const isStaff = staffPhones.includes(patientPhone);
+
+            let patient = null;
+            if (!isStaff) {
+              // Find patient
+              patient = await prisma.patient.findFirst({
+                where: { phone: patientPhone, doctorId },
               });
-              console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}`);
+
+              // If no patient exists, auto-create as a Patient
+              if (!patient) {
+                patient = await prisma.patient.create({
+                  data: {
+                    doctorId,
+                    firstName: "Patient",
+                    lastName: `+${patientPhone}`,
+                    phone: patientPhone,
+                    patientType: "ACTIVE",
+                    tags: ["WhatsApp"]
+                  }
+                });
+                console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}`);
+              }
+
+              if (patient.isBlocked) {
+                console.log(`[WhatsAppManager] Ignored message from BLOCKED patient ${patientPhone}`);
+                continue; // Skip processing
+              }
             }
 
-            if (patient.isBlocked) {
-              console.log(`[WhatsAppManager] Ignored message from BLOCKED patient ${patientPhone}`);
-              continue; // Skip processing
-            }
-
-            const patientName = `${patient.firstName} ${patient.lastName}`;
+            const patientName = isStaff ? "Clinic Staff/Doctor" : `${patient!.firstName} ${patient!.lastName}`;
 
             // Find or create Conversation
             let conversation = await prisma.conversation.findUnique({
@@ -273,14 +299,14 @@ class WhatsAppManager {
                   doctorId,
                   patientPhone,
                   patientName,
-                  patientId: patient.id,
+                  patientId: isStaff ? null : patient!.id,
                   status: "OPEN",
                 }
               });
             } else {
               await prisma.conversation.update({
                 where: { id: conversation.id },
-                data: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, status: "OPEN", patientId: patient.id }
+                data: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, status: "OPEN", patientId: isStaff ? null : patient!.id }
               });
             }
 
@@ -296,25 +322,28 @@ class WhatsAppManager {
             });
 
             // Check if this is a reply to the review survey or a recent completed appointment
-            let pendingAppointment = await prisma.appointment.findFirst({
-              where: {
-                doctorId,
-                patientId: patient.id,
-                reviewStatus: "SURVEY_SENT"
-              },
-              orderBy: { createdAt: "desc" }
-            });
-
-            if (!pendingAppointment) {
+            let pendingAppointment = null;
+            if (!isStaff && patient) {
               pendingAppointment = await prisma.appointment.findFirst({
                 where: {
                   doctorId,
                   patientId: patient.id,
-                  status: "COMPLETED",
-                  reviewStatus: { in: ["NOT_SENT", "SURVEY_SENT"] }
+                  reviewStatus: "SURVEY_SENT"
                 },
                 orderBy: { createdAt: "desc" }
               });
+
+              if (!pendingAppointment) {
+                pendingAppointment = await prisma.appointment.findFirst({
+                  where: {
+                    doctorId,
+                    patientId: patient.id,
+                    status: "COMPLETED",
+                    reviewStatus: { in: ["NOT_SENT", "SURVEY_SENT"] }
+                  },
+                  orderBy: { createdAt: "desc" }
+                });
+              }
             }
 
             // Check recent outgoing chat message to see if a review survey was sent
@@ -349,11 +378,11 @@ class WhatsAppManager {
                 try {
                   const reviewLink = await resolveGoogleReviewLink(doctorId);
                   
-                  const displayName = (patient.firstName && patient.firstName !== "Lead" && patient.firstName !== "Patient") ? ` ${patient.firstName}` : "";
+                  const displayName = (patient?.firstName && patient.firstName !== "Lead" && patient.firstName !== "Patient") ? ` ${patient.firstName}` : "";
                   const defaultReply = `Hello${displayName},\n\nThank you so much for your positive feedback! We are delighted to hear that you were happy with your care at ${doctorData?.clinicName || "our clinic"}.\n\nIf you have 60 seconds, it would mean the world to our team if you could share your experience on Google:\n\n${reviewLink}\n\nWishing you the very best of health!`;
                   
                   const replyText = doctorData?.reviewGoogleInvitationMessage 
-                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`).replace("{firstName}", patient.firstName || "")
+                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`).replace("{firstName}", patient?.firstName || "")
                     : defaultReply;
                   
                   await sock.sendMessage(remoteJid, { text: replyText });
@@ -439,18 +468,6 @@ class WhatsAppManager {
               }
             }
 
-            // Check AI Appointment Agent
-            const doctorInfo = await prisma.doctor.findUnique({
-              where: { id: doctorId },
-              select: { 
-                enableAIAutoResponder: true,
-                phone: true,
-                name: true,
-                clinicName: true,
-                specialty: true
-              }
-            });
-
             const agentConfig = await prisma.aIAgentConfig.findUnique({
               where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
             });
@@ -463,33 +480,149 @@ class WhatsAppManager {
                 orderBy: { createdAt: "desc" },
                 take: 10,
               });
-              const history = recentMessages.reverse().map(rm => 
-                `${rm.direction === "INCOMING" ? "Patient" : "Clinic"}: ${rm.content}`
-              );
 
-              const clinicPhone = doctorInfo?.phone || "";
+              let aiReply = "";
 
-              const aiReply = await AIAgentsService.runAppointmentAgent(
-                doctorId,
-                textMessage,
-                history,
-                agentConfig.config as any,
-                clinicPhone,
-                {
-                  doctorName: doctorInfo?.name || undefined,
-                  clinicName: doctorInfo?.clinicName || undefined,
-                  specialty: doctorInfo?.specialty || undefined
-                }
-              );
+              if (isStaff) {
+                const history = recentMessages.reverse().map(rm => 
+                  `${rm.direction === "INCOMING" ? "Staff" : "Assistant"}: ${rm.content}`
+                );
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const tomorrowEnd = new Date(today);
+                tomorrowEnd.setDate(tomorrowEnd.getDate() + 2);
+                
+                const appointments = await prisma.appointment.findMany({
+                  where: {
+                    doctorId,
+                    date: { gte: today, lt: tomorrowEnd },
+                    status: { not: "CANCELLED" }
+                  },
+                  include: { patient: true, practitioner: true },
+                  orderBy: { date: 'asc' }
+                });
+
+                aiReply = await AIAgentsService.runStaffAssistantAgent(
+                  doctorId,
+                  textMessage,
+                  history,
+                  appointments,
+                  { doctorName: doctorInfo?.name || "Doctor" }
+                );
+              } else {
+                const history = recentMessages.reverse().map(rm => 
+                  `${rm.direction === "INCOMING" ? "Patient" : "Clinic"}: ${rm.content}`
+                );
+
+                const clinicPhone = doctorInfo?.phone || "";
+
+                aiReply = await AIAgentsService.runAppointmentAgent(
+                  doctorId,
+                  textMessage,
+                  history,
+                  agentConfig.config as any,
+                  clinicPhone,
+                  {
+                    doctorName: doctorInfo?.name || undefined,
+                    clinicName: doctorInfo?.clinicName || undefined,
+                    specialty: doctorInfo?.specialty || undefined
+                  }
+                );
+              }
 
               let finalAiReply = aiReply;
 
               if (aiReply) {
-                // Intercept Agentic Booking Tag
+                // 1. Intercept Staff Modification Tags
+                const cancelRegex = /\[CANCEL_APPOINTMENT:\s*([^\]]+)\]/i;
+                const cancelMatch = aiReply.match(cancelRegex);
+
+                if (cancelMatch && isStaff) {
+                  const [fullTag, appointmentId] = cancelMatch;
+                  try {
+                    const apt = await prisma.appointment.findUnique({ 
+                      where: { id: appointmentId.trim() }, 
+                      include: { patient: true }
+                    });
+                    if (apt && apt.status !== "CANCELLED") {
+                       await prisma.appointment.update({ 
+                         where: { id: apt.id }, 
+                         data: { status: "CANCELLED" }
+                       });
+                       finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                       
+                       // Notify patient via WhatsApp
+                       if (apt.patient?.phone) {
+                         const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
+                         const msg = `⚠️ *Appointment Update*\n\nHi ${apt.patient.firstName}, unfortunately your appointment on ${apt.date.toDateString()} has been cancelled by the clinic. Please reply here if you would like to book a new slot.`;
+                         await sock.sendMessage(patientJid, { text: msg });
+                         console.log(`[WhatsAppManager] Sent cancellation to ${patientJid}`);
+                       }
+                    }
+                  } catch (e) {
+                    console.error("[WhatsAppManager] Cancel Error:", e);
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                  }
+                }
+
+                const rescheduleRegex = /\[RESCHEDULE_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
+                const rescheduleMatch = aiReply.match(rescheduleRegex);
+
+                if (rescheduleMatch && isStaff) {
+                  const [fullTag, appointmentId, dateStr, sessionStr] = rescheduleMatch;
+                  try {
+                    const apt = await prisma.appointment.findUnique({ 
+                      where: { id: appointmentId.trim() }, 
+                      include: { patient: true }
+                    });
+                    
+                    if (apt) {
+                      const newDate = new Date(dateStr.trim());
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      
+                      if (!isNaN(newDate.getTime()) && newDate >= today) {
+                        const isMorning = sessionStr.toLowerCase().includes("morning");
+                        const startTime = new Date(newDate);
+                        startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); 
+                        
+                        const endTime = new Date(startTime);
+                        endTime.setHours(startTime.getHours() + 1);
+
+                        await prisma.appointment.update({ 
+                          where: { id: apt.id }, 
+                          data: { 
+                            status: "CONFIRMED",
+                            date: newDate,
+                            startTime: startTime,
+                            endTime: endTime,
+                            notes: `Rescheduled via AI Assistant (${sessionStr.trim()})`
+                          }
+                        });
+                        
+                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                        
+                        // Notify patient via WhatsApp
+                        if (apt.patient?.phone) {
+                          const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
+                          const msg = `🔄 *Appointment Rescheduled*\n\nHi ${apt.patient.firstName}, the clinic has rescheduled your appointment to *${newDate.toDateString()} (${sessionStr.trim()})*. Reply here if this time does not work for you.`;
+                          await sock.sendMessage(patientJid, { text: msg });
+                          console.log(`[WhatsAppManager] Sent reschedule to ${patientJid}`);
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.error("[WhatsAppManager] Reschedule Error:", e);
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                  }
+                }
+
+                // 2. Intercept Patient Booking Tag
                 const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
                 const match = aiReply.match(bookingRegex);
                 
-                if (match) {
+                if (match && !isStaff && patient) {
                   const [fullTag, dateStr, sessionStr, patientFullName] = match;
                   
                   try {
