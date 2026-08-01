@@ -37,6 +37,7 @@ export const patientSchema = z.object({
   medicalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   patientType: z.enum(["LEAD", "ACTIVE", "INACTIVE", "LOST"]).optional(),
+  isBlocked: z.boolean().optional(),
   primaryPractitionerId: z.string().optional(),
 });
 

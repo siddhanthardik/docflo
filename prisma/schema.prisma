@@ -108,6 +108,7 @@ model Patient {
   medicalNotes          String?
   tags                  String[]
   patientType           PatientType    @default(LEAD)
+  isBlocked             Boolean        @default(false)
   lastReviewRequestedAt DateTime?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt

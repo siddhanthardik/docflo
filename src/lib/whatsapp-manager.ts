@@ -255,6 +255,11 @@ class WhatsAppManager {
               console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}`);
             }
 
+            if (patient.isBlocked) {
+              console.log(`[WhatsAppManager] Ignored message from BLOCKED patient ${patientPhone}`);
+              continue; // Skip processing
+            }
+
             const patientName = `${patient.firstName} ${patient.lastName}`;
 
             // Find or create Conversation
@@ -477,9 +482,87 @@ class WhatsAppManager {
                 }
               );
 
+              let finalAiReply = aiReply;
+
               if (aiReply) {
+                // Intercept Agentic Booking Tag
+                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
+                const match = aiReply.match(bookingRegex);
+                
+                if (match) {
+                  const [fullTag, dateStr, sessionStr, patientFullName] = match;
+                  
+                  try {
+                    // 1. Check if patient already has an active appointment
+                    const activeAppointment = await prisma.appointment.findFirst({
+                      where: {
+                        patientId: patient.id,
+                        doctorId: doctorId,
+                        date: { gte: new Date() },
+                        status: "CONFIRMED"
+                      }
+                    });
+
+                    if (activeAppointment) {
+                      // Prevent spam/double booking
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
+                    } else {
+                      // 2. Parse Date
+                      const appointmentDate = new Date(dateStr.trim());
+                      // Basic validation: Is it a valid date and not in the past?
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      
+                      if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
+                        // Create fake times based on session
+                        const isMorning = sessionStr.toLowerCase().includes("morning");
+                        const startTime = new Date(appointmentDate);
+                        startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); // Default 10am or 5pm
+                        
+                        const endTime = new Date(startTime);
+                        endTime.setHours(startTime.getHours() + 1);
+
+                        // 3. Update Patient Profile Name if it's default
+                        if (patient.firstName === "Patient" && patient.lastName.startsWith("+")) {
+                          const nameParts = patientFullName.trim().split(" ");
+                          const firstName = nameParts[0];
+                          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+                          await prisma.patient.update({
+                            where: { id: patient.id },
+                            data: { firstName, lastName }
+                          });
+                        }
+
+                        // 4. Create the Appointment
+                        await prisma.appointment.create({
+                          data: {
+                            patientId: patient.id,
+                            doctorId: doctorId,
+                            date: appointmentDate,
+                            startTime: startTime,
+                            endTime: endTime,
+                            status: "CONFIRMED",
+                            notes: `Booked via AI Assistant (${sessionStr.trim()})`,
+                            type: "IN_CLINIC"
+                          }
+                        });
+                        console.log(`[WhatsAppManager] Successfully agentic-booked appointment for ${patientPhone}`);
+                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      } else {
+                        // Invalid date hallucinated by AI
+                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                        finalAiReply += "\n\n*(Note: There was an issue processing the requested date. Please call the clinic to finalize your slot.)*";
+                      }
+                    }
+                  } catch (e) {
+                    console.error("[WhatsAppManager] Agentic Booking Error:", e);
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                  }
+                }
+
                 // Send reply via Baileys
-                await sock.sendMessage(remoteJid, { text: aiReply });
+                await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage
                 await prisma.chatMessage.create({
@@ -487,7 +570,7 @@ class WhatsAppManager {
                     conversationId: conversation.id,
                     direction: "OUTGOING",
                     messageType: "text",
-                    content: aiReply,
+                    content: finalAiReply,
                     senderName: "AI Assistant",
                   }
                 });

@@ -22,7 +22,8 @@ import {
   CreditCard,
   FileText,
   Star,
-  AlertTriangle
+  AlertTriangle,
+  Ban
 } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -129,6 +130,14 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     setIsAddingTag(false);
   };
 
+  const handleToggleBlock = async () => {
+    if (!patient) return;
+    try {
+      await updatePatient({ isBlocked: !patient.isBlocked });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
 
   const handleSendReviewRequest = async (overrideCooldown = false, type: "SURVEY" | "GOOGLE_REVIEW" = "GOOGLE_REVIEW") => {
     if (!patient) return;
@@ -233,6 +242,17 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                 {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending Link..." : "Send Google Review"}
               </button>
+              <button
+                onClick={handleToggleBlock}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
+                  patient.isBlocked 
+                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                  : "bg-red-50 text-red-700 hover:bg-red-100"
+                }`}
+              >
+                <Ban className="h-4 w-4" />
+                {patient.isBlocked ? "Unblock Patient" : "Block Patient"}
+              </button>
             </div>
           </div>
         </div>
@@ -255,11 +275,12 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                     {displayStatus && (
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                        ${displayStatus === "LEAD" ? "bg-purple-100 text-purple-700" :
+                        ${patient.isBlocked ? "bg-gray-900 text-white" :
+                          displayStatus === "LEAD" ? "bg-purple-100 text-purple-700" :
                           displayStatus === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
                           displayStatus === "INACTIVE" ? "bg-amber-100 text-amber-700" :
                           "bg-red-100 text-red-700"}`}>
-                        {displayStatus}
+                        {patient.isBlocked ? "BLOCKED" : displayStatus}
                       </span>
                     )}
                   </div>

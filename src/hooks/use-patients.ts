@@ -20,6 +20,7 @@ interface Patient {
   doctorId: string;
   primaryPractitionerId?: string | null;
   patientType?: string;
+  isBlocked?: boolean;
   primaryPractitioner?: {
     id: string;
     name: string;
