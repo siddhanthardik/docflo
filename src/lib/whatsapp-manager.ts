@@ -496,8 +496,7 @@ class WhatsAppManager {
                 const appointments = await prisma.appointment.findMany({
                   where: {
                     doctorId,
-                    date: { gte: today, lt: weekEnd },
-                    status: { not: "CANCELLED" }
+                    date: { gte: today, lt: weekEnd }
                   },
                   include: { patient: true, practitioner: true },
                   orderBy: { date: 'asc' }
@@ -627,6 +626,11 @@ class WhatsAppManager {
                   const [fullTag, targetPhone, msgContent] = msgMatch;
                   try {
                     const cleanPhone = targetPhone.replace(/\D/g, '');
+                    if (!cleanPhone) {
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply += "\n\n*(System Note: Could not send the message because the patient's phone number was missing or invalid in my context.)*";
+                      throw new Error("Empty phone number in MESSAGE_PATIENT tag");
+                    }
                     const patientJid = `${cleanPhone}@s.whatsapp.net`;
                     
                     // Send message via Baileys
