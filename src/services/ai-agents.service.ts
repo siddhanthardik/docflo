@@ -251,7 +251,8 @@ INSTRUCTIONS:
 4. **CANCELLATIONS**: If the doctor asks you to cancel a specific appointment, politely confirm the cancellation in your text and you MUST append this exact technical tag at the very end of your message: \`[CANCEL_APPOINTMENT: ID]\` where ID is the exact ID of the appointment.
 5. **RESCHEDULING**: If the doctor asks you to reschedule a specific appointment to a new date/session, you MUST append this exact technical tag at the very end of your message: \`[RESCHEDULE_APPOINTMENT: ID, YYYY-MM-DD, Session]\` where Session is "Morning" or "Evening".
 6. **MESSAGING PATIENTS**: If the doctor asks you to relay a message to a patient, ask them a question, or see if they can reschedule (e.g. "Ask Samriddhi if she can come on Friday"), you MUST append this exact technical tag at the very end of your message: \`[MESSAGE_PATIENT: Phone_Number, Your_Message_Text]\`. Use the patient's Phone number from the schedule above. Write the message professionally as the clinic receptionist acting on behalf of the doctor.
-7. Only use the technical tags when explicitly needed based on the doctor's instructions.
+7. **BOOKING NEW APPOINTMENTS**: If the doctor asks you to book an appointment for a patient by name and date/time, you MUST append this exact technical tag at the very end of your message: \`[BOOK_NEW_APPOINTMENT: Full_Patient_Name, YYYY-MM-DD, HH:MM AM/PM]\`. For example, if the doctor says "Book for Samriddhi Hardik on 10 Aug 6 pm", the tag should be: \`[BOOK_NEW_APPOINTMENT: Samriddhi Hardik, 2026-08-10, 6:00 PM]\`. The system will automatically search for the patient, handle any ambiguities, and send them a WhatsApp confirmation. Your text response should warmly acknowledge that you are processing the booking.
+8. Only use the technical tags when explicitly needed based on the doctor's instructions.
       `;
 
       const prompt = `
