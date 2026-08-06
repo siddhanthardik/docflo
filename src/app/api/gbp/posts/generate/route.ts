@@ -59,13 +59,13 @@ export async function POST(req: Request) {
     if (error.name === 'InsufficientAICreditsError') {
       return NextResponse.json({ error: error.message }, { status: 402 });
     } else if (error.name === 'ModuleAccessDeniedError') {
-      return NextResponse.json({ error: "Your subscription plan does not include AI features." }, { status: 403 });
+      return NextResponse.json({ error: "AI features are not available on your current plan. Please upgrade to unlock this capability." }, { status: 403 });
     }
     
-    // Map raw AI provider errors to human-readable messages
+    // Map raw AI provider errors to a professional upgrade message per user request
     const errorMsg = error.message || "";
     if (errorMsg.includes("API key not valid") || errorMsg.includes("GoogleGenerativeAI Error")) {
-      return NextResponse.json({ error: "The AI service is currently unavailable due to a configuration issue. Please contact support." }, { status: 503 });
+      return NextResponse.json({ error: "AI generation is not available on your current plan. Please upgrade to unlock this feature." }, { status: 403 });
     }
 
     return NextResponse.json({ error: "An unexpected error occurred while generating the post. Please try again later." }, { status: 500 });
