@@ -61,6 +61,13 @@ export async function POST(req: Request) {
     } else if (error.name === 'ModuleAccessDeniedError') {
       return NextResponse.json({ error: "Your subscription plan does not include AI features." }, { status: 403 });
     }
-    return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
+    
+    // Map raw AI provider errors to human-readable messages
+    const errorMsg = error.message || "";
+    if (errorMsg.includes("API key not valid") || errorMsg.includes("GoogleGenerativeAI Error")) {
+      return NextResponse.json({ error: "The AI service is currently unavailable due to a configuration issue. Please contact support." }, { status: 503 });
+    }
+
+    return NextResponse.json({ error: "An unexpected error occurred while generating the post. Please try again later." }, { status: 500 });
   }
 }

@@ -203,8 +203,7 @@ export function PostScheduler() {
         } else if (res.status === 403) {
           toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" })
         } else {
-          const errMsg = data.details ? `${data.error}: ${data.details}` : data.error || "An error occurred while generating the post.";
-          toast({ title: "Generation failed", description: errMsg, variant: "destructive" })
+          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" })
         }
       }
     } catch (error) {
