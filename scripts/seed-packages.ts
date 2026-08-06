@@ -21,14 +21,15 @@ type PackageSeed = {
 
 const PACKAGES: PackageSeed[] = [
   {
-    slug: 'starter',
-    name: 'Starter Plan',
-    description: 'Essential clinic management',
+    slug: 'free',
+    name: 'FREE',
+    description: 'For new clinics getting started',
     priceMonthly: 0,
     modules: [ModuleName.CLINIC_CORE],
     limits: [
       { limitName: LimitName.MAX_STAFF_SEATS,       limitValue: 1 },
-      { limitName: LimitName.MAX_PATIENTS,           limitValue: 500 },
+      { limitName: LimitName.MAX_PATIENTS,           limitValue: 50 },
+      { limitName: LimitName.MAX_PRACTITIONERS,      limitValue: 1 },
       { limitName: LimitName.MAX_GBP_LOCATIONS,      limitValue: 0 },
       { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 0 },
       { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: 0 },
@@ -36,29 +37,49 @@ const PACKAGES: PackageSeed[] = [
     ],
   },
   {
+    slug: 'starter',
+    name: 'STARTER',
+    description: 'Grow your local presence',
+    priceMonthly: 1499,
+    modules: [
+      ModuleName.CLINIC_CORE,
+      ModuleName.GROWTH_SEO,
+    ],
+    limits: [
+      { limitName: LimitName.MAX_STAFF_SEATS,       limitValue: 3 },
+      { limitName: LimitName.MAX_PATIENTS,           limitValue: null }, // Unlimited
+      { limitName: LimitName.MAX_PRACTITIONERS,      limitValue: 1 },
+      { limitName: LimitName.MAX_GBP_LOCATIONS,      limitValue: 1 },
+      { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 0 },
+      { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: 4 },
+      { limitName: LimitName.AI_CREDITS_PER_MONTH,   limitValue: 0 },
+    ],
+  },
+  {
     slug: 'growth',
-    name: 'Growth Plan',
-    description: 'Clinic management + CRM & SEO',
-    priceMonthly: 99,
+    name: 'GROWTH',
+    description: 'Dominate your local market',
+    priceMonthly: 2499,
     modules: [
       ModuleName.CLINIC_CORE,
       ModuleName.GROWTH_SEO,
       ModuleName.WHATSAPP_CRM,
     ],
     limits: [
-      { limitName: LimitName.MAX_STAFF_SEATS,       limitValue: 3 },
-      { limitName: LimitName.MAX_PATIENTS,           limitValue: 2000 },
+      { limitName: LimitName.MAX_STAFF_SEATS,       limitValue: 10 },
+      { limitName: LimitName.MAX_PATIENTS,           limitValue: null }, // Unlimited
+      { limitName: LimitName.MAX_PRACTITIONERS,      limitValue: 3 },
       { limitName: LimitName.MAX_GBP_LOCATIONS,      limitValue: 1 },
-      { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 20 },
-      { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: 4 },
-      { limitName: LimitName.AI_CREDITS_PER_MONTH,   limitValue: 0 },
+      { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 10 },
+      { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: 15 },
+      { limitName: LimitName.AI_CREDITS_PER_MONTH,   limitValue: 100 },
     ],
   },
   {
-    slug: 'enterprise',
-    name: 'Enterprise Plan',
-    description: 'Everything + AI Assistant',
-    priceMonthly: 299,
+    slug: 'premium',
+    name: 'PREMIUM / AUTOPILOT',
+    description: 'Fully automated clinic',
+    priceMonthly: 4999,
     modules: [
       ModuleName.CLINIC_CORE,
       ModuleName.GROWTH_SEO,
@@ -68,10 +89,11 @@ const PACKAGES: PackageSeed[] = [
     limits: [
       { limitName: LimitName.MAX_STAFF_SEATS,       limitValue: null }, // Unlimited
       { limitName: LimitName.MAX_PATIENTS,           limitValue: null }, // Unlimited
-      { limitName: LimitName.MAX_GBP_LOCATIONS,      limitValue: 3 },
-      { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 100 },
-      { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: 15 },
-      { limitName: LimitName.AI_CREDITS_PER_MONTH,   limitValue: 1000 },
+      { limitName: LimitName.MAX_PRACTITIONERS,      limitValue: null }, // Unlimited
+      { limitName: LimitName.MAX_GBP_LOCATIONS,      limitValue: 1 }, // Max supported by system architecture
+      { limitName: LimitName.MAX_TRACKED_KEYWORDS,   limitValue: 50 },
+      { limitName: LimitName.MAX_SCHEDULED_POSTS,    limitValue: null }, // Unlimited
+      { limitName: LimitName.AI_CREDITS_PER_MONTH,   limitValue: null }, // Unlimited
     ],
   },
 ];
