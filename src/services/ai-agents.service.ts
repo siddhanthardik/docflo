@@ -47,7 +47,9 @@ export class AIAgentsService {
     conversationHistory: string[],
     config: any,
     clinicPhone?: string,
-    doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string }
+    doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string },
+    clinicAddress?: string | null,
+    clinicMapsUri?: string | null
   ) {
     try {
       const mode = config?.mode || "handoff";
@@ -99,6 +101,11 @@ export class AIAgentsService {
 
       const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+      // Clinic Location (sourced from connected GMB/GBP profile — never hardcoded)
+      const locationBlock = clinicAddress
+        ? `- Clinic Address: ${clinicAddress}${clinicMapsUri ? `\n- Google Maps Link: ${clinicMapsUri}` : ''}`
+        : null;
+
       const systemPrompt = `
 You are ${assistantName}, the warm, polite, highly experienced Senior WhatsApp Clinic Receptionist for ${clinicName} (${doctorName} - ${specialty}).
 
@@ -112,6 +119,7 @@ CLINIC OPD & SCHEDULE SPECIFICATIONS:
 - Evening OPD Hours: ${eveningOpd || "Check Full Schedule"}
 - Full Schedule Summary: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
+${locationBlock ? locationBlock : ""}
 
 FEES & POLICY:
 - Consultation Fee: ${consultationFee || "Shared at clinic"}
@@ -169,6 +177,15 @@ CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
    - You MUST NOT invent, guess, or hallucinate any clinic services, prices, medical advice, doctor availability, or policies that are not explicitly provided in this system prompt. 
    - DO NOT give medical advice or diagnose patients under any circumstances.
    - If a patient asks a question you do not know the answer to (or if the information is missing from the config), politely state that you do not have that information and invite them to call the clinic directly to speak with human staff.
+
+9. **CLINIC LOCATION & DIRECTIONS**:
+${locationBlock
+  ? `   - When a patient asks for the clinic address, location, or how to reach the clinic, share the following:
+     Address: *${clinicAddress}*${clinicMapsUri ? `\n     Google Maps: ${clinicMapsUri}` : ''}
+   - Always include the Maps link so patients can navigate directly.
+   - NEVER say "I don't have the address" — you have the full address above. Use it.`
+  : `   - If a patient asks for the clinic address or directions, let them know warmly that our team is still updating location details on the system, and invite them to call *${clinicPhone || 'the clinic'}* directly for the exact address and directions.`
+}
       `;
 
       const prompt = `
@@ -251,7 +268,7 @@ INSTRUCTIONS:
 4. **CANCELLATIONS**: If the doctor asks you to cancel a specific appointment, politely confirm the cancellation in your text and you MUST append this exact technical tag at the very end of your message: \`[CANCEL_APPOINTMENT: ID]\` where ID is the exact ID of the appointment.
 5. **RESCHEDULING**: If the doctor asks you to reschedule a specific appointment to a new date/session, you MUST append this exact technical tag at the very end of your message: \`[RESCHEDULE_APPOINTMENT: ID, YYYY-MM-DD, Session]\` where Session is "Morning" or "Evening".
 6. **MESSAGING PATIENTS**: If the doctor asks you to relay a message to a patient, ask them a question, or see if they can reschedule (e.g. "Ask Samriddhi if she can come on Friday"), you MUST append this exact technical tag at the very end of your message: \`[MESSAGE_PATIENT: Phone_Number, Your_Message_Text]\`. Use the patient's Phone number from the schedule above. Write the message professionally as the clinic receptionist acting on behalf of the doctor.
-7. **BOOKING NEW APPOINTMENTS**: If the doctor asks you to book an appointment for a patient by name and date/time, you MUST append this exact technical tag at the very end of your message: \`[BOOK_NEW_APPOINTMENT: Full_Patient_Name, YYYY-MM-DD, HH:MM AM/PM]\`. For example, if the doctor says "Book for Samriddhi Hardik on 10 Aug 6 pm", the tag should be: \`[BOOK_NEW_APPOINTMENT: Samriddhi Hardik, 2026-08-10, 6:00 PM]\`. The system will automatically search for the patient, handle any ambiguities, and send them a WhatsApp confirmation. Your text response should warmly acknowledge that you are processing the booking.
+7. **BOOKING NEW APPOINTMENTS**: If the doctor asks you to book an appointment for a patient by name and date/time, you MUST append this exact technical tag at the very end of your message: \`[BOOK_NEW_APPOINTMENT: Full_Patient_Name, YYYY-MM-DD, HH:MM AM/PM]\`. If the doctor also provides a phone number in their message, include it as a 4th parameter: \`[BOOK_NEW_APPOINTMENT: Full_Patient_Name, YYYY-MM-DD, HH:MM AM/PM, Phone_Number]\`. For example, if the doctor says "Book for Saroj Kumari Mobile Number +917979854719 for 5 Aug 7 PM", the tag should be: \`[BOOK_NEW_APPOINTMENT: Saroj Kumari, 2026-08-05, 7:00 PM, 917979854719]\`. The system will automatically create the patient profile, book the slot, and send a WhatsApp confirmation. Your text response should warmly acknowledge the booking.
 8. Only use the technical tags when explicitly needed based on the doctor's instructions.
       `;
 

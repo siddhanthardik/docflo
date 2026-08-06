@@ -255,6 +255,18 @@ class WhatsAppManager {
               }
             });
 
+            // Fetch connected GMB profile for clinic address (most recently synced)
+            const gbpAccount = await prisma.gbpAccount.findFirst({
+              where: { doctorId },
+              orderBy: { lastSyncAt: 'desc' },
+              select: { insightsData: true }
+            });
+            const gbpInsights = (gbpAccount?.insightsData && typeof gbpAccount.insightsData === 'object')
+              ? gbpAccount.insightsData as Record<string, any>
+              : null;
+            const clinicAddress = gbpInsights?.formattedAddress as string | null ?? null;
+            const clinicMapsUri = gbpInsights?.mapsUri as string | null ?? null;
+
             const practitioners = await prisma.practitioner.findMany({
               where: { doctorId, isActive: true },
               select: { phone: true, name: true, isOwner: true }
@@ -563,42 +575,87 @@ class WhatsAppManager {
                       selectedPatient = pendingIntent.candidates.find(c => c.phone?.endsWith(phoneDigits4)) ?? null;
                     }
                     if (selectedPatient) {
+                       this.pendingIntents.delete(patientPhone);
+                       handled = true;
+                       try {
+                         const { dateStr, timeStr } = pendingIntent;
+                         const appointmentDate = new Date(dateStr);
+                         const timeMatchS = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+                         let hour = 18;
+                         if (timeMatchS) {
+                           hour = parseInt(timeMatchS[1]);
+                           const mer = (timeMatchS[3] || '').toLowerCase();
+                           if (mer === 'pm' && hour < 12) hour += 12;
+                           if (mer === 'am' && hour === 12) hour = 0;
+                         }
+                         const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
+                         const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
+
+                         await prisma.appointment.create({
+                           data: { patientId: selectedPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                         });
+
+                         const docName = doctorInfo?.name || 'the Doctor';
+                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                         if (selectedPatient.phone) {
+                           const patientJid = `${selectedPatient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
+                           await sock.sendMessage(patientJid, {
+                             text: `Hi ${selectedPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                           });
+                         }
+                         const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
+                         await sock.sendMessage(remoteJid, { text: confirmMsg });
+                         await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
+                         await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                         return;
+                       } catch (e) {
+                         console.error('[WhatsAppManager] AWAITING_SELECTION resolution error:', e);
+                       }
+                    } else if (phoneDigits4.length >= 10) {
+                      // Doctor provided a FULL phone number — treat as brand new patient
                       this.pendingIntents.delete(patientPhone);
                       handled = true;
                       try {
-                        const { dateStr, timeStr } = pendingIntent;
+                        const { patientName, dateStr, timeStr } = pendingIntent;
+                        const nameParts = patientName.split(' ');
+                        const newPatient = await prisma.patient.create({
+                          data: {
+                            doctorId,
+                            firstName: nameParts[0],
+                            lastName: nameParts.slice(1).join(' ') || '',
+                            phone: phoneDigits4,
+                            patientType: 'ACTIVE'
+                          }
+                        });
                         const appointmentDate = new Date(dateStr);
-                        const timeMatchS = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+                        const timeMatchN = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
                         let hour = 18;
-                        if (timeMatchS) {
-                          hour = parseInt(timeMatchS[1]);
-                          const mer = (timeMatchS[3] || '').toLowerCase();
+                        if (timeMatchN) {
+                          hour = parseInt(timeMatchN[1]);
+                          const mer = (timeMatchN[3] || '').toLowerCase();
                           if (mer === 'pm' && hour < 12) hour += 12;
                           if (mer === 'am' && hour === 12) hour = 0;
                         }
                         const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
                         const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
-
                         await prisma.appointment.create({
-                          data: { patientId: selectedPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                          data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
-
                         const docName = doctorInfo?.name || 'the Doctor';
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                        if (selectedPatient.phone) {
-                          const patientJid = `${selectedPatient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                          await sock.sendMessage(patientJid, {
-                            text: `Hi ${selectedPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                          });
-                        }
-                        const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
+                        const patientJid = `${phoneDigits4}@s.whatsapp.net`;
+                        await sock.sendMessage(patientJid, {
+                          text: `Hi ${newPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                        });
+                        const confirmMsg = `Done, Doctor! I have created a new profile for *${patientName}* (Phone: ${phoneDigits4}) and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
                         await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
                         await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
                         return;
                       } catch (e) {
-                        console.error('[WhatsAppManager] AWAITING_SELECTION resolution error:', e);
+                        console.error('[WhatsAppManager] New patient from AWAITING_SELECTION error:', e);
                       }
                     }
                   }
@@ -648,7 +705,9 @@ class WhatsAppManager {
                     doctorName: doctorInfo?.name || undefined,
                     clinicName: doctorInfo?.clinicName || undefined,
                     specialty: doctorInfo?.specialty || undefined
-                  }
+                  },
+                  clinicAddress,
+                  clinicMapsUri
                 );
               }
 
@@ -800,23 +859,21 @@ class WhatsAppManager {
                 }
 
                 // 4. Intercept Doctor-initiated new appointment booking
-                const bookNewRegex = /\[BOOK_NEW_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
+                const bookNewRegex = /\[BOOK_NEW_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^,\]]+)(?:,\s*([^\]]+))?\]/i;
                 const bookNewMatch = aiReply.match(bookNewRegex);
 
                 if (bookNewMatch && isStaff) {
-                  const [fullTag, patientName, dateStr, timeStr] = bookNewMatch;
+                  const [fullTag, patientName, dateStr, timeStr, phoneFromTag] = bookNewMatch;
                   const cleanName = patientName.trim();
                   const cleanDate = dateStr.trim();
                   const cleanTime = timeStr.trim();
+                  // If AI extracted a phone number upfront, use it to skip disambiguation entirely
+                  const prefilledPhone = phoneFromTag ? phoneFromTag.trim().replace(/\D/g, '') : '';
 
                   try {
-                    // Parse appointment date
+                    // Parse appointment date & time
                     const appointmentDate = new Date(cleanDate);
-                    const isMorning = /morning|am|10/i.test(cleanTime);
-                    const isEvening = /evening|pm|6|7|17|18|19/i.test(cleanTime);
-                    
-                    // Parse explicit time like "6:00 PM" or "18:00"
-                    let hour = isMorning ? 10 : 18;
+                    let hour = 18;
                     const timeMatch = cleanTime.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
                     if (timeMatch) {
                       hour = parseInt(timeMatch[1]);
@@ -830,104 +887,116 @@ class WhatsAppManager {
                     const endTime = new Date(startTime);
                     endTime.setHours(hour + 1, 0, 0, 0);
 
-                    // Search patients by name (case-insensitive)
-                    const nameParts = cleanName.split(' ');
-                    const firstName = nameParts[0];
-                    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-                    const exactMatches = await prisma.patient.findMany({
-                      where: {
-                        doctorId,
-                        firstName: { equals: firstName, mode: 'insensitive' },
-                        ...(lastName ? { lastName: { equals: lastName, mode: 'insensitive' } } : {})
-                      },
-                      include: { appointments: { orderBy: { date: 'desc' }, take: 1 } },
-                      take: 10
-                    });
-
                     finalAiReply = finalAiReply.replace(fullTag, '').trim();
 
-                    if (exactMatches.length === 1) {
-                      // SCENARIO 1: Exact single match - book immediately
-                      const pt = exactMatches[0];
-                      const apt = await prisma.appointment.create({
+                    // If the doctor already provided a phone number → create new patient immediately, no disambiguation
+                    if (prefilledPhone.length >= 10) {
+                      const nameParts = cleanName.split(' ');
+                      const newPatient = await prisma.patient.create({
                         data: {
-                          patientId: pt.id,
                           doctorId,
-                          date: appointmentDate,
-                          startTime,
-                          endTime,
-                          status: 'CONFIRMED',
-                          type: 'IN_CLINIC',
-                          notes: 'Booked via Staff AI Assistant'
+                          firstName: nameParts[0],
+                          lastName: nameParts.slice(1).join(' ') || '',
+                          phone: prefilledPhone,
+                          patientType: 'ACTIVE'
                         }
                       });
-                      console.log(`[WhatsAppManager] Staff AI booked appointment for ${pt.firstName} ${pt.lastName}`);
-
-                      // Send WhatsApp confirmation to patient
-                      if (pt.phone) {
-                        const patientJid = `${pt.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                        const docName = doctorInfo?.name || 'the Doctor';
-                        const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                        const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                        await sock.sendMessage(patientJid, {
-                          text: `Hi ${pt.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                        });
-                      }
-                      finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${appointmentDate.toDateString()} at ${startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} and sent them a WhatsApp confirmation.`;
-
-                    } else if (exactMatches.length > 1) {
-                      // SCENARIO 2: Multiple patients with same name - ask doctor to disambiguate
-                      const candidateLines = exactMatches.map((pt, i) => {
-                        const lastVisitDate = pt.appointments[0]?.date;
-                        const lastVisit = lastVisitDate ? new Date(lastVisitDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No prior visit';
-                        const maskedPhone = pt.phone ? `${pt.phone.slice(0, -4).replace(/./g, 'x')}${pt.phone.slice(-4)}` : 'N/A';
-                        return `  ${i + 1}. ${pt.firstName} ${pt.lastName} | Phone: ${maskedPhone} | Last visit: ${lastVisit}`;
+                      await prisma.appointment.create({
+                        data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
-                      this.pendingIntents.set(patientPhone, {
-                        type: 'AWAITING_SELECTION',
-                        patientName: cleanName,
-                        dateStr: cleanDate,
-                        timeStr: cleanTime,
-                        candidates: exactMatches.map(pt => ({ id: pt.id, firstName: pt.firstName, lastName: pt.lastName, phone: pt.phone, lastVisit: pt.appointments[0]?.date ?? null }))
+                      const docName = doctorInfo?.name || 'the Doctor';
+                      const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+                      const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                      await sock.sendMessage(`${prefilledPhone}@s.whatsapp.net`, {
+                        text: `Hi ${newPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                       });
-                      finalAiReply += `\n\nDoctor, I found ${exactMatches.length} patients named *${cleanName}* in your records. Which one would you like to book for?\n\n${candidateLines.join('\n')}\n\nPlease reply with the number (1, 2...) or the last 4 digits of their phone to confirm.`;
-
+                      finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                     } else {
-                      // SCENARIO 3: No match - fuzzy search then ask for phone
-                      const fuzzyMatches = await prisma.patient.findMany({
+                      // No phone provided upfront: search by name
+                      const nameParts2 = cleanName.split(' ');
+                      const firstName = nameParts2[0];
+                      const lastName = nameParts2.length > 1 ? nameParts2.slice(1).join(' ') : '';
+
+                      const exactMatches = await prisma.patient.findMany({
                         where: {
                           doctorId,
-                          OR: [
-                            { firstName: { contains: firstName, mode: 'insensitive' } },
-                            { lastName: { contains: lastName || firstName, mode: 'insensitive' } }
-                          ]
+                          firstName: { equals: firstName, mode: 'insensitive' },
+                          ...(lastName ? { lastName: { equals: lastName, mode: 'insensitive' } } : {})
                         },
-                        take: 3
+                        include: { appointments: { orderBy: { date: 'desc' }, take: 1 } },
+                        take: 10
                       });
 
-                      if (fuzzyMatches.length > 0) {
-                        // SCENARIO 4: Fuzzy match found - ask doctor to confirm
-                        const fuzzyLines = fuzzyMatches.map((pt, i) => `  ${i + 1}. ${pt.firstName} ${pt.lastName} | Phone: ...${pt.phone?.slice(-4) || 'N/A'}`).join('\n');
+                      if (exactMatches.length === 1) {
+                        // SCENARIO 1: Exact single match - book immediately
+                        const pt = exactMatches[0];
+                        await prisma.appointment.create({
+                          data: { patientId: pt.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                        });
+                        if (pt.phone) {
+                          const patientJid = `${pt.phone.replace(/\D/g, '')}@s.whatsapp.net`;
+                          const docName = doctorInfo?.name || 'the Doctor';
+                          const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+                          const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                          await sock.sendMessage(patientJid, {
+                            text: `Hi ${pt.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                          });
+                          finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
+                        }
+
+                      } else if (exactMatches.length > 1) {
+                        // SCENARIO 2: Multiple patients with same name - ask doctor to disambiguate
+                        const candidateLines = exactMatches.map((pt, i) => {
+                          const lastVisitDate = pt.appointments[0]?.date;
+                          const lastVisit = lastVisitDate ? new Date(lastVisitDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No prior visit';
+                          const maskedPhone = pt.phone ? `${pt.phone.slice(0, -4).replace(/./g, 'x')}${pt.phone.slice(-4)}` : 'N/A';
+                          return `  ${i + 1}. ${pt.firstName} ${pt.lastName} | Phone: ${maskedPhone} | Last visit: ${lastVisit}`;
+                        });
                         this.pendingIntents.set(patientPhone, {
                           type: 'AWAITING_SELECTION',
                           patientName: cleanName,
                           dateStr: cleanDate,
                           timeStr: cleanTime,
-                          candidates: fuzzyMatches.map(pt => ({ id: pt.id, firstName: pt.firstName, lastName: pt.lastName, phone: pt.phone, lastVisit: null }))
+                          candidates: exactMatches.map(pt => ({ id: pt.id, firstName: pt.firstName, lastName: pt.lastName, phone: pt.phone, lastVisit: pt.appointments[0]?.date ?? null }))
                         });
-                        finalAiReply += `\n\nDoctor, I couldn't find an exact match for *${cleanName}*. Did you mean one of these patients?\n\n${fuzzyLines}\n\nReply with the number to confirm, or say the full name + phone number if this is a new patient.`;
+                        finalAiReply += `\n\nDoctor, I found ${exactMatches.length} patients named *${cleanName}*. Which one would you like to book for?\n\n${candidateLines.join('\n')}\n\nPlease reply with the number (1, 2...) or the last 4 digits of their phone to confirm.`;
+
                       } else {
-                        // Brand new patient — ask for phone number before creating any record
-                        this.pendingIntents.set(patientPhone, {
-                          type: 'AWAITING_PHONE',
-                          patientName: cleanName,
-                          dateStr: cleanDate,
-                          timeStr: cleanTime
+                        // SCENARIO 3: No exact match - fuzzy search
+                        const fuzzyMatches = await prisma.patient.findMany({
+                          where: {
+                            doctorId,
+                            OR: [
+                              { firstName: { contains: firstName, mode: 'insensitive' } },
+                              { lastName: { contains: lastName || firstName, mode: 'insensitive' } }
+                            ]
+                          },
+                          take: 3
                         });
-                        finalAiReply += `\n\nDoctor, *${cleanName}* is not in your patient records yet. Could you please share their WhatsApp number so I can create their profile and send them an appointment confirmation?`;
+
+                        if (fuzzyMatches.length > 0) {
+                          // SCENARIO 4: Fuzzy match - ask to confirm
+                          const fuzzyLines = fuzzyMatches.map((pt, i) => `  ${i + 1}. ${pt.firstName} ${pt.lastName} | Phone: ...${pt.phone?.slice(-4) || 'N/A'}`).join('\n');
+                          this.pendingIntents.set(patientPhone, {
+                            type: 'AWAITING_SELECTION',
+                            patientName: cleanName,
+                            dateStr: cleanDate,
+                            timeStr: cleanTime,
+                            candidates: fuzzyMatches.map(pt => ({ id: pt.id, firstName: pt.firstName, lastName: pt.lastName, phone: pt.phone, lastVisit: null }))
+                          });
+                          finalAiReply += `\n\nDoctor, I couldn't find an exact match for *${cleanName}*. Did you mean one of these patients?\n\n${fuzzyLines}\n\nReply with the number to confirm, or share the full name + phone number if this is a new patient.`;
+                        } else {
+                          // Brand new patient — ask for phone number first
+                          this.pendingIntents.set(patientPhone, {
+                            type: 'AWAITING_PHONE',
+                            patientName: cleanName,
+                            dateStr: cleanDate,
+                            timeStr: cleanTime
+                          });
+                          finalAiReply += `\n\nDoctor, *${cleanName}* is not in your patient records yet. Could you please share their WhatsApp number so I can create their profile and send them an appointment confirmation?`;
+                        }
                       }
-                    }
+                    } // end else (no prefilled phone)
                   } catch (e) {
                     console.error('[WhatsAppManager] BOOK_NEW_APPOINTMENT Error:', e);
                     finalAiReply = finalAiReply.replace(fullTag, '').trim();
