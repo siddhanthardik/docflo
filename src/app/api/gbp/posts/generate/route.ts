@@ -58,7 +58,9 @@ export async function POST(req: Request) {
     console.error("Error generating AI Google Post:", error);
     if (error.name === 'InsufficientAICreditsError') {
       return NextResponse.json({ error: error.message }, { status: 402 });
+    } else if (error.name === 'ModuleAccessDeniedError') {
+      return NextResponse.json({ error: "Your subscription plan does not include AI features." }, { status: 403 });
     }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
   }
 }

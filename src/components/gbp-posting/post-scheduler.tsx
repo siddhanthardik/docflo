@@ -200,8 +200,11 @@ export function PostScheduler() {
       } else {
         if (res.status === 402) {
           toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" })
+        } else if (res.status === 403) {
+          toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" })
         } else {
-          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" })
+          const errMsg = data.details ? `${data.error}: ${data.details}` : data.error || "An error occurred while generating the post.";
+          toast({ title: "Generation failed", description: errMsg, variant: "destructive" })
         }
       }
     } catch (error) {
