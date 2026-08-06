@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useLocationContext } from "@/contexts/LocationContext";
 
 export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,8 @@ export default function IntegrationsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectingGbp, setDisconnectingGbp] = useState(false);
   const [isGbpDisconnectModalOpen, setIsGbpDisconnectModalOpen] = useState(false);
+  
+  const { refresh: refreshLocationContext } = useLocationContext();
 
   useEffect(() => {
     fetchIntegrations();
@@ -76,6 +79,8 @@ export default function IntegrationsPage() {
         });
         setGbpStatus({ connected: false });
         setIsGbpDisconnectModalOpen(false);
+        // Force refresh LocationContext to clear stale stats and reviews
+        await refreshLocationContext();
       } else {
         toast({ title: "Error", description: "Failed to disconnect GBP profile", variant: "destructive" });
       }

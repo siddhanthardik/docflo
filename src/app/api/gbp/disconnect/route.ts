@@ -44,6 +44,9 @@ export async function DELETE(req: Request) {
       await prisma.searchGridSnapshot.deleteMany({ where: { gbpAccountId: { in: accountIds } } });
       await prisma.seoRecommendation.deleteMany({ where: { gbpAccountId: { in: accountIds } } });
 
+      // Delete actual cached Review rows for these accounts
+      await prisma.review.deleteMany({ where: { gbpAccountId: { in: accountIds }, source: "GOOGLE" } });
+
       // Delete GBP Accounts
       await prisma.gbpAccount.deleteMany({ where: { doctorId } });
     }
