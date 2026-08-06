@@ -447,14 +447,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 <FileText className="h-4 w-4" />
                 Create Invoice
               </button>
-              <button 
-                onClick={() => handleSendReviewRequest(false, "SURVEY")}
-                disabled={sendingReview}
-                className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 disabled:opacity-50 transition-all"
-              >
-                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                {sendingReview && pendingType === "SURVEY" ? "Sending Survey..." : "Send Feedback Survey"}
-              </button>
             </div>
 
             {/* Medical Notes */}
