@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -9,7 +9,6 @@ import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
   const { update } = useSession();
@@ -35,10 +34,12 @@ function VerifyEmailContent() {
         const data = await res.json();
         if (res.ok) {
           setStatus("success");
-          await update({ emailVerified: new Date().toISOString() });
+          // Trigger JWT callback to re-read emailVerified from DB (secure, works cross-device)
+          await update();
+          // Hard redirect — bypasses App Router cache so the fresh JWT cookie is read immediately
           setTimeout(() => {
-            router.push("/dashboard");
-          }, 3000);
+            window.location.href = "/dashboard";
+          }, 2000);
         } else {
           setStatus("error");
           setErrorMessage(data.error || "Failed to verify email. The link may have expired.");
@@ -51,7 +52,7 @@ function VerifyEmailContent() {
     }
 
     verify();
-  }, [token, email, router]);
+  }, [token, email]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

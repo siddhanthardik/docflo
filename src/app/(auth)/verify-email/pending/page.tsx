@@ -7,9 +7,10 @@ import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 
 function VerifyEmailPendingContent() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const handleResend = async () => {
     if (!session?.user?.email) return;
@@ -32,6 +33,19 @@ function VerifyEmailPendingContent() {
     }
   };
 
+  const handleAlreadyVerified = async () => {
+    setChecking(true);
+    try {
+      // Re-fetches emailVerified from DB via the secure JWT callback
+      await update();
+      // Hard redirect so the fresh JWT cookie is read by middleware immediately
+      window.location.href = "/dashboard";
+    } catch {
+      toast({ title: "Error", description: "Could not refresh your session. Please try signing out and back in.", variant: "destructive" });
+      setChecking(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
@@ -43,6 +57,13 @@ function VerifyEmailPendingContent() {
           Your grace period for using Gyrex without a verified email has expired. Please check your inbox and verify your email address to regain access.
         </p>
         <div className="space-y-3">
+          <button
+            onClick={handleAlreadyVerified}
+            disabled={checking}
+            className="w-full bg-emerald-600 text-white rounded-xl py-3 font-semibold hover:bg-emerald-700 transition disabled:opacity-50"
+          >
+            {checking ? "Checking..." : "✓ I've Already Verified My Email"}
+          </button>
           <button
             onClick={handleResend}
             disabled={loading || !session?.user?.email}

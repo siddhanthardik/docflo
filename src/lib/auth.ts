@@ -233,8 +233,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session?.emailVerified) {
-        token.emailVerified = session.emailVerified;
+      if (trigger === "update") {
+        // Re-fetch emailVerified from DB — secure source of truth, handles cross-device verification
+        try {
+          const dbDoc = await prisma.doctor.findUnique({ where: { id: token.sub! }, select: { emailVerified: true } });
+          const dbStaff = !dbDoc ? await prisma.staffMember.findUnique({ where: { id: token.sub! }, select: { emailVerified: true } }) : null;
+          const dbPlatform = !dbDoc && !dbStaff ? await prisma.platformUser.findUnique({ where: { id: token.sub! }, select: { emailVerified: true } }) : null;
+          const verified = dbDoc?.emailVerified || dbStaff?.emailVerified || dbPlatform?.emailVerified;
+          if (verified) token.emailVerified = verified.toISOString();
+        } catch { /* non-critical — token stays as-is if DB unreachable */ }
       }
       if (user) {
         token.role = user.role;
