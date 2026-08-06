@@ -7,7 +7,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye, Sparkles } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye, Sparkles, Bot } from "lucide-react"
 import { format } from "date-fns"
 
 export function PostScheduler() {
@@ -33,6 +41,12 @@ export function PostScheduler() {
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
   const [publishedPostData, setPublishedPostData] = useState<any>(null)
   const [overlayMessage, setOverlayMessage] = useState("")
+
+  // AI Generation State
+  const [showAIDialog, setShowAIDialog] = useState(false)
+  const [aiTopic, setAiTopic] = useState("")
+  const [aiTone, setAiTone] = useState("Professional")
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     // Check for draftKeyword search parameter
@@ -158,6 +172,45 @@ export function PostScheduler() {
     return map[type] || "Learn more"
   }
 
+  const handleGenerateAI = async () => {
+    if (!aiTopic.trim()) {
+      toast({ title: "Topic required", description: "Please enter a topic for the post.", variant: "destructive" })
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/gbp/posts/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: aiTopic,
+          tone: aiTone,
+          targetKeywords: [] // optional keywords could be added later
+        })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setForm(prev => ({ ...prev, content: data.content }))
+        toast({ title: "Post generated!", description: "Review and edit the AI drafted content." })
+        setShowAIDialog(false)
+        setAiTopic("")
+      } else {
+        if (res.status === 402) {
+          toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" })
+        } else {
+          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" })
+        }
+      }
+    } catch (error) {
+      toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   return (
     <div className="space-y-8 relative">
       {/* FULL SCREEN SUCCESS MODAL */}
@@ -262,7 +315,19 @@ export function PostScheduler() {
 
             {/* Content Textarea */}
             <div>
-              <Label className="text-gray-700 font-semibold mb-2 block">Post Content <span className="text-red-500">*</span></Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-gray-700 font-semibold block">Post Content <span className="text-red-500">*</span></Label>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAIDialog(true)}
+                  className="h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300"
+                >
+                  <Bot className="w-4 h-4 mr-2" />
+                  Draft with AI
+                </Button>
+              </div>
               <Textarea 
                 value={form.content} 
                 onChange={(e) => setForm({...form, content: e.target.value.substring(0, 1500)})} 
@@ -502,6 +567,60 @@ export function PostScheduler() {
           </table>
         </div>
       </div>
+      
+      {/* AI Draft Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-indigo-600" />
+              Draft Post with AI
+            </DialogTitle>
+            <DialogDescription>
+              Enter a topic and let AI draft an engaging post for your Google Business Profile.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Topic</Label>
+              <Textarea 
+                placeholder="e.g. Flu season vaccines available now. Walk-ins welcome!" 
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tone</Label>
+              <Select value={aiTone} onValueChange={setAiTone}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Professional">Professional</SelectItem>
+                  <SelectItem value="Friendly">Friendly</SelectItem>
+                  <SelectItem value="Urgent">Urgent</SelectItem>
+                  <SelectItem value="Informative">Informative</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAIDialog(false)} disabled={isGenerating}>Cancel</Button>
+            <Button onClick={handleGenerateAI} disabled={isGenerating || !aiTopic.trim()}>
+              {isGenerating ? (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Draft"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
+}
