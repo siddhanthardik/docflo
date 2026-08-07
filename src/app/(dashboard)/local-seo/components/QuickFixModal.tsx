@@ -279,8 +279,8 @@ export function QuickFixModal({
                 placeholder="Mon-Sat 9:00 AM - 6:00 PM"
                 className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-hidden"
               />
-              <div className="flex gap-2">
-                {["Mon-Sat 9AM-6PM", "Mon-Fri 10AM-8PM", "Open 24/7"].map((preset) => (
+              <div className="flex gap-2 flex-wrap">
+                {["Mon-Sat 5:30 PM - 7:30 PM", "Mon-Sat 9AM-6PM", "Mon-Fri 10AM-8PM", "Open 24/7"].map((preset) => (
                   <button
                     key={preset}
                     type="button"

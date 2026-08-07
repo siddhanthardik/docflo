@@ -286,7 +286,7 @@ export default function GBPProfilePage() {
   const description = insights.description || "";
   const appointmentUrl = insights.appointmentUrl || insights.website || "";
   const rawHours = insights.regularHours || insights.hours;
-  const hours = typeof rawHours === "string" ? rawHours : "Mon-Sat 9:00 AM - 6:00 PM";
+  const hours = typeof rawHours === "string" && rawHours ? rawHours : "Mon-Sat 5:30 PM - 7:30 PM";
   const phone = insights.phone || "+91 99711 18381";
   const website = insights.website || insights.websiteUri || "https://drvinayrai.com";
   

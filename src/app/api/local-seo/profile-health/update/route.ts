@@ -70,6 +70,11 @@ export async function POST(req: Request) {
     } else if (field === "primaryCategory") {
       if (!insightsData.categories) insightsData.categories = {};
       insightsData.categories.primaryCategory = { displayName: value };
+    } else if (field === "hours") {
+      insightsData.hours = value;
+      insightsData.regularHours = value;
+    } else if (field === "attributes") {
+      insightsData.attributes = Array.isArray(value) ? value : [value];
     } else {
       insightsData[field] = value;
     }

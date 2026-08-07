@@ -40,6 +40,7 @@ export class GoogleBusinessProfileService {
         locationId: account.locationId,
         locationName: account.locationName,
         insights: {
+          ...insights,
           name: insights.name || "Google Business Profile",
           formattedAddress: insights.formattedAddress || "",
           rating: insights.rating || 0,
@@ -62,6 +63,10 @@ export class GoogleBusinessProfileService {
           categories: insights.categories || null,
           description: insights.description || "",
           accountName: insights.accountName || "",
+          appointmentUrl: insights.appointmentUrl || insights.website || "",
+          hours: insights.hours || insights.regularHours || "",
+          regularHours: insights.regularHours || insights.hours || "",
+          attributes: insights.attributes || [],
         },
         recentReviews: storedReviews.map(r => ({
           id: r.id,
