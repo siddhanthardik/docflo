@@ -506,6 +506,20 @@ export class GBPService {
         });
       }
 
+      // Cleanup: Delete reviews from the database that are no longer present in Google's API response
+      // This ensures the local database count perfectly matches the live Google Reviews count.
+      if (gbpAccountId) {
+        const fetchedReviewIds = reviews.map((r: any) => r.reviewId);
+        await prisma.review.deleteMany({
+          where: {
+            doctorId: this.doctorId,
+            gbpAccountId: gbpAccountId,
+            source: "GOOGLE",
+            id: { notIn: fetchedReviewIds },
+          },
+        });
+      }
+
       return reviews;
     } catch (error) {
       console.error("Error fetching GBP reviews:", error);
