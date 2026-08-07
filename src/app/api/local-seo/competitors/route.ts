@@ -121,8 +121,8 @@ export async function GET(request: Request) {
     const actualName = placeData?.name || bName;
     const actualCategories = placeData?.types || categoryNames;
     const locationStr = placeData?.formattedAddress || bAddr;
-    const gbpPrimarySlug = placeData?.primaryType || insights.primaryCategory || profileData?.primaryCategory || null;
-    const gbpDisplayName = placeData?.primaryTypeDisplayName || null;
+    const gbpPrimarySlug = placeData?.primaryType || null;
+    const gbpDisplayName = placeData?.primaryTypeDisplayName || insights.primaryCategory || profileData?.primaryCategory || null;
 
     const detected = detectSpeciality(
       actualName, 

@@ -33,8 +33,8 @@ export async function GET(request: Request) {
     const bName = insights.name || profileData?.name || account.locationName || "";
     const bCats = profileData?.categories || profileData?.types || insights.categories || [];
     const bAddr = insights.formattedAddress || profileData?.address || "";
-    const detected = detectSpeciality(bName, bCats, bAddr);
-    const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || "Medical Clinic") : detected.speciality;
+    const detected = detectSpeciality(bName, bCats, bAddr, null, profileData?.primaryCategory || insights.primaryCategory);
+    const primaryCategory = detected.isUnknown ? (profileData?.primaryCategory || insights.primaryCategory || "Medical Clinic") : detected.speciality;
 
     const views = comparisons.find(c => c.metric === 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH')?.currentValue || insights.views || insights.user_ratings_total || 0;
     const calls = comparisons.find(c => c.metric === 'CALL_CLICKS')?.currentValue || insights.calls || 0;
