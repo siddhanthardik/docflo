@@ -49,7 +49,7 @@ export function PostingActivity() {
           <h2 className="text-xl font-bold text-gray-900">Posting Activity</h2>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href="/google-business/posts">Create Post</Link>
+          <Link href="/gbp/posts">Create Post</Link>
         </Button>
       </div>
 

@@ -19,6 +19,7 @@ import { PostingActivity } from "./PostingActivity";
 import { KeywordInsights } from "./KeywordInsights";
 import { CompetitorInsights } from "./CompetitorInsights";
 import { AiSearchReadiness } from "./AiSearchReadiness";
+import { OverviewQuickActions } from "./OverviewQuickActions";
 import ServiceInsights from "./ServiceInsights";
 import { SearchGrid } from "./SearchGrid";
 import { RecommendationsList } from "./RecommendationsList";
@@ -445,10 +446,10 @@ export function LocalSeoDashboard() {
             </div>
           </div>
 
-          {/* Middle Row: Completeness & Sync (1/3) + Posting Activity (2/3) */}
+          {/* Middle Row: Growth Shortcuts & Sync (1/3) + Posting Activity (2/3) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 flex flex-col gap-6">
-              <ProfileCompletenessMini profileData={profileHealthData} />
+              <OverviewQuickActions onSwitchTab={(tab: any) => setActiveTab(tab)} />
               <SyncStatus lastSynced={lastSyncedStr} />
             </div>
             <div className="lg:col-span-2">
