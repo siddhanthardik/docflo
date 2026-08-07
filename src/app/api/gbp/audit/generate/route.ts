@@ -15,12 +15,14 @@ export async function POST(req: Request) {
 
     const gbpAccount = await prisma.gbpAccount.findFirst({
       where: { doctorId },
-      select: { locationName: true, insightsData: true }
+      select: { id: true, locationName: true, insightsData: true }
     });
 
     if (!gbpAccount) {
       return NextResponse.json({ error: "Google Business Profile not connected" }, { status: 400 });
     }
+
+    const insights = (gbpAccount.insightsData as any) || {};
 
     const profileSnap = await prisma.profileSnapshot.findFirst({
       where: { gbpAccountId: gbpAccount.id },
