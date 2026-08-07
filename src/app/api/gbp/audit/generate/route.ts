@@ -22,11 +22,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Google Business Profile not connected" }, { status: 400 });
     }
 
-    const insights = gbpAccount.insightsData as any || {};
+    const profileSnap = await prisma.profileSnapshot.findFirst({
+      where: { gbpAccountId: gbpAccount.id },
+      orderBy: { date: 'desc' }
+    });
+    const profileData = profileSnap?.json as any;
+    const category = profileData?.primaryCategory || (typeof insights.primaryCategory === 'string' ? insights.primaryCategory : insights.categories?.primaryCategory?.displayName) || 'Not specified';
 
     const prompt = `You are a Local SEO expert analyzing a clinic's Google Business Profile.
     Location Name: ${gbpAccount.locationName || 'Unknown'}
-    Category: ${insights.primaryCategory || 'Not specified'}
+    Category: ${category}
     Description length: ${(insights.description || '').length} characters
     Photos count: ${insights.photoCount || 0}
     Reviews unanswered: ${insights.unansweredReviews || 0}
