@@ -45,6 +45,16 @@ export default function TermsConditionsPage() {
             <p>
               In no event shall Gyrex Technologies be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.
             </p>
+
+            <h3 className="text-xl font-bold text-slate-900 mt-8 mb-4">6. Practitioner Licensing & Professional Compliance</h3>
+            <p>
+              By creating an account, the User (Doctor or Clinic) represents and warrants that they, and any practitioners operating under their account, hold all valid, unexpired licenses, registrations, and permits required by applicable local, state, and national laws to practice medicine and operate a clinical facility.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 mt-8 mb-4">7. SaaS Platform & Medical Disclaimer</h3>
+            <p>
+              Gyrex is an administrative software-as-a-service (SaaS) management platform. Gyrex does not provide medical services, verify practitioner qualifications, or engage in patient referral services. The User remains solely responsible for all clinical care, treatment, and medical compliance.
+            </p>
           </div>
         </article>
       </div>
