@@ -1,22 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, AlertCircle, ShieldCheck, ArrowRight, Sparkles, Layers, PhoneCall, CalendarCheck, Image as ImageIcon } from "lucide-react";
+import { CheckCircle2, AlertCircle, ShieldCheck, ArrowRight, Layers, PhoneCall, CalendarCheck, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { QuickFixModal } from "./QuickFixModal";
 
 interface AuditField {
+  key: string;
   label: string;
   category: "foundation" | "seo" | "conversion";
   impact: "High Impact" | "Medium Impact" | "Core Requirement";
   isComplete: boolean;
   valueDisplay?: string;
+  currentValue: any;
   advice: string;
 }
 
 export function ProfileHealth() {
-  const { data: profileData, isLoading } = useLocalSeoModule<any>("profile-health");
+  const { data: profileData, isLoading, refetch } = useLocalSeoModule<any>("profile-health");
+  const { data: overviewData } = useLocalSeoModule<any>("overview");
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeFix, setActiveFix] = useState<{
+    key: string;
+    label: string;
+    value: any;
+  } | null>(null);
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full rounded-2xl" />;
@@ -26,90 +38,101 @@ export function ProfileHealth() {
 
   const secondaryCount = profileData.categories ? profileData.categories.length : 0;
   const descLength = profileData.description ? profileData.description.length : 0;
+  const primaryCat = profileData.primaryCategory || overviewData?.primaryCategory || "Doctor";
 
   const fields: AuditField[] = [
     {
+      key: "name",
       label: "Business Name",
       category: "foundation",
       impact: "Core Requirement",
       isComplete: !!profileData.name,
       valueDisplay: profileData.name || "Missing",
+      currentValue: profileData.name || "",
       advice: "Your official practice or clinic title registered with Google.",
     },
     {
+      key: "primaryCategory",
       label: "Primary Business Category",
       category: "seo",
       impact: "High Impact",
       isComplete: !!profileData.primaryCategory,
       valueDisplay: profileData.primaryCategory || "Not Set",
+      currentValue: profileData.primaryCategory || "",
       advice: "Primary factor used by Google algorithm to index your clinic for local searches.",
     },
     {
+      key: "categories",
       label: "Secondary Categories",
       category: "seo",
       impact: "High Impact",
       isComplete: secondaryCount >= 1,
       valueDisplay: secondaryCount > 0 ? `${secondaryCount} Added` : "None Added",
+      currentValue: profileData.categories || [],
       advice: secondaryCount >= 2
         ? "Great coverage! Secondary categories increase local keyword visibility by up to 35%."
         : "Add at least 2 secondary categories (e.g. Gynecologist, Women's Health Clinic) to expand keyword reach.",
     },
     {
+      key: "description",
       label: "Business Description",
       category: "seo",
       impact: "High Impact",
       isComplete: descLength >= 100,
       valueDisplay: descLength > 0 ? `${descLength} characters` : "Missing",
+      currentValue: profileData.description || "",
       advice: descLength >= 250
         ? "Comprehensive description loaded with specialty keywords."
         : "A rich 250+ character description containing specialty & neighborhood keywords boosts local AI indexing.",
     },
     {
+      key: "appointmentUrl",
       label: "Appointment Booking URL",
       category: "conversion",
       impact: "High Impact",
       isComplete: !!profileData.appointmentUrl,
       valueDisplay: profileData.appointmentUrl ? "Configured" : "Missing Link",
+      currentValue: profileData.appointmentUrl || "",
       advice: "Direct appointment links increase patient conversion rates by 40% on Google Maps.",
     },
     {
+      key: "hours",
       label: "Opening Hours & Timings",
       category: "conversion",
       impact: "High Impact",
       isComplete: !!profileData.hours,
       valueDisplay: profileData.hours ? "Active Schedule" : "Missing Hours",
+      currentValue: profileData.hours || "",
       advice: "Accurate operating hours prevent lost bookings and improve Google's 'Open Now' filter ranking.",
     },
     {
+      key: "phone",
       label: "Direct Phone Number",
       category: "foundation",
       impact: "Core Requirement",
       isComplete: !!profileData.phone,
       valueDisplay: profileData.phone || "Missing",
+      currentValue: profileData.phone || "",
       advice: "Enables 1-click patient call actions directly from Google Search & Maps results.",
     },
     {
+      key: "website",
       label: "Official Website Link",
       category: "foundation",
       impact: "Core Requirement",
       isComplete: !!profileData.website,
       valueDisplay: profileData.website || "Missing",
+      currentValue: profileData.website || "",
       advice: "Connects your GBP listing to your domain authority for higher Google Maps ranking.",
     },
     {
-      label: "Clinic Photos & Imagery",
-      category: "conversion",
-      impact: "Medium Impact",
-      isComplete: !!profileData.hasPhotos,
-      valueDisplay: profileData.hasPhotos ? "Photos Uploaded" : "No Photos Detected",
-      advice: "Listings with 10+ clinic interior & staff photos receive 42% more direction requests.",
-    },
-    {
+      key: "attributes",
       label: "Profile Attributes & Amenities",
       category: "conversion",
       impact: "Medium Impact",
-      isComplete: !!(profileData.attributes && profileData.attributes.length > 0),
-      valueDisplay: profileData.attributes?.length ? `${profileData.attributes.length} Attributes` : "None Set",
+      isComplete: !!(profileData.attributes && (Array.isArray(profileData.attributes) ? profileData.attributes.length > 0 : Object.keys(profileData.attributes).length > 0)),
+      valueDisplay: profileData.attributes ? "Attributes Configured" : "None Set",
+      currentValue: profileData.attributes || [],
       advice: "Highlights accessibility (wheelchair accessible, care types) for filtering patients.",
     },
   ];
@@ -135,6 +158,15 @@ export function ProfileHealth() {
       fields.filter((f) => f.category === "conversion").length) *
       100
   );
+
+  const handleOpenFixModal = (field: AuditField) => {
+    setActiveFix({
+      key: field.key,
+      label: field.label,
+      value: field.currentValue,
+    });
+    setModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -235,7 +267,7 @@ export function ProfileHealth() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {fields.map((field) => (
             <div
-              key={field.label}
+              key={field.key}
               className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
                 field.isComplete
                   ? "bg-white border-gray-100 hover:border-gray-200"
@@ -271,18 +303,37 @@ export function ProfileHealth() {
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs pl-7">
                 <span className="text-gray-400 font-medium">Status: <strong className="text-gray-700">{field.valueDisplay}</strong></span>
-                {!field.isComplete && (
-                  <Button asChild variant="ghost" size="sm" className="h-7 text-xs text-indigo-600 hover:bg-indigo-50 font-bold px-2">
-                    <Link href="/gbp">
-                      Optimize <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenFixModal(field)}
+                  className={`h-7 text-xs font-bold px-2.5 rounded-lg transition-all ${
+                    field.isComplete
+                      ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                      : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 shadow-2xs"
+                  }`}
+                >
+                  <Edit3 className="mr-1 h-3.5 w-3.5 text-indigo-500" />
+                  {field.isComplete ? "Edit" : "Optimize"}
+                </Button>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Quick Fix Popover Modal */}
+      {activeFix && (
+        <QuickFixModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          fieldKey={activeFix.key}
+          fieldLabel={activeFix.label}
+          currentValue={activeFix.value}
+          primaryCategory={primaryCat}
+          onSaved={() => refetch()}
+        />
+      )}
     </div>
   );
 }

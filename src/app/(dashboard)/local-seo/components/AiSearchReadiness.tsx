@@ -1,17 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
-import { Sparkles, CheckCircle2, AlertCircle, HelpCircle, Bot, ArrowRight } from "lucide-react";
+import { Sparkles, CheckCircle2, AlertCircle, HelpCircle, Bot, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { QuickFixModal } from "./QuickFixModal";
 
 export function AiSearchReadiness() {
-  const { data: profileData } = useLocalSeoModule<any>("profile-health");
+  const { data: profileData, refetch } = useLocalSeoModule<any>("profile-health");
+  const { data: overviewData } = useLocalSeoModule<any>("overview");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeFix, setActiveFix] = useState<{
+    key: string;
+    label: string;
+    value: any;
+  } | null>(null);
 
   if (!profileData) return null;
 
+  const primaryCat = profileData.primaryCategory || overviewData?.primaryCategory || "Doctor";
+
   const queries = [
     {
+      fieldKey: "appointmentUrl",
+      fieldLabel: "Appointment Booking URL",
+      fieldValue: profileData.appointmentUrl || "",
       question: "Can I book an appointment online with this clinic?",
       ready: !!profileData.appointmentUrl,
       source: profileData.appointmentUrl ? "Appointment Link verified" : "Missing Appointment URL",
@@ -21,6 +35,9 @@ export function AiSearchReadiness() {
         : "Add your online booking or WhatsApp link so AI search agents can convert patients instantly.",
     },
     {
+      fieldKey: "categories",
+      fieldLabel: "Secondary Business Categories",
+      fieldValue: profileData.categories || [],
       question: "What specialty treatments and clinical services are offered?",
       ready: !!(profileData.primaryCategory && profileData.categories && profileData.categories.length > 0),
       source: profileData.primaryCategory
@@ -30,13 +47,19 @@ export function AiSearchReadiness() {
       tip: "AI search engines construct treatment maps using your primary and secondary categories.",
     },
     {
+      fieldKey: "hours",
+      fieldLabel: "Opening Hours & Timings",
+      fieldValue: profileData.hours || "",
       question: "What are the clinic's operating hours and weekend availability?",
       ready: !!profileData.hours,
       source: profileData.hours ? "Structured Hours Verified" : "Hours not specified",
       impact: "Emergency & Urgent Discovery",
-      tip: "Google AI relies on structured hours to answer queries like 'Is Dr. Maanvvi open right now?'.",
+      tip: "Google AI relies on structured hours to answer queries like 'Is Dr. Vinay Kumar Rai open right now?'.",
     },
     {
+      fieldKey: "phone",
+      fieldLabel: "Direct Phone Number & Contact",
+      fieldValue: profileData.phone || "",
       question: "Where is the clinic located and how can I reach them?",
       ready: !!(profileData.phone && profileData.address),
       source: profileData.phone && profileData.address ? "Direct Phone & Geocoded Address" : "Incomplete Contact Data",
@@ -47,6 +70,15 @@ export function AiSearchReadiness() {
 
   const readyCount = queries.filter((q) => q.ready).length;
   const aiReadinessScore = Math.round((readyCount / queries.length) * 100);
+
+  const handleOpenFix = (q: any) => {
+    setActiveFix({
+      key: q.fieldKey,
+      label: q.fieldLabel,
+      value: q.fieldValue,
+    });
+    setModalOpen(true);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6">
@@ -117,18 +149,37 @@ export function AiSearchReadiness() {
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-200/50 text-[11px] pl-6">
                 <span className="text-gray-400 font-medium">Source: {q.source}</span>
-                {!q.ready && (
-                  <Button asChild variant="ghost" size="sm" className="h-6 text-[11px] text-indigo-600 hover:bg-indigo-50 px-2 font-bold">
-                    <Link href="/gbp">
-                      Fix <ArrowRight className="w-3 h-3 ml-1" />
-                    </Link>
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenFix(q)}
+                  className={`h-6 text-[11px] font-bold px-2.5 rounded-lg transition-all ${
+                    q.ready
+                      ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                      : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100"
+                  }`}
+                >
+                  <Edit3 className="w-3 h-3 mr-1 text-indigo-500" />
+                  {q.ready ? "Edit" : "Fix Inline"}
+                </Button>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Quick Fix Popover Modal */}
+      {activeFix && (
+        <QuickFixModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          fieldKey={activeFix.key}
+          fieldLabel={activeFix.label}
+          currentValue={activeFix.value}
+          primaryCategory={primaryCat}
+          onSaved={() => refetch()}
+        />
+      )}
     </div>
   );
 }
