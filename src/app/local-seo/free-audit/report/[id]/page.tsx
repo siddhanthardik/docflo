@@ -505,19 +505,30 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   const addressParts = address.split(",").map((s: string) => s.trim());
   const city = compIntel?.searchContext || (addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "your area");
 
+  // PDF Download Handler with production-grade naming prefix "gyrex-audit"
+  const handleDownloadPDF = () => {
+    const originalTitle = document.title;
+    const cleanName = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    document.title = `gyrex-audit-${cleanName || id}`;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1200);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 print:pb-0 print:bg-white">
 
       {/* ── Top Navigation Bar ───────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:static print:border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <GyrexLogo size="md" />
             <span className="text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1">Audit Report</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 print:hidden">
             <button
-              onClick={() => window.print()}
+              onClick={handleDownloadPDF}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -543,13 +554,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       </header>
 
       {/* ── Main Container ────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:py-4 print:px-0 print:max-w-none">
         
         {/* Two Column Layout */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-8 items-start print:block">
 
           {/* ════ LEFT MAIN CONTENT ════════════════════════════════════════ */}
-          <div className="flex-1 min-w-0 space-y-6">
+          <div className="flex-1 min-w-0 space-y-6 print:w-full print:max-w-none">
 
             {/* ── SECTION 1: Hero Diagnostic Banner ─────────────────────── */}
             <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
@@ -651,7 +662,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </div>
                     <Link
                       href="/register"
-                      className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shrink-0 transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
+                      className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shrink-0 transition-all shadow-xs flex items-center gap-1.5 active:scale-95 print:hidden"
                     >
                       <span>Reclaim Lost Patients</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -662,7 +673,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 {/* Clean CTA button */}
                 <Link
                   href="/register"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-[0.99]"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-[0.99] print:hidden"
                 >
                   <span>Fix My Google Profile</span>
                   <ArrowRight className="w-4 h-4" />
@@ -813,7 +824,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </div>
                     <Link
                       href="/register"
-                      className="self-start sm:self-center shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors shadow-2xs"
+                      className="self-start sm:self-center shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors shadow-2xs print:hidden"
                     >
                       <span>Fix with Gyrex Pro</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -933,7 +944,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* ════ RIGHT SIDEBAR (Sticky Gyrex Platform Pitch) ══════════════ */}
-          <div className="w-full lg:w-[22rem] xl:w-80 shrink-0 relative z-20">
+          <div className="w-full lg:w-[22rem] xl:w-80 shrink-0 relative z-20 print:hidden">
             <GyrexPlatformSidebar businessName={businessName} />
           </div>
 
@@ -942,7 +953,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ── Native App Mobile Sticky Bottom Bar (App-like UX) ─────────────── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+      <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
         <div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-base font-bold text-slate-900">₹0</span>
