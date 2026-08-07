@@ -18,7 +18,7 @@ import { Reputation } from "./Reputation";
 import { PostingActivity } from "./PostingActivity";
 import { KeywordInsights } from "./KeywordInsights";
 import { CompetitorInsights } from "./CompetitorInsights";
-import { GoogleQA } from "./GoogleQA";
+import { AiSearchReadiness } from "./AiSearchReadiness";
 import ServiceInsights from "./ServiceInsights";
 import { SearchGrid } from "./SearchGrid";
 import { RecommendationsList } from "./RecommendationsList";
@@ -505,7 +505,7 @@ export function LocalSeoDashboard() {
       {activeTab === "profile-health" && (
         <div className="space-y-6">
           <ProfileHealth />
-          <GoogleQA />
+          <AiSearchReadiness />
         </div>
       )}
 
