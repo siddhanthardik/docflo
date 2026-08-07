@@ -350,12 +350,34 @@ async function processAuditAsync(auditId: string, data: any) {
         // 7. Healthcare Intelligence
         healthcareIntelligence: {
            specialty: specialityData.speciality,
-           expectedServices: specialityData.isUnknown ? ["Consultation", "Diagnosis", "Treatment"] : 
-             specialityData.speciality.toLowerCase().includes("dentist") ? ["Teeth Whitening", "Root Canal", "Dental Implants", "Orthodontics", "Dental Crowns"] :
-             specialityData.speciality.toLowerCase().includes("ivf") ? ["IVF Treatment", "IUI", "Fertility Preservation", "Semen Analysis"] :
-             specialityData.speciality.toLowerCase().includes("lab") || specialityData.speciality.toLowerCase().includes("diagnostics") ? ["Blood Test", "MRI", "CT Scan", "X-Ray", "Ultrasound"] :
-             specialityData.speciality.toLowerCase().includes("derma") ? ["Acne Treatment", "Laser Hair Removal", "Botox", "Chemical Peel"] :
-             ["Consultation", "Patient Care", "Follow-up", "Health Checkup", "Diagnostics"]
+           expectedServices: (function(s: string) {
+             const spec = s.toLowerCase();
+             if (spec.includes("pediatr") || spec.includes("child")) {
+               return ["Newborn Care", "Child Vaccination & Immunization", "Growth & Development Monitoring", "Pediatric Nutrition", "Fever & Allergy Care", "Childhood Asthma"];
+             }
+             if (spec.includes("gynaec") || spec.includes("gynec") || spec.includes("obstet") || spec.includes("pregnancy")) {
+               return ["Pregnancy & Prenatal Care", "High Risk Pregnancy", "PCOS / PCOD Management", "Fetal Medicine & Ultrasound", "Infertility Consultation", "Laparoscopic Surgery"];
+             }
+             if (spec.includes("dentist") || spec.includes("dental")) {
+               return ["Teeth Whitening", "Root Canal Treatment", "Dental Implants", "Orthodontics & Braces", "Tooth Extraction", "Pediatric Dentistry"];
+             }
+             if (spec.includes("derma") || spec.includes("skin")) {
+               return ["Acne & Scar Treatment", "Laser Hair Removal", "Botox & Dermal Fillers", "Chemical Peel", "Hair Loss & PRP Treatment", "Skin Pigmentation"];
+             }
+             if (spec.includes("ortho")) {
+               return ["Joint Replacement", "Arthritis Management", "Fracture & Trauma Care", "Spine Care", "Sports Injury Treatment"];
+             }
+             if (spec.includes("eye") || spec.includes("ophthalm")) {
+               return ["Cataract Surgery", "LASIK & Vision Correction", "Glaucoma Treatment", "Dry Eye Therapy", "Pediatric Ophthalmology"];
+             }
+             if (spec.includes("ivf") || spec.includes("fertility")) {
+               return ["IVF Treatment", "IUI Consultation", "Fertility Preservation", "Semen Analysis", "Egg Freezing"];
+             }
+             if (spec.includes("lab") || spec.includes("diagnost")) {
+               return ["Blood Test", "MRI Scan", "CT Scan", "X-Ray", "Ultrasound Diagnostics"];
+             }
+             return ["General Consultation", "Preventive Health Checkup", "Patient Diagnosis & Follow-up", "Prescription & Care"];
+           })(specialityData.speciality)
         },
 
         // 8. Priority Action Plan

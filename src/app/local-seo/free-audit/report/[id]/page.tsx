@@ -469,8 +469,37 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     : defaultCompletenessItems;
 
   const profilePct      = completenessPercent(completenessItems);
-  const keywords: string[] = healthIntel?.expectedServices || ["Consultation", "Diagnosis", "Treatment", "Health Checkup"];
   const specialty       = healthIntel?.specialty || reportData.speciality || "Medical Clinic";
+  
+  // Dynamic Authentic Medical Specialty Keyword Mapping
+  const keywords: string[] = (function(s: string, existing: string[] | undefined) {
+    if (existing && existing.length > 0 && !existing.includes("Consultation")) {
+      return existing;
+    }
+    const spec = s.toLowerCase();
+    if (spec.includes("pediatr") || spec.includes("child")) {
+      return ["Newborn Care", "Child Vaccination & Immunization", "Growth & Development Monitoring", "Pediatric Nutrition", "Fever & Allergy Care", "Childhood Asthma"];
+    }
+    if (spec.includes("gynaec") || spec.includes("gynec") || spec.includes("obstet") || spec.includes("pregnancy")) {
+      return ["Pregnancy & Prenatal Care", "High Risk Pregnancy", "PCOS / PCOD Management", "Fetal Medicine & Ultrasound", "Infertility Consultation", "Laparoscopic Surgery"];
+    }
+    if (spec.includes("dentist") || spec.includes("dental")) {
+      return ["Teeth Whitening", "Root Canal Treatment", "Dental Implants", "Orthodontics & Braces", "Tooth Extraction", "Pediatric Dentistry"];
+    }
+    if (spec.includes("derma") || spec.includes("skin")) {
+      return ["Acne & Scar Treatment", "Laser Hair Removal", "Botox & Dermal Fillers", "Chemical Peel", "Hair Loss & PRP Treatment", "Skin Pigmentation"];
+    }
+    if (spec.includes("ortho")) {
+      return ["Joint Replacement", "Arthritis Management", "Fracture & Trauma Care", "Spine Care", "Sports Injury Treatment"];
+    }
+    if (spec.includes("eye") || spec.includes("ophthalm")) {
+      return ["Cataract Surgery", "LASIK & Vision Correction", "Glaucoma Treatment", "Dry Eye Therapy", "Pediatric Ophthalmology"];
+    }
+    if (spec.includes("ivf") || spec.includes("fertility")) {
+      return ["IVF Treatment", "IUI Consultation", "Fertility Preservation", "Semen Analysis", "Egg Freezing"];
+    }
+    return ["General Consultation", "Preventive Health Checkup", "Patient Diagnosis & Follow-up", "Prescription & Care"];
+  })(specialty, healthIntel?.expectedServices);
 
   // City extraction
   const addressParts = address.split(",").map((s: string) => s.trim());
@@ -576,7 +605,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   ) : (
                     <>
                       <span className="text-indigo-600">{businessName}</span> is actively losing patients to{" "}
-                      <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAheadStr} competitors</span> on Google.
+                      <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAheadStr} competitor{clinicsAheadStr === "1" ? "" : "s"}</span> on Google.
                     </>
                   )}
                 </h2>
@@ -588,7 +617,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
                     <div className="text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
-                    <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
+                    <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitor{clinicsAheadStr === "1" ? "" : "s"} Ahead</div>
                   </div>
                   <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs">
                     <div className="text-4xl font-extrabold text-amber-600">{issueCount}</div>
@@ -757,7 +786,11 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 font-bold">
                       <ShieldAlert className="w-4 h-4" />
                     </div>
-                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Why {businessName} isn't ranking</h2>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                      {userRankNum === 1
+                        ? `Profile Optimization Opportunities for ${businessName}`
+                        : `Why ${businessName} isn't ranking #1 on Google Maps`}
+                    </h2>
                   </div>
                   <p className="text-sm text-slate-500 font-normal">Profile gaps identified by our diagnostic engine</p>
                 </div>
