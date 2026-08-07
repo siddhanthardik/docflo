@@ -216,10 +216,21 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
         </Link>
         <Link
           href="/register"
-          className="text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors text-center block mt-3"
+          className="text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors text-center block mt-2"
         >
           Learn More &gt;
         </Link>
+      </div>
+
+      {/* Social Proof & Doctor Trust */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50/80 text-center">
+        <div className="flex items-center justify-center gap-1 mb-1">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star key={s} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+        <p className="text-[11px] font-semibold text-slate-700">Trusted by 500+ Clinics & Doctors</p>
+        <p className="text-[10px] text-slate-500 mt-0.5 italic">"Increased our Google Maps calls by +140% in 30 days."</p>
       </div>
     </div>
   );
@@ -475,10 +486,26 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             <GyrexLogo size="md" />
             <span className="text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1">Audit Report</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden sm:inline">Download PDF</span>
+            </button>
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out the Google Business Profile Audit Report for ${businessName}: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs"
+            >
+              <WhatsAppSVG />
+              <span className="hidden sm:inline">Share Report</span>
+            </a>
             <Link
               href="/local-seo/free-audit"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors pl-2"
             >
               Audit Another Clinic
             </Link>
@@ -558,7 +585,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </p>
 
                 {/* 3 Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
                     <div className="text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
                     <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
@@ -570,6 +597,36 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs">
                     <div className="text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
                     <div className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
+                  </div>
+                </div>
+
+                {/* Estimated Monthly Revenue & Patient Loss Card */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-indigo-50/90 border border-rose-200/80 mb-6 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <TrendingUp className="w-5 h-5 rotate-180" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          Estimated Monthly Revenue & Patient Opportunity Gap
+                        </h3>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed font-normal">
+                          {userRankNum <= 3 ? (
+                            <>Your clinic maintains strong local map visibility. Maintaining this position captures an estimated <span className="font-semibold text-emerald-700">85%+ of high-intent local patient calls</span> in {city}.</>
+                          ) : (
+                            <>Ranking at position <span className="font-bold text-rose-700">#{userRankNum}</span> for <span className="font-semibold text-slate-800">"{specialty}"</span> costs your clinic an estimated <span className="font-bold text-rose-700">~25 to 40 lost patient calls per month</span> (~<span className="font-bold text-rose-700">₹1.2L – ₹2.5L</span> estimated monthly revenue gap).</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/register"
+                      className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shrink-0 transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
+                    >
+                      <span>Reclaim Lost Patients</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
 
@@ -711,16 +768,51 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
               <div className="p-6 space-y-3 bg-slate-50/50">
                 {issues.map((item, i) => (
-                  <div key={i} className="p-4 rounded-2xl bg-white border border-rose-100/80 flex items-start gap-3 shadow-2xs">
-                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
-                      <XCircle className="w-4 h-4" />
+                  <div key={i} className="p-4 rounded-2xl bg-white border border-rose-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
+                        <XCircle className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{item.issue}</p>
+                        <p className="text-[13px] text-slate-600 mt-1 leading-relaxed font-normal">{item.evidence}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{item.issue}</p>
-                      <p className="text-[13px] text-slate-600 mt-1 leading-relaxed font-normal">{item.evidence}</p>
-                    </div>
+                    <Link
+                      href="/register"
+                      className="self-start sm:self-center shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors shadow-2xs"
+                    >
+                      <span>Fix with Gyrex Pro</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* ── SECTION 4.5: Treatment & Category Coverage Gap Card ───── */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 font-bold">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Clinical Treatment & Category Coverage</h2>
+                    <p className="text-sm text-slate-500 font-normal">Specialty search terms evaluated for {specialty}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Evaluated Treatment Keywords</p>
+                <div className="flex flex-wrap gap-2">
+                  {keywords.map((kw: string, i: number) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200/60">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
+                      {kw}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
