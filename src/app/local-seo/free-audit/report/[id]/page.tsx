@@ -115,7 +115,7 @@ function GoogleGSVG() {
 // ─── Gyrex Platform Features Sticky Sidebar ────────────────────────────────
 function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
   return (
-    <div className="sticky top-24 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all">
+    <div className="sticky top-24 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all print:hidden">
       {/* Header Banner - Gyrex Indigo Theme */}
       <div className="p-6 bg-indigo-600 text-white relative overflow-hidden">
         <div className="relative z-10">
@@ -508,8 +508,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   // PDF Download Handler with production-grade naming prefix "gyrex-audit"
   const handleDownloadPDF = () => {
     const originalTitle = document.title;
-    const cleanName = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    document.title = `gyrex-audit-${cleanName || id}`;
+    // ensure audit report is saved with report number prefix gyrex-audit
+    document.title = `gyrex-audit-${id}`;
     window.print();
     setTimeout(() => {
       document.title = originalTitle;

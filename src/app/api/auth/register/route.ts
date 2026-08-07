@@ -28,6 +28,10 @@ export async function POST(req: Request) {
         }
       }
 
+      // Calculate 14-day trial expiry
+      const trialExpiry = new Date();
+      trialExpiry.setDate(trialExpiry.getDate() + 14);
+
       // Create doctor atomically
       const doctor = await prisma.doctor.create({
         data: {
@@ -39,6 +43,8 @@ export async function POST(req: Request) {
           clinicName: validatedData.clinicName,
           address: validatedData.address,
           salesRepId,
+          subscriptionStatus: "ACTIVE",
+          subscriptionExpiry: trialExpiry,
           practitioners: {
             create: {
               name: validatedData.name,

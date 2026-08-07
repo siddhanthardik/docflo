@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
+import { TrialBanner } from "@/components/layout/TrialBanner";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +18,31 @@ export default async function DashboardLayout({
 
   if (!session || !session.user?.id) {
     redirect("/login");
+  }
+
+  // Fetch fresh doctor data to check subscription status
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: session.user.doctorId || session.user.id },
+    select: {
+      subscriptionExpiry: true,
+      stripeCustomerId: true,
+      razorpayCustomerId: true,
+      subscriptionStatus: true,
+    }
+  });
+
+  const hasPaymentMethod = !!(doctor?.stripeCustomerId || doctor?.razorpayCustomerId);
+
+  // Enforce trial expiry
+  if (doctor?.subscriptionExpiry && !hasPaymentMethod && doctor.subscriptionStatus !== "ACTIVE") {
+    // Check if expired
+    if (new Date() > doctor.subscriptionExpiry) {
+      redirect("/settings/billing?reason=trial_expired");
+    }
+  } else if (doctor?.subscriptionExpiry && !hasPaymentMethod) {
+    if (new Date() > doctor.subscriptionExpiry) {
+      redirect("/settings/billing?reason=trial_expired");
+    }
   }
 
   return (
@@ -30,6 +57,10 @@ export default async function DashboardLayout({
 
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible print:block relative">
             <ImpersonationBanner />
+            <TrialBanner 
+              subscriptionExpiry={doctor?.subscriptionExpiry || null} 
+              hasPaymentMethod={hasPaymentMethod} 
+            />
             <Header />
             
             {/* Main content with bottom padding for mobile navigation bar */}
