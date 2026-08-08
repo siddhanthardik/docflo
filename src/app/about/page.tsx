@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import {
   Search,
@@ -28,42 +28,31 @@ import { LandingHeader } from "@/components/layout/LandingHeader";
 import { Footer } from "@/components/layout/Footer";
 
 export default function AboutPage() {
-  const [activeTab, setActiveTab] = useState<"discover" | "communicate" | "operations">("discover");
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col selection:bg-blue-600 selection:text-white overflow-x-hidden">
       {/* Navigation Header */}
       <LandingHeader />
 
       <main className="flex-grow pt-24 pb-20">
-        {/* HERO SECTION - LIGHT THEME */}
-        <section className="relative pt-12 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* HERO SECTION - ONLY PUNCHLINE & HERO IMAGE */}
+        <section className="relative pt-12 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           {/* Subtle Ambient Background Gradients */}
           <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-br from-blue-200/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none" />
           <div className="absolute top-40 right-10 w-80 h-80 bg-indigo-100/40 rounded-full blur-2xl pointer-events-none" />
 
           <div className="relative z-10 text-center max-w-4xl mx-auto">
-            {/* Main Headline (Clean Light Theme) */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.15] mb-6">
+            {/* ONLY Marketing Punchline */}
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.15] mb-4">
               Helping Clinics Grow with{" "}
               <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 bg-clip-text text-transparent">
                 Confidence
               </span>
             </h1>
-
-            {/* Subtitle / Paragraph */}
-            <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed font-normal mb-8">
-              Running a clinic today involves much more than providing excellent medical care. Patients search online before they visit. They compare ratings, read reviews, check photos, send WhatsApp messages, and expect quick responses. At the same time, clinic teams are busy managing appointments, answering calls, following up with patients, and handling everyday administrative work.
-            </p>
-
-            <p className="text-sm sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed font-medium bg-blue-50/80 border border-blue-100 p-4 rounded-2xl">
-              Gyrex brings together Google Business Profile management, WhatsApp communication, patient engagement, appointment management, billing, and practical automation into one unified platform designed specifically for healthcare providers.
-            </p>
           </div>
 
-          {/* Hero Image Showcase (Indian Doctors in Clinic) */}
-          <div className="mt-14 relative max-w-5xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 bg-white group">
-            <div className="relative h-[320px] sm:h-[480px] lg:h-[520px] w-full">
+          {/* Hero Image Showcase (Cleaned Indian Doctors Image without third-party branding) */}
+          <div className="mt-10 relative max-w-5xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 bg-white group">
+            <div className="relative h-[340px] sm:h-[500px] lg:h-[540px] w-full">
               <Image
                 src="/images/indian_doctors_clinic.jpg"
                 alt="Indian Healthcare Team in Modern Clinic"
@@ -76,19 +65,19 @@ export default function AboutPage() {
 
             {/* Floating Metric Badges on Hero Image */}
             <div className="absolute bottom-6 left-6 right-6 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 z-20">
-              <div className="bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
+              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
                 <div className="text-2xl sm:text-3xl font-black text-blue-600">+350%</div>
                 <div className="text-xs text-slate-600 font-semibold mt-0.5">Google Local Search Rank</div>
               </div>
-              <div className="bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
+              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
                 <div className="text-2xl sm:text-3xl font-black text-indigo-600">99.4%</div>
                 <div className="text-xs text-slate-600 font-semibold mt-0.5">Patient Retention Rate</div>
               </div>
-              <div className="bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
+              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
                 <div className="text-2xl sm:text-3xl font-black text-emerald-600">10M+</div>
                 <div className="text-xs text-slate-600 font-semibold mt-0.5">Automated Reminders Sent</div>
               </div>
-              <div className="bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
+              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
                 <div className="text-2xl sm:text-3xl font-black text-amber-500">4.9 ★</div>
                 <div className="text-xs text-slate-600 font-semibold mt-0.5">Average Patient Rating</div>
               </div>
@@ -96,8 +85,47 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* MAIN CONTENT AREA - INTRO & PROMINENT HIGHLIGHT BANNER */}
+        <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
+          {/* Main Intro Paragraphs */}
+          <div className="text-center sm:text-left space-y-6 text-slate-600 text-lg sm:text-xl leading-relaxed">
+            <p>
+              Running a clinic today involves much more than providing excellent medical care.
+            </p>
+            <p>
+              Patients search online before they visit. They compare ratings, read reviews, check photos, send WhatsApp messages, and expect quick responses. At the same time, clinic teams are busy managing appointments, answering calls, following up with patients, and handling everyday administrative work.
+            </p>
+            <p>
+              These responsibilities are important, but they often take valuable time away from patient care. Gyrex was created to make managing and growing a clinic simpler.
+            </p>
+          </div>
+
+          {/* PROMINENT HIGHLIGHTED PLATFORM CARD */}
+          <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all pointer-events-none" />
+            
+            <div className="relative z-10 space-y-4">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-100 text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>The Gyrex Solution</span>
+              </div>
+
+              <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug tracking-tight text-white">
+                Gyrex brings together Google Business Profile management, WhatsApp communication, patient engagement, appointment management, billing, and practical automation into one unified platform designed specifically for healthcare providers.
+              </p>
+
+              <div className="pt-4 border-t border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-blue-100 text-sm font-medium">
+                <span>Our goal is not to change the way doctors practice medicine.</span>
+                <span className="font-bold text-white bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                  Our goal is to make everything around patient care easier.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* OUR STORY SECTION */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Story Text */}
             <div className="lg:col-span-7 space-y-6">
@@ -115,11 +143,11 @@ export default function AboutPage() {
                 <p>
                   Many clinics provide excellent treatment, yet struggle to attract new patients or build a strong online presence. Meanwhile, other clinics with average services often appear first on Google simply because they manage their digital presence better.
                 </p>
-                <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg space-y-2">
-                  <p className="font-bold text-lg">
+                <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl space-y-2">
+                  <p className="font-bold text-lg text-blue-300">
                     Success should not depend on marketing knowledge alone.
                   </p>
-                  <p className="text-blue-100 text-sm leading-relaxed">
+                  <p className="text-slate-300 text-sm leading-relaxed">
                     Every clinic deserves access to tools that help patients find them, communicate with them easily, and build trust online. Gyrex was built to close that gap.
                   </p>
                 </div>
@@ -136,7 +164,7 @@ export default function AboutPage() {
                   Making Everything Around Patient Care Easier
                 </h3>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  Our goal is not to change the way doctors practice medicine. Our goal is to handle the digital visibility, WhatsApp messaging, reminders, and daily admin so doctors can focus 100% on their patients.
+                  We handle the digital visibility, WhatsApp messaging, reminders, and daily admin so doctors can focus 100% on their patients.
                 </p>
                 
                 <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
@@ -163,7 +191,7 @@ export default function AboutPage() {
         </section>
 
         {/* MISSION & VISION */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-4">
               Guided by Purpose & Vision
@@ -210,8 +238,8 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* WHAT WE BELIEVE (REDESIGNED WORLD CLASS SECTION) */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
+        {/* WHAT WE BELIEVE */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
               What We Believe
@@ -221,7 +249,6 @@ export default function AboutPage() {
             </p>
           </div>
 
-          {/* Clean 4 Grid with Hover Micro-Animations */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Pillar 1 */}
             <div className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-md hover:shadow-xl hover:border-blue-300 hover:-translate-y-1.5 transition-all duration-300 group">
@@ -270,7 +297,7 @@ export default function AboutPage() {
         </section>
 
         {/* WHAT WE DO SECTION */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-4">
               What We Do
@@ -324,7 +351,7 @@ export default function AboutPage() {
         </section>
 
         {/* OUR APPROACH & LOOKING AHEAD */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
           <div className="grid lg:grid-cols-12 gap-12 items-start">
             {/* Approach */}
             <div className="lg:col-span-6 space-y-6">
