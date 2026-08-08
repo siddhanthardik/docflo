@@ -74,21 +74,23 @@ export class BackupService {
     const fileSizeKB = (buffer.length / 1024).toFixed(1);
     const formattedSize = buffer.length > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`;
 
-    // 2. Upload to Google Drive
-    const driveResult = await GoogleDriveService.uploadBackup(fileName, buffer, "application/json");
-
-    if (!driveResult) {
-      throw new Error("Failed to upload backup to Google Drive. Please check if the Google Drive API is enabled in your Google Cloud Console and that your credentials are valid.");
+    // 2. Upload to Google Drive (Optional if quota fails)
+    let driveResult = null;
+    try {
+      driveResult = await GoogleDriveService.uploadBackup(fileName, buffer, "application/json");
+      // Clean up backups older than 30 days if upload succeeds
+      if (driveResult) {
+        await GoogleDriveService.cleanupOldBackups(30);
+      }
+    } catch (e) {
+      console.warn("[BACKUP SERVICE] Google Drive upload failed. Continuing with email backup.", e);
     }
-
-    // 3. Clean up backups older than 30 days
-    await GoogleDriveService.cleanupOldBackups(30);
 
     // 4. Send Confirmation Email
     const recipientEmail = adminEmail || process.env.ADMIN_EMAIL || process.env.RESEND_FROM_EMAIL || "admin@gyrex.in";
     const driveLink = driveResult?.webViewLink || `https://drive.google.com/drive/folders/${process.env.GOOGLE_DRIVE_FOLDER_ID || 'gyrex-backups'}`;
 
-    const emailSubject = `[Gyrex] Daily Database Backup Success - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    const emailSubject = `[Gyrex] Daily Database Backup - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; borderRadius: 12px; background-color: #ffffff;">
@@ -98,8 +100,8 @@ export class BackupService {
         </div>
 
         <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-          <h3 style="color: #166534; margin: 0 0 5px 0; font-size: 16px;">✅ Backup Successfully Created & Stored</h3>
-          <p style="color: #15803d; margin: 0; font-size: 13px;">Your daily database snapshot has been safely encrypted and uploaded to Google Drive.</p>
+          <h3 style="color: #166534; margin: 0 0 5px 0; font-size: 16px;">✅ Backup Successfully Created</h3>
+          <p style="color: #15803d; margin: 0; font-size: 13px;">Your daily database snapshot has been safely encrypted and attached to this email.</p>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
@@ -146,6 +148,12 @@ export class BackupService {
         to: recipientEmail,
         subject: emailSubject,
         html: emailHtml,
+        attachments: [
+          {
+            filename: fileName,
+            content: buffer
+          }
+        ]
       });
       emailSent = true;
     } catch (e) {

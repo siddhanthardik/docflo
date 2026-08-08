@@ -9,9 +9,10 @@ export interface SendEmailOptions {
   html: string;
   apiKey?: string;
   fromEmail?: string;
+  attachments?: Array<{ filename: string; content: string | Buffer }>;
 }
 
-export async function sendEmail({ to, subject, html, apiKey, fromEmail }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, apiKey, fromEmail, attachments }: SendEmailOptions) {
   const finalApiKey = apiKey || process.env.RESEND_API_KEY;
   const finalFromEmail = fromEmail || process.env.RESEND_FROM_EMAIL || "Gyrex Verification <verify@updates.gyrex.in>";
 
@@ -33,6 +34,10 @@ export async function sendEmail({ to, subject, html, apiKey, fromEmail }: SendEm
         to: [to],
         subject,
         html,
+        attachments: attachments ? attachments.map(a => ({
+          filename: a.filename,
+          content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : a.content
+        })) : undefined
       }),
     });
 

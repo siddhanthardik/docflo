@@ -37,7 +37,7 @@ async function getAccessToken() {
 
 async function uploadBackup() {
   const accessToken = await getAccessToken();
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  const folderId = "1uzDEEwjdBFhqJSvIdWj8_-WgvuK8ntZ6";
   console.log("Token:", !!accessToken);
   console.log("Folder:", folderId);
 
