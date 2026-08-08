@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, DollarSign, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download, Plus, Settings } from "lucide-react";
+import { Loader2, DollarSign, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download, Plus, Settings, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,6 +29,8 @@ export default function AffiliatesPage() {
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({ commission: "", kycStatus: "" });
+
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -259,6 +261,17 @@ export default function AffiliatesPage() {
                           size="sm" 
                           onClick={() => {
                             setSelectedAffiliate(affiliate);
+                            setIsDetailsModalOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedAffiliate(affiliate);
                             setSettingsForm({ 
                               commission: affiliate.commissionPercentage?.toString() || "20",
                               kycStatus: affiliate.kycStatus || "PENDING"
@@ -392,6 +405,81 @@ export default function AffiliatesPage() {
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Create Affiliate"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Modal */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Affiliate Details: {selectedAffiliate?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedAffiliate && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <p className="text-sm text-slate-500 font-medium mb-1">Affiliate Code</p>
+                  <p className="text-lg font-bold text-slate-900">{selectedAffiliate.affiliateCode || "N/A"}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <p className="text-sm text-slate-500 font-medium mb-1">Commission Rate</p>
+                  <p className="text-lg font-bold text-slate-900">{selectedAffiliate.commissionPercentage || 0}%</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-md font-semibold text-slate-900 mb-3 border-b pb-2">Bank Details</h3>
+                {selectedAffiliate.bankDetails ? (
+                  <div className="space-y-2 text-sm text-slate-700">
+                    <p><span className="font-medium text-slate-500">Bank Name:</span> {(selectedAffiliate.bankDetails as any).bankName || "N/A"}</p>
+                    <p><span className="font-medium text-slate-500">Account Name:</span> {(selectedAffiliate.bankDetails as any).accountName || "N/A"}</p>
+                    <p><span className="font-medium text-slate-500">Account Number:</span> {(selectedAffiliate.bankDetails as any).accountNumber || "N/A"}</p>
+                    <p><span className="font-medium text-slate-500">Routing/IFSC:</span> {(selectedAffiliate.bankDetails as any).routingNumber || "N/A"}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-amber-500" /> No bank details provided yet.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-md font-semibold text-slate-900 mb-3 border-b pb-2">Referred Doctors</h3>
+                {selectedAffiliate.referredDoctors && selectedAffiliate.referredDoctors.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedAffiliate.referredDoctors.map((doc: any, i: number) => (
+                      <li key={i} className="text-sm bg-slate-50 p-2 rounded flex justify-between border border-slate-100">
+                        <span>{doc.clinicName || "Unknown Clinic"}</span>
+                        <span className="text-indigo-600 font-medium">{doc.package?.name || "No Package"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">No referred doctors yet.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-md font-semibold text-slate-900 mb-3 border-b pb-2">Payout History</h3>
+                {selectedAffiliate.affiliatePayouts && selectedAffiliate.affiliatePayouts.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedAffiliate.affiliatePayouts.map((payout: any, i: number) => (
+                      <div key={i} className="text-sm bg-slate-50 p-3 rounded flex justify-between items-center border border-slate-100">
+                        <div>
+                          <p className="font-medium text-slate-900">${payout.amount.toFixed(2)}</p>
+                          <p className="text-xs text-slate-500">Ref: {payout.referenceId}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{payout.status}</Badge>
+                          <p className="text-xs text-slate-500 mt-1">{new Date(payout.paidAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No payout history.</p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
