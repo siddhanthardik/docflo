@@ -119,7 +119,7 @@ export class GoogleDriveService {
         close_delim;
 
       const uploadRes = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink,size",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,size",
         {
           method: "POST",
           headers: {
@@ -169,18 +169,21 @@ export class GoogleDriveService {
       }
 
       const listRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+          query
+        )}&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name,createdTime)`,
         {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
       );
-
       const listData = await listRes.json();
       const filesToDelete = listData.files || [];
 
       let deletedCount = 0;
       for (const file of filesToDelete) {
-        const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
+        const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?supportsAllDrives=true`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${accessToken}` },
         });
