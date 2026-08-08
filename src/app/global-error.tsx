@@ -23,7 +23,7 @@ export default function GlobalError({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          reset();
+          window.location.reload();
           return 25;
         }
         return prev - 1;
@@ -31,12 +31,11 @@ export default function GlobalError({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [reset]);
+  }, []);
 
   const handleManualReset = () => {
     setIsRefreshing(true);
-    reset();
-    setTimeout(() => setIsRefreshing(false), 2000);
+    window.location.reload();
   };
 
   return (

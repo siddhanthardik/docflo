@@ -24,7 +24,7 @@ export default function Error({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          reset();
+          window.location.reload();
           return 25;
         }
         return prev - 1;
@@ -32,12 +32,11 @@ export default function Error({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [reset]);
+  }, []);
 
   const handleManualReset = () => {
     setIsRefreshing(true);
-    reset();
-    setTimeout(() => setIsRefreshing(false), 2000);
+    window.location.reload();
   };
 
   return (
