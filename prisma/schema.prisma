@@ -1363,3 +1363,21 @@ model WebhookEvent {
   @@index([processed])
   @@map("webhook_events")
 }
+
+model SystemErrorLog {
+  id          String   @id @default(cuid())
+  errorCode   String?
+  errorMessage String  @db.Text
+  stackTrace  String?  @db.Text
+  path        String?
+  method      String?
+  metadata    Json?
+  solution    String?  @db.Text
+  status      String   @default("OPEN") // OPEN, RESOLVED
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("system_error_logs")
+}

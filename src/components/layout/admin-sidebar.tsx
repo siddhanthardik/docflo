@@ -33,6 +33,7 @@ const navigation = [
   { name: "Team", href: "/admin/team", icon: Users },
   { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
   { name: "Settings", href: "/admin/settings", icon: Settings },
+  { name: "System Errors", href: "/admin/system-errors", icon: ShieldAlert },
 ];
 
 export function AdminSidebar() {

@@ -5,6 +5,8 @@ import { RefreshCw, ShieldCheck, LifeBuoy, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
+import { logErrorAction } from "@/app/actions/logError";
+
 export default function Error({
   error,
   reset,
@@ -17,6 +19,12 @@ export default function Error({
 
   useEffect(() => {
     console.error("Gyrex System Error:", error);
+    logErrorAction({
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      digest: error.digest,
+    }, { path: window.location.pathname });
   }, [error]);
 
   useEffect(() => {

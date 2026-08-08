@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { RefreshCw, ShieldCheck, LifeBuoy, ArrowLeft } from "lucide-react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
+import { logErrorAction } from "@/app/actions/logError";
+
 export default function GlobalError({
   error,
   reset,
@@ -16,6 +18,12 @@ export default function GlobalError({
 
   useEffect(() => {
     console.error("Gyrex Global System Error:", error);
+    logErrorAction({
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      digest: error.digest,
+    }, { path: "global" });
   }, [error]);
 
   useEffect(() => {
