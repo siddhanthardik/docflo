@@ -33,94 +33,125 @@ export default function AboutPage() {
       {/* Navigation Header */}
       <LandingHeader />
 
-      <main className="flex-grow pt-24 pb-20">
-        {/* HERO SECTION - ONLY PUNCHLINE & HERO IMAGE */}
-        <section className="relative pt-12 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          {/* Subtle Ambient Background Gradients */}
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-br from-blue-200/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-40 right-10 w-80 h-80 bg-indigo-100/40 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 text-center max-w-4xl mx-auto">
-            {/* ONLY Marketing Punchline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.15] mb-4">
-              Helping Clinics Grow with{" "}
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 bg-clip-text text-transparent">
-                Confidence
-              </span>
-            </h1>
+      <main className="flex-grow pt-20">
+        {/* FULL-WIDTH HERO SECTION WITH OVERLAY TEXT */}
+        <section className="relative w-full min-h-[580px] lg:min-h-[640px] flex items-center justify-center overflow-hidden bg-slate-950">
+          {/* Background Hero Image */}
+          <div className="absolute inset-0 z-0">
+            <Image
+              src="/images/indian_doctors_hero_clean.jpg"
+              alt="Gyrex Healthcare Team"
+              fill
+              className="object-cover object-center lg:object-[center_20%]"
+              priority
+            />
+            {/* Gradient Overlays for perfect readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/30 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40 z-10" />
           </div>
 
-          {/* Hero Image Showcase (Cleaned Indian Doctors Image without third-party branding) */}
-          <div className="mt-10 relative max-w-5xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 bg-white group">
-            <div className="relative h-[340px] sm:h-[500px] lg:h-[540px] w-full">
-              <Image
-                src="/images/indian_doctors_clinic.jpg"
-                alt="Indian Healthcare Team in Modern Clinic"
-                fill
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-            </div>
+          {/* Hero Overlay Text */}
+          <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
+            <div className="max-w-3xl space-y-6">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
+                Helping Clinics Grow with{" "}
+                <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
+                  Confidence
+                </span>
+              </h1>
+              
+              <p className="text-base sm:text-xl text-slate-300 leading-relaxed font-normal max-w-2xl">
+                Running a clinic today involves much more than providing excellent medical care. Gyrex provides the complete digital engine for modern healthcare practices.
+              </p>
 
-            {/* Floating Metric Badges on Hero Image */}
-            <div className="absolute bottom-6 left-6 right-6 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 z-20">
-              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
-                <div className="text-2xl sm:text-3xl font-black text-blue-600">+350%</div>
-                <div className="text-xs text-slate-600 font-semibold mt-0.5">Google Local Search Rank</div>
+              {/* Quick Trust Badges */}
+              <div className="pt-2 flex flex-wrap gap-4 text-xs font-semibold text-slate-300">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/15">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Google Business & Local SEO
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/15">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> WhatsApp Automation
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/15">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Patient Management
+                </span>
               </div>
-              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
-                <div className="text-2xl sm:text-3xl font-black text-indigo-600">99.4%</div>
-                <div className="text-xs text-slate-600 font-semibold mt-0.5">Patient Retention Rate</div>
+            </div>
+          </div>
+
+          {/* Floating Metric Badges Bar at Bottom of Hero */}
+          <div className="absolute bottom-0 inset-x-0 z-20 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 py-4 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-black text-cyan-400">+350%</div>
+                  <div className="text-xs text-slate-400">Google Search Rank</div>
+                </div>
               </div>
-              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600">10M+</div>
-                <div className="text-xs text-slate-600 font-semibold mt-0.5">Automated Reminders Sent</div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+                  <Heart className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-black text-indigo-300">99.4%</div>
+                  <div className="text-xs text-slate-400">Patient Retention</div>
+                </div>
               </div>
-              <div className="bg-white/95 backdrop-blur-md border border-white/50 p-4 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform">
-                <div className="text-2xl sm:text-3xl font-black text-amber-500">4.9 ★</div>
-                <div className="text-xs text-slate-600 font-semibold mt-0.5">Average Patient Rating</div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-black text-emerald-400">10M+</div>
+                  <div className="text-xs text-slate-400">Automated Reminders</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg sm:text-xl font-black text-amber-400">4.9 ★</div>
+                  <div className="text-xs text-slate-400">Average Patient Rating</div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* MAIN CONTENT AREA - INTRO & PROMINENT HIGHLIGHT BANNER */}
-        <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
-          {/* Main Intro Paragraphs */}
-          <div className="text-center sm:text-left space-y-6 text-slate-600 text-lg sm:text-xl leading-relaxed">
-            <p>
-              Running a clinic today involves much more than providing excellent medical care.
-            </p>
-            <p>
-              Patients search online before they visit. They compare ratings, read reviews, check photos, send WhatsApp messages, and expect quick responses. At the same time, clinic teams are busy managing appointments, answering calls, following up with patients, and handling everyday administrative work.
-            </p>
-            <p>
-              These responsibilities are important, but they often take valuable time away from patient care. Gyrex was created to make managing and growing a clinic simpler.
-            </p>
-          </div>
-
-          {/* PROMINENT HIGHLIGHTED PLATFORM CARD */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all pointer-events-none" />
+        {/* PROMINENTLY HIGHLIGHTED GYREX PLATFORM BANNER */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all pointer-events-none" />
             
-            <div className="relative z-10 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-100 text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>The Gyrex Solution</span>
-              </div>
-
+            <div className="relative z-10 space-y-6">
               <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug tracking-tight text-white">
                 Gyrex brings together Google Business Profile management, WhatsApp communication, patient engagement, appointment management, billing, and practical automation into one unified platform designed specifically for healthcare providers.
               </p>
 
-              <div className="pt-4 border-t border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-blue-100 text-sm font-medium">
+              <div className="pt-6 border-t border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-blue-100 text-base font-medium">
                 <span>Our goal is not to change the way doctors practice medicine.</span>
-                <span className="font-bold text-white bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                <span className="font-bold text-white bg-white/15 px-4 py-2 rounded-xl border border-white/20 shadow-inner">
                   Our goal is to make everything around patient care easier.
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Intro Context Paragraphs */}
+          <div className="mt-12 text-slate-600 text-base sm:text-lg leading-relaxed space-y-4 max-w-4xl mx-auto text-center sm:text-left">
+            <p>
+              Patients search online before they visit. They compare ratings, read reviews, check photos, send WhatsApp messages, and expect quick responses.
+            </p>
+            <p>
+              At the same time, clinic teams are busy managing appointments, answering calls, following up with patients, and handling everyday administrative work. These responsibilities are important, but they often take valuable time away from patient care. Gyrex was created to make managing and growing a clinic simpler.
+            </p>
           </div>
         </section>
 
@@ -129,7 +160,7 @@ export default function AboutPage() {
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Story Text */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-xs font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider">
                 <Clock className="w-3.5 h-3.5" />
                 <span>Our Story</span>
               </div>
@@ -143,14 +174,6 @@ export default function AboutPage() {
                 <p>
                   Many clinics provide excellent treatment, yet struggle to attract new patients or build a strong online presence. Meanwhile, other clinics with average services often appear first on Google simply because they manage their digital presence better.
                 </p>
-                <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl space-y-2">
-                  <p className="font-bold text-lg text-blue-300">
-                    Success should not depend on marketing knowledge alone.
-                  </p>
-                  <p className="text-slate-300 text-sm leading-relaxed">
-                    Every clinic deserves access to tools that help patients find them, communicate with them easily, and build trust online. Gyrex was built to close that gap.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -164,7 +187,7 @@ export default function AboutPage() {
                   Making Everything Around Patient Care Easier
                 </h3>
                 <p className="text-slate-600 text-sm leading-relaxed">
-                  We handle the digital visibility, WhatsApp messaging, reminders, and daily admin so doctors can focus 100% on their patients.
+                  We handle digital visibility, WhatsApp messaging, appointment confirmations, and daily admin so doctors can focus 100% on providing care.
                 </p>
                 
                 <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
@@ -355,7 +378,7 @@ export default function AboutPage() {
           <div className="grid lg:grid-cols-12 gap-12 items-start">
             {/* Approach */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-xs font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider">
                 <Target className="w-3.5 h-3.5" />
                 <span>Our Approach</span>
               </div>
