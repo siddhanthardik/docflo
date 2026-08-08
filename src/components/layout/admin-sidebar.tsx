@@ -31,7 +31,7 @@ const navigation = [
   { name: "Leads", href: "/admin/leads", icon: UserPlus },
   { name: "AI Sales Agent", href: "/admin/prospector", icon: Bot },
   { name: "Team", href: "/admin/team", icon: Users },
-  { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
+  { name: "Affiliates", href: "/admin/affiliates", icon: DollarSign },
   { name: "Settings", href: "/admin/settings", icon: Settings },
   { name: "System Errors", href: "/admin/system-errors", icon: ShieldAlert },
 ];

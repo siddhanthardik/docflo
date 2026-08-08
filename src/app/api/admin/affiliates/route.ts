@@ -88,10 +88,40 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { affiliateId, amount, referenceId, notes } = body;
+    const { action, affiliateId, amount, referenceId, notes, name, email, password, commission } = body;
 
+    if (action === "create") {
+      if (!name || !email || !password) {
+        return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      }
+
+      // Check if user exists
+      const existing = await prisma.platformUser.findUnique({ where: { email } });
+      if (existing) {
+        return NextResponse.json({ error: "Email already in use" }, { status: 400 });
+      }
+
+      const { hash } = await import("bcryptjs");
+      const hashedPassword = await hash(password, 10);
+      const affiliateCode = `AFF${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const newUser = await prisma.platformUser.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: "AFFILIATE",
+          affiliateCode,
+          commissionPercentage: parseFloat(commission) || 20,
+        },
+      });
+
+      return NextResponse.json(newUser, { status: 201 });
+    }
+
+    // Default to payout if no action specified (for backwards compatibility)
     if (!affiliateId || !amount) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required fields for payout" }, { status: 400 });
     }
 
     const payout = await prisma.affiliatePayout.create({
@@ -107,7 +137,37 @@ export async function POST(req: Request) {
 
     return NextResponse.json(payout, { status: 201 });
   } catch (error) {
-    console.error("Error recording payout:", error);
-    return NextResponse.json({ error: "Failed to record payout" }, { status: 500 });
+    console.error("Error recording payout/creating affiliate:", error);
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const session = await auth();
+    if (!session || !["SUPERADMIN", "ACCOUNTS"].includes(session.user?.role || "")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { affiliateId, commission, kycStatus } = body;
+
+    if (!affiliateId) {
+      return NextResponse.json({ error: "Affiliate ID is required" }, { status: 400 });
+    }
+
+    const updateData: any = {};
+    if (commission !== undefined) updateData.commissionPercentage = parseFloat(commission);
+    if (kycStatus) updateData.kycStatus = kycStatus;
+
+    const updated = await prisma.platformUser.update({
+      where: { id: affiliateId },
+      data: updateData,
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Error updating affiliate settings:", error);
+    return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
   }
 }

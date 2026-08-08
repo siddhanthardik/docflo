@@ -3,15 +3,16 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, DollarSign, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download } from "lucide-react";
+import { Loader2, DollarSign, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function PayoutsPage() {
+export default function AffiliatesPage() {
   const { data: session, status } = useSession();
   const [affiliates, setAffiliates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,13 @@ export default function PayoutsPage() {
   const [selectedAffiliate, setSelectedAffiliate] = useState<any>(null);
   const [payoutForm, setPayoutForm] = useState({ amount: "", referenceId: "", notes: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // New Modals
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", email: "", password: "", commission: "20" });
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({ commission: "", kycStatus: "" });
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -36,7 +44,7 @@ export default function PayoutsPage() {
 
   const fetchPayouts = async () => {
     try {
-      const res = await fetch("/api/admin/payouts");
+      const res = await fetch("/api/admin/affiliates");
       if (res.ok) {
         const data = await res.json();
         setAffiliates(data);
@@ -52,27 +60,86 @@ export default function PayoutsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/admin/payouts", {
+      const res = await fetch("/api/admin/affiliates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "payout",
           affiliateId: selectedAffiliate.id,
           amount: payoutForm.amount,
           referenceId: payoutForm.referenceId,
           notes: payoutForm.notes,
         }),
       });
+
       if (res.ok) {
-        toast({ title: "Success", description: "Payout recorded successfully" });
+        toast({ title: "Success", description: "Payout recorded successfully." });
         setIsPayoutModalOpen(false);
         setPayoutForm({ amount: "", referenceId: "", notes: "" });
         fetchPayouts();
       } else {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to record payout");
+        const err = await res.json();
+        toast({ title: "Error", description: err.error || "Failed to record payout.", variant: "destructive" });
       }
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: "System error occurred.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddAffiliate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          ...addForm
+        }),
+      });
+
+      if (res.ok) {
+        toast({ title: "Success", description: "Affiliate added successfully." });
+        setIsAddModalOpen(false);
+        setAddForm({ name: "", email: "", password: "", commission: "20" });
+        fetchPayouts();
+      } else {
+        const err = await res.json();
+        toast({ title: "Error", description: err.error || "Failed to add affiliate.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "System error occurred.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          affiliateId: selectedAffiliate.id,
+          ...settingsForm
+        }),
+      });
+
+      if (res.ok) {
+        toast({ title: "Success", description: "Settings updated successfully." });
+        setIsSettingsModalOpen(false);
+        fetchPayouts();
+      } else {
+        const err = await res.json();
+        toast({ title: "Error", description: err.error || "Failed to update settings.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "System error occurred.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -101,12 +168,18 @@ export default function PayoutsPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <DollarSign className="h-6 w-6 text-indigo-600" />
-            Affiliate Payouts
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-indigo-600" />
+            Affiliates
           </h1>
-          <p className="text-gray-500 mt-1">Manage and record payouts to your Sales and Affiliate partners.</p>
+          <p className="text-slate-500 text-sm mt-1">
+            Manage your Affiliates, record payouts, and track commissions.
+          </p>
         </div>
+        <Button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Affiliate
+        </Button>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -180,15 +253,32 @@ export default function PayoutsPage() {
                       ${affiliate.pendingPayout.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {affiliate.pendingPayout > 0 ? (
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => openPayoutModal(affiliate)}>
-                          Record Payout
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedAffiliate(affiliate);
+                            setSettingsForm({ 
+                              commission: affiliate.commissionPercentage?.toString() || "20",
+                              kycStatus: affiliate.kycStatus || "PENDING"
+                            });
+                            setIsSettingsModalOpen(true);
+                          }}
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          Settings
                         </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" disabled>
-                          Settled
-                        </Button>
-                      )}
+                        {affiliate.pendingPayout > 0 ? (
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => openPayoutModal(affiliate)}>
+                            Record Payout
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled>
+                            Settled
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -236,6 +326,72 @@ export default function PayoutsPage() {
               </Button>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Settings Modal */}
+      <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Affiliate Settings</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSettings} className="space-y-4">
+            <div>
+              <Label>Commission Percentage</Label>
+              <Input 
+                type="number" 
+                value={settingsForm.commission} 
+                onChange={e => setSettingsForm({...settingsForm, commission: e.target.value})} 
+                min="0" max="100" required 
+              />
+            </div>
+            <div>
+              <Label>KYC Status</Label>
+              <Select value={settingsForm.kycStatus} onValueChange={(v) => setSettingsForm({...settingsForm, kycStatus: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Settings
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Affiliate Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Affiliate</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddAffiliate} className="space-y-4">
+            <div>
+              <Label>Full Name</Label>
+              <Input required value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" required value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} />
+            </div>
+            <div>
+              <Label>Password</Label>
+              <Input type="password" required value={addForm.password} onChange={e => setAddForm({...addForm, password: e.target.value})} />
+            </div>
+            <div>
+              <Label>Commission %</Label>
+              <Input type="number" required value={addForm.commission} onChange={e => setAddForm({...addForm, commission: e.target.value})} min="0" max="100" />
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Create Affiliate"}
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
