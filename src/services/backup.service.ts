@@ -134,11 +134,18 @@ export class BackupService {
           </ul>
         </div>
 
+        ${driveResult ? `
         <div style="text-align: center; margin-top: 25px;">
           <a href="${driveLink}" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
             Open File in Google Drive 🚀
           </a>
         </div>
+        ` : `
+        <div style="text-align: center; margin-top: 25px; padding: 15px; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px;">
+          <h4 style="margin: 0 0 5px 0; color: #b45309; font-size: 15px;">⬇️ Backup File Attached ⬇️</h4>
+          <p style="margin: 0; color: #92400e; font-size: 13px;">Please scroll to the bottom of this email to download your <strong>${fileName}</strong> backup file.</p>
+        </div>
+        `}
       </div>
     `;
 
