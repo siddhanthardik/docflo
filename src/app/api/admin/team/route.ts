@@ -12,6 +12,9 @@ export async function GET() {
     }
 
     const team = await prisma.platformUser.findMany({
+      where: {
+        role: { not: "AFFILIATE" }
+      },
       select: {
         id: true,
         name: true,
