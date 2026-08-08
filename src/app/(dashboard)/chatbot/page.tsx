@@ -176,11 +176,11 @@ export default function AIAgentsHubPage() {
   const agentDefinitions = [
     {
       type: "APPOINTMENT",
-      name: "WhatsApp AI Booking Assistant",
+      name: "AI Receptionist & Booking Assistant",
       icon: PhoneCall,
       color: "text-blue-600",
       bg: "bg-blue-50",
-      desc: "Connects to your clinic WhatsApp Business number to handle after-hours inquiries, answer slot questions, and share booking links 24/7.",
+      desc: <>Connects to your WhatsApp to handle patient inquiries 24/7. <strong className="text-indigo-600">Internal Mode:</strong> Doctors can also text the AI directly to instantly book, update, or cancel calendar slots on the go.</>,
       metrics: "24/7 Live",
     },
     {
