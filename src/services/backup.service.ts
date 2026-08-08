@@ -77,6 +77,10 @@ export class BackupService {
     // 2. Upload to Google Drive
     const driveResult = await GoogleDriveService.uploadBackup(fileName, buffer, "application/json");
 
+    if (!driveResult) {
+      throw new Error("Failed to upload backup to Google Drive. Please check if the Google Drive API is enabled in your Google Cloud Console and that your credentials are valid.");
+    }
+
     // 3. Clean up backups older than 30 days
     await GoogleDriveService.cleanupOldBackups(30);
 
