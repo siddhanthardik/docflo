@@ -1,11 +1,12 @@
-import { db } from "@/lib/db";
+import { prisma as db } from "@/lib/prisma";
 import { format } from "date-fns";
 import { 
   AlertCircle, 
   CheckCircle2, 
   TerminalSquare, 
   Clock, 
-  ServerCrash
+  ServerCrash,
+  ShieldCheck
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -57,7 +58,7 @@ export default async function SystemErrorsPage() {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
+                logs.map((log: any) => (
                   <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       {log.status === "OPEN" ? (

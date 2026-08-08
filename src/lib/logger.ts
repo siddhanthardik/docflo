@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { prisma as db } from "./prisma";
 
 // Option A: Algorithmic Error Dictionary
 const ERROR_DICTIONARY: Record<string, string> = {
