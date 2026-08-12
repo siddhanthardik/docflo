@@ -43,7 +43,7 @@ export async function GET() {
     const isAllowedMap: Record<string, { isAllowed: boolean; requiredPackage: string }> = {
       APPOINTMENT: {
         isAllowed: pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST"),
-        requiredPackage: "PREMIUM / AUTOPILOT"
+        requiredPackage: "PREMIUM"
       },
       REVIEW: {
         isAllowed: pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY"),
@@ -124,7 +124,7 @@ export async function PUT(req: Request) {
     let reqPkg = "Premium";
     if (agentType === "APPOINTMENT") {
       allowed = pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST");
-      reqPkg = "Premium / Autopilot";
+      reqPkg = "Premium";
     } else if (agentType === "REVIEW") {
       allowed = pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY");
       reqPkg = "Starter";

@@ -134,18 +134,7 @@ export function BillingClient({
             <p className="text-xs text-gray-500 mt-1">Upgrade or modify your plan with 1-click self-managed checkout.</p>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {/* Promo Code Input */}
-            <div className="relative">
-              <input 
-                type="text" 
-                placeholder="PROMO CODE"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                className="w-full sm:w-44 px-3 py-2 border border-gray-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono font-bold uppercase tracking-wider text-gray-900 placeholder:text-gray-400 placeholder:font-normal"
-              />
-            </div>
-
+          <div className="flex items-center gap-3">
             {/* Period Toggle */}
             <div className="inline-flex bg-gray-100 p-1 rounded-xl">
               {(["monthly", "quarterly", "yearly"] as const).map((p) => (
@@ -386,12 +375,13 @@ export function BillingClient({
 
                       const currentRank = getRank(currentPackage?.name || "");
                       const targetRank = getRank(pkg.name || "");
+                      const cleanPkgName = (pkg.name || "").replace(/\s*\/\s*AUTOPILOT/i, "").trim();
 
-                      let actionLabel = `Switch to ${pkg.name}`;
+                      let actionLabel = `Switch to ${cleanPkgName}`;
                       if (targetRank > currentRank) {
-                        actionLabel = `Upgrade to ${pkg.name}`;
+                        actionLabel = `Upgrade to ${cleanPkgName}`;
                       } else if (targetRank < currentRank) {
-                        actionLabel = `Downgrade to ${pkg.name}`;
+                        actionLabel = `Downgrade to ${cleanPkgName}`;
                       }
 
                       return (
