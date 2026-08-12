@@ -24,7 +24,33 @@ export function BillingClient({
   const [loadingPkgId, setLoadingPkgId] = useState<string | null>(null);
   const [period, setPeriod] = useState<"monthly" | "quarterly" | "yearly">("monthly");
   const [promoCode, setPromoCode] = useState("");
-  
+  const [fetchingLink, setFetchingLink] = useState(false);
+
+  const handleOpenRazorpayUpdateLink = async () => {
+    try {
+      setFetchingLink(true);
+      const res = await fetch("/api/billing/razorpay/update-link");
+      const data = await res.json();
+      if (res.ok && data.updateUrl) {
+        window.open(data.updateUrl, "_blank");
+      } else {
+        toast({
+          title: "Payment Update",
+          description: data.error || "Please select a plan below to renew your subscription.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load payment update link. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingLink(false);
+    }
+  };
+
   useEffect(() => {
     if (userCountry === "IN") {
       const script = document.createElement("script");
@@ -125,6 +151,30 @@ export function BillingClient({
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
+
+      {/* Payment Failed / Action Required Alert Banner */}
+      {["PAST_DUE", "HALTED"].includes(subscriptionStatus) && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-red-950">Subscription Renewal Payment Failed</h4>
+              <p className="text-xs text-red-700 mt-0.5">
+                Your automatic subscription renewal attempt failed. Please update your payment method on Razorpay to avoid service interruption.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={handleOpenRazorpayUpdateLink}
+            disabled={fetchingLink}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shrink-0 shadow-md shadow-red-200"
+          >
+            {fetchingLink ? "Fetching Link..." : "💳 Update Payment Method on Razorpay →"}
+          </Button>
+        </div>
+      )}
 
       {/* Pricing Controls & Period Selector */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs p-6">

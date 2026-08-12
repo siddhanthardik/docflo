@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { razorpay } from "@/lib/razorpay";
 import { sendPaymentSuccessEmail, sendPaymentFailedEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -98,8 +99,28 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case "subscription.halted":
-      case "subscription.pending": {
+      case "payment.failed": {
+        const payment = event.payload.payment.entity;
+        const customerId = payment.customer_id;
+        if (!customerId) break;
+
+        const doctor = await prisma.doctor.findFirst({ where: { razorpayCustomerId: customerId } });
+        if (!doctor) break;
+
+        await prisma.paymentTransaction.create({
+          data: {
+            doctorId: doctor.id,
+            packageId: doctor.packageId || "",
+            amount: payment.amount / 100,
+            currency: payment.currency,
+            status: "FAILED",
+            razorpayPaymentId: payment.id,
+          },
+        });
+        break;
+      }
+
+      case "subscription.authenticated": {
         const subscription = event.payload.subscription.entity;
         const customerId = subscription.customer_id;
         const doctor = await prisma.doctor.findFirst({ where: { razorpayCustomerId: customerId } });
@@ -107,22 +128,62 @@ export async function POST(req: NextRequest) {
 
         await prisma.doctor.update({
           where: { id: doctor.id },
-          data: { subscriptionStatus: "PAST_DUE" },
+          data: {
+            subscriptionStatus: "ACTIVE",
+            razorpaySubscriptionId: subscription.id,
+          },
         });
 
-        const actionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`;
+        await prisma.notification.create({
+          data: {
+            doctorId: doctor.id,
+            title: "Payment Method Updated",
+            message: "Your subscription payment method was re-authenticated and updated successfully.",
+            type: "BILLING",
+          },
+        });
+        break;
+      }
+
+      case "subscription.halted":
+      case "subscription.pending": {
+        const subscription = event.payload.subscription.entity;
+        const customerId = subscription.customer_id;
+        const doctor = await prisma.doctor.findFirst({ where: { razorpayCustomerId: customerId } });
+        if (!doctor) break;
+
+        const newStatus = "PAST_DUE";
+
+        await prisma.doctor.update({
+          where: { id: doctor.id },
+          data: { subscriptionStatus: newStatus },
+        });
+
+        // Extract Hosted Payment Method Update URL (short_url)
+        let hostedUpdateUrl = subscription.short_url || subscription.sub_link;
+        if (!hostedUpdateUrl && subscription.id) {
+          try {
+            const fetchedSub: any = await razorpay.subscriptions.fetch(subscription.id);
+            hostedUpdateUrl = fetchedSub?.short_url || fetchedSub?.sub_link;
+          } catch (e) {
+            console.error("Failed to fetch Razorpay short_url:", e);
+          }
+        }
+
+        const actionUrl = hostedUpdateUrl || `${process.env.NEXT_PUBLIC_APP_URL}/subscription`;
+
         await sendPaymentFailedEmail(
           doctor.email,
           doctor.name || "Doctor",
-          "Your Gyrex Plan",
+          "Your Gyrex Subscription",
           actionUrl
         );
 
         await prisma.notification.create({
           data: {
             doctorId: doctor.id,
-            title: "Payment Failed",
-            message: "Your subscription payment failed. Please update your payment method to avoid interruption.",
+            title: "Subscription Payment Failed",
+            message: "Your subscription payment failed. Please click below to update your payment method on Razorpay.",
             type: "ERROR",
             actionUrl,
           },
