@@ -30,7 +30,9 @@ export function GyrexLogo({
       <img
         src="/logo-icon.png"
         alt="Gyrex"
-        className={`${hClass} w-auto object-contain shrink-0 ${className}`}
+        className={`h-8 w-8 object-contain shrink-0 ${className}`}
+        width={32}
+        height={32}
       />
     );
   }

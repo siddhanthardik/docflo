@@ -43,7 +43,6 @@ const navigationItems = [
   { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Smart Automation", href: "/ai-agents", icon: Zap },
-  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 import { useState, useEffect } from "react";
@@ -83,32 +82,35 @@ export function Sidebar() {
   if (!mounted) return <div className="w-60 bg-white border-r border-gray-100 shadow-sm flex-shrink-0" />; // skeleton
 
   return (
-    <div className={cn("flex h-full flex-col bg-white border-r border-gray-100 shadow-sm transition-all duration-300 flex-shrink-0 print:hidden", isCollapsed ? "w-[68px]" : "w-60")}>
-      {/* Logo and Toggle */}
-      <div className={cn("flex h-16 items-center px-4 border-b border-gray-100 relative", isCollapsed ? "justify-center" : "justify-between")}>
-        <Link href="/dashboard" className="flex items-center">
+    <div className={cn("flex h-full flex-col bg-white border-r border-gray-100 shadow-sm transition-all duration-300 flex-shrink-0 print:hidden relative", isCollapsed ? "w-[68px]" : "w-60")}>
+      
+      {/* Floating Toggle Button on Edge */}
+      <button
+        onClick={toggleCollapse}
+        className="absolute -right-3 top-5 z-30 bg-white border border-slate-200 shadow-md rounded-full p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+        title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+      >
+        {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+      </button>
+
+      {/* Logo and Toggle Header */}
+      <div className={cn("flex h-16 items-center border-b border-gray-100 shrink-0", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
+        <Link href="/dashboard" className="flex items-center justify-center">
           {isCollapsed ? (
             <GyrexLogo iconOnly size="md" />
           ) : (
             <GyrexLogo size="md" />
           )}
         </Link>
-        <button
-          onClick={toggleCollapse}
-          className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          title={isCollapsed ? "Expand Sidebar" : "Toggle Sidebar (Ctrl+B)"}
-        >
-          <PanelLeft className="h-5 w-5" />
-        </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto overflow-x-hidden no-scrollbar">
+      {/* Main Navigation List */}
+      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto overflow-x-hidden">
         {session?.user?.role && isPlatformRole(session.user.role) && (
             <Link
               href="/admin"
               className={cn(
-                "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 mb-2 border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100",
+                "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150 mb-2 border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100",
               isCollapsed ? "justify-center" : "gap-3",
               pathname === "/admin" && "bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm shadow-purple-200"
             )}
@@ -131,29 +133,48 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 mb-0.5",
+                "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150 mb-0.5",
                 isCollapsed ? "justify-center" : "gap-3",
                 isActive
-                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-200"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               )}
               title={item.name}
             >
-              <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-white" : "text-gray-400")} />
+              <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-white" : "text-slate-400")} />
               {!isCollapsed && <span className="whitespace-nowrap">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Sign Out */}
-      <div className="p-3 border-t border-gray-100 flex justify-center">
+      {/* Anchored Bottom Footer: Settings & Sign Out */}
+      <div className="p-2 border-t border-slate-100 bg-slate-50/50 space-y-0.5 shrink-0">
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
+            isCollapsed ? "justify-center" : "gap-3",
+            pathname.startsWith("/settings")
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
+          )}
+          title="Settings"
+        >
+          <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/settings") ? "text-white" : "text-slate-400")} />
+          {!isCollapsed && <span>Settings</span>}
+        </Link>
+
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="p-2 rounded-xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-all duration-150 group"
+          className={cn(
+            "flex w-full items-center rounded-xl px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 hover:text-red-700 transition-all duration-150",
+            isCollapsed ? "justify-center" : "gap-3"
+          )}
           title="Sign Out"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4 shrink-0 text-red-400" />
+          {!isCollapsed && <span>Sign Out</span>}
         </button>
       </div>
     </div>
