@@ -20,14 +20,31 @@ export default async function BillingPage() {
   });
 
   // Get all active packages
-  const packages = await prisma.package.findMany({
+  const rawPackages = await prisma.package.findMany({
     where: { isActive: true },
-    orderBy: { priceMonthly: "asc" },
     include: {
       packageFeatures: true,
       prices: true
     }
   });
+
+  const PACKAGE_RANK: Record<string, number> = {
+    "FREE": 1,
+    "STARTER": 2,
+    "GROWTH": 3,
+    "PREMIUM": 4,
+    "AUTOPILOT": 4,
+  };
+
+  const getRank = (name: string) => {
+    const upper = name.toUpperCase();
+    for (const [key, rank] of Object.entries(PACKAGE_RANK)) {
+      if (upper.includes(key)) return rank;
+    }
+    return 99;
+  };
+
+  const packages = rawPackages.sort((a, b) => getRank(a.name) - getRank(b.name));
 
   const featureFlags = await prisma.featureFlag.findMany({
     orderBy: { createdAt: "asc" }

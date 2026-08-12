@@ -42,8 +42,24 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
   const [packages, setPackages] = useState<any[]>(initialPackages);
   const [activeTab, setActiveTab] = useState("active");
 
-  const activePackages = packages.filter(p => !p.isArchived);
-  const archivedPackages = packages.filter(p => p.isArchived);
+  const PACKAGE_RANK: Record<string, number> = {
+    "FREE": 1,
+    "STARTER": 2,
+    "GROWTH": 3,
+    "PREMIUM": 4,
+    "AUTOPILOT": 4,
+  };
+
+  const getRank = (name: string) => {
+    const upper = (name || "").toUpperCase();
+    for (const [key, rank] of Object.entries(PACKAGE_RANK)) {
+      if (upper.includes(key)) return rank;
+    }
+    return 99;
+  };
+
+  const activePackages = packages.filter(p => !p.isArchived).sort((a, b) => getRank(a.name) - getRank(b.name));
+  const archivedPackages = packages.filter(p => p.isArchived).sort((a, b) => getRank(a.name) - getRank(b.name));
 
   // Package Form Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -307,36 +323,82 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
           </div>
         </div>
         <div className="mt-4 space-y-3">
+          {pkg.name?.toUpperCase().includes("STARTER") && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-2 py-1 rounded-md text-center">
+              📌 Starter requires 3-Month Commitment (Save 10%)
+            </div>
+          )}
           {pkg.prices && pkg.prices.length > 0 ? (
-            pkg.prices.map((price: any) => (
-              <div key={price.id} className="bg-white rounded-md border border-gray-100 p-2 px-3 shadow-sm flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 inline-block mb-1">{price.countryCode}</div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-extrabold text-gray-900">{price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceMonthly}</span>
-                    <span className="text-xs font-medium text-gray-500">/mo</span>
+            pkg.prices.map((price: any) => {
+              const sym = price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$';
+              const monthly = price.priceMonthly || 0;
+              const realQt = monthly * 3;
+              const offeredQt = price.priceQuarterly > 0 ? price.priceQuarterly : Math.round(realQt * 0.90);
+              const realYr = monthly * 12;
+              const offeredYr = price.priceYearly > 0 ? price.priceYearly : Math.round(realYr * 0.80);
+
+              return (
+                <div key={price.id} className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{price.countryCode}</span>
+                    <span className="text-xs font-bold text-gray-900">{sym}{monthly} <span className="text-[10px] text-gray-500 font-normal">/mo base</span></span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-gray-100">
+                    <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
+                      <div className="text-[9px] font-bold text-indigo-700 uppercase flex justify-between">
+                        <span>Qt (10% OFF)</span>
+                      </div>
+                      <div className="font-bold text-gray-900 mt-0.5">
+                        <span className="line-through text-gray-400 text-[10px] mr-1">{sym}{realQt}</span>
+                        <span>{sym}{offeredQt}</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
+                      <div className="text-[9px] font-bold text-emerald-700 uppercase flex justify-between">
+                        <span>Yr (20% OFF)</span>
+                      </div>
+                      <div className="font-bold text-gray-900 mt-0.5">
+                        <span className="line-through text-gray-400 text-[10px] mr-1">{sym}{realYr}</span>
+                        <span>{sym}{offeredYr}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="text-[10px] text-gray-400 text-right leading-tight">
-                  <div>Yr: {price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceYearly}</div>
-                  <div>Qt: {price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$'}{price.priceQuarterly}</div>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
-            <div className="bg-white rounded-md border border-gray-100 p-2 px-3 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 inline-block mb-1">BASE</div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-extrabold text-gray-900">${pkg.priceMonthly}</span>
-                  <span className="text-xs font-medium text-gray-500">/mo</span>
+            (() => {
+              const monthly = pkg.priceMonthly || 0;
+              const realQt = monthly * 3;
+              const offeredQt = pkg.priceQuarterly > 0 ? pkg.priceQuarterly : Math.round(realQt * 0.90);
+              const realYr = monthly * 12;
+              const offeredYr = pkg.priceYearly > 0 ? pkg.priceYearly : Math.round(realYr * 0.80);
+
+              return (
+                <div className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">BASE</span>
+                    <span className="text-xs font-bold text-gray-900">${monthly} <span className="text-[10px] text-gray-500 font-normal">/mo base</span></span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-gray-100">
+                    <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
+                      <div className="text-[9px] font-bold text-indigo-700 uppercase">Qt (10% OFF)</div>
+                      <div className="font-bold text-gray-900 mt-0.5">
+                        <span className="line-through text-gray-400 text-[10px] mr-1">${realQt}</span>
+                        <span>${offeredQt}</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
+                      <div className="text-[9px] font-bold text-emerald-700 uppercase">Yr (20% OFF)</div>
+                      <div className="font-bold text-gray-900 mt-0.5">
+                        <span className="line-through text-gray-400 text-[10px] mr-1">${realYr}</span>
+                        <span>${offeredYr}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="text-[10px] text-gray-400 text-right leading-tight">
-                <div>Yr: ${pkg.priceYearly}</div>
-                <div>Qt: ${pkg.priceQuarterly}</div>
-              </div>
-            </div>
+              );
+            })()
           )}
         </div>
       </CardHeader>

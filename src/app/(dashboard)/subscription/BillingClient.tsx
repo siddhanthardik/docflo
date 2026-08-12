@@ -41,6 +41,7 @@ export function BillingClient({
 
   const handleSubscribe = async (pkg: any) => {
     setLoadingPkgId(pkg.id);
+    const targetPeriod = pkg._effectivePeriod || period;
     const price = getPriceForPeriod(pkg);
 
     try {
@@ -66,7 +67,7 @@ export function BillingClient({
         body: JSON.stringify({ 
           packageId: pkg.id, 
           countryCode: userCountry,
-          period,
+          period: targetPeriod,
           promoCode: promoCode ? promoCode.trim() : undefined
         }),
       });
@@ -153,11 +154,11 @@ export function BillingClient({
                   onClick={() => setPeriod(p)}
                   className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all capitalize ${
                     period === p 
-                      ? 'bg-white shadow-xs text-gray-900' 
-                      : 'text-gray-500 hover:text-gray-900'
+                      ? 'bg-indigo-600 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  {p === "yearly" ? "Yearly (-20%)" : p}
+                  {p === "monthly" ? "Monthly" : p === "quarterly" ? "Quarterly (10% OFF)" : "Yearly (20% OFF)"}
                 </button>
               ))}
             </div>
@@ -168,9 +169,32 @@ export function BillingClient({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
           {availablePackages.map((pkg) => {
             const isCurrent = currentPackage?.id === pkg.id;
-            const price = getPriceForPeriod(pkg);
             const currency = getCurrency(pkg);
-            const isPopular = pkg.name?.toUpperCase() === "GROWTH";
+            const isPopular = pkg.name?.toUpperCase().includes("GROWTH");
+            const isStarter = pkg.name?.toUpperCase().includes("STARTER");
+            const isFree = (pkg.priceMonthly || 0) === 0;
+
+            const effectivePeriod = (isStarter && period === "monthly") ? "quarterly" : period;
+            
+            const priceModel = pkg.prices?.find((p: any) => p.countryCode === userCountry);
+            const baseMonthly = priceModel?.priceMonthly || pkg.priceMonthly || 0;
+
+            let realTotal = baseMonthly;
+            let offeredTotal = baseMonthly;
+            let discountPercent = 0;
+            let effectiveMonthly = baseMonthly;
+
+            if (effectivePeriod === "quarterly" && !isFree) {
+              realTotal = baseMonthly * 3;
+              offeredTotal = priceModel?.priceQuarterly > 0 ? priceModel.priceQuarterly : (pkg.priceQuarterly > 0 ? pkg.priceQuarterly : Math.round(realTotal * 0.90));
+              discountPercent = 10;
+              effectiveMonthly = Math.round(offeredTotal / 3);
+            } else if (effectivePeriod === "yearly" && !isFree) {
+              realTotal = baseMonthly * 12;
+              offeredTotal = priceModel?.priceYearly > 0 ? priceModel.priceYearly : (pkg.priceYearly > 0 ? pkg.priceYearly : Math.round(realTotal * 0.80));
+              discountPercent = 20;
+              effectiveMonthly = Math.round(offeredTotal / 12);
+            }
 
             return (
               <div 
@@ -179,7 +203,7 @@ export function BillingClient({
                   isCurrent 
                     ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' 
                     : isPopular 
-                    ? 'border-indigo-200 shadow-sm' 
+                    ? 'border-indigo-500 shadow-sm ring-1 ring-indigo-500/30' 
                     : 'border-gray-200 shadow-2xs'
                 } overflow-hidden flex flex-col justify-between relative transition-all hover:shadow-md group`}
               >
@@ -191,7 +215,7 @@ export function BillingClient({
 
                 {isPopular && !isCurrent && (
                   <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" /> Most Popular
+                    <Sparkles className="w-3.5 h-3.5" /> Most Popular ⭐
                   </div>
                 )}
 
@@ -201,9 +225,44 @@ export function BillingClient({
                     <p className="text-xs text-gray-500 mt-1 min-h-[32px] leading-relaxed">{pkg.description}</p>
                   </div>
 
-                  <div className="flex items-baseline gap-1 pt-2">
-                    <span className="text-3xl font-black text-gray-900">{currency}{price}</span>
-                    <span className="text-xs font-semibold text-gray-500">/{period === 'monthly' ? 'mo' : period === 'quarterly' ? 'quarter' : 'yr'}</span>
+                  {/* Starter Plan Forced Quarterly Commitment Notice */}
+                  {isStarter && (
+                    <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-[11px] text-amber-900 font-medium leading-tight space-y-0.5">
+                      <div className="font-bold flex items-center gap-1 text-amber-900">
+                        <span>📌 90-Day Ranking Commitment</span>
+                      </div>
+                      <p className="text-[10px] text-amber-700">Starts at 3-Month Commitment to guarantee Local Search & Google Maps ranking.</p>
+                    </div>
+                  )}
+
+                  {/* Pricing Block with Struck-Through Real Price and Offered Discount */}
+                  <div className="pt-2">
+                    {isFree ? (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-gray-900">{currency}0</span>
+                        <span className="text-xs font-semibold text-gray-500">/mo</span>
+                      </div>
+                    ) : discountPercent > 0 ? (
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-black text-gray-900">{currency}{effectiveMonthly}</span>
+                          <span className="text-xs font-semibold text-gray-500">/mo effective</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className="text-gray-500 font-medium">Billed {effectivePeriod}:</span>
+                          <span className="line-through text-gray-400 font-semibold">{currency}{realTotal}</span>
+                          <span className="font-extrabold text-gray-900">{currency}{offeredTotal}</span>
+                          <span className="bg-emerald-100 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-md">
+                            SAVE {discountPercent}%
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-gray-900">{currency}{baseMonthly}</span>
+                        <span className="text-xs font-semibold text-gray-500">/mo</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="border-t border-gray-100 pt-4">
@@ -251,11 +310,11 @@ export function BillingClient({
                     </Button>
                   ) : (
                     <Button 
-                      onClick={() => handleSubscribe(pkg)}
+                      onClick={() => handleSubscribe({ ...pkg, _effectivePeriod: effectivePeriod })}
                       disabled={loadingPkgId === pkg.id}
                       className={`w-full font-bold text-xs shadow-sm transition-all ${
                         isPopular 
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
                           : 'bg-gray-900 hover:bg-gray-800 text-white'
                       }`}
                     >

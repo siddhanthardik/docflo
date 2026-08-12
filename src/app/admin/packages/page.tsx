@@ -10,8 +10,7 @@ export default async function PackagesPage() {
   }
 
   // Fetch all packages with their new Module/Limit configuration
-  const packages = await prisma.package.findMany({
-    orderBy: { createdAt: "asc" },
+  const rawPackages = await prisma.package.findMany({
     include: {
       modules: { select: { moduleName: true } },
       limits: { select: { limitName: true, limitValue: true } },
@@ -19,6 +18,24 @@ export default async function PackagesPage() {
       prices: true
     }
   });
+
+  const PACKAGE_RANK: Record<string, number> = {
+    "FREE": 1,
+    "STARTER": 2,
+    "GROWTH": 3,
+    "PREMIUM": 4,
+    "AUTOPILOT": 4,
+  };
+
+  const getRank = (name: string) => {
+    const upper = name.toUpperCase();
+    for (const [key, rank] of Object.entries(PACKAGE_RANK)) {
+      if (upper.includes(key)) return rank;
+    }
+    return 99;
+  };
+
+  const packages = rawPackages.sort((a, b) => getRank(a.name) - getRank(b.name));
 
   // Fetch all doctors for the assignment modal
   const doctors = await prisma.doctor.findMany({
