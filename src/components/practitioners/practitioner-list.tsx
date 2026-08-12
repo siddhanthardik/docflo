@@ -38,7 +38,6 @@ export function PractitionerList({ practitioners, onRefresh }: PractitionerListP
             practitioner={p}
             onEdit={() => handleEdit(p)}
             onRefresh={onRefresh}
-            allPractitioners={practitioners}
           />
         ))}
       </div>

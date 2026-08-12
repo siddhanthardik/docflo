@@ -51,23 +51,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Practitioner not found" }, { status: 404 });
     }
 
-    // Ownership transfer logic
-    if (validatedData.isOwner === true && !existingPractitioner.isOwner) {
-      // Begin transaction to transfer ownership
-      await prisma.$transaction([
-        prisma.practitioner.updateMany({
-          where: { doctorId: session.doctorId, isOwner: true },
-          data: { isOwner: false },
-        }),
-        prisma.practitioner.update({
-          where: { id: practitionerId },
-          data: { isOwner: true },
-        })
-      ]);
-    } else if (validatedData.isOwner === false && existingPractitioner.isOwner) {
+    // Disallow self-serve ownership changes to prevent revenue leakage & account flipping
+    if (validatedData.isOwner !== undefined) {
       return NextResponse.json(
-        { error: "Cannot remove owner status directly. You must transfer ownership to another practitioner." },
-        { status: 400 }
+        { error: "Ownership transfer is restricted to SuperAdmin Support." },
+        { status: 403 }
       );
     }
 
