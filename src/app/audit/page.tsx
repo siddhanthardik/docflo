@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { CheckCircle2, ShieldCheck, Zap, ArrowRight, MessageSquare, Star, Building2, PhoneCall, RefreshCcw } from "lucide-react";
 
@@ -11,9 +11,21 @@ export default function AuditLandingPage() {
     clinicName: "",
     city: "",
   });
+  const [platformWhatsapp, setPlatformWhatsapp] = useState("919999999999");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    fetch("/api/platform/whatsapp-number")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.whatsappNumber) {
+          setPlatformWhatsapp(data.whatsappNumber);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +141,7 @@ export default function AuditLandingPage() {
                     Thank you, <strong>Dr. {formData.name}</strong>. We are generating your Google Maps rank report and sending it directly to <strong>{formData.phone}</strong> on WhatsApp right now.
                   </p>
                   <a
-                    href={`https://wa.me/919999999999?text=Hi%20Gyrex%2C%20I%20just%20requested%20my%20clinic%20audit%20for%20Dr.%20${encodeURIComponent(formData.name)}`}
+                    href={`https://wa.me/${platformWhatsapp}?text=Hi%20Gyrex%2C%20I%20just%20requested%20my%20clinic%20audit%20for%20Dr.%20${encodeURIComponent(formData.name)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all shadow-md"

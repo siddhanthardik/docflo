@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Settings, CreditCard, Mail, Bell, Shield, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupControlPanel } from "./backup-control-panel";
+import { PlatformWhatsAppPanel } from "./platform-whatsapp-panel";
 
 export default async function AdminSettingsPage() {
   const session = await auth();
@@ -61,7 +62,10 @@ export default async function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* 1. Automated Google Drive Database Backup Panel */}
+      {/* 1. SuperAdmin Platform WhatsApp Connection Panel */}
+      <PlatformWhatsAppPanel />
+
+      {/* 2. Automated Google Drive Database Backup Panel */}
       <BackupControlPanel />
 
       {/* 2. Platform Settings Sections */}
