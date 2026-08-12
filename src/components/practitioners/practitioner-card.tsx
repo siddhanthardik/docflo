@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Phone, Mail, Edit, Crown, Trash2, PowerOff, Power } from "lucide-react";
+import { User, Phone, Mail, Edit, Crown, Trash2, PowerOff, Power, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -205,29 +205,46 @@ export function PractitionerCard({ practitioner, onEdit, onRefresh, allPractitio
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={selectedNewOwner} onValueChange={setSelectedNewOwner}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select new owner..." />
-              </SelectTrigger>
-              <SelectContent>
-                {eligibleNewOwners.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.specialty})</SelectItem>
-                ))}
-                {eligibleNewOwners.length === 0 && (
-                  <SelectItem value="none" disabled>No other active practitioners</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            {eligibleNewOwners.length === 0 ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900">
+                <p className="font-bold text-sm text-amber-950 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  No Other Active Doctors Found
+                </p>
+                <p className="text-amber-800 leading-relaxed">
+                  You are currently the only doctor in this clinic. Ownership can only be transferred to an active doctor profile.
+                </p>
+                <p className="text-amber-900 font-semibold pt-1">
+                  💡 To transfer ownership: First click <strong>&quot;+ Add Doctor&quot;</strong> on the main page to create another doctor profile, then transfer ownership to them.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700">Select New Clinic Owner</label>
+                <Select value={selectedNewOwner} onValueChange={setSelectedNewOwner}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new owner..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eligibleNewOwners.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.specialty})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleTransfer} 
-              disabled={!selectedNewOwner || selectedNewOwner === "none" || isTransferring}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              Transfer Ownership
-            </Button>
+            {eligibleNewOwners.length > 0 && (
+              <Button 
+                onClick={handleTransfer} 
+                disabled={!selectedNewOwner || selectedNewOwner === "none" || isTransferring}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              >
+                {isTransferring ? "Transferring..." : "Transfer Ownership"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
