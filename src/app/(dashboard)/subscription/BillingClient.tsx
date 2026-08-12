@@ -171,7 +171,7 @@ export function BillingClient({
             disabled={fetchingLink}
             className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shrink-0 shadow-md shadow-red-200"
           >
-            {fetchingLink ? "Fetching Link..." : "💳 Update Payment Method on Razorpay →"}
+            {fetchingLink ? "Fetching Link..." : "💳 Update Payment Method →"}
           </Button>
         </div>
       )}
