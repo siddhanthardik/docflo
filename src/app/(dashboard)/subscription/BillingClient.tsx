@@ -221,21 +221,28 @@ export function BillingClient({
 
                 <div className="p-6 space-y-4">
                   <div>
-                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">{pkg.name}</h4>
-                    <p className="text-xs text-gray-500 mt-1 min-h-[32px] leading-relaxed">{pkg.description}</p>
+                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                      {(pkg.name || "").replace(/\s*\/\s*AUTOPILOT/i, "").trim()}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1 min-h-[32px] leading-relaxed">
+                      {(pkg.description || "").toLowerCase().includes("fully automated") 
+                        ? "Complete clinic management & growth platform" 
+                        : pkg.description}
+                    </p>
                   </div>
 
-                  {/* Starter Plan Forced Quarterly Commitment Notice */}
+                  {/* Starter Plan Quarterly Commitment Requirement Notice */}
                   {isStarter && (
-                    <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-[11px] text-amber-900 font-medium leading-tight space-y-0.5">
-                      <div className="font-bold flex items-center gap-1 text-amber-900">
-                        <span>📌 90-Day Ranking Commitment</span>
+                    <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-2.5 text-[11px] text-indigo-950 font-medium leading-tight space-y-0.5">
+                      <div className="font-bold flex items-center gap-1.5 text-indigo-900">
+                        <CreditCard className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>Quarterly Commitment Plan</span>
                       </div>
-                      <p className="text-[10px] text-amber-700">Starts at 3-Month Commitment to guarantee Local Search & Google Maps ranking.</p>
+                      <p className="text-[10px] text-indigo-700">Requires a 3-Month (Quarterly) commitment for new clinics.</p>
                     </div>
                   )}
 
-                  {/* Pricing Block with Struck-Through Real Price and Offered Discount */}
+                  {/* Pricing Block with Struck-Through Real Price in Red and Offered Discount */}
                   <div className="pt-2">
                     {isFree ? (
                       <div className="flex items-baseline gap-1">
@@ -244,13 +251,14 @@ export function BillingClient({
                       </div>
                     ) : discountPercent > 0 ? (
                       <div className="space-y-1">
-                        <div className="flex items-baseline gap-1">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm font-extrabold line-through text-red-500 decoration-red-500">{currency}{baseMonthly}</span>
                           <span className="text-3xl font-black text-gray-900">{currency}{effectiveMonthly}</span>
                           <span className="text-xs font-semibold text-gray-500">/mo effective</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-xs flex-wrap pt-0.5">
                           <span className="text-gray-500 font-medium">Billed {effectivePeriod}:</span>
-                          <span className="line-through text-gray-400 font-semibold">{currency}{realTotal}</span>
+                          <span className="line-through text-red-500 decoration-red-500 font-bold text-[11px]">{currency}{realTotal}</span>
                           <span className="font-extrabold text-gray-900">{currency}{offeredTotal}</span>
                           <span className="bg-emerald-100 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-md">
                             SAVE {discountPercent}%
