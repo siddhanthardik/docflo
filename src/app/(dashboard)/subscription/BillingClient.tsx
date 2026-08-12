@@ -265,65 +265,143 @@ export function BillingClient({
                     )}
                   </div>
 
-                  <div className="border-t border-gray-100 pt-4">
-                    <ul className="space-y-2.5 text-xs text-gray-600">
-                      {featureFlags.map(ff => {
-                        const feat = pkg.packageFeatures?.find((pf: any) => pf.featureId === ff.id);
-                        const isEnabled = feat?.isEnabled || false;
-                        const limit = feat?.limit;
+                  <div className="border-t border-gray-100 pt-4 space-y-3">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">What&apos;s Included:</div>
+                    
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      {/* Render Included Modules */}
+                      {pkg.modules && pkg.modules.length > 0 ? (
+                        pkg.modules.map((m: any) => {
+                          const mName = m.moduleName || m;
+                          let label = mName;
+                          if (mName === "CLINIC_CORE") label = "Clinic Operations (Patients, Billing, Calendar)";
+                          if (mName === "GROWTH_SEO") label = "Growth & Local SEO (Google Profile & Rankings)";
+                          if (mName === "WHATSAPP_CRM") label = "WhatsApp CRM (Automations & Reminders)";
+                          if (mName === "AI_ASSISTANT") label = "AI Practice Assistant";
 
-                        if (!isEnabled) {
                           return (
-                            <li key={ff.id} className="flex items-center gap-2 text-gray-400">
-                              <X className="h-3.5 w-3.5 text-gray-300 shrink-0" />
-                              <span className="line-through">{ff.name}</span>
+                            <li key={mName} className="flex items-start gap-2 font-semibold text-slate-800">
+                              <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                              <span>{label}</span>
                             </li>
                           );
-                        }
+                        })
+                      ) : (
+                        /* Human Tier Features Fallback */
+                        (() => {
+                          const pName = (pkg.name || "").toUpperCase();
+                          if (pName.includes("FREE")) {
+                            return (
+                              <>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Standard Patient Records & Calendar</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 1 Staff Seat & Basic Billing</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Up to 50 Patient Capacity</li>
+                              </>
+                            );
+                          }
+                          if (pName.includes("STARTER")) {
+                            return (
+                              <>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Everything in Free</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Google Business Profile & Local Search</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 3 Staff Seats & 500 Patient Records</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 90-Day Ranking Setup Support</li>
+                              </>
+                            );
+                          }
+                          if (pName.includes("GROWTH")) {
+                            return (
+                              <>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Everything in Starter</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> WhatsApp CRM & Automated Reminders</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 10 Staff Seats & Unlimited Patients</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Tracked Local SEO Keywords</li>
+                              </>
+                            );
+                          }
+                          return (
+                            <>
+                              <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Everything in Growth</li>
+                              <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> AI Practice Assistant & Auto Reviews</li>
+                              <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Unlimited Staff Seats & Multi-Location</li>
+                              <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Priority 24/7 Account Management</li>
+                            </>
+                          );
+                        })()
+                      )}
 
-                        return (
-                          <li key={ff.id} className="flex items-center gap-2 font-medium text-gray-800">
-                            <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                            <span>
-                              {ff.name}
-                              {ff.type === "NUMBER" && limit !== null && (
-                                <span className="font-bold ml-1 text-[10px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.2 rounded">
-                                  {limit === 0 ? "Unlimited" : limit}
-                                </span>
-                              )}
-                            </span>
-                          </li>
-                        );
-                      })}
+                      {/* Render Included Limits */}
+                      {pkg.limits && pkg.limits.length > 0 && (
+                        pkg.limits.map((l: any) => {
+                          const val = l.limitValue === null || l.limitValue === undefined ? "Unlimited" : l.limitValue;
+                          let name = l.limitName;
+                          if (name === "MAX_STAFF_SEATS") name = "Staff Seats";
+                          if (name === "MAX_PATIENTS") name = "Patient Capacity";
+                          if (name === "MAX_GBP_LOCATIONS") name = "Google Locations";
+                          if (name === "MAX_TRACKED_KEYWORDS") name = "Tracked Keywords";
+                          if (name === "MAX_SCHEDULED_POSTS") name = "Social Posts / mo";
+
+                          return (
+                            <li key={l.limitName} className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 text-slate-600">
+                              <span>{name}</span>
+                              <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.2 rounded">{val}</span>
+                            </li>
+                          );
+                        })
+                      )}
                     </ul>
                   </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50/50 mt-auto">
+                {/* Card Action Footer Button */}
+                <div className="p-5 border-t border-gray-100 bg-slate-50/60 mt-auto">
                   {isCurrent ? (
                     <Button 
                       variant="outline" 
                       className="w-full text-indigo-700 border-indigo-200 bg-indigo-50 font-bold text-xs cursor-default" 
                       disabled
                     >
-                      Active Plan
+                      ✓ Active Plan
                     </Button>
                   ) : (
-                    <Button 
-                      onClick={() => handleSubscribe({ ...pkg, _effectivePeriod: effectivePeriod })}
-                      disabled={loadingPkgId === pkg.id}
-                      className={`w-full font-bold text-xs shadow-sm transition-all ${
-                        isPopular 
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
-                          : 'bg-gray-900 hover:bg-gray-800 text-white'
-                      }`}
-                    >
-                      {loadingPkgId === pkg.id ? (
-                        <><RefreshCcw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Processing...</>
-                      ) : (
-                        <><Zap className="h-3.5 w-3.5 mr-1.5" /> Upgrade to {pkg.name}</>
-                      )}
-                    </Button>
+                    (() => {
+                      const PACKAGE_RANK: Record<string, number> = { "FREE": 1, "STARTER": 2, "GROWTH": 3, "PREMIUM": 4, "AUTOPILOT": 4 };
+                      const getRank = (name: string) => {
+                        const upper = (name || "").toUpperCase();
+                        for (const [key, rank] of Object.entries(PACKAGE_RANK)) {
+                          if (upper.includes(key)) return rank;
+                        }
+                        return 99;
+                      };
+
+                      const currentRank = getRank(currentPackage?.name || "");
+                      const targetRank = getRank(pkg.name || "");
+
+                      let actionLabel = `Switch to ${pkg.name}`;
+                      if (targetRank > currentRank) {
+                        actionLabel = `Upgrade to ${pkg.name}`;
+                      } else if (targetRank < currentRank) {
+                        actionLabel = `Downgrade to ${pkg.name}`;
+                      }
+
+                      return (
+                        <Button 
+                          onClick={() => handleSubscribe({ ...pkg, _effectivePeriod: effectivePeriod })}
+                          disabled={loadingPkgId === pkg.id}
+                          className={`w-full font-bold text-xs shadow-sm transition-all ${
+                            targetRank > currentRank
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200' 
+                              : 'bg-slate-800 hover:bg-slate-900 text-white'
+                          }`}
+                        >
+                          {loadingPkgId === pkg.id ? (
+                            <><RefreshCcw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Processing...</>
+                          ) : (
+                            <><ArrowRight className="h-3.5 w-3.5 mr-1.5" /> {actionLabel}</>
+                          )}
+                        </Button>
+                      );
+                    })()
                   )}
                 </div>
               </div>

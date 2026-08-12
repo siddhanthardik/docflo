@@ -24,6 +24,8 @@ export default async function BillingPage() {
     where: { isActive: true },
     include: {
       packageFeatures: true,
+      modules: { select: { moduleName: true } },
+      limits: { select: { limitName: true, limitValue: true } },
       prices: true
     }
   });

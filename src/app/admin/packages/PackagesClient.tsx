@@ -337,6 +337,15 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
               const realYr = monthly * 12;
               const offeredYr = price.priceYearly > 0 ? price.priceYearly : Math.round(realYr * 0.80);
 
+              if (monthly === 0) {
+                return (
+                  <div key={price.id} className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{price.countryCode}</span>
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">Always Free ({sym}0)</span>
+                  </div>
+                );
+              }
+
               return (
                 <div key={price.id} className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
@@ -373,6 +382,15 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
               const offeredQt = pkg.priceQuarterly > 0 ? pkg.priceQuarterly : Math.round(realQt * 0.90);
               const realYr = monthly * 12;
               const offeredYr = pkg.priceYearly > 0 ? pkg.priceYearly : Math.round(realYr * 0.80);
+
+              if (monthly === 0) {
+                return (
+                  <div className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">BASE</span>
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">Always Free ($0)</span>
+                  </div>
+                );
+              }
 
               return (
                 <div className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm space-y-2">
