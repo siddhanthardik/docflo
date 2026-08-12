@@ -27,13 +27,11 @@ export function GyrexLogo({
 
   if (iconOnly) {
     return (
-      <div className={`flex items-center justify-center ${hClass} w-8 overflow-hidden shrink-0 ${className}`}>
-        <img
-          src={lightText ? "/logo-dark-background.svg" : "/logo.svg"}
-          alt="Gyrex"
-          className={`${hClass} max-w-none object-left object-cover h-8 w-auto`}
-        />
-      </div>
+      <img
+        src="/logo-icon.png"
+        alt="Gyrex"
+        className={`${hClass} w-auto object-contain shrink-0 ${className}`}
+      />
     );
   }
 
