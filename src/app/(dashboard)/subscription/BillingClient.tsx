@@ -337,12 +337,14 @@ export function BillingClient({
                           let name = l.limitName;
                           if (name === "MAX_STAFF_SEATS") name = "Staff Seats";
                           if (name === "MAX_PATIENTS") name = "Patient Capacity";
+                          if (name === "MAX_PRACTITIONERS") name = "Doctor / Practitioner Seats";
                           if (name === "MAX_GBP_LOCATIONS") name = "Google Locations";
                           if (name === "MAX_TRACKED_KEYWORDS") name = "Tracked Keywords";
                           if (name === "MAX_SCHEDULED_POSTS") name = "Social Posts / mo";
+                          if (name === "AI_CREDITS_PER_MONTH") name = "Smart Credits / mo";
 
                           return (
-                            <li key={l.limitName} className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 text-slate-600">
+                            <li key={l.limitName} className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 text-slate-600 font-medium">
                               <span>{name}</span>
                               <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.2 rounded">{val}</span>
                             </li>

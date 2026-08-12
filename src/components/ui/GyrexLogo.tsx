@@ -27,35 +27,13 @@ export function GyrexLogo({
 
   if (iconOnly) {
     return (
-      <svg
-        viewBox="0 0 128 128"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={`${hClass} w-auto aspect-square ${className}`}
-      >
-        <defs>
-          <linearGradient id="gyrex-icon-g" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0066FF" />
-            <stop offset="100%" stopColor="#00D2FF" />
-          </linearGradient>
-        </defs>
-        <rect width="128" height="128" rx="28" fill="#020B1E" />
-        <g transform="translate(32, 32)">
-          <path
-            d="M12 8L52 56"
-            stroke="url(#gyrex-icon-g)"
-            strokeWidth="14"
-            strokeLinecap="round"
-          />
-          <path
-            d="M52 8L24 32L52 56"
-            stroke="url(#gyrex-icon-g)"
-            strokeWidth="14"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
-      </svg>
+      <div className={`flex items-center justify-center ${hClass} w-8 overflow-hidden shrink-0 ${className}`}>
+        <img
+          src={lightText ? "/logo-dark-background.svg" : "/logo.svg"}
+          alt="Gyrex"
+          className={`${hClass} max-w-none object-left object-cover h-8 w-auto`}
+        />
+      </div>
     );
   }
 

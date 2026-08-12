@@ -219,13 +219,14 @@ export default function AIAgentsHubPage() {
 
   return (
     <div className="pb-12 space-y-8 max-w-7xl mx-auto">
+      {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Bot className="h-8 w-8 text-indigo-400" /> Autonomous AI Agents Hub
+            <Sparkles className="h-8 w-8 text-indigo-400" /> Smart Practice Automation
           </h1>
           <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-            Configure and train your autonomous clinic AI employees to handle WhatsApp bookings, Google reviews, and local search optimization 24/7.
+            Configure smart automated assistants to handle WhatsApp bookings, Google reviews, and local search rankings 24/7.
           </p>
         </div>
       </div>
@@ -291,15 +292,15 @@ export default function AIAgentsHubPage() {
         })}
       </div>
 
-      {/* Live AI Conversation Training Log */}
+      {/* Live Patient Conversation Log */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Bot className="w-5 h-5 text-indigo-600" />
-              Live AI Conversation Training & Audit Log
+              <MessageSquare className="w-5 h-5 text-indigo-600" />
+              Live Patient Conversation Log
             </h3>
-            <p className="text-xs text-slate-500">Inspect real-time patient messages, AI assistant replies, and conversation turns to continuously audit and train your AI employee.</p>
+            <p className="text-xs text-slate-500">Inspect real-time patient messages and automated replies to maintain high patient care standards.</p>
           </div>
           <Button 
             variant="outline" 
