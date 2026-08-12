@@ -21,6 +21,8 @@ function isAdmin(role?: string) {
 const INCLUDE_FULL = {
   modules: { select: { moduleName: true } },
   limits: { select: { limitName: true, limitValue: true } },
+  packageFeatures: { include: { feature: true } },
+  prices: true,
   _count: { select: { doctors: true } },
 } as const;
 
@@ -55,7 +57,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits } = body;
+  const { name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features } = body;
 
   // Validate module names if provided
   if (modules) {
@@ -73,7 +75,7 @@ export async function PUT(
     }
   }
 
-  // Use a transaction to atomically update modules and limits
+  // Use a transaction to atomically update modules, limits, and features
   const updatedPackage = await prisma.$transaction(async (tx) => {
     if (modules !== undefined) {
       await tx.packageModule.deleteMany({ where: { packageId: id } });
@@ -88,6 +90,20 @@ export async function PUT(
           where: { packageId_limitName: { packageId: id, limitName: l.limitName as LimitName } },
           update: { limitValue: l.limitValue ?? null },
           create: { packageId: id, limitName: l.limitName as LimitName, limitValue: l.limitValue ?? null },
+        });
+      }
+    }
+
+    if (features !== undefined && Array.isArray(features)) {
+      await tx.packageFeature.deleteMany({ where: { packageId: id } });
+      if (features.length > 0) {
+        await tx.packageFeature.createMany({
+          data: features.map((f: any) => ({
+            packageId: id,
+            featureId: f.featureId,
+            isEnabled: f.isEnabled ?? true,
+            limit: f.limit || null
+          }))
         });
       }
     }

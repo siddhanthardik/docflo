@@ -526,137 +526,144 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
 
       {/* PACKAGE BUILDER MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-50 p-0">
-          <div className="p-6">
-            <DialogHeader className="bg-white p-6 pb-4 border-b -mx-6 -mt-6 mb-6 sticky top-0 z-10 shadow-sm">
-              <DialogTitle className="text-2xl">{editingPkg ? "Edit Package" : "Create Package"}</DialogTitle>
-            </DialogHeader>
-          <form onSubmit={submitPackage} className="space-y-8 px-2 pb-8">
-            
-            {/* Section 1: Basic Info */}
-            <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-lg font-bold border-b pb-2">1. Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Package Name</Label>
-                  <Input placeholder="e.g. Starter Plan" value={formData.name} onChange={handleNameChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input placeholder="Tagline or short desc" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-                </div>
-              </div>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl h-[90vh] flex flex-col bg-slate-50 p-0 overflow-hidden">
+          {/* Fixed Top Header */}
+          <DialogHeader className="bg-white p-6 pb-4 border-b shrink-0 shadow-2xs">
+            <DialogTitle className="text-2xl font-black text-slate-900">
+              {editingPkg ? `Edit ${editingPkg.name} Package` : "Create New Package"}
+            </DialogTitle>
+          </DialogHeader>
 
-              <div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500">
-                  {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings (Slug)"}
-                </Button>
-                {showAdvanced && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg border space-y-2">
-                    <Label className="text-xs">System Slug (Auto-generated, used for idempotency)</Label>
-                    <Input className="text-sm font-mono bg-white" value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value})} required disabled={!!editingPkg} />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Monthly Price ($)</Label>
-                  <Input type="number" min="0" value={formData.priceMonthly} onChange={e => setFormData({...formData, priceMonthly: Number(e.target.value)})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Quarterly Price ($)</Label>
-                  <Input type="number" min="0" value={formData.priceQuarterly} onChange={e => setFormData({...formData, priceQuarterly: Number(e.target.value)})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Yearly Price ($)</Label>
-                  <Input type="number" min="0" value={formData.priceYearly} onChange={e => setFormData({...formData, priceYearly: Number(e.target.value)})} required />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Included Modules */}
-            <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-lg font-bold border-b pb-2">2. Included Modules</h3>
-              <p className="text-sm text-gray-500">Select the high-level capabilities this package provides.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {MODULES.map(mod => {
-                  const isSelected = formData.modules.includes(mod.id);
-                  return (
-                    <div 
-                      key={mod.id} 
-                      onClick={() => handleToggleModule(mod.id)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${isSelected ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-indigo-200'}`}
-                    >
-                      <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300'}`}>
-                        {isSelected && <Check className="w-3.5 h-3.5" />}
-                      </div>
-                      <div>
-                        <h4 className={`font-bold ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>{mod.name}</h4>
-                        <p className="text-sm text-gray-500 mt-1 leading-snug">{mod.desc}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Section 3: Usage Limits */}
-            <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-lg font-bold border-b pb-2">3. Usage Limits</h3>
-              <p className="text-sm text-gray-500">Configure constraints for resources. Toggle 'Unlimited' to remove the ceiling.</p>
+          {/* Scrollable Middle Form Container */}
+          <div className="overflow-y-auto p-6 flex-1 space-y-6">
+            <form id="package-form" onSubmit={submitPackage} className="space-y-8">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                {LIMITS.map(limit => {
-                  const val = formData.limits[limit.id];
-                  const isUnlimited = val === null;
-                  
-                  return (
-                    <div key={limit.id} className="p-4 rounded-lg bg-gray-50 border space-y-3">
-                      <div className="flex justify-between items-center">
-                        <Label className="font-semibold text-gray-700">{limit.name}</Label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Unlimited</span>
-                          <Switch 
-                            checked={isUnlimited} 
-                            onCheckedChange={(checked) => {
-                              handleLimitChange(limit.id, checked ? null : 0);
-                            }} 
-                          />
+              {/* Section 1: Basic Info */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2">1. Basic Information & Pricing</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-700">Package Name</Label>
+                    <Input placeholder="e.g. Starter Plan" value={formData.name} onChange={handleNameChange} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-700">Description / Tagline</Label>
+                    <Input placeholder="Tagline or short desc" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+                  </div>
+                </div>
+
+                <div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-slate-500">
+                    {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings (Slug)"}
+                  </Button>
+                  {showAdvanced && (
+                    <div className="mt-2 p-3 bg-slate-50 rounded-lg border space-y-2">
+                      <Label className="text-xs">System Slug (Auto-generated, used for idempotency)</Label>
+                      <Input className="text-sm font-mono bg-white" value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value})} required disabled={!!editingPkg} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-700">Monthly Price (₹ Base)</Label>
+                    <Input type="number" min="0" value={formData.priceMonthly} onChange={e => setFormData({...formData, priceMonthly: Number(e.target.value)})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-700">Quarterly Price (₹ Total)</Label>
+                    <Input type="number" min="0" value={formData.priceQuarterly} onChange={e => setFormData({...formData, priceQuarterly: Number(e.target.value)})} required />
+                    <p className="text-[10px] text-slate-500">Auto-calc: 10% OFF = ₹{Math.round(formData.priceMonthly * 3 * 0.90)}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-slate-700">Yearly Price (₹ Total)</Label>
+                    <Input type="number" min="0" value={formData.priceYearly} onChange={e => setFormData({...formData, priceYearly: Number(e.target.value)})} required />
+                    <p className="text-[10px] text-slate-500">Auto-calc: 20% OFF = ₹{Math.round(formData.priceMonthly * 12 * 0.80)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Included Modules */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2">2. Included Modules</h3>
+                <p className="text-xs text-slate-500">Select the core platform capabilities available in this tier.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {MODULES.map(mod => {
+                    const isSelected = formData.modules.includes(mod.id);
+                    return (
+                      <div 
+                        key={mod.id} 
+                        onClick={() => handleToggleModule(mod.id)}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${isSelected ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-200'}`}
+                      >
+                        <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <div>
+                          <h4 className={`font-bold ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{mod.name}</h4>
+                          <p className="text-xs text-slate-500 mt-1 leading-snug">{mod.desc}</p>
                         </div>
                       </div>
-                      {!isUnlimited && (
-                        <div className="pt-2">
-                          <Input 
-                            type="number" 
-                            min="0"
-                            value={val || 0} 
-                            onChange={(e) => handleLimitChange(limit.id, Number(e.target.value))}
-                            className="bg-white"
-                          />
-                        </div>
-                      )}
-                      {isUnlimited && (
-                        <div className="pt-2 text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md py-2 px-3 text-center">
-                          ∞ Unlimited Volume
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Form Actions */}
-            <div className="flex justify-end gap-3 pt-6 sticky bottom-0 bg-gray-50 pb-4">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8">
-                {loading ? "Saving..." : (editingPkg ? "Save Package" : "Create Package")}
-              </Button>
-            </div>
+              {/* Section 3: Usage Limits */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2">3. Usage Limits & Capacity</h3>
+                <p className="text-xs text-slate-500">Configure constraints for clinic resources. Toggle &apos;Unlimited&apos; to remove limits.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                  {LIMITS.map(limit => {
+                    const val = formData.limits[limit.id];
+                    const isUnlimited = val === null;
+                    
+                    return (
+                      <div key={limit.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <Label className="font-semibold text-slate-700 text-xs">{limit.name}</Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-500">Unlimited</span>
+                            <Switch 
+                              checked={isUnlimited} 
+                              onCheckedChange={(checked) => {
+                                handleLimitChange(limit.id, checked ? null : 0);
+                              }} 
+                            />
+                          </div>
+                        </div>
+                        {!isUnlimited && (
+                          <div className="pt-1">
+                            <Input 
+                              type="number" 
+                              min="0"
+                              value={val || 0} 
+                              onChange={(e) => handleLimitChange(limit.id, Number(e.target.value))}
+                              className="bg-white text-xs"
+                            />
+                          </div>
+                        )}
+                        {isUnlimited && (
+                          <div className="pt-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md py-1.5 px-3 text-center">
+                            ∞ Unlimited
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
 
-          </form>
+            </form>
           </div>
+
+          {/* Fixed Bottom Footer - Never overlaps form content */}
+          <DialogFooter className="bg-white p-4 px-6 border-t border-slate-200 shrink-0 flex justify-end gap-3 z-10">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="submit" form="package-form" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 font-bold">
+              {loading ? "Saving Package..." : (editingPkg ? "Save Package Changes" : "Create Package")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

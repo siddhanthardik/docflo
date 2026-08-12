@@ -14,6 +14,7 @@ export default async function PackagesPage() {
     include: {
       modules: { select: { moduleName: true } },
       limits: { select: { limitName: true, limitValue: true } },
+      packageFeatures: { include: { feature: true } },
       _count: { select: { doctors: true } },
       prices: true
     }
