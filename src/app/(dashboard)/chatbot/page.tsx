@@ -243,7 +243,7 @@ export default function AIAgentsHubPage() {
               
               {!isAllowed && (
                 <div className="bg-amber-50 border-b border-amber-200/80 text-amber-900 text-[11px] font-bold px-3 py-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-[10px]">🔒 Requires {agentData.requiredPackage || "Premium"}</span>
+                  <span className="flex items-center gap-1 text-[10px]">🔒 Requires {(agentData.requiredPackage || "PREMIUM").replace(/\s*\/\s*AUTOPILOT/i, "").trim()}</span>
                   <button onClick={() => router.push("/subscription")} className="text-[10px] text-amber-900 font-extrabold underline hover:text-amber-700">
                     Upgrade
                   </button>

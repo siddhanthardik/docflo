@@ -330,11 +330,16 @@ export function BillingClient({
                       {/* Render Included Limits */}
                       {pkg.limits && pkg.limits.length > 0 && (
                         pkg.limits.map((l: any) => {
-                          const val = l.limitValue === null || l.limitValue === undefined ? "Unlimited" : l.limitValue;
+                          let val = l.limitValue === null || l.limitValue === undefined ? "Unlimited" : l.limitValue;
                           let name = l.limitName;
                           if (name === "MAX_STAFF_SEATS") name = "Staff Seats";
                           if (name === "MAX_PATIENTS") name = "Patient Capacity";
-                          if (name === "MAX_PRACTITIONERS") name = "Doctor / Practitioner Seats";
+                          if (name === "MAX_PRACTITIONERS") {
+                            name = "Doctor / Practitioner Seats";
+                            if (l.limitValue === null || l.limitValue === undefined) {
+                              val = "5 Included (FUP)";
+                            }
+                          }
                           if (name === "MAX_GBP_LOCATIONS") name = "Google Locations";
                           if (name === "MAX_TRACKED_KEYWORDS") name = "Tracked Keywords";
                           if (name === "MAX_SCHEDULED_POSTS") name = "Social Posts / mo";
