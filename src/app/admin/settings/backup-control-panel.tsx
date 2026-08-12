@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Database, HardDrive, Mail, CheckCircle2, RefreshCcw, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { Database, HardDrive, Mail, CheckCircle2, RefreshCcw, ExternalLink, ShieldCheck, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -59,7 +59,7 @@ export function BackupControlPanel() {
           {running ? (
             <><RefreshCcw className="h-4 w-4 mr-2 animate-spin" /> Exporting & Uploading...</>
           ) : (
-            <><Sparkles className="h-4 w-4 mr-2 text-amber-300" /> Run Instant Backup Now</>
+            <><Play className="h-4 w-4 mr-2 text-amber-300" /> Run Instant Backup Now</>
           )}
         </Button>
       </div>

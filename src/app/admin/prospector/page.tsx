@@ -4,7 +4,6 @@ import { useState } from "react";
 import { 
   Bot, 
   Search, 
-  Sparkles, 
   MapPin, 
   Stethoscope, 
   Send, 
@@ -18,7 +17,8 @@ import {
   TrendingDown, 
   AlertTriangle,
   RefreshCcw,
-  ShieldCheck
+  ShieldCheck,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,7 +198,7 @@ export default function AdminProspectorPage() {
       {/* Task Creation Form */}
       <form onSubmit={handleRunScan} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs space-y-6">
         <div className="flex items-center gap-2 text-sm font-bold text-gray-900 uppercase tracking-wider">
-          <Sparkles className="w-4 h-4 text-indigo-600" /> Launch AI Discovery Task
+          <Search className="w-4 h-4 text-indigo-600" /> Launch Discovery Task
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -262,6 +262,21 @@ export default function AdminProspectorPage() {
           </div>
         </div>
 
+        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-500">Scans Google Maps & Places API for local clinics needing review & SEO optimization.</p>
+          <Button
+            type="submit"
+            disabled={scanning}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-11 px-6 rounded-xl shadow-sm"
+          >
+            {scanning ? (
+              <><RefreshCcw className="w-4 h-4 mr-2 animate-spin" /> Executing Prospecting Engine...</>
+            ) : (
+              <><Play className="w-4 h-4 mr-2 text-amber-300" /> Run Prospecting Scan</>
+            )}
+          </Button>
+        </div>
+
         {/* Live Stepper Indicator */}
         {scanning && (
           <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2">
@@ -294,7 +309,7 @@ export default function AdminProspectorPage() {
             {scanning ? (
               <><RefreshCcw className="w-4 h-4 mr-2 animate-spin" /> Executing Prospecting Engine...</>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-2 text-amber-300" /> Run AI Prospecting Agent</>
+              <><Play className="w-4 h-4 mr-2 text-amber-300" /> Run Prospecting Engine</>
             )}
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, Sparkles, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -223,7 +223,7 @@ export default function AIAgentsHubPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Sparkles className="h-8 w-8 text-indigo-400" /> Smart Practice Automation
+            <Zap className="h-8 w-8 text-indigo-400" /> Smart Practice Automation
           </h1>
           <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
             Configure smart automated assistants to handle WhatsApp bookings, Google reviews, and local search rankings 24/7.
@@ -346,7 +346,7 @@ export default function AIAgentsHubPage() {
                       )}
                       {isCorrected && (
                         <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-purple-600" /> Trained Rule Deployed
+                          <CheckCircle2 className="w-3 h-3 text-purple-600" /> Custom Rule Applied
                         </span>
                       )}
                     </div>
@@ -362,9 +362,8 @@ export default function AIAgentsHubPage() {
                     </div>
 
                     <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
-                      <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-indigo-600" />
-                        AI Assistant Reply:
+                      <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                        Automated Reply:
                       </p>
                       <p className="text-slate-900 font-medium whitespace-pre-wrap">{log.aiResponse}</p>
                     </div>
@@ -401,7 +400,7 @@ export default function AIAgentsHubPage() {
                         className={`text-xs font-bold gap-1.5 h-8 ${isEditing ? "bg-purple-600 text-white" : "border-purple-200 text-purple-700 hover:bg-purple-50"}`}
                       >
                         <Settings className="w-3.5 h-3.5" />
-                        {isEditing ? "Cancel Retraining" : "👎 Modify & Train AI"}
+                        {isEditing ? "Cancel Retraining" : "👎 Modify & Update"}
                       </Button>
                     </div>
                   </div>
@@ -410,12 +409,12 @@ export default function AIAgentsHubPage() {
                   {isEditing && (
                     <div className="p-4 bg-white rounded-2xl border border-purple-200 space-y-3 mt-2">
                       <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                        Retrain AI Assistant for Future Patient Queries
+                        <Settings className="w-3.5 h-3.5 text-purple-600" />
+                        Update Instructions for Future Patient Queries
                       </h4>
 
                       <div className="space-y-2">
-                        <Label className="text-[11px] font-semibold text-slate-700">What should the AI have replied instead?</Label>
+                        <Label className="text-[11px] font-semibold text-slate-700">What should the assistant have replied instead?</Label>
                         <Textarea
                           placeholder="e.g., Namaste! Dr. Sharma ke paas kal evening OPD mein slots available hain..."
                           value={correctedReplyDraft}
@@ -426,7 +425,7 @@ export default function AIAgentsHubPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-[11px] font-semibold text-slate-700">Add a Custom Instruction / Rule for the AI</Label>
+                        <Label className="text-[11px] font-semibold text-slate-700">Add a Custom Instruction / Rule</Label>
                         <Input
                           placeholder="e.g., Always ask patient temperature before confirming fever appointment"
                           value={customRuleDraft}
@@ -452,8 +451,8 @@ export default function AIAgentsHubPage() {
                           onClick={() => handleFeedback(log, "CORRECTED")}
                           className="text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
                         >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          Save & Train AI Engine
+                          <Check className="w-3.5 h-3.5" />
+                          Save Instructions
                         </Button>
                       </div>
                     </div>

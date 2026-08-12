@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, X, Sparkles, ShieldCheck, Zap, CreditCard, ArrowRight, RefreshCcw } from "lucide-react";
+import { Check, X, Star, ShieldCheck, Zap, CreditCard, ArrowRight, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -215,7 +215,7 @@ export function BillingClient({
 
                 {isPopular && !isCurrent && (
                   <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" /> Most Popular ⭐
+                    <Star className="w-3.5 h-3.5 fill-current" /> Most Popular
                   </div>
                 )}
 

@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
-import { Sparkles } from "lucide-react";
+import { Zap } from "lucide-react";
 
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -42,7 +42,7 @@ const navigationItems = [
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
   { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Smart Automation", href: "/ai-agents", icon: Sparkles },
+  { name: "Smart Automation", href: "/ai-agents", icon: Zap },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
