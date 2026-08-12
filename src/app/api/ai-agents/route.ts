@@ -13,23 +13,60 @@ export async function GET() {
 
     const doctorId = session.user.id;
 
-    // Fetch the doctor to check package features
+    // Fetch the doctor with package and packageFeatures
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      include: { package: true },
+      include: { 
+        package: {
+          include: {
+            packageFeatures: {
+              include: { feature: true }
+            }
+          }
+        } 
+      },
     });
 
     if (!doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    const hasAIAgentsAccess = await EntitlementService.hasModule(doctorId, "AI_ASSISTANT");
+    const pkgName = (doctor.package?.name || "").toUpperCase();
+
+    // Helper to check feature flag or default package rank
+    const isFeatureEnabled = (key: string) => {
+      const feat = doctor.package?.packageFeatures?.find(pf => pf.feature?.key === key);
+      return feat?.isEnabled ?? false;
+    };
+
+    // Agent access logic
+    const isAllowedMap: Record<string, { isAllowed: boolean; requiredPackage: string }> = {
+      APPOINTMENT: {
+        isAllowed: pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST"),
+        requiredPackage: "PREMIUM / AUTOPILOT"
+      },
+      REVIEW: {
+        isAllowed: pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY"),
+        requiredPackage: "STARTER"
+      },
+      POST_CREATION: {
+        isAllowed: pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR"),
+        requiredPackage: "GROWTH"
+      },
+      PROFILE: {
+        isAllowed: pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR"),
+        requiredPackage: "GROWTH"
+      },
+      LOCAL_SEO_COPILOT: {
+        isAllowed: pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_SEO_COPILOT"),
+        requiredPackage: "STARTER"
+      }
+    };
 
     // Initialize default agents if they don't exist
-    const agentTypes = ["APPOINTMENT", "REVIEW", "PROFILE", "LOCAL_SEO_COPILOT"];
+    const agentTypes = ["APPOINTMENT", "REVIEW", "POST_CREATION", "LOCAL_SEO_COPILOT"];
     
-    // Using an upsert pattern for each to ensure they exist
-    const agents = await Promise.all(
+    const rawAgents = await Promise.all(
       agentTypes.map(async (type) => {
         return prisma.aIAgentConfig.upsert({
           where: { doctorId_agentType: { doctorId, agentType: type } },
@@ -39,8 +76,15 @@ export async function GET() {
       })
     );
 
+    const agents = rawAgents.map(agent => ({
+      ...agent,
+      isAllowed: isAllowedMap[agent.agentType]?.isAllowed ?? false,
+      requiredPackage: isAllowedMap[agent.agentType]?.requiredPackage ?? "PREMIUM"
+    }));
+
     return NextResponse.json({
-      hasAccess: hasAIAgentsAccess,
+      hasAccess: true,
+      packageName: doctor.package?.name || "Free",
       agents,
     });
   } catch (error: any) {
@@ -56,10 +100,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Bypass entitlement guard for demonstration
-    // const blockPut = await entitlementGuard(session.user.id, req, { module: "AI_ASSISTANT" });
-    // if (blockPut) return blockPut;
-
+    const doctorId = session.user.id;
     const body = await req.json();
     const { agentType, enabled, config } = body;
 
@@ -67,14 +108,48 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Agent type is required" }, { status: 400 });
     }
 
+    // Check doctor's package entitlement before enabling
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      include: { package: { include: { packageFeatures: { include: { feature: true } } } } }
+    });
+
+    const pkgName = (doctor?.package?.name || "").toUpperCase();
+    const isFeatureEnabled = (key: string) => {
+      const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
+      return feat?.isEnabled ?? false;
+    };
+
+    let allowed = false;
+    let reqPkg = "Premium";
+    if (agentType === "APPOINTMENT") {
+      allowed = pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST");
+      reqPkg = "Premium / Autopilot";
+    } else if (agentType === "REVIEW") {
+      allowed = pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY");
+      reqPkg = "Starter";
+    } else if (agentType === "POST_CREATION" || agentType === "PROFILE") {
+      allowed = pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR");
+      reqPkg = "Growth";
+    } else if (agentType === "LOCAL_SEO_COPILOT") {
+      allowed = pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_SEO_COPILOT");
+      reqPkg = "Starter";
+    }
+
+    if (enabled && !allowed) {
+      return NextResponse.json({ 
+        error: `The ${agentType === "APPOINTMENT" ? "AI Receptionist & Booking Assistant" : agentType} requires the ${reqPkg} package.` 
+      }, { status: 403 });
+    }
+
     const agent = await prisma.aIAgentConfig.upsert({
-      where: { doctorId_agentType: { doctorId: session.user.id, agentType } },
+      where: { doctorId_agentType: { doctorId, agentType } },
       update: {
         ...(enabled !== undefined && { enabled }),
         ...(config !== undefined && { config }),
       },
       create: {
-        doctorId: session.user.id,
+        doctorId,
         agentType,
         enabled: enabled ?? false,
         config: config ?? {},

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, Sparkles, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 
 export default function AIAgentsHubPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -99,7 +101,17 @@ export default function AIAgentsHubPage() {
     fetchLogs();
   }, []);
 
-  const toggleAgent = async (agentType: string, currentStatus: boolean) => {
+  const toggleAgent = async (agentType: string, currentStatus: boolean, isAllowed: boolean, requiredPackage: string) => {
+    if (!isAllowed) {
+      toast({
+        title: "🔒 Package Upgrade Required",
+        description: `The ${agentType === "APPOINTMENT" ? "AI Receptionist & Booking Assistant" : "selected AI agent"} is available in the ${requiredPackage} package.`,
+        variant: "destructive"
+      });
+      router.push("/subscription");
+      return;
+    }
+
     const newStatus = !currentStatus;
     setAgents(agents.map(a => a.agentType === agentType ? { ...a, enabled: newStatus } : a));
     
@@ -109,15 +121,27 @@ export default function AIAgentsHubPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentType, enabled: newStatus }),
       });
-      if (!res.ok) throw new Error("Update failed");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Update failed");
+      }
       toast({ title: newStatus ? "AI Agent Activated 🚀" : "AI Agent Paused" });
-    } catch (error) {
+    } catch (error: any) {
       setAgents(agents.map(a => a.agentType === agentType ? { ...a, enabled: currentStatus } : a));
-      toast({ title: "Failed to update agent status", variant: "destructive" });
+      toast({ title: error.message || "Failed to update agent status", variant: "destructive" });
     }
   };
 
   const openConfig = (agent: any) => {
+    if (agent.isAllowed === false) {
+      toast({
+        title: "🔒 Package Upgrade Required",
+        description: `Please upgrade to the ${agent.requiredPackage || "Premium"} package to configure and train this AI agent.`,
+        variant: "destructive"
+      });
+      router.push("/subscription");
+      return;
+    }
     setActiveAgent(agent);
     setConfigDraft(agent.config || {});
     setIsConfigOpen(true);
@@ -146,33 +170,6 @@ export default function AIAgentsHubPage() {
     }
   };
 
-  const copyDoctorTemplate = () => {
-    const template = `📋 GYREX CLINIC AI ASSISTANT SETUP TEMPLATE
-(Fill in your clinic details below and reply via WhatsApp)
-
-🏥 Clinic Name: [e.g. City Pediatrics & Child Care]
-👨‍⚕️ Doctor Name(s): [e.g. Dr. R. K. Sharma]
-🩺 Specialty: [e.g. Pediatrician & Child Specialist]
-
-🕒 Clinic Timings & Days:
-• Mon - Sat: 10:00 AM - 1:30 PM | 5:00 PM - 8:30 PM
-• Sunday: Closed / Emergency Only
-
-💰 Consultation Fee:
-• ₹500 (First Visit) | ₹300 (Follow-up)
-
-💉 Vaccinations Available (Pediatrics Only):
-• BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot
-
-🏥 Services Offered:
-• Newborn Care, Growth Tracking, Child Consultation, Nebulization
-
-📞 Emergency Contact: [+91 98765 43210]`;
-
-    navigator.clipboard.writeText(template);
-    toast({ title: "WhatsApp Template Copied! 📋", description: "Forward this template to doctors via WhatsApp to collect their clinic variables." });
-  };
-
   const agentDefinitions = [
     {
       type: "APPOINTMENT",
@@ -181,16 +178,25 @@ export default function AIAgentsHubPage() {
       color: "text-blue-600",
       bg: "bg-blue-50",
       desc: <>Connects to your WhatsApp to handle patient inquiries 24/7. <strong className="text-indigo-600">Internal Mode:</strong> Doctors can also text the AI directly to instantly book, update, or cancel calendar slots on the go.</>,
-      metrics: "24/7 Live",
+      metrics: "24/7 Live WhatsApp",
     },
     {
       type: "REVIEW",
-      name: "Review Manager",
+      name: "Review Manager Agent",
       icon: MessageSquare,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
       desc: "Analyzes incoming Google Business Profile reviews and drafts HIPAA-compliant, keyword-rich responses to boost Maps ranking.",
       metrics: "Auto-Drafting",
+    },
+    {
+      type: "POST_CREATION",
+      name: "AI Post & Content Creator",
+      icon: Megaphone,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+      desc: "Generates engaging, keyword-rich Google Business Profile posts and patient education content tailored for your clinic.",
+      metrics: "Auto-Generating",
     },
     {
       type: "LOCAL_SEO_COPILOT",
@@ -199,7 +205,7 @@ export default function AIAgentsHubPage() {
       color: "text-amber-600",
       bg: "bg-amber-50",
       desc: "Conducts weekly competitive keyword audits and generates prioritized 1-click execution tasks to outrank local competitors.",
-      metrics: "Algorithmic",
+      metrics: "Algorithmic Audit",
     }
   ];
 
@@ -213,7 +219,6 @@ export default function AIAgentsHubPage() {
 
   return (
     <div className="pb-12 space-y-8 max-w-7xl mx-auto">
-      {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
@@ -226,47 +231,58 @@ export default function AIAgentsHubPage() {
       </div>
 
       {/* Agents Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {agentDefinitions.map((def) => {
-          const agentData = agents.find(a => a.agentType === def.type) || { enabled: false, config: {} };
+          const agentData = agents.find(a => a.agentType === def.type) || { enabled: false, config: {}, isAllowed: false, requiredPackage: "PREMIUM" };
           const Icon = def.icon;
+          const isAllowed = agentData.isAllowed ?? false;
           
           return (
-            <div key={def.type} className={`bg-white rounded-2xl border ${agentData.enabled ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-gray-100 shadow-sm opacity-90'} overflow-hidden transition-all duration-300 flex flex-col justify-between`}>
-              <div className="p-6">
+            <div key={def.type} className={`bg-white rounded-2xl border ${!isAllowed ? 'border-amber-200 bg-amber-50/10' : agentData.enabled ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-gray-100 shadow-sm'} overflow-hidden transition-all duration-300 flex flex-col justify-between relative`}>
+              
+              {!isAllowed && (
+                <div className="bg-amber-50 border-b border-amber-200/80 text-amber-900 text-[11px] font-bold px-3 py-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-[10px]">🔒 Requires {agentData.requiredPackage || "Premium"}</span>
+                  <button onClick={() => router.push("/subscription")} className="text-[10px] text-amber-900 font-extrabold underline hover:text-amber-700">
+                    Upgrade
+                  </button>
+                </div>
+              )}
+
+              <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${def.bg}`}>
-                    <Icon className={`h-6 w-6 ${def.color}`} />
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${def.bg}`}>
+                    <Icon className={`h-5 w-5 ${def.color}`} />
                   </div>
-                  <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-                    <span className={`text-xs font-bold ${agentData.enabled ? "text-emerald-700" : "text-gray-400"}`}>
-                      {agentData.enabled ? "ACTIVE" : "PAUSED"}
+                  <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
+                    <span className={`text-[10px] font-bold ${!isAllowed ? 'text-amber-700' : agentData.enabled ? "text-emerald-700" : "text-gray-400"}`}>
+                      {!isAllowed ? "LOCKED" : agentData.enabled ? "ACTIVE" : "PAUSED"}
                     </span>
                     <Switch 
-                      checked={agentData.enabled}
-                      onCheckedChange={() => toggleAgent(def.type, agentData.enabled)}
-                      className="data-[state=checked]:bg-emerald-500"
+                      checked={agentData.enabled && isAllowed}
+                      onCheckedChange={() => toggleAgent(def.type, agentData.enabled, isAllowed, agentData.requiredPackage)}
+                      className="data-[state=checked]:bg-emerald-500 scale-90"
                     />
                   </div>
                 </div>
                 
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{def.name}</h3>
-                <p className="text-xs text-gray-500 mb-6 min-h-[40px] leading-relaxed">
+                <h3 className="text-base font-bold text-gray-900 mb-1.5">{def.name}</h3>
+                <p className="text-xs text-gray-500 mb-5 min-h-[48px] leading-relaxed">
                   {def.desc}
                 </p>
                 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md flex items-center gap-1.5 border border-indigo-100">
-                    <Power className="h-3 w-3 text-indigo-500" /> {def.metrics}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded flex items-center gap-1 border border-indigo-100">
+                    <Power className="h-2.5 w-2.5 text-indigo-500" /> {def.metrics}
                   </span>
                   
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => openConfig({ ...agentData, ...def })}
-                    className="gap-2 text-xs font-bold text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 hover:border-indigo-200"
+                    className={`gap-1.5 text-xs font-bold ${!isAllowed ? 'text-amber-800 border-amber-200 bg-amber-50 hover:bg-amber-100' : 'text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 hover:border-indigo-200'}`}
                   >
-                    <Settings className="h-4 w-4" /> Configure & Train
+                    <Settings className="h-3.5 w-3.5" /> {!isAllowed ? "Upgrade to Unlock" : "Configure & Train"}
                   </Button>
                 </div>
               </div>
