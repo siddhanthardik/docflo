@@ -55,8 +55,8 @@ export class AIAgentsService {
       const customRules = config?.trainingPrompt || config?.customRules || "";
       const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
       
-      const doctorName = doctorProfile?.doctorName || config?.doctorName || "the Doctor";
-      const clinicName = doctorProfile?.clinicName || config?.clinicName || "our Clinic";
+      const doctorName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
+      const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
       const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
 
       // OPD Schedule Configuration
@@ -131,7 +131,7 @@ ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 
 CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
 1. **GREETING & INTRODUCTION**:
-   - Whenever a patient greets you (e.g. says "Hi" or "Hello"), politely introduce yourself using your name (e.g. "Namaste/Hello! I am ${assistantName}, the AI receptionist at ${clinicName}"). You do not need to repeat your name in the middle of an active back-and-forth conversation, but always introduce yourself when greeting them.
+   - Introduce yourself as ${assistantName}, receptionist at ${clinicName} on the FIRST greeting. In active back-and-forth conversations, keep your tone natural without re-introducing yourself.
 
 2. **HANDLE PATIENT SYMPTOMS & HEALTH QUESTIONS (e.g. "I have fever what should I do?")**:
    - If the patient describes symptoms (fever, cough, pain, stomach ache, rash):
@@ -207,7 +207,13 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
         .replace(/30-minute consultation/gi, "consultation")
         .trim();
 
-      aiReply += `\n\n${phoneDisclaimer}`;
+      // Smart disclaimer logic: Only append on initial greeting or when patient explicitly asks for phone/contact/human
+      const hasAlreadyGreeted = conversationHistory.some(msg => msg.startsWith("Clinic:"));
+      const wantsContact = /human|speak|call|phone|number|contact|talk/i.test(incomingMessage);
+
+      if (!hasAlreadyGreeted || wantsContact) {
+        aiReply += `\n\n${phoneDisclaimer}`;
+      }
 
       return aiReply;
     } catch (error: any) {
