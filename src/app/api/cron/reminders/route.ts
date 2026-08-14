@@ -9,11 +9,18 @@ export async function GET(req: Request) {
     console.log("[CRON] Starting Reminder Service CRON...");
     const reminderService = new ReminderService();
     
-    // We can also trigger sendReviewRequests() here if we want to batch process them.
-    // However, our task is specifically to ensure follow-ups are sent.
-    await reminderService.sendFollowUpReminders();
+    // 1. Trigger 24-hour and 2-hour pre-appointment WhatsApp reminders
+    const appointmentReminders = await reminderService.sendAppointmentReminders();
 
-    return NextResponse.json({ success: true, message: "Reminder CRON finished successfully" });
+    // 2. Trigger post-appointment follow-up WhatsApp check-ins
+    const followUpReminders = await reminderService.sendFollowUpReminders();
+
+    return NextResponse.json({
+      success: true,
+      message: "Reminder CRON finished successfully",
+      appointmentReminders,
+      followUpReminders,
+    });
   } catch (error: any) {
     console.error("[CRON] Reminder error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

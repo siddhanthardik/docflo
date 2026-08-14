@@ -8,49 +8,102 @@ export class ReminderService {
       const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
       const doctors = await prisma.doctor.findMany({});
+      let reminders24hSent = 0;
+      let reminders2hSent = 0;
 
       for (const doctor of doctors) {
-        if (!whatsappManager.isConnected(doctor.id) || doctor.enable24hReminder === false) continue;
+        if (!whatsappManager.isConnected(doctor.id)) continue;
 
-        // Find appointments in the next 24 hours that haven't been reminded
-        const upcomingAppointments = await prisma.appointment.findMany({
-          where: {
-            doctorId: doctor.id,
-            status: "CONFIRMED",
-            reminderSent: false,
-            date: {
-              gte: now,
-              lte: in24Hours,
+        // 1. 24-HOUR PRIOR REMINDERS (If enable24hReminder is not explicitly disabled)
+        if (doctor.enable24hReminder !== false) {
+          const upcoming24hAppointments = await prisma.appointment.findMany({
+            where: {
+              doctorId: doctor.id,
+              status: "CONFIRMED",
+              startTime: {
+                gte: now,
+                lte: in24Hours,
+              },
+              followUps: {
+                none: {
+                  type: "24_HOUR",
+                },
+              },
             },
-          },
-          include: {
-            patient: true,
-          },
-        });
+            include: {
+              patient: true,
+            },
+          });
 
-        for (const appointment of upcomingAppointments) {
-          const appointmentTime = new Date(appointment.startTime);
-          const hoursUntilAppointment =
-            (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+          for (const appointment of upcoming24hAppointments) {
+            const appointmentTime = new Date(appointment.startTime);
+            const hoursUntilAppointment =
+              (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-          // Send 24-hour reminder
-          if (hoursUntilAppointment <= 24 && hoursUntilAppointment > 2) {
-            const timeStr = appointmentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-            const msg = `Hi ${appointment.patient.firstName}! Just a friendly reminder from ${doctor.clinicName || 'our clinic'} about your appointment tomorrow at ${timeStr}.\n\nIf anything has changed, please let us know.`;
-            await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
+            if (hoursUntilAppointment <= 24 && hoursUntilAppointment > 2) {
+              const timeStr = appointmentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              const msg = `Hi ${appointment.patient.firstName}! Just a friendly reminder from ${doctor.clinicName || 'our clinic'} about your appointment tomorrow at ${timeStr}.\n\nIf anything has changed, please let us know.`;
+              await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 
-            // Mark as reminded
-            await prisma.appointment.update({
-              where: { id: appointment.id },
-              data: { reminderSent: true },
-            });
+              await prisma.appointmentFollowUp.create({
+                data: {
+                  appointmentId: appointment.id,
+                  type: "24_HOUR",
+                },
+              });
+              await prisma.appointment.update({
+                where: { id: appointment.id },
+                data: { reminderSent: true },
+              });
+              reminders24hSent++;
+            }
           }
+        }
 
-          // Send 1-hour reminder (wait, we need a separate flag for 1hr reminder if we want it, otherwise we'd send it repeatedly. I'll skip 1-hour for now to avoid complexity or just rely on the existing logic which was flawed since it checked reminderSent=false for both).
+        // 2. SAME-DAY / 2-HOUR PRIOR REMINDERS (If enable2hReminder is true)
+        if (doctor.enable2hReminder === true) {
+          const upcoming2hAppointments = await prisma.appointment.findMany({
+            where: {
+              doctorId: doctor.id,
+              status: "CONFIRMED",
+              startTime: {
+                gte: now,
+                lte: new Date(now.getTime() + 2.5 * 60 * 60 * 1000),
+              },
+              followUps: {
+                none: {
+                  type: "2_HOUR",
+                },
+              },
+            },
+            include: {
+              patient: true,
+            },
+          });
+
+          for (const appointment of upcoming2hAppointments) {
+            const appointmentTime = new Date(appointment.startTime);
+            const hoursUntilAppointment =
+              (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+            if (hoursUntilAppointment > 0 && hoursUntilAppointment <= 2.2) {
+              const timeStr = appointmentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              const msg = `Hi ${appointment.patient.firstName}! Friendly reminder: Your appointment with ${doctor.clinicName || 'our clinic'} is today in 2 hours at ${timeStr}.\n\nWe look forward to seeing you soon! 🩺`;
+              await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
+
+              await prisma.appointmentFollowUp.create({
+                data: {
+                  appointmentId: appointment.id,
+                  type: "2_HOUR",
+                },
+              });
+              reminders2hSent++;
+            }
+          }
         }
       }
 
-      return { success: true, message: "Reminders sent successfully" };
+      return { success: true, message: `Reminders sweep completed: ${reminders24hSent} 24h reminders & ${reminders2hSent} 2h reminders sent.` };
     } catch (error) {
       console.error("Error sending reminders:", error);
       throw error;
