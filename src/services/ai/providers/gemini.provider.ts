@@ -82,18 +82,21 @@ export class GeminiProvider implements AIProvider {
         });
 
         const response = await result.response;
-        return response.text();
+        const text = response.text();
+        if (text && text.trim().length > 0) {
+          return text;
+        }
       } catch (err: any) {
         lastError = err;
-        const errText = err.message || "";
-        if (errText.includes("404") || errText.includes("not found")) {
-          console.warn(`Gemini model ${modelName} returned 404, trying fallback model...`);
-          continue;
-        }
-        throw err;
+        const errText = err.message || err.toString() || "";
+        console.warn(`[GeminiProvider] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+
+        // Short 300ms backoff before trying next candidate model in downgrade order
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        continue;
       }
     }
 
-    throw lastError;
+    throw lastError || new Error("All Gemini models in downgrade cascade are currently unavailable.");
   }
 }
