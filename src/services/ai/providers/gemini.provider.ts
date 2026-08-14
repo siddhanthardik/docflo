@@ -6,7 +6,8 @@ export class GeminiProvider implements AIProvider {
   private model: string;
 
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_CLIENT_SECRET || process.env.GEMINI_API_KEY || '');
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY || '';
+    this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = 'gemini-1.5-flash';
   }
 
@@ -24,8 +25,44 @@ export class GeminiProvider implements AIProvider {
       finalPrompt = `${options.systemPrompt}\n\n${prompt}`;
     }
 
+    const parts: any[] = [{ text: finalPrompt }];
+
+    // If an image URL is provided, fetch and attach inline image data for multimodal vision analysis
+    if (options?.imageUrl) {
+      try {
+        let base64Data = "";
+        let mimeType = "image/jpeg";
+
+        if (options.imageUrl.startsWith("data:")) {
+          const matches = options.imageUrl.match(/^data:(.+);base64,(.+)$/);
+          if (matches) {
+            mimeType = matches[1];
+            base64Data = matches[2];
+          }
+        } else if (options.imageUrl.startsWith("http://") || options.imageUrl.startsWith("https://")) {
+          const imgRes = await fetch(options.imageUrl);
+          if (imgRes.ok) {
+            const arrayBuf = await imgRes.arrayBuffer();
+            base64Data = Buffer.from(arrayBuf).toString("base64");
+            mimeType = imgRes.headers.get("content-type") || "image/jpeg";
+          }
+        }
+
+        if (base64Data) {
+          parts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Could not load image for Gemini vision processing:", e);
+      }
+    }
+
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: finalPrompt }] }],
+      contents: [{ role: 'user', parts }],
       generationConfig,
     });
 

@@ -172,46 +172,58 @@ export function PostScheduler() {
     return map[type] || "Learn more"
   }
 
-  const handleGenerateAI = async () => {
-    if (!aiTopic.trim()) {
-      toast({ title: "Topic required", description: "Please enter a topic for the post.", variant: "destructive" })
-      return
+  const handleDraftClick = () => {
+    if (form.imageUrl || form.content.trim()) {
+      handleGenerateAI(form.content.trim(), form.imageUrl);
+    } else {
+      setShowAIDialog(true);
+    }
+  };
+
+  const handleGenerateAI = async (overrideTopic?: string, overrideImageUrl?: string) => {
+    const topicToUse = overrideTopic || aiTopic.trim();
+    const imageToUse = overrideImageUrl || form.imageUrl;
+
+    if (!topicToUse && !imageToUse) {
+      toast({ title: "Topic required", description: "Please enter a topic or upload an image.", variant: "destructive" });
+      return;
     }
 
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
       const res = await fetch("/api/gbp/posts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: aiTopic,
+          topic: topicToUse,
+          imageUrl: imageToUse || undefined,
           tone: aiTone,
-          targetKeywords: [] // optional keywords could be added later
+          targetKeywords: []
         })
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (res.ok) {
-        setForm(prev => ({ ...prev, content: data.content }))
-        toast({ title: "Post generated!", description: "Review and edit the AI drafted content." })
-        setShowAIDialog(false)
-        setAiTopic("")
+        setForm(prev => ({ ...prev, content: data.content }));
+        toast({ title: "Post drafted with AI! ✨", description: "Content generated successfully based on your request." });
+        setShowAIDialog(false);
+        setAiTopic("");
       } else {
         if (res.status === 402) {
-          toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" })
+          toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" });
         } else if (res.status === 403) {
-          toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" })
+          toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" });
         } else {
-          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" })
+          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" });
         }
       }
     } catch (error) {
-      toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" })
+      toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" });
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-8 relative">
@@ -323,11 +335,15 @@ export function PostScheduler() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowAIDialog(true)}
+                  disabled={isGenerating}
+                  onClick={handleDraftClick}
                   className="h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300"
                 >
-                  <Bot className="w-4 h-4 mr-2" />
-                  Draft with AI
+                  {isGenerating ? (
+                    <><Sparkles className="w-4 h-4 mr-2 animate-spin text-indigo-600" /> Generating...</>
+                  ) : (
+                    <><Bot className="w-4 h-4 mr-2" /> Draft with AI</>
+                  )}
                 </Button>
               </div>
               <Textarea 
@@ -610,7 +626,7 @@ export function PostScheduler() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAIDialog(false)} disabled={isGenerating}>Cancel</Button>
-            <Button onClick={handleGenerateAI} disabled={isGenerating || !aiTopic.trim()}>
+            <Button onClick={() => handleGenerateAI()} disabled={isGenerating || !aiTopic.trim()}>
               {isGenerating ? (
                 <>
                   <Sparkles className="mr-2 h-4 w-4 animate-spin" />

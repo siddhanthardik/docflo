@@ -9,32 +9,40 @@ export async function POST(req: Request) {
   try {
     const { doctorId } = await getSessionData();
 
-    // 1. Verify Growth & SEO module access
+    // 1. Verify module access
     const block = await entitlementGuard(doctorId, req, { module: "GROWTH_SEO" });
     if (block) return block;
 
     const body = await req.json();
-    const { topic, tone = "professional", targetKeywords = [] } = body;
+    const { topic, tone = "professional", targetKeywords = [], imageUrl } = body;
 
-    if (!topic) {
-      return NextResponse.json({ error: "Topic is required" }, { status: 400 });
-    }
-
-    // 2. Generate Post using AIService
     const keywordsStr = targetKeywords.length > 0 ? `Include these keywords organically: ${targetKeywords.join(", ")}` : "";
     
-    const prompt = `You are an expert social media manager for a medical clinic writing a Google Business Profile update post.
-    Topic: ${topic}
-    Tone: ${tone}
-    ${keywordsStr}
-    
-    Write an engaging, informative post (1-2 paragraphs, max 1500 characters). Include a clear call to action (like 'Call us today' or 'Book an appointment'). Do not include placeholders.`;
+    let prompt = "";
+    if (imageUrl) {
+      prompt = `You are an expert social media manager for a medical clinic writing a Google Business Profile update post based on the attached image/document.
+      Additional Instructions / Context: ${topic || "Analyze the image content and write a high-converting clinic update post."}
+      Tone: ${tone}
+      ${keywordsStr}
+      
+      Write an engaging, informative post (1-2 paragraphs, max 1500 characters) matching the visual content or news snippet in the photo. Include a clear call to action (like 'Call us today' or 'Book an appointment'). Do not include placeholders.`;
+    } else {
+      if (!topic) {
+        return NextResponse.json({ error: "Topic or image is required for AI generation" }, { status: 400 });
+      }
+      prompt = `You are an expert social media manager for a medical clinic writing a Google Business Profile update post.
+      Topic: ${topic}
+      Tone: ${tone}
+      ${keywordsStr}
+      
+      Write an engaging, informative post (1-2 paragraphs, max 1500 characters). Include a clear call to action (like 'Call us today' or 'Book an appointment'). Do not include placeholders.`;
+    }
 
     const aiResult = await AIService.generate(
       doctorId, 
       AIFeature.GBP_POST,
       prompt,
-      { temperature: 0.8 }
+      { temperature: 0.8, imageUrl }
     );
 
     // Audit the AI action
@@ -43,7 +51,7 @@ export async function POST(req: Request) {
         userId: doctorId,
         userType: "CLINIC",
         action: "AI_GENERATE",
-        details: { feature: AIFeature.GBP_POST, creditsUsed: aiResult.creditsUsed },
+        details: { feature: AIFeature.GBP_POST, creditsUsed: aiResult.creditsUsed, hasImage: !!imageUrl },
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1"
       }
     });
@@ -62,12 +70,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "AI features are not available on your current plan. Please upgrade to unlock this capability." }, { status: 403 });
     }
     
-    // Map raw AI provider errors to a professional upgrade message per user request
-    const errorMsg = error.message || "";
-    if (errorMsg.includes("API key not valid") || errorMsg.includes("GoogleGenerativeAI Error")) {
-      return NextResponse.json({ error: "AI generation is not available on your current plan. Please upgrade to unlock this feature." }, { status: 403 });
-    }
-
-    return NextResponse.json({ error: "An unexpected error occurred while generating the post. Please try again later." }, { status: 500 });
+    return NextResponse.json({ error: error.message || "An unexpected error occurred while generating the post. Please try again later." }, { status: 500 });
   }
 }

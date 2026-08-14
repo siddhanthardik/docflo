@@ -11,6 +11,7 @@ export interface AIGenerationOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  imageUrl?: string;
 }
 
 export interface AIProvider {
