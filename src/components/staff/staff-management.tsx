@@ -249,41 +249,43 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
 
       {/* Add Staff Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-full max-w-full sm:max-w-[540px] p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Add New Staff</DialogTitle>
-            <DialogDescription>Create a new account for a staff member to access the clinic dashboard.</DialogDescription>
+            <DialogTitle className="text-lg font-bold text-slate-900">Add New Staff</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">Create a new account for a staff member to access the clinic dashboard.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sarah Jenkins" required />
+          <form onSubmit={handleAdd} className="space-y-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sarah Jenkins" required className="h-10 text-sm rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Email Address (Login ID)</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="sarah@clinic.com" required className="h-10 text-sm rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Temporary Password</Label>
+                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required className="h-10 text-sm rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Role & Access Level</Label>
+                <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
+                  <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RECEPTIONIST">Receptionist (Appointments, Chat)</SelectItem>
+                    <SelectItem value="NURSE">Nurse (Patients, Reports)</SelectItem>
+                    <SelectItem value="MANAGER">Manager (Full Access)</SelectItem>
+                    <SelectItem value="STAFF">Standard Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Email Address (Login ID)</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="sarah@clinic.com" required />
-            </div>
-            <div className="space-y-2">
-              <Label>Temporary Password</Label>
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RECEPTIONIST">Receptionist (Appointments, Chat)</SelectItem>
-                  <SelectItem value="NURSE">Nurse (Patients, Reports)</SelectItem>
-                  <SelectItem value="MANAGER">Manager (Full Access)</SelectItem>
-                  <SelectItem value="STAFF">Standard Staff</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={loading}>
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="w-full sm:w-auto h-10 rounded-xl">Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20" disabled={loading}>
                 {loading ? "Adding..." : "Create Account"}
               </Button>
             </DialogFooter>
@@ -293,37 +295,39 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
 
       {/* Edit Staff Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-full max-w-full sm:max-w-[540px] p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Staff Details</DialogTitle>
-            <DialogDescription>Update the role or name of {selectedStaff?.name}.</DialogDescription>
+            <DialogTitle className="text-lg font-bold text-slate-900">Edit Staff Details</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">Update the role or name of {selectedStaff?.name}.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+          <form onSubmit={handleEdit} className="space-y-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required className="h-10 text-sm rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Role</Label>
+                <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                  <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
+                    <SelectItem value="NURSE">Nurse</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="STAFF">Standard Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Reset Password (Optional)</Label>
+                <Input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="Leave blank to keep current" className="h-10 text-sm rounded-xl border-slate-200" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
-                  <SelectItem value="NURSE">Nurse</SelectItem>
-                  <SelectItem value="MANAGER">Manager</SelectItem>
-                  <SelectItem value="STAFF">Standard Staff</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Reset Password (Optional)</Label>
-              <Input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="Leave blank to keep current" />
-            </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={loading}>
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="w-full sm:w-auto h-10 rounded-xl">Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20" disabled={loading}>
                 {loading ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>

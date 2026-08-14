@@ -135,12 +135,12 @@ export function PatientForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-full sm:max-w-[680px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">
             {mode === "create" ? "Add New Patient" : "Edit Patient"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-slate-500">
             {mode === "create"
               ? "Add a new patient to your practice"
               : "Update patient information"}
@@ -151,10 +151,10 @@ export function PatientForm({
           e.stopPropagation();
           handleSubmit(e);
         }}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
+          <div className="grid gap-4 py-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName" className="text-xs font-semibold text-slate-700">First Name *</Label>
                 <Input
                   id="firstName"
                   value={formData.firstName}
@@ -163,10 +163,11 @@ export function PatientForm({
                   }
                   placeholder="John"
                   required
+                  className="h-10 text-sm rounded-xl border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName" className="text-xs font-semibold text-slate-700">Last Name *</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
@@ -175,16 +176,17 @@ export function PatientForm({
                   }
                   placeholder="Doe"
                   required
+                  className="h-10 text-sm rounded-xl border-slate-200"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">Phone *</Label>
                 <div className="flex gap-2">
                   <Select value={countryCode} onValueChange={setCountryCode}>
-                    <SelectTrigger className="w-[110px]">
+                    <SelectTrigger className="w-[100px] h-10 text-xs rounded-xl border-slate-200">
                       <SelectValue placeholder="Code" />
                     </SelectTrigger>
                     <SelectContent>
@@ -204,12 +206,12 @@ export function PatientForm({
                     }
                     placeholder="9876543210"
                     required
-                    className="flex-1"
+                    className="flex-1 h-10 text-sm rounded-xl border-slate-200"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-700">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
@@ -218,13 +220,14 @@ export function PatientForm({
                     setFormData({ ...formData, email: e.target.value })
                   }
                   placeholder="john@example.com"
+                  className="h-10 text-sm rounded-xl border-slate-200"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="dateOfBirth" className="text-xs font-semibold text-slate-700">Date of Birth</Label>
                 <Input
                   id="dateOfBirth"
                   type="date"
@@ -232,17 +235,18 @@ export function PatientForm({
                   onChange={(e) =>
                     setFormData({ ...formData, dateOfBirth: e.target.value })
                   }
+                  className="h-10 text-xs sm:text-sm rounded-xl border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="gender" className="text-xs font-semibold text-slate-700">Gender</Label>
                 <Select
                   value={formData.gender}
                   onValueChange={(value) =>
                     setFormData({ ...formData, gender: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -254,15 +258,15 @@ export function PatientForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bloodGroup">Blood Group</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="bloodGroup" className="text-xs font-semibold text-slate-700">Blood Group</Label>
                 <Select
                   value={formData.bloodGroup}
                   onValueChange={(value) =>
                     setFormData({ ...formData, bloodGroup: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -276,17 +280,15 @@ export function PatientForm({
               </div>
             </div>
 
-
-
-            <div className="space-y-2">
-              <Label htmlFor="primaryPractitioner">Primary Practitioner</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="primaryPractitioner" className="text-xs font-semibold text-slate-700">Primary Practitioner</Label>
               <Select
                 value={formData.primaryPractitionerId || "NONE"}
                 onValueChange={(value) =>
                   setFormData({ ...formData, primaryPractitionerId: value === "NONE" ? "" : value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200">
                   <SelectValue placeholder="Select Practitioner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -300,9 +302,9 @@ export function PatientForm({
               </Select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="address" className="text-xs font-semibold text-slate-700">Address</Label>
                 <Textarea
                   id="address"
                   value={formData.address}
@@ -311,10 +313,11 @@ export function PatientForm({
                   }
                   placeholder="123 Medical Street"
                   rows={2}
+                  className="text-sm rounded-xl border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="city" className="text-xs font-semibold text-slate-700">City</Label>
                 <Input
                   id="city"
                   value={formData.city}
@@ -322,12 +325,13 @@ export function PatientForm({
                     setFormData({ ...formData, city: e.target.value })
                   }
                   placeholder="New York"
+                  className="h-10 text-sm rounded-xl border-slate-200"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="medicalNotes">Medical Notes</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="medicalNotes" className="text-xs font-semibold text-slate-700">Medical Notes</Label>
               <Textarea
                 id="medicalNotes"
                 value={formData.medicalNotes}
@@ -335,19 +339,21 @@ export function PatientForm({
                   setFormData({ ...formData, medicalNotes: e.target.value })
                 }
                 placeholder="Any relevant medical history, allergies, conditions..."
-                rows={3}
+                rows={2}
+                className="text-sm rounded-xl border-slate-200"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="w-full sm:w-auto h-10 rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20">
               {loading
                 ? "Saving..."
                 : mode === "create"

@@ -116,29 +116,30 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-full sm:max-w-[680px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
         <DialogHeader>
-          <DialogTitle>{practitioner ? "Edit Doctor Details" : "Add New Doctor"}</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">{practitioner ? "Edit Doctor Details" : "Add New Doctor"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Full Name *</Label>
+        <form onSubmit={handleSubmit} className="space-y-6 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Full Name *</Label>
               <Input 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
                 required 
                 placeholder="Dr. Sarah Smith"
+                className="h-10 text-sm rounded-xl border-slate-200"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Specialty *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Specialty *</Label>
               <Select 
                 value={formData.specialty} 
                 onValueChange={v => setFormData({...formData, specialty: v})}
               >
-                <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200"><SelectValue placeholder="Select specialty" /></SelectTrigger>
                 <SelectContent>
                   {specialtiesList.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -148,42 +149,43 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
 
             {formData.specialty === "Other" && (
-              <div className="space-y-2 md:col-span-2">
-                <Label>Custom Specialty</Label>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Custom Specialty</Label>
                 <Input 
                   value={formData.otherSpecialty} 
                   onChange={e => setFormData({...formData, otherSpecialty: e.target.value})} 
                   placeholder="e.g. Immunologist"
+                  className="h-10 text-sm rounded-xl border-slate-200"
                 />
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Email Address</Label>
+              <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
             </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Qualification (e.g. MBBS, MD)</Label>
-              <Input value={formData.qualification} onChange={e => setFormData({...formData, qualification: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Registration Number</Label>
-              <Input value={formData.registrationNumber} onChange={e => setFormData({...formData, registrationNumber: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Phone Number</Label>
+              <Input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
             </div>
 
-            <div className="space-y-2">
-              <Label>Consultation Fee ($)</Label>
-              <Input type="number" step="0.01" value={formData.consultationFee} onChange={e => setFormData({...formData, consultationFee: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Qualification (e.g. MBBS, MD)</Label>
+              <Input value={formData.qualification} onChange={e => setFormData({...formData, qualification: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
             </div>
-            <div className="space-y-2">
-              <Label>Default Appt Duration (mins)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Registration Number</Label>
+              <Input value={formData.registrationNumber} onChange={e => setFormData({...formData, registrationNumber: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Consultation Fee (₹)</Label>
+              <Input type="number" step="0.01" value={formData.consultationFee} onChange={e => setFormData({...formData, consultationFee: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Default Appt Duration (mins)</Label>
               <Select value={formData.duration} onValueChange={v => setFormData({...formData, duration: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm rounded-xl border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="10">10 mins</SelectItem>
                   <SelectItem value="15">15 mins</SelectItem>
@@ -196,40 +198,40 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
           </div>
 
-          <div className="border-t pt-4">
-            <h4 className="text-sm font-semibold mb-4">Calendar Settings</h4>
+          <div className="border-t border-slate-100 pt-4 space-y-4">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Calendar Settings</h4>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Working Hours Start</Label>
-                <Input type="time" value={formData.workingHoursStart} onChange={e => setFormData({...formData, workingHoursStart: e.target.value})} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Working Hours Start</Label>
+                <Input type="time" value={formData.workingHoursStart} onChange={e => setFormData({...formData, workingHoursStart: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
               </div>
-              <div className="space-y-2">
-                <Label>Working Hours End</Label>
-                <Input type="time" value={formData.workingHoursEnd} onChange={e => setFormData({...formData, workingHoursEnd: e.target.value})} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Working Hours End</Label>
+                <Input type="time" value={formData.workingHoursEnd} onChange={e => setFormData({...formData, workingHoursEnd: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
               </div>
             </div>
 
-            <div className="space-y-2 mb-4">
-              <Label>Calendar Color</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Calendar Color</Label>
               <div className="flex gap-2">
                 {["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6"].map(color => (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setFormData({...formData, calendarColor: color})}
-                    className={`w-8 h-8 rounded-full border-2 ${formData.calendarColor === color ? 'border-gray-900' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 transition-transform active:scale-95 ${formData.calendarColor === color ? 'border-slate-900 scale-110' : 'border-transparent'}`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Working Days</Label>
-              <div className="flex flex-wrap gap-3 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Working Days</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
                 {daysOfWeek.map((day) => (
-                  <label key={day} className="flex items-center gap-2 text-sm border p-2 rounded-md cursor-pointer hover:bg-gray-50">
+                  <label key={day} className={`flex items-center gap-2 text-xs font-semibold border px-3 py-2 rounded-xl cursor-pointer transition-colors ${formData.workingDays.includes(day) ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
                     <Checkbox
                       checked={formData.workingDays.includes(day)}
                       onCheckedChange={() => toggleDay(day)}
@@ -241,9 +243,9 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto h-10 rounded-xl">Cancel</Button>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20">
               {loading ? "Saving..." : "Save Details"}
             </Button>
           </DialogFooter>

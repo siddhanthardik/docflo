@@ -212,12 +212,12 @@ export function AppointmentForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[550px] max-h-[90vh] overflow-y-auto rounded-xl">
+      <DialogContent className="w-full max-w-full sm:max-w-[580px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">
             {mode === "create" ? "Schedule Appointment" : "Edit Appointment"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-slate-500">
             {mode === "create"
               ? "Schedule a new appointment for a patient"
               : "Update appointment details"}
