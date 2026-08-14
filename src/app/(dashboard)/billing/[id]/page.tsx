@@ -192,8 +192,8 @@ export default function InvoiceDetailsPage() {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-8 sm:p-12 shadow-[0_2px_15px_-3px_rgba(6,81,237,0.05)] print:shadow-none print:border-none print:p-0">
           
           {/* Clinic Header (Print & Screen View) */}
-          <div className="flex justify-between items-start pb-6 mb-8 border-b border-gray-100">
-            <div className="space-y-1">
+          <div className="flex flex-col sm:flex-row justify-between items-start border-b border-gray-100 pb-6 sm:pb-8 mb-6 sm:mb-8 gap-4">
+            <div>
               {invoice.doctor?.image && (
                 <img src={invoice.doctor.image} alt="Clinic Logo" className="h-12 w-auto mb-2 object-contain" />
               )}
@@ -207,7 +207,7 @@ export default function InvoiceDetailsPage() {
               {invoice.doctor?.taxGstNumber && <p className="text-xs font-semibold text-gray-700 mt-1">GSTIN: {invoice.doctor.taxGstNumber}</p>}
             </div>
             
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">{invoice.status === "PAID" ? "RECEIPT" : "INVOICE"}</h3>
               <p className="text-sm font-semibold text-gray-500">#{invoice.invoiceNumber}</p>
               <div className="mt-4">
@@ -217,13 +217,13 @@ export default function InvoiceDetailsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 mb-12 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 text-sm">
             <div>
               <p className="font-semibold text-gray-500 uppercase tracking-wider mb-2 text-xs">Billed To</p>
               <p className="font-bold text-gray-900 text-base">{invoice.patient.firstName} {invoice.patient.lastName}</p>
               <p className="text-gray-600 mt-1">{invoice.patient.phone}</p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <p className="font-semibold text-gray-500 uppercase tracking-wider mb-2 text-xs">Dates</p>
               <p className="text-gray-900"><span className="font-medium text-gray-500 mr-2">Issued:</span> {format(new Date(invoice.issueDate), "MMM dd, yyyy")}</p>
               {invoice.dueDate && (
@@ -233,26 +233,28 @@ export default function InvoiceDetailsPage() {
           </div>
 
           {/* Line Items */}
-          <table className="w-full text-sm text-left mb-8">
-            <thead className="text-xs text-gray-500 uppercase tracking-wider border-b-2 border-gray-100">
-              <tr>
-                <th className="pb-3 font-semibold">Description</th>
-                <th className="pb-3 font-semibold text-center">Qty</th>
-                <th className="pb-3 font-semibold text-right">Price</th>
-                <th className="pb-3 font-semibold text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {invoice.items.map((item: any) => (
-                <tr key={item.id}>
-                  <td className="py-4 font-medium text-gray-900">{item.description}</td>
-                  <td className="py-4 text-center text-gray-600">{item.quantity}</td>
-                  <td className="py-4 text-right text-gray-600">{sym}{item.unitPrice.toFixed(2)}</td>
-                  <td className="py-4 text-right font-bold text-gray-900">{sym}{item.total.toFixed(2)}</td>
+          <div className="overflow-x-auto mb-8">
+            <table className="w-full text-sm text-left min-w-[480px]">
+              <thead className="text-xs text-gray-500 uppercase tracking-wider border-b-2 border-gray-100">
+                <tr>
+                  <th className="pb-3 font-semibold">Description</th>
+                  <th className="pb-3 font-semibold text-center">Qty</th>
+                  <th className="pb-3 font-semibold text-right">Price</th>
+                  <th className="pb-3 font-semibold text-right">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {invoice.items.map((item: any) => (
+                  <tr key={item.id}>
+                    <td className="py-4 font-medium text-gray-900">{item.description}</td>
+                    <td className="py-4 text-center text-gray-600">{item.quantity}</td>
+                    <td className="py-4 text-right text-gray-600">{sym}{item.unitPrice.toFixed(2)}</td>
+                    <td className="py-4 text-right font-bold text-gray-900">{sym}{item.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Totals */}
           <div className="flex justify-end">
