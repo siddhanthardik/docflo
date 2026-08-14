@@ -47,6 +47,7 @@ export function PostScheduler() {
   const [aiTopic, setAiTopic] = useState("")
   const [aiTone, setAiTone] = useState("Professional")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [publishingDraftId, setPublishingDraftId] = useState<string | null>(null)
 
   useEffect(() => {
     // Check for draftKeyword search parameter
@@ -227,6 +228,31 @@ export function PostScheduler() {
       toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handlePublishDraft = async (postId: string) => {
+    setPublishingDraftId(postId);
+    try {
+      const res = await fetch(`/api/gbp/posts/${postId}/publish`, {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast({ title: "Post Published to Google Live! 🚀", description: "Your post is now live on Google Search & Maps." });
+        fetchHistory();
+      } else {
+        toast({
+          title: "Publishing Failed",
+          description: data.error || data.message || "Could not publish draft post to Google.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({ title: "Publishing Failed", description: "Network error occurred.", variant: "destructive" });
+    } finally {
+      setPublishingDraftId(null);
     }
   };
 
@@ -536,16 +562,17 @@ export function PostScheduler() {
           <table className="w-full text-left text-sm">
             <thead className="bg-white border-b border-gray-100 text-gray-500">
               <tr>
-                <th className="font-semibold px-6 py-4 w-[40%]">Post Content</th>
+                <th className="font-semibold px-6 py-4 w-[35%]">Post Content</th>
                 <th className="font-semibold px-6 py-4">Status</th>
                 <th className="font-semibold px-6 py-4">Date</th>
                 <th className="font-semibold px-6 py-4">Type</th>
+                <th className="font-semibold px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {postHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <p className="text-gray-500 font-medium">No posts found.</p>
                   </td>
                 </tr>
@@ -582,6 +609,22 @@ export function PostScheduler() {
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">
                         {post.postType}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {post.status === "DRAFT" && (
+                        <Button
+                          size="sm"
+                          disabled={publishingDraftId === post.id}
+                          onClick={() => handlePublishDraft(post.id)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 text-xs rounded-full px-3.5 shadow-sm transition-all hover:scale-105"
+                        >
+                          {publishingDraftId === post.id ? (
+                            <><Sparkles className="h-3.5 w-3.5 mr-1 animate-spin" /> Publishing...</>
+                          ) : (
+                            <><Globe className="h-3.5 w-3.5 mr-1" /> Publish to Google</>
+                          )}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))
