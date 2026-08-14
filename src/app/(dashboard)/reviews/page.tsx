@@ -405,25 +405,30 @@ export default function ReviewsPage() {
 
                   {/* AI Reply Section */}
                   {draftingReplyFor === review.id ? (
-                    <div className="bg-indigo-50/50 rounded-lg border border-indigo-100 p-4 mt-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-indigo-700 font-medium text-sm">
-                          <Bot className="h-4 w-4" />
-                          Drafted Reply
+                    <div className="bg-indigo-50/60 rounded-xl border border-indigo-100 p-4 sm:p-5 mt-4 space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm">
+                          <Bot className="h-4 w-4 text-indigo-600" />
+                          <span>Drafted AI Reply</span>
+                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">Editable</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setDraftingReplyFor(null)} className="h-7 text-xs text-gray-500">Cancel</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDraftingReplyFor(null)} className="h-7 text-xs text-slate-500 hover:bg-slate-100">Cancel</Button>
                       </div>
                       <textarea 
-                        className="w-full text-sm p-3 border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                        rows={5}
+                        className="w-full min-h-[160px] max-h-[360px] text-sm p-3.5 border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white font-medium text-slate-800 leading-relaxed resize-y overflow-y-auto"
+                        rows={7}
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="AI drafted response..."
                       />
-                      <div className="flex justify-end mt-3">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
+                        <span className="text-[11px] text-slate-400 font-medium self-start sm:self-auto">
+                          {replyText.length} characters · Drag bottom right to resize text box
+                        </span>
                         <Button 
                           onClick={() => handleSubmitReply(review.id)}
-                          disabled={submittingReply || !replyText}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                          disabled={submittingReply || !replyText.trim()}
+                          className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20"
                         >
                           <Send className="h-4 w-4 mr-2" />
                           {submittingReply ? "Publishing..." : "Publish to Google"}
