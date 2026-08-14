@@ -135,7 +135,7 @@ export function PatientForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-full sm:max-w-[680px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-t-2xl sm:rounded-2xl inset-x-0 bottom-0 fixed sm:relative translate-y-0 sm:translate-y-0 shadow-2xl">
+      <DialogContent className="w-[95vw] sm:w-full max-w-[680px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl bg-white shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900">
             {mode === "create" ? "Add New Patient" : "Edit Patient"}
