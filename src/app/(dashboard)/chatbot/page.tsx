@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -484,160 +484,168 @@ export default function AIAgentsHubPage() {
 
       {/* Deep Agent Configuration Dialog */}
       <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-        <DialogContent className="sm:max-w-[600px] w-full max-h-[100dvh] h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 sm:rounded-2xl border-0 sm:border flex flex-col bg-slate-50">
-          <DialogHeader className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              <Settings className="h-5 w-5 text-indigo-600" />
-              Configure & Train: {activeAgent?.name}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Train this AI agent with custom clinic guidelines, system prompts, and operational rules.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[760px] w-full max-h-[100dvh] h-[100dvh] sm:h-auto sm:max-h-[85vh] p-0 gap-0 sm:rounded-3xl border-0 sm:border border-slate-200/80 shadow-2xl flex flex-col bg-slate-50 overflow-hidden">
+          <DialogHeader className="p-4 sm:p-5 border-b border-slate-200/80 bg-white sticky top-0 z-20 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100/80 shrink-0">
+                <Settings className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                  Configure & Train: {activeAgent?.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Train this AI agent with custom clinic guidelines, system prompts, and operational rules.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
-          <div className="flex-1 p-4 space-y-5 overflow-y-auto">
+          <div className="flex-1 p-4 sm:p-6 space-y-5 overflow-y-auto bg-slate-50/70">
             {/* 1. WHATSAPP BOOKING AGENT CONFIG */}
             {activeAgent?.type === "APPOINTMENT" && (
               <>
-
                 {/* 🕒 OPD SHIFTS & SCHEDULE */}
-                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-indigo-600" />
                     1. OPD Shifts & Schedule (Critical)
                   </h4>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Morning OPD Hours</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Morning OPD Hours</Label>
                       <Input 
                         placeholder="10:00 AM - 1:30 PM (or Leave empty if closed)"
                         value={configDraft.morningOpdHours || ""}
                         onChange={(e) => setConfigDraft({...configDraft, morningOpdHours: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Evening OPD Hours</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Evening OPD Hours</Label>
                       <Input 
                         placeholder="5:00 PM - 8:30 PM"
                         value={configDraft.eveningOpdHours || ""}
                         onChange={(e) => setConfigDraft({...configDraft, eveningOpdHours: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Hospital Visit / Round Hours</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Hospital Visit / Round Hours</Label>
                       <Input 
                         placeholder="e.g., Morning 9 AM - 1 PM Hospital Rounds"
                         value={configDraft.hospitalHours || ""}
                         onChange={(e) => setConfigDraft({...configDraft, hospitalHours: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Sunday OPD Policy</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Sunday OPD Policy</Label>
                       <Input 
                         placeholder="e.g., Closed / Emergency Only"
                         value={configDraft.sundayRule || ""}
                         onChange={(e) => setConfigDraft({...configDraft, sundayRule: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                {/* 💳 FEES & POLICY */}
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-600" />
                     2. Fees & Follow-up Policy
                   </h4>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">First Visit Fee</Label>
+                      <Label className="text-xs font-semibold text-slate-700">First Visit Fee</Label>
                       <Input 
                         placeholder="e.g., ₹500"
                         value={configDraft.consultationFee || ""}
                         onChange={(e) => setConfigDraft({...configDraft, consultationFee: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Follow-up Fee</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Follow-up Fee</Label>
                       <Input 
                         placeholder="e.g., ₹300"
                         value={configDraft.followUpFee || ""}
                         onChange={(e) => setConfigDraft({...configDraft, followUpFee: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Follow-up Validity</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Follow-up Validity</Label>
                       <Input 
                         placeholder="e.g., Within 7 Days"
                         value={configDraft.followUpDays || ""}
                         onChange={(e) => setConfigDraft({...configDraft, followUpDays: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                {/* 💉 SERVICES & VACCINATION CATALOG */}
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                     3. Services & Vaccination Catalog
                   </h4>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-gray-700">Available Vaccinations (Pediatricians Only)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Available Vaccinations (Pediatricians Only)</Label>
                     <Input 
                       placeholder="BCG, Polio, Hepatitis B, Rotavirus, DTP, MMR, Flu Shot"
                       value={configDraft.vaccinationsList || ""}
                       onChange={(e) => setConfigDraft({...configDraft, vaccinationsList: e.target.value})}
-                      className="text-xs bg-white"
+                      className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                     />
-                    <p className="text-[11px] text-gray-500">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Non-pediatricians will politely inform patients that child vaccines are not provided.</p>
+                    <p className="text-xs text-slate-500">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Non-pediatricians will politely inform patients that child vaccines are not provided.</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-gray-700">Services & Treatments Offered</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Services & Treatments Offered</Label>
                     <Input 
                       placeholder="General OPD Consultation, Growth Tracking, Nebulization, In-clinic Procedures"
                       value={configDraft.servicesOffered || ""}
                       onChange={(e) => setConfigDraft({...configDraft, servicesOffered: e.target.value})}
-                      className="text-xs bg-white"
+                      className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                {/* 🤖 PERSONA & LANGUAGE */}
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-indigo-600" />
                     4. Receptionist Persona & Language
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Assistant Name</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Assistant Name</Label>
                       <Input 
                         placeholder="e.g., Riya"
                         value={configDraft.assistantName || ""}
                         onChange={(e) => setConfigDraft({...configDraft, assistantName: e.target.value})}
-                        className="text-xs bg-white"
+                        className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-700">Language Style</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Language Style</Label>
                       <Select 
                         value={configDraft.languagePref || "auto"} 
                         onValueChange={(v) => setConfigDraft({...configDraft, languagePref: v})}
                       >
-                        <SelectTrigger className="bg-white text-xs"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="auto">Auto-Detect & Match Patient Language (Recommended)</SelectItem>
                           <SelectItem value="hinglish">Natural Indian Hinglish (Namaste / Ji)</SelectItem>
@@ -649,22 +657,22 @@ export default function AIAgentsHubPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-semibold text-slate-700">Emergency Escalation Triggers</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Emergency Escalation Triggers</Label>
                     <Input 
                       placeholder="severe pain, bleeding, chest pain, trauma, emergency"
                       value={configDraft.emergencyTriggers || ""}
                       onChange={(e) => setConfigDraft({...configDraft, emergencyTriggers: e.target.value})}
-                      className="text-xs bg-white"
+                      className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-semibold text-slate-700">Doctor Custom Guidelines & Rules</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Doctor Custom Guidelines & Rules</Label>
                     <Textarea 
                       placeholder="E.g., Sunday OPD closed. Walk-ins accepted before 4 PM. Please bring past medical reports."
                       value={configDraft.trainingPrompt || ""}
                       onChange={(e) => setConfigDraft({...configDraft, trainingPrompt: e.target.value})}
-                      className="resize-none text-xs bg-white"
+                      className="resize-none text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       rows={3}
                     />
                   </div>
@@ -674,57 +682,57 @@ export default function AIAgentsHubPage() {
 
             {/* 2. REVIEW MANAGER AGENT CONFIG */}
             {activeAgent?.type === "REVIEW" && (
-              <>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Auto-Publish Threshold</Label>
+              <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
                   <Select 
                     value={configDraft.autoPublish || "none"} 
                     onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
                       <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
                       <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-gray-500">Reviews below the threshold will always be drafted for manual review before publishing.</p>
+                  <p className="text-xs text-slate-500">Reviews below the threshold will always be drafted for manual review before publishing.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Target Keywords to Weave in Replies</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Target Keywords to Weave in Replies</Label>
                   <Input 
                     placeholder="Root Canal, Laser Treatment, Pediatric Care, Orthodontist"
                     value={configDraft.targetKeywords || ""}
                     onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
-                    className="text-xs"
+                    className="h-10 text-sm bg-white border-slate-200"
                   />
-                  <p className="text-[11px] text-gray-500">The AI naturally incorporates these keywords in review responses to boost Google Maps rankings.</p>
+                  <p className="text-xs text-slate-500">The AI naturally incorporates these keywords in review responses to boost Google Maps rankings.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Custom Training & Response Guidelines</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
                   <Textarea 
                     placeholder="E.g., Always thank the patient by name, mention Gyrex Clinic, and invite negative reviewers to contact support@gyrex.com privately."
                     value={configDraft.instructions || ""}
                     onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
-                    className="resize-none text-xs"
+                    className="resize-none text-sm bg-white border-slate-200"
                     rows={4}
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* 3. PROFILE UPDATER AGENT CONFIG */}
             {activeAgent?.type === "PROFILE" && (
-              <>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Posting Frequency</Label>
+              <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Posting Frequency</Label>
                   <Select 
                     value={configDraft.frequency || "weekly"} 
                     onValueChange={(v) => setConfigDraft({...configDraft, frequency: v})}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="weekly">Weekly (Recommended)</SelectItem>
                       <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
@@ -733,25 +741,25 @@ export default function AIAgentsHubPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Focus Specialties & Treatments</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Focus Specialties & Treatments</Label>
                   <Textarea 
                     placeholder="E.g., Dental Implants, Teeth Whitening, Emergency Dental Care, Invisalign"
                     value={configDraft.focusAreas || ""}
                     onChange={(e) => setConfigDraft({...configDraft, focusAreas: e.target.value})}
-                    className="resize-none text-xs"
+                    className="resize-none text-sm bg-white border-slate-200"
                     rows={3}
                   />
-                  <p className="text-[11px] text-gray-500">The agent generates posts highlighting these specific treatments.</p>
+                  <p className="text-xs text-slate-500">The agent generates posts highlighting these specific treatments.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Call To Action (CTA) Preference</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Call To Action (CTA) Preference</Label>
                   <Select 
                     value={configDraft.ctaType || "LEARN_MORE"} 
                     onValueChange={(v) => setConfigDraft({...configDraft, ctaType: v})}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="LEARN_MORE">Learn More</SelectItem>
                       <SelectItem value="BOOK">Book Online</SelectItem>
@@ -760,40 +768,40 @@ export default function AIAgentsHubPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Brand Style Guidelines</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Brand Style Guidelines</Label>
                   <Input 
                     placeholder="Informative healthcare tone, max 2 emojis, end with booking phone number."
                     value={configDraft.brandVoice || ""}
                     onChange={(e) => setConfigDraft({...configDraft, brandVoice: e.target.value})}
-                    className="text-xs"
+                    className="h-10 text-sm bg-white border-slate-200"
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* 4. LOCAL SEO COPILOT AGENT CONFIG */}
             {activeAgent?.type === "LOCAL_SEO_COPILOT" && (
-              <>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Target Search Keywords</Label>
+              <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Target Search Keywords</Label>
                   <Textarea 
                     placeholder="E.g., Best dentist near me, root canal specialist, emergency clinic"
                     value={configDraft.keywords || ""}
                     onChange={(e) => setConfigDraft({...configDraft, keywords: e.target.value})}
-                    className="resize-none text-xs"
+                    className="resize-none text-sm bg-white border-slate-200"
                     rows={3}
                   />
-                  <p className="text-[11px] text-gray-500">Comma-separated target keywords to monitor against competitors in weekly scans.</p>
+                  <p className="text-xs text-slate-500">Comma-separated target keywords to monitor against competitors in weekly scans.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-gray-700">Audit Focus Priority</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Audit Focus Priority</Label>
                   <Select 
                     value={configDraft.focus || "all"} 
                     onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Balanced (Relevancy, Prominence, Citations)</SelectItem>
                       <SelectItem value="relevancy">Focus on Relevancy & Content</SelectItem>
@@ -801,14 +809,18 @@ export default function AIAgentsHubPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </>
+              </div>
             )}
           </div>
           
-          <DialogFooter className="p-4 bg-white border-t border-slate-100 sticky bottom-0 z-10 shrink-0 gap-2 flex flex-col sm:flex-row">
-            <Button variant="outline" onClick={() => setIsConfigOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-            <Button onClick={saveConfig} disabled={savingConfig} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 font-bold">
-              {savingConfig ? "Deploying Prompt..." : "Save & Train Agent"}
+          <DialogFooter className="p-4 sm:px-6 sm:py-4 bg-white border-t border-slate-200/80 sticky bottom-0 z-20 shrink-0 gap-3 flex flex-col-reverse sm:flex-row items-center justify-end">
+            <Button variant="outline" onClick={() => setIsConfigOpen(false)} className="w-full sm:w-auto h-10 font-medium border-slate-200 text-slate-700">Cancel</Button>
+            <Button onClick={saveConfig} disabled={savingConfig} className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 font-bold px-6 shadow-md shadow-indigo-600/20">
+              {savingConfig ? (
+                <><Sparkles className="w-4 h-4 mr-2 animate-spin" /> Deploying Prompt...</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-2" /> Save & Train Agent</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
