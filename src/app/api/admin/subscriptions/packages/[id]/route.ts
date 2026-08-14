@@ -96,14 +96,27 @@ export async function PUT(
 
     if (features !== undefined && Array.isArray(features)) {
       await tx.packageFeature.deleteMany({ where: { packageId: id } });
-      if (features.length > 0) {
-        await tx.packageFeature.createMany({
-          data: features.map((f: any) => ({
+      for (const featKey of features) {
+        const featKeyStr = typeof featKey === 'string' ? featKey : featKey.featureId || featKey.key;
+        if (!featKeyStr) continue;
+
+        const featureFlag = await tx.featureFlag.upsert({
+          where: { key: featKeyStr },
+          update: {},
+          create: {
+            key: featKeyStr,
+            name: featKeyStr.replace(/_/g, ' '),
+            type: 'BOOLEAN',
+            defaultValue: 'true'
+          }
+        });
+
+        await tx.packageFeature.create({
+          data: {
             packageId: id,
-            featureId: f.featureId,
-            isEnabled: f.isEnabled ?? true,
-            limit: f.limit || null
-          }))
+            featureId: featureFlag.id,
+            isEnabled: true,
+          }
         });
       }
     }

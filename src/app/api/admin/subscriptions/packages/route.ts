@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { slug, name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits } = body;
+  const { slug, name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features } = body;
 
   if (!slug || !name || typeof priceMonthly !== 'number') {
     return NextResponse.json(
@@ -66,25 +66,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Invalid limit names: ${invalidLimits.map((l: any) => l.limitName).join(', ')}` }, { status: 400 });
   }
 
-  const newPackage = await prisma.package.create({
-    data: {
-      slug,
-      name,
-      description,
-      priceMonthly,
-      priceQuarterly: priceQuarterly ?? 0,
-      priceYearly: priceYearly ?? 0,
-      modules: {
-        create: (modules || []).map((m: string) => ({ moduleName: m as ModuleName })),
+  const newPackage = await prisma.$transaction(async (tx) => {
+    const pkg = await tx.package.create({
+      data: {
+        slug,
+        name,
+        description,
+        priceMonthly,
+        priceQuarterly: priceQuarterly ?? 0,
+        priceYearly: priceYearly ?? 0,
+        modules: {
+          create: (modules || []).map((m: string) => ({ moduleName: m as ModuleName })),
+        },
+        limits: {
+          create: (limits || []).map((l: { limitName: string; limitValue?: number | null }) => ({
+            limitName: l.limitName as LimitName,
+            limitValue: l.limitValue ?? null,
+          })),
+        },
       },
-      limits: {
-        create: (limits || []).map((l: { limitName: string; limitValue?: number | null }) => ({
-          limitName: l.limitName as LimitName,
-          limitValue: l.limitValue ?? null,
-        })),
-      },
-    },
-    include: INCLUDE_FULL,
+    });
+
+    if (features && Array.isArray(features)) {
+      for (const featKey of features) {
+        const featKeyStr = typeof featKey === 'string' ? featKey : featKey.featureId || featKey.key;
+        if (!featKeyStr) continue;
+
+        const featureFlag = await tx.featureFlag.upsert({
+          where: { key: featKeyStr },
+          update: {},
+          create: {
+            key: featKeyStr,
+            name: featKeyStr.replace(/_/g, ' '),
+            type: 'BOOLEAN',
+            defaultValue: 'true'
+          }
+        });
+
+        await tx.packageFeature.create({
+          data: {
+            packageId: pkg.id,
+            featureId: featureFlag.id,
+            isEnabled: true,
+          }
+        });
+      }
+    }
+
+    return tx.package.findUnique({
+      where: { id: pkg.id },
+      include: {
+        modules: { select: { moduleName: true } },
+        limits: { select: { limitName: true, limitValue: true } },
+        packageFeatures: { include: { feature: true } },
+        _count: { select: { doctors: true } },
+      }
+    });
   });
 
   return NextResponse.json(newPackage, { status: 201 });

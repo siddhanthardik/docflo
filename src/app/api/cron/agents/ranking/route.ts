@@ -11,9 +11,32 @@ export async function GET(req: Request) {
     
     const activeConfigs = await prisma.aIAgentConfig.findMany({
       where: { agentType: "LOCAL_SEO_COPILOT", enabled: true },
+      include: {
+        doctor: {
+          include: {
+            package: {
+              include: {
+                packageFeatures: {
+                  include: { feature: true }
+                }
+              }
+            }
+          }
+        }
+      },
     });
 
     for (const config of activeConfigs) {
+      const doctor = config.doctor;
+      const pkgName = (doctor?.package?.name || "").toUpperCase();
+      const isTrialActive = doctor?.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
+      const isFeatureEnabled = (key: string) => {
+        const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
+        return feat?.isEnabled ?? false;
+      };
+
+      const hasAccess = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT");
+      if (!hasAccess) continue;
       // For cron purposes, we pass minimal dummy profile data or ideally fetch it.
       // Since this is just a stub for now:
       const dummyProfileData = { locationName: "Cron Sync" };

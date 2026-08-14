@@ -11,10 +11,34 @@ export async function GET(req: Request) {
     
     const activeConfigs = await prisma.aIAgentConfig.findMany({
       where: { agentType: "PROFILE", enabled: true },
-      include: { doctor: { include: { gbpAccounts: true } } },
+      include: {
+        doctor: {
+          include: {
+            gbpAccounts: true,
+            package: {
+              include: {
+                packageFeatures: {
+                  include: { feature: true }
+                }
+              }
+            }
+          }
+        }
+      },
     });
 
     for (const config of activeConfigs) {
+      const doctor = config.doctor;
+      const pkgName = (doctor?.package?.name || "").toUpperCase();
+      const isTrialActive = doctor?.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
+      const isFeatureEnabled = (key: string) => {
+        const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
+        return feat?.isEnabled ?? false;
+      };
+
+      const hasAccess = isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR");
+      if (!hasAccess) continue;
+
       const gbpAccount = config.doctor.gbpAccounts[0];
       if (!gbpAccount) continue;
 

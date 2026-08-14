@@ -36,6 +36,13 @@ const LIMITS = [
   { id: "AI_CREDITS_PER_MONTH", name: "AI Credits / Month" },
 ];
 
+const AI_AGENT_FEATURES = [
+  { key: "AI_RECEPTIONIST", name: "AI Receptionist & Booking Assistant", desc: "24/7 Live WhatsApp AI assistant for patient inquiries & calendar bookings." },
+  { key: "AI_REVIEW_REPLY", name: "Review Manager Assistant", desc: "Auto-drafting & live publishing of HIPAA-compliant Google Review replies." },
+  { key: "AI_POST_CREATOR", name: "AI Content & Post Creator", desc: "AI creation of Google Business Profile update posts & clinical content." },
+  { key: "AI_SEO_COPILOT", name: "Local SEO Optimizer", desc: "Weekly local search audits and prioritized execution tasks." }
+];
+
 export function PackagesClient({ initialPackages, doctors }: { initialPackages: any[], doctors: any[] }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -76,6 +83,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
     priceYearly: 0,
     modules: [] as string[],
     limits: {} as Record<string, number | null>, // null means unlimited
+    aiFeatures: [] as string[],
   });
 
   const generateSlug = (name: string) => {
@@ -103,8 +111,9 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       priceMonthly: 0,
       priceQuarterly: 0,
       priceYearly: 0,
-      modules: ["CLINIC_CORE"],
+      modules: ["CLINIC_CORE", "AI_ASSISTANT"],
       limits: initialLimits,
+      aiFeatures: ["AI_RECEPTIONIST", "AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"],
     });
     setShowAdvanced(false);
     setIsModalOpen(true);
@@ -118,6 +127,10 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       initialLimits[l.id] = existing ? existing.limitValue : null;
     });
 
+    const enabledFeatures = pkg.packageFeatures
+      ? pkg.packageFeatures.filter((pf: any) => pf.isEnabled !== false && pf.feature?.key).map((pf: any) => pf.feature.key)
+      : ["AI_RECEPTIONIST", "AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"];
+
     setFormData({
       slug: pkg.slug || "",
       name: pkg.name,
@@ -127,6 +140,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       priceYearly: pkg.priceYearly || 0,
       modules: pkg.modules?.map((m: any) => m.moduleName) || [],
       limits: initialLimits,
+      aiFeatures: enabledFeatures,
     });
     setShowAdvanced(false);
     setIsModalOpen(true);
@@ -137,6 +151,14 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       const isSelected = prev.modules.includes(modId);
       if (isSelected) return { ...prev, modules: prev.modules.filter(m => m !== modId) };
       return { ...prev, modules: [...prev.modules, modId] };
+    });
+  };
+
+  const handleToggleAiFeature = (featureKey: string) => {
+    setFormData(prev => {
+      const isSelected = prev.aiFeatures.includes(featureKey);
+      if (isSelected) return { ...prev, aiFeatures: prev.aiFeatures.filter(f => f !== featureKey) };
+      return { ...prev, aiFeatures: [...prev.aiFeatures, featureKey] };
     });
   };
 
@@ -158,7 +180,8 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
 
     const payload = {
       ...formData,
-      limits: limitsArray
+      limits: limitsArray,
+      features: formData.aiFeatures
     };
 
     try {
@@ -650,6 +673,38 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                         )}
                       </div>
                     )
+                  })}
+                </div>
+              </div>
+
+              {/* Section 4: AI Agent Controls */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-lg font-bold text-slate-900">4. AI Agent Feature Controls</h3>
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 font-bold text-xs">
+                    Superadmin Controls
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">Toggle individual AI agents enabled for clinics on this package tier.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {AI_AGENT_FEATURES.map(agent => {
+                    const isEnabled = formData.aiFeatures.includes(agent.key);
+                    return (
+                      <div 
+                        key={agent.key} 
+                        onClick={() => handleToggleAiFeature(agent.key)}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${isEnabled ? 'border-purple-600 bg-purple-50/50 shadow-xs' : 'border-slate-200 hover:border-purple-200'}`}
+                      >
+                        <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isEnabled ? 'bg-purple-600 border-purple-600 text-white' : 'border-slate-300'}`}>
+                          {isEnabled && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <div>
+                          <h4 className={`font-bold text-sm ${isEnabled ? 'text-purple-900' : 'text-slate-800'}`}>{agent.name}</h4>
+                          <p className="text-xs text-slate-500 mt-1 leading-snug">{agent.desc}</p>
+                        </div>
+                      </div>
+                    );
                   })}
                 </div>
               </div>
