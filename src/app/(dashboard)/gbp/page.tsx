@@ -71,7 +71,7 @@ function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: numbe
   });
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full">
       <svg width={size} height={size} className="flex-shrink-0">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F1F5F9" strokeWidth={strokeWidth} />
         {paths}
@@ -79,27 +79,27 @@ function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: numbe
           {d}%
         </text>
       </svg>
-      <div className="space-y-2.5 flex-1">
+      <div className="space-y-2.5 w-full sm:flex-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Direct Searches</span>
           </div>
-          <span className="text-xs font-bold text-blue-600">{d}%</span>
+          <span className="text-xs font-bold text-blue-600 ml-2">{d}%</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Discovery Searches</span>
           </div>
-          <span className="text-xs font-bold text-emerald-600">{disc}%</span>
+          <span className="text-xs font-bold text-emerald-600 ml-2">{disc}%</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Google Maps Routes</span>
           </div>
-          <span className="text-xs font-bold text-amber-600">{m}%</span>
+          <span className="text-xs font-bold text-amber-600 ml-2">{m}%</span>
         </div>
       </div>
     </div>
@@ -336,35 +336,35 @@ export default function GBPProfilePage() {
     <div className="space-y-6 pb-8">
       {/* ── HERO BANNER ── */}
       <div
-        className="rounded-2xl p-6 relative overflow-hidden shadow-sm border border-blue-700/20"
+        className="rounded-2xl p-5 sm:p-6 relative overflow-hidden shadow-sm border border-blue-700/20"
         style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b5bdb 50%, #4c6ef5 100%)" }}
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
             <p className="text-blue-200 text-sm mb-1">{greeting} 👋</p>
-            <h2 className="text-white text-2xl font-black mb-1">{insights.name || "Dr Vinay Kumar Rai"}</h2>
+            <h2 className="text-white text-xl sm:text-2xl font-black mb-1">{insights.name || "Dr Vinay Kumar Rai"}</h2>
             <p className="text-blue-200 text-xs mb-4">
               {insights.formattedAddress || "B-4/32, Safdarjung Enclave, New Delhi, 110029"}{" "}
               <span className="font-semibold text-white">· {primaryCategory}</span>
             </p>
-            <div className="flex gap-3 flex-wrap">
-              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 py-2 text-white border border-white/10">
-                <p className="text-[11px] text-blue-200 mb-0.5">Profile Views (30d)</p>
-                <p className="text-base font-extrabold">{formatNum(totalViews || 1500)}</p>
+            <div className="grid grid-cols-3 sm:flex gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
+                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Profile Views</p>
+                <p className="text-sm sm:text-base font-extrabold">{formatNum(totalViews || 1500)}</p>
               </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 py-2 text-white border border-white/10">
-                <p className="text-[11px] text-blue-200 mb-0.5">Calls (30d)</p>
-                <p className="text-base font-extrabold">{formatNum(phoneCalls || 20)}</p>
+              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
+                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Calls (30d)</p>
+                <p className="text-sm sm:text-base font-extrabold">{formatNum(phoneCalls || 20)}</p>
               </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 py-2 text-white border border-white/10">
-                <p className="text-[11px] text-blue-200 mb-0.5">Response Rate</p>
-                <p className="text-base font-extrabold">100%</p>
+              <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
+                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Response Rate</p>
+                <p className="text-sm sm:text-base font-extrabold">100%</p>
               </div>
             </div>
           </div>
 
-          <div className="text-right flex flex-col justify-between items-start lg:items-end space-y-3">
-            <div className="flex items-center gap-2">
+          <div className="text-left lg:text-right flex flex-col justify-between items-start lg:items-end space-y-4 sm:space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -387,9 +387,9 @@ export default function GBPProfilePage() {
 
             <div>
               <p className="text-blue-200 text-xs mb-1">Average Google Rating</p>
-              <div className="flex items-center gap-2 justify-end">
-                <Star className="h-6 w-6 fill-amber-300 text-amber-300" />
-                <span className="text-white text-4xl font-black leading-none">{rating}</span>
+              <div className="flex items-center gap-2 justify-start lg:justify-end">
+                <Star className="h-6 w-6 fill-amber-300 text-amber-300 shrink-0" />
+                <span className="text-white text-3xl sm:text-4xl font-black leading-none">{rating}</span>
               </div>
               <p className="text-blue-200 text-xs mt-1">{totalRatings} total patient reviews</p>
 
@@ -408,15 +408,15 @@ export default function GBPProfilePage() {
       </div>
 
       {/* ── METRIC CARDS ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {metricCards.map((c, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 shadow-2xs space-y-2">
+          <div key={i} className="bg-white rounded-xl border border-gray-100 p-3.5 sm:p-4 shadow-2xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500">{c.label}</span>
-              <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center`}>{c.icon}</div>
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}>{c.icon}</div>
             </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-gray-900">{c.value}</span>
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+              <span className="text-xl sm:text-2xl font-black text-gray-900">{c.value}</span>
               <span className="text-xs font-bold text-emerald-600">{c.change}</span>
             </div>
           </div>
@@ -425,47 +425,47 @@ export default function GBPProfilePage() {
 
       {/* ── ANALYTICS CHARTS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-gray-900">30-Day Search Impression Trend</h3>
               <p className="text-xs text-gray-500">Monthly patient discovery volume on Google</p>
             </div>
-            <TrendingUp className="w-5 h-5 text-indigo-600" />
+            <TrendingUp className="w-5 h-5 text-indigo-600 shrink-0" />
           </div>
           <ProfileViewsTrend totalViews={totalViews} />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-gray-900">Patient Search Intent Breakdown</h3>
               <p className="text-xs text-gray-500">Direct vs Discovery vs Maps Navigation</p>
             </div>
-            <Search className="w-5 h-5 text-emerald-600" />
+            <Search className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
           <DonutChart direct={52} discovery={31} maps={17} />
         </div>
       </div>
 
       {/* ── BUSINESS INFORMATION & PROFILE EDITORS ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 md:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-2">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Business Information & Profile Settings</h3>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">Business Information & Profile Settings</h3>
             <p className="text-xs text-gray-500">Manage your official Google listing fields with instant in-page sync.</p>
           </div>
-          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 self-start sm:self-auto">
             GBP Synced
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Primary Business Category */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" />
+                <Layers className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Primary Category</span>
               </div>
               <p className="text-sm font-bold text-gray-900">{primaryCategory}</p>
@@ -474,17 +474,17 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("primaryCategory", "Primary Category", primaryCategory)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Secondary Categories */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-600" />
+                <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Additional Services</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -503,17 +503,17 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("categories", "Secondary Categories", additionalCats.map((c: any) => c.displayName || c))}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Business Description */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-start justify-between col-span-1 md:col-span-2">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start justify-between gap-3 col-span-1 md:col-span-2">
             <div className="space-y-1 max-w-2xl">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-600" />
+                <FileText className="w-4 h-4 text-amber-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Business Description</span>
               </div>
               <p className="text-xs text-gray-700 leading-relaxed font-medium">
@@ -524,36 +524,36 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("description", "Business Description", description)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 ml-4"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Appointment Booking URL */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
-            <div className="space-y-1 min-w-0">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-1 min-w-0 w-full sm:w-auto">
               <div className="flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-emerald-600" />
+                <CalendarCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Appointment Booking Link</span>
               </div>
-              <p className="text-xs font-bold text-indigo-900 truncate">{appointmentUrl || "https://gyrex.in/book/dr-vinay-rai"}</p>
+              <p className="text-xs font-bold text-indigo-900 truncate max-w-xs sm:max-w-md">{appointmentUrl || "https://gyrex.in/book/dr-vinay-rai"}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("appointmentUrl", "Appointment Booking URL", appointmentUrl)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 ml-2"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Opening Hours */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
+                <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Operating Hours</span>
               </div>
               <p className="text-xs font-bold text-gray-900">{hours}</p>
@@ -562,17 +562,17 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("hours", "Operating Hours & Schedule", hours)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Direct Phone Number */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-pink-600" />
+                <Phone className="w-4 h-4 text-pink-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Direct Phone Number</span>
               </div>
               <p className="text-xs font-bold text-gray-900">{phone}</p>
@@ -581,36 +581,36 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("phone", "Direct Phone Number", phone)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Official Website */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between">
-            <div className="space-y-1 min-w-0">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-1 min-w-0 w-full sm:w-auto">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-indigo-600" />
+                <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Official Website</span>
               </div>
-              <p className="text-xs font-bold text-gray-900 truncate">{website}</p>
+              <p className="text-xs font-bold text-gray-900 truncate max-w-xs sm:max-w-md">{website}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("website", "Official Website Link", website)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 ml-2"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Attributes & Amenities */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between col-span-1 md:col-span-2">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 col-span-1 md:col-span-2">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Clinic Amenities & Attributes</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -625,7 +625,7 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("attributes", "Profile Attributes & Amenities", attributes)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 ml-4"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
