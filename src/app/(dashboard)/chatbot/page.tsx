@@ -492,10 +492,10 @@ export default function AIAgentsHubPage() {
               </div>
               <div>
                 <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-                  Configure & Train: {activeAgent?.name}
+                  Configure Agent: {activeAgent?.name}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Train this AI agent with custom clinic guidelines, system prompts, and operational rules.
+                  Pre-trained out-of-the-box. Customize optional clinic guidelines, triggers, and operational rules below.
                 </DialogDescription>
               </div>
             </div>
@@ -683,31 +683,38 @@ export default function AIAgentsHubPage() {
             {/* 2. REVIEW MANAGER AGENT CONFIG */}
             {activeAgent?.type === "REVIEW" && (
               <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
-                  <Select 
-                    value={configDraft.autoPublish || "none"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
-                  >
-                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
-                      <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
-                      <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-slate-500">Reviews below the threshold will always be drafted for manual review before publishing.</p>
-                </div>
+                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-indigo-600" />
+                  Review Reply Rules & Keyword Targeting
+                </h4>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Target Keywords to Weave in Replies</Label>
-                  <Input 
-                    placeholder="Root Canal, Laser Treatment, Pediatric Care, Orthodontist"
-                    value={configDraft.targetKeywords || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
-                    className="h-10 text-sm bg-white border-slate-200"
-                  />
-                  <p className="text-xs text-slate-500">The AI naturally incorporates these keywords in review responses to boost Google Maps rankings.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
+                    <Select 
+                      value={configDraft.autoPublish || "none"} 
+                      onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
+                        <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
+                        <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">Reviews below threshold require manual doctor approval before live publishing.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Target Keywords for Google Maps SEO</Label>
+                    <Input 
+                      placeholder="Root Canal, Laser Treatment, Pediatric Care, Orthodontist"
+                      value={configDraft.targetKeywords || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
+                      className="h-10 text-sm bg-white border-slate-200"
+                    />
+                    <p className="text-xs text-slate-500">Keywords naturally woven into replies to boost local Google search rankings.</p>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -726,19 +733,41 @@ export default function AIAgentsHubPage() {
             {/* 3. PROFILE UPDATER AGENT CONFIG */}
             {activeAgent?.type === "PROFILE" && (
               <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Posting Frequency</Label>
-                  <Select 
-                    value={configDraft.frequency || "weekly"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, frequency: v})}
-                  >
-                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly (Recommended)</SelectItem>
-                      <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-purple-600" />
+                  Google Post Creation Rules
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Posting Frequency</Label>
+                    <Select 
+                      value={configDraft.frequency || "weekly"} 
+                      onValueChange={(v) => setConfigDraft({...configDraft, frequency: v})}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly (Recommended)</SelectItem>
+                        <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Call To Action (CTA) Preference</Label>
+                    <Select 
+                      value={configDraft.ctaType || "LEARN_MORE"} 
+                      onValueChange={(v) => setConfigDraft({...configDraft, ctaType: v})}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LEARN_MORE">Learn More</SelectItem>
+                        <SelectItem value="BOOK">Book Online</SelectItem>
+                        <SelectItem value="CALL">Call Now</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -750,22 +779,7 @@ export default function AIAgentsHubPage() {
                     className="resize-none text-sm bg-white border-slate-200"
                     rows={3}
                   />
-                  <p className="text-xs text-slate-500">The agent generates posts highlighting these specific treatments.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Call To Action (CTA) Preference</Label>
-                  <Select 
-                    value={configDraft.ctaType || "LEARN_MORE"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, ctaType: v})}
-                  >
-                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LEARN_MORE">Learn More</SelectItem>
-                      <SelectItem value="BOOK">Book Online</SelectItem>
-                      <SelectItem value="CALL">Call Now</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-xs text-slate-500">The agent generates Google Posts highlighting these specific treatments.</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -783,31 +797,36 @@ export default function AIAgentsHubPage() {
             {/* 4. LOCAL SEO COPILOT AGENT CONFIG */}
             {activeAgent?.type === "LOCAL_SEO_COPILOT" && (
               <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Target Search Keywords</Label>
-                  <Textarea 
-                    placeholder="E.g., Best dentist near me, root canal specialist, emergency clinic"
-                    value={configDraft.keywords || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, keywords: e.target.value})}
-                    className="resize-none text-sm bg-white border-slate-200"
-                    rows={3}
-                  />
-                  <p className="text-xs text-slate-500">Comma-separated target keywords to monitor against competitors in weekly scans.</p>
-                </div>
+                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-amber-600" />
+                  Local Search Audit Preferences
+                </h4>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Audit Focus Priority</Label>
-                  <Select 
-                    value={configDraft.focus || "all"} 
-                    onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
-                  >
-                    <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Balanced (Relevancy, Prominence, Citations)</SelectItem>
-                      <SelectItem value="relevancy">Focus on Relevancy & Content</SelectItem>
-                      <SelectItem value="prominence">Focus on Prominence & Reviews</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Audit Focus Priority</Label>
+                    <Select 
+                      value={configDraft.focus || "all"} 
+                      onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-sm border-slate-200"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Balanced (Relevancy, Prominence, Citations)</SelectItem>
+                        <SelectItem value="relevancy">Focus on Relevancy & Content</SelectItem>
+                        <SelectItem value="prominence">Focus on Prominence & Reviews</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Target Search Keywords</Label>
+                    <Input 
+                      placeholder="E.g., Best dentist near me, root canal, emergency clinic"
+                      value={configDraft.keywords || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, keywords: e.target.value})}
+                      className="h-10 text-sm bg-white border-slate-200"
+                    />
+                  </div>
                 </div>
               </div>
             )}
