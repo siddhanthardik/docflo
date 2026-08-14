@@ -26,7 +26,9 @@ async function generateWithFallback(prompt: string): Promise<string> {
       }
     } catch (err: any) {
       lastError = err;
-      console.warn(`[AIAgentsService] Model ${modelName} failed (${err.message}). Trying next fallback...`);
+      const errText = err.message || err.toString() || "";
+      console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
   throw lastError || new Error("All Gemini models unavailable");
