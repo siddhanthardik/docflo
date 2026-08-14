@@ -176,36 +176,41 @@ export default function AIAgentsHubPage() {
       name: "AI Receptionist & Booking Assistant",
       icon: PhoneCall,
       color: "text-blue-600",
-      bg: "bg-blue-50",
-      desc: <>Connects to your WhatsApp to handle patient inquiries 24/7. <strong className="text-indigo-600">Internal Mode:</strong> Doctors can also text the AI directly to instantly book, update, or cancel calendar slots on the go.</>,
+      bg: "bg-blue-50 border-blue-100",
+      desc: (
+        <>
+          Connects to your WhatsApp to handle patient inquiries 24/7.{" "}
+          <strong className="text-indigo-600 font-semibold">Internal Mode:</strong> Doctors can also text the AI directly to instantly book, update, or cancel calendar slots on the go.
+        </>
+      ),
       metrics: "24/7 Live WhatsApp",
     },
     {
       type: "REVIEW",
-      name: "Review Manager Agent",
+      name: "Review Manager Assistant",
       icon: MessageSquare,
       color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      desc: "Analyzes incoming Google Business Profile reviews and drafts HIPAA-compliant, keyword-rich responses to boost Maps ranking.",
-      metrics: "Auto-Drafting",
+      bg: "bg-emerald-50 border-emerald-100",
+      desc: "Analyzes incoming Google Business Profile reviews and drafts HIPAA-compliant, keyword-rich responses to boost Google Maps rankings.",
+      metrics: "Auto-Drafting Reviews",
     },
     {
       type: "POST_CREATION",
-      name: "AI Post & Content Creator",
+      name: "AI Content & Post Creator",
       icon: Megaphone,
       color: "text-purple-600",
-      bg: "bg-purple-50",
-      desc: "Generates engaging, keyword-rich Google Business Profile posts and patient education content tailored for your clinic.",
-      metrics: "Auto-Generating",
+      bg: "bg-purple-50 border-purple-100",
+      desc: "Generates engaging Google Business Profile updates and patient education content tailored specifically for your clinic practice.",
+      metrics: "Profile Updates",
     },
     {
       type: "LOCAL_SEO_COPILOT",
-      name: "Local SEO Copilot",
+      name: "Local SEO Optimizer",
       icon: TrendingUp,
       color: "text-amber-600",
-      bg: "bg-amber-50",
-      desc: "Conducts weekly competitive keyword audits and generates prioritized 1-click execution tasks to outrank local competitors.",
-      metrics: "Algorithmic Audit",
+      bg: "bg-amber-50 border-amber-100",
+      desc: "Conducts weekly local search audits and generates prioritized 1-click execution tasks to help your clinic outrank nearby competitors.",
+      metrics: "Weekly Rank Audit",
     }
   ];
 
@@ -220,43 +225,57 @@ export default function AIAgentsHubPage() {
   return (
     <div className="pb-12 space-y-8 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
-        <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Zap className="h-8 w-8 text-indigo-400" /> Smart Practice Automation
-          </h1>
-          <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-            Configure smart automated assistants to handle WhatsApp bookings, Google reviews, and local search rankings 24/7.
-          </p>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+            <Zap className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Practice Assistants & Automation
+            </h1>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed mt-0.5">
+              Set up smart digital assistants to handle patient inquiries on WhatsApp, respond to Google reviews, and manage local search visibility.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Agents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* 2x2 Agents Grid (2 Rows & 2 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {agentDefinitions.map((def) => {
           const agentData = agents.find(a => a.agentType === def.type) || { enabled: false, config: {}, isAllowed: false, requiredPackage: "PREMIUM" };
           const Icon = def.icon;
           const isAllowed = agentData.isAllowed ?? false;
           
           return (
-            <div key={def.type} className={`bg-white rounded-2xl border ${!isAllowed ? 'border-amber-200 bg-amber-50/10' : agentData.enabled ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-gray-100 shadow-sm'} overflow-hidden transition-all duration-300 flex flex-col justify-between relative`}>
-              
+            <div 
+              key={def.type} 
+              className={`bg-white rounded-2xl border ${!isAllowed ? 'border-amber-200/80 bg-amber-50/20' : agentData.enabled ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-slate-200/80 shadow-2xs'} overflow-hidden transition-all duration-300 flex flex-col justify-between relative`}
+            >
               {!isAllowed && (
-                <div className="bg-amber-50 border-b border-amber-200/80 text-amber-900 text-[11px] font-bold px-3 py-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-[10px]">🔒 Requires {(agentData.requiredPackage || "PREMIUM").replace(/\s*\/\s*AUTOPILOT/i, "").trim()}</span>
-                  <button onClick={() => router.push("/subscription")} className="text-[10px] text-amber-900 font-extrabold underline hover:text-amber-700">
-                    Upgrade
+                <div className="bg-amber-50 border-b border-amber-200/80 text-amber-900 text-xs font-bold px-4 py-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs">🔒 Requires {(agentData.requiredPackage || "PREMIUM").replace(/\s*\/\s*AUTOPILOT/i, "").trim()}</span>
+                  <button onClick={() => router.push("/subscription")} className="text-xs text-amber-900 font-black underline hover:text-amber-700">
+                    Upgrade Package
                   </button>
                 </div>
               )}
 
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${def.bg}`}>
-                    <Icon className={`h-5 w-5 ${def.color}`} />
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${def.bg} shrink-0`}>
+                      <Icon className={`h-5.5 w-5.5 ${def.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900">{def.name}</h3>
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{def.metrics}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-                    <span className={`text-[10px] font-bold ${!isAllowed ? 'text-amber-700' : agentData.enabled ? "text-emerald-700" : "text-gray-400"}`}>
+
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shrink-0">
+                    <span className={`text-xs font-bold ${!isAllowed ? 'text-amber-700' : agentData.enabled ? "text-emerald-700" : "text-slate-400"}`}>
                       {!isAllowed ? "LOCKED" : agentData.enabled ? "ACTIVE" : "PAUSED"}
                     </span>
                     <Switch 
@@ -266,29 +285,28 @@ export default function AIAgentsHubPage() {
                     />
                   </div>
                 </div>
-                
-                <h3 className="text-base font-bold text-gray-900 mb-1.5">{def.name}</h3>
-                <p className="text-xs text-gray-500 mb-5 min-h-[48px] leading-relaxed">
+
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed min-h-[52px]">
                   {def.desc}
                 </p>
-                
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded flex items-center gap-1 border border-indigo-100">
-                    <Power className="h-2.5 w-2.5 text-indigo-500" /> {def.metrics}
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-indigo-100">
+                    <Power className="h-3.5 w-3.5 text-indigo-500" /> {def.metrics}
                   </span>
-                  
+
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => openConfig({ ...agentData, ...def })}
-                    className={`gap-1.5 text-xs font-bold ${!isAllowed ? 'text-amber-800 border-amber-200 bg-amber-50 hover:bg-amber-100' : 'text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 hover:border-indigo-200'}`}
+                    className={`gap-1.5 text-xs font-bold ${!isAllowed ? 'text-amber-800 border-amber-200 bg-amber-50 hover:bg-amber-100' : 'text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 hover:border-indigo-200'}`}
                   >
                     <Settings className="h-3.5 w-3.5" /> {!isAllowed ? "Upgrade to Unlock" : "Configure & Train"}
                   </Button>
                 </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
