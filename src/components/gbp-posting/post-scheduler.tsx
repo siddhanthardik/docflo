@@ -152,7 +152,12 @@ export function PostScheduler() {
           setTimeout(() => setPublishedPostData(null), 300) // slight delay to prevent flicker during fade out
         }, 3000)
       } else {
-        toast({ title: "Error saving post", variant: "destructive" })
+        const data = await res.json().catch(() => ({}));
+        toast({ 
+          title: isScheduled ? "Failed to schedule post" : "Failed to publish to Google", 
+          description: data.error || data.message || "An error occurred while communicating with Google.", 
+          variant: "destructive" 
+        });
       }
     } catch (error) {
       toast({ title: "Failed to publish", variant: "destructive" })

@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { auth } from "@/lib/auth"
-import { GBPService } from "@/services/gbp.service"
-import { EntitlementService } from "@/services/entitlement.service"
-import crypto from "crypto"
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { GBPService } from "@/services/gbp.service";
+import { EntitlementService } from "@/services/entitlement.service";
+import { getValidGbpAccessToken } from "@/lib/gbp-auth";
+import crypto from "crypto";
 
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const requestId = crypto.randomUUID();
   const context = { route: "/api/gbp/posts", method: "POST", requestId };
@@ -26,78 +27,92 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json()
-    const { title, content, postType, scheduledDate, imageUrl, ctaType, ctaLink } = body
+    const body = await req.json();
+    const { title, content, postType, scheduledDate, imageUrl, ctaType, ctaLink } = body;
 
     const doctorId = session.user.id;
 
-    // Get GBP Account
-    const account = await prisma.gbpAccount.findFirst({
-      where: { doctorId },
-      orderBy: { createdAt: "desc" },
-    });
+    // Get valid GBP Account & Access Token (with automatic token refresh if expired)
+    const authResult = await getValidGbpAccessToken(doctorId);
 
-    let gbpPostId = null;
-    let status = scheduledDate ? "SCHEDULED" : "PUBLISHED";
-    let publishedAt = scheduledDate ? null : new Date();
+    let gbpPostId: string | null = null;
+    let status: "DRAFT" | "SCHEDULED" | "PUBLISHED" = scheduledDate ? "SCHEDULED" : "PUBLISHED";
+    let publishedAt: Date | null = scheduledDate ? null : new Date();
 
-    // If publishing now, call GBP API
-    if (!scheduledDate && account && account.accessToken && account.insightsData) {
+    // If publishing live right now, call Google Business Profile API
+    if (!scheduledDate) {
+      if (!authResult || !authResult.account || !authResult.accessToken) {
+        return NextResponse.json(
+          { error: "Google Business Profile is not connected. Please connect your Google account under GBP Profile." },
+          { status: 400 }
+        );
+      }
+
+      const { account, accessToken } = authResult;
       const insights = account.insightsData as any;
-      if (insights.locationName) {
-         let fullLocationName = insights.locationName;
-         if (insights.accountName && !fullLocationName.startsWith("accounts/")) {
-           const locPart = fullLocationName.startsWith("locations/") ? fullLocationName : `locations/${fullLocationName}`;
-           fullLocationName = `${insights.accountName}/${locPart}`;
-         }
 
-         try {
-           const gbpService = new GBPService(account.accessToken, account.doctorId);
-           const res = await gbpService.createPost(
-             fullLocationName,
-             content,
-             postType,
-             imageUrl,
-             ctaType,
-             ctaLink
-           );
-           gbpPostId = res.name;
-         } catch(e: any) {
-           console.error("GBP API error:", e);
-           require('fs').writeFileSync('d:\\gyrex\\gbp_error.log', e.toString() + '\\n' + (e.stack || ''), {flag: 'a'});
-           status = "DRAFT";
-           publishedAt = null;
-         }
+      if (!insights?.locationName) {
+        return NextResponse.json(
+          { error: "No clinic location selected for Google Business Profile. Please select a location under GBP Profile." },
+          { status: 400 }
+        );
+      }
+
+      let fullLocationName = insights.locationName;
+      if (insights.accountName && !fullLocationName.startsWith("accounts/")) {
+        const locPart = fullLocationName.startsWith("locations/") ? fullLocationName : `locations/${fullLocationName}`;
+        fullLocationName = `${insights.accountName}/${locPart}`;
+      }
+
+      try {
+        const gbpService = new GBPService(accessToken, doctorId);
+        const res = await gbpService.createPost(
+          fullLocationName,
+          content,
+          postType || "STANDARD",
+          imageUrl,
+          ctaType,
+          ctaLink
+        );
+        gbpPostId = res.name;
+        status = "PUBLISHED";
+        publishedAt = new Date();
+      } catch (e: any) {
+        console.error("GBP API error during Publish Now:", e);
+        return NextResponse.json(
+          { error: e.message || "Failed to publish post to Google Business Profile." },
+          { status: 400 }
+        );
       }
     }
 
     const post = await prisma.gBPPost.create({
       data: {
         doctorId,
-        gbpAccountId: account?.id,
+        gbpAccountId: authResult?.account?.id,
         title,
         content,
-        postType,
+        postType: postType || "STANDARD",
         imageUrl,
-        ctaType,
+        ctaType: ctaType || "NONE",
         ctaLink,
         scheduledFor: scheduledDate ? new Date(scheduledDate) : null,
         publishedAt,
         status: status as any,
         gbpPostId,
       },
-    })
+    });
 
-    return NextResponse.json(post)
-  } catch (error) {
+    return NextResponse.json(post);
+  } catch (error: any) {
     console.error("Error saving post:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const requestId = crypto.randomUUID();
   const context = { route: "/api/gbp/posts", method: "GET", requestId };
@@ -113,7 +128,7 @@ export async function GET(req: Request) {
   
   const posts = await prisma.gBPPost.findMany({
     where: { doctorId: session.user.id },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: "desc" }
   });
   
   return NextResponse.json(posts);
