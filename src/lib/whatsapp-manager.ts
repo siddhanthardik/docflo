@@ -251,7 +251,15 @@ class WhatsAppManager {
                 phone: true,
                 name: true,
                 clinicName: true,
-                specialty: true
+                specialty: true,
+                subscriptionExpiry: true,
+                package: {
+                  include: {
+                    packageFeatures: {
+                      include: { feature: true }
+                    }
+                  }
+                }
               }
             });
 
@@ -492,7 +500,16 @@ class WhatsAppManager {
               where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
             });
 
-            if (doctorInfo?.enableAIAutoResponder !== false && agentConfig && agentConfig.enabled) {
+            const pkgName = (doctorInfo?.package?.name || "").toUpperCase();
+            const isTrialActive = doctorInfo?.subscriptionExpiry ? new Date(doctorInfo.subscriptionExpiry) > new Date() : false;
+            const isFeatureEnabled = (key: string) => {
+              const feat = doctorInfo?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
+              return feat?.isEnabled ?? false;
+            };
+
+            const hasAiReceptionistAccess = isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST");
+
+            if (doctorInfo?.enableAIAutoResponder !== false && agentConfig && agentConfig.enabled && hasAiReceptionistAccess) {
               const { AIAgentsService } = await import('@/services/ai-agents.service');
               
               const recentMessages = await prisma.chatMessage.findMany({

@@ -32,6 +32,7 @@ export async function GET() {
     }
 
     const pkgName = (doctor.package?.name || "").toUpperCase();
+    const isTrialActive = doctor.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
 
     // Helper to check feature flag or default package rank
     const isFeatureEnabled = (key: string) => {
@@ -39,26 +40,26 @@ export async function GET() {
       return feat?.isEnabled ?? false;
     };
 
-    // Agent access logic
+    // Agent access logic (Trial active or valid package grants access)
     const isAllowedMap: Record<string, { isAllowed: boolean; requiredPackage: string }> = {
       APPOINTMENT: {
-        isAllowed: pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST"),
+        isAllowed: isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST"),
         requiredPackage: "PREMIUM"
       },
       REVIEW: {
-        isAllowed: pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY"),
+        isAllowed: isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_REVIEW_REPLY"),
         requiredPackage: "STARTER"
       },
       POST_CREATION: {
-        isAllowed: pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR"),
+        isAllowed: isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR"),
         requiredPackage: "GROWTH"
       },
       PROFILE: {
-        isAllowed: pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR"),
+        isAllowed: isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR"),
         requiredPackage: "GROWTH"
       },
       LOCAL_SEO_COPILOT: {
-        isAllowed: pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_SEO_COPILOT"),
+        isAllowed: isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT"),
         requiredPackage: "STARTER"
       }
     };
@@ -115,6 +116,7 @@ export async function PUT(req: Request) {
     });
 
     const pkgName = (doctor?.package?.name || "").toUpperCase();
+    const isTrialActive = doctor?.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
     const isFeatureEnabled = (key: string) => {
       const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
       return feat?.isEnabled ?? false;
@@ -123,16 +125,16 @@ export async function PUT(req: Request) {
     let allowed = false;
     let reqPkg = "Premium";
     if (agentType === "APPOINTMENT") {
-      allowed = pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_RECEPTIONIST");
+      allowed = isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST");
       reqPkg = "Premium";
     } else if (agentType === "REVIEW") {
-      allowed = pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_REVIEW_REPLY");
+      allowed = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_REVIEW_REPLY");
       reqPkg = "Starter";
     } else if (agentType === "POST_CREATION" || agentType === "PROFILE") {
-      allowed = pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_POST_CREATOR");
+      allowed = isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR");
       reqPkg = "Growth";
     } else if (agentType === "LOCAL_SEO_COPILOT") {
-      allowed = pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || isFeatureEnabled("AI_SEO_COPILOT");
+      allowed = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT");
       reqPkg = "Starter";
     }
 
