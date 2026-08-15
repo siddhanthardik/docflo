@@ -602,8 +602,10 @@ export function PostScheduler() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {format(new Date(post.createdAt), "MMM d, yyyy")}
+                    <td className="px-6 py-4 text-gray-600 text-xs">
+                      {post.status === "SCHEDULED" && post.scheduledFor
+                        ? format(new Date(post.scheduledFor), "MMM d, yyyy h:mm a")
+                        : format(new Date(post.createdAt), "MMM d, yyyy")}
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">
@@ -611,15 +613,21 @@ export function PostScheduler() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {post.status === "DRAFT" && (
+                      {(post.status === "DRAFT" || post.status === "SCHEDULED") && (
                         <Button
                           size="sm"
                           disabled={publishingDraftId === post.id}
                           onClick={() => handlePublishDraft(post.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 text-xs rounded-full px-3.5 shadow-sm transition-all hover:scale-105"
+                          className={`${
+                            post.status === "SCHEDULED"
+                              ? "bg-indigo-600 hover:bg-indigo-700"
+                              : "bg-emerald-600 hover:bg-emerald-700"
+                          } text-white font-bold h-8 text-xs rounded-full px-3.5 shadow-sm transition-all hover:scale-105`}
                         >
                           {publishingDraftId === post.id ? (
                             <><Sparkles className="h-3.5 w-3.5 mr-1 animate-spin" /> Publishing...</>
+                          ) : post.status === "SCHEDULED" ? (
+                            <><Globe className="h-3.5 w-3.5 mr-1" /> Publish Now</>
                           ) : (
                             <><Globe className="h-3.5 w-3.5 mr-1" /> Publish to Google</>
                           )}

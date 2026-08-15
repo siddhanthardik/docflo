@@ -13,8 +13,23 @@ const port = parseInt(process.env.PORT || "3000", 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+import { GbpPostPublisherService } from "./src/services/gbp-post-publisher.service";
+
 app.prepare().then(() => {
   console.log("Next.js started. WhatsApp Manager is ready in the main process.");
+
+  // Background sweep for scheduled GBP posts (runs every 2 minutes)
+  const runGbpSweep = async () => {
+    try {
+      await GbpPostPublisherService.publishDuePosts();
+    } catch (err) {
+      console.error("[Background Runner] GBP posts sweep error:", err);
+    }
+  };
+
+  // Run on startup and every 2 minutes
+  setTimeout(runGbpSweep, 5000);
+  setInterval(runGbpSweep, 2 * 60 * 1000);
 
   createServer(async (req, res) => {
     try {
@@ -34,3 +49,4 @@ app.prepare().then(() => {
       console.log(`> Ready on http://${hostname}:${port}`);
     });
 });
+
