@@ -454,160 +454,316 @@ export default function AuditLandingPage() {
         </div>
       </section>
 
-      {/* ── DATA-DRIVEN GROWTH / MOBILE MOCKUP SECTION ────────────────────── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-8 lg:px-14 bg-white border-t border-slate-100">
+      {/* ── DATA-DRIVEN GROWTH / SMARTPHONE & METRICS SECTION (PIXEL PERFECT) ── */}
+      <section className="py-16 sm:py-24 px-4 sm:px-8 lg:px-14 bg-white border-t border-slate-100 overflow-hidden">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
           
-          {/* LEFT: Smartphone Graphic with Floating Performance Badges */}
-          <div className="lg:col-span-6 relative flex items-center justify-center">
+          {/* LEFT: Complete Smartphone Mockup + 4 Flanking Metric Cards */}
+          <div className="lg:col-span-7 flex items-center justify-center">
             
-            {/* Center Phone Container */}
-            <div className="w-[240px] sm:w-[260px] h-[480px] bg-slate-900 rounded-[38px] p-3 shadow-2xl border-4 border-slate-800 relative z-10 flex flex-col">
+            {/* SVG Definitions for Wave Gradients & Marker Arrows */}
+            <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+              <defs>
+                {/* Red Downward Gradient */}
+                <linearGradient id="redAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EF4444" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
+                </linearGradient>
+                {/* Green Upward Gradient */}
+                <linearGradient id="greenAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                </linearGradient>
+                {/* Red Arrowhead */}
+                <marker id="redArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                  <path d="M 1 1 L 7 4 L 1 7 Z" fill="#EF4444" />
+                </marker>
+                {/* Green Arrowhead */}
+                <marker id="greenArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                  <path d="M 1 1 L 7 4 L 1 7 Z" fill="#10B981" />
+                </marker>
+              </defs>
+            </svg>
+
+            <div className="w-full flex flex-row items-center justify-center gap-3 sm:gap-4 lg:gap-5">
               
-              {/* Phone Speaker Notch */}
-              <div className="w-20 h-4 bg-slate-900 rounded-full mx-auto mb-2 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-slate-800 mr-2" />
-                <div className="w-8 h-1 bg-slate-800 rounded-full" />
+              {/* ── LEFT 2 CARDS ── */}
+              <div className="flex flex-col justify-between gap-5 sm:gap-6 w-[130px] sm:w-[155px] shrink-0">
+                
+                {/* CARD 1: Visibility Score Low */}
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-100 shadow-xl shadow-slate-200/60 text-left transition-transform hover:-translate-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">
+                    Visibility Score
+                  </span>
+                  <span className="text-base sm:text-xl font-black text-slate-900 block mt-1">
+                    Low
+                  </span>
+                  <div className="mt-2 w-full h-10 sm:h-12 overflow-visible">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path
+                        d="M 5,8 Q 30,5 45,22 T 85,25 L 94,33 L 94,40 L 5,40 Z"
+                        fill="url(#redAreaGrad)"
+                      />
+                      <path
+                        d="M 5,8 Q 30,5 45,22 T 85,25 L 94,33"
+                        stroke="#EF4444"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        fill="none"
+                        markerEnd="url(#redArrow)"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* CARD 2: Directions +31% */}
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-100 shadow-xl shadow-slate-200/60 text-left transition-transform hover:-translate-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">
+                    Directions
+                  </span>
+                  <span className="text-base sm:text-xl font-black text-slate-900 block mt-0.5">
+                    +31%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-normal leading-tight">
+                    vs last month
+                  </span>
+                  <div className="mt-1 w-full h-10 sm:h-12 overflow-visible">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path
+                        d="M 5,34 Q 35,32 55,18 T 85,20 L 94,8 L 94,40 L 5,40 Z"
+                        fill="url(#greenAreaGrad)"
+                      />
+                      <path
+                        d="M 5,34 Q 35,32 55,18 T 85,20 L 94,8"
+                        stroke="#10B981"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        fill="none"
+                        markerEnd="url(#greenArrow)"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Inside Screen */}
-              <div className="bg-[#F8FAFC] flex-1 rounded-[28px] overflow-hidden flex flex-col relative text-left">
-                
-                {/* Search Bar */}
-                <div className="p-3 bg-white border-b border-slate-200">
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-100 rounded-full text-[10px]">
-                    <span className="font-extrabold text-[#4285F4]">G</span>
-                    <span className="text-slate-600 font-medium truncate">best doctor near me</span>
-                    <Search className="w-3 h-3 text-slate-400 ml-auto" />
+              {/* ── CENTER: THE SMARTPHONE MOCKUP ── */}
+              <div className="w-[190px] sm:w-[230px] lg:w-[240px] shrink-0">
+                <div className="bg-slate-900 rounded-[38px] sm:rounded-[44px] p-2 sm:p-2.5 shadow-2xl shadow-slate-400/50 border-[4px] sm:border-[5px] border-slate-900 relative">
+                  
+                  {/* Notch / Speaker Island */}
+                  <div className="w-14 sm:w-16 h-3 sm:h-3.5 bg-slate-900 rounded-full mx-auto mb-1.5 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-800 mr-1.5" />
+                    <div className="w-6 h-1 bg-slate-800 rounded-full" />
                   </div>
-                </div>
 
-                {/* Google Map Mockup */}
-                <div className="flex-1 bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                  <svg className="w-full h-full opacity-40" viewBox="0 0 200 200">
-                    <path d="M0,50 Q100,60 200,40" stroke="#CBD5E1" strokeWidth="8" fill="none" />
-                    <path d="M50,0 Q60,100 40,200" stroke="#CBD5E1" strokeWidth="8" fill="none" />
-                    <path d="M120,0 L180,200" stroke="#E2E8F0" strokeWidth="12" fill="none" />
-                    <path d="M0,140 Q100,120 200,160" stroke="#E2E8F0" strokeWidth="10" fill="none" />
-                  </svg>
-                  {/* Red Location Pin */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center animate-bounce">
-                    <div className="w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg">
-                      <MapPin className="w-4 h-4 fill-white" />
+                  {/* Inside Smartphone Screen */}
+                  <div className="bg-[#FAFBFD] rounded-[28px] sm:rounded-[34px] overflow-hidden flex flex-col text-left border border-slate-200/50">
+                    
+                    {/* Top Google Branding & Search Header */}
+                    <div className="p-2 sm:p-2.5 bg-white border-b border-slate-100 space-y-1.5">
+                      
+                      {/* Centered Colorful Google Logo */}
+                      <div className="text-center">
+                        <span className="font-black text-sm sm:text-base tracking-tight inline-flex">
+                          <span className="text-[#4285F4]">G</span>
+                          <span className="text-[#EA4335]">o</span>
+                          <span className="text-[#FBBC05]">o</span>
+                          <span className="text-[#4285F4]">g</span>
+                          <span className="text-[#34A853]">l</span>
+                          <span className="text-[#EA4335]">e</span>
+                        </span>
+                      </div>
+
+                      {/* Google Search Bar Pill */}
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200/70 rounded-full shadow-2xs">
+                        <Search className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                        <span className="text-[9px] sm:text-[10px] text-slate-700 font-medium truncate flex-1">
+                          best doctor near me
+                        </span>
+                        <span className="text-[10px] shrink-0">🎙️</span>
+                      </div>
+
+                      {/* Filter Chips */}
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-slate-500 overflow-hidden pt-0.5">
+                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-full">All</span>
+                        <span className="px-1.5 py-0.5 bg-slate-100 rounded-full">Doctors</span>
+                        <span className="px-1.5 py-0.5 bg-slate-100 rounded-full truncate">Clinics</span>
+                      </div>
+
                     </div>
-                  </div>
-                </div>
 
-                {/* Clinic Card at bottom */}
-                <div className="p-3 bg-white border-t border-slate-200 space-y-1 shadow-lg">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="text-xs font-black text-slate-900">Your Clinic</h4>
-                      <div className="flex items-center gap-1 text-[10px] text-amber-500 font-bold">
-                        <span>5.0</span>
-                        <span>★★★★★</span>
-                        <span className="text-slate-400 font-normal">(128)</span>
+                    {/* Google Business Profile Listing Card */}
+                    <div className="p-1.5 bg-white border-b border-slate-100 shadow-xs">
+                      <div className="bg-slate-50/70 p-2 rounded-xl border border-slate-100 flex items-center justify-between gap-2">
+                        <div className="space-y-0.5 min-w-0">
+                          <h4 className="text-[10px] sm:text-[11px] font-black text-slate-900 truncate">
+                            Your Clinic
+                          </h4>
+                          <div className="flex items-center gap-0.5 text-[9px] text-amber-500 font-extrabold">
+                            <span>5.0</span>
+                            <span className="tracking-tighter">★★★★★</span>
+                            <span className="text-slate-400 font-normal text-[8px]">(129)</span>
+                          </div>
+                          <p className="text-[8px] text-slate-500 font-medium truncate">
+                            0.4 km • Open
+                          </p>
+                        </div>
+
+                        {/* Clinic Thumbnail Photo */}
+                        <img
+                          src="/images/clinic-card-thumb.jpg"
+                          alt="Your Clinic"
+                          className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover shrink-0 border border-white shadow-xs"
+                        />
                       </div>
                     </div>
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold">
-                      🏥
+
+                    {/* Google Map Mockup Background with Big 3D Pin */}
+                    <div className="h-32 sm:h-36 bg-[#E8ECEF] relative overflow-hidden flex items-center justify-center">
+                      
+                      {/* Stylized Google Maps Road Vectors */}
+                      <svg className="w-full h-full opacity-60" viewBox="0 0 200 200">
+                        <rect x="0" y="0" width="200" height="200" fill="#F4F3F0" />
+                        <path d="M 0,40 Q 80,45 200,30" stroke="#FFFFFF" strokeWidth="12" fill="none" />
+                        <path d="M 0,40 Q 80,45 200,30" stroke="#E5E3DF" strokeWidth="14" fill="none" />
+                        <path d="M 40,0 Q 45,90 30,200" stroke="#FFFFFF" strokeWidth="12" fill="none" />
+                        <path d="M 140,0 L 170,200" stroke="#FFFFFF" strokeWidth="16" fill="none" />
+                        <path d="M 0,130 Q 90,120 200,150" stroke="#FFFFFF" strokeWidth="14" fill="none" />
+                        <rect x="60" y="60" width="50" height="50" rx="6" fill="#D2EBD2" opacity="0.7" />
+                        <rect x="15" y="80" width="20" height="35" rx="4" fill="#E8E8E8" />
+                        <rect x="140" y="70" width="40" height="30" rx="4" fill="#E8E8E8" />
+                      </svg>
+
+                      {/* Big Red 3D Location Pin */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                        <div className="relative">
+                          {/* Pulsing Beacon Circle */}
+                          <div className="absolute -inset-1 rounded-full bg-red-400/40 animate-ping" />
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-600/40 relative z-10 border-2 border-white">
+                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
+                          </div>
+                        </div>
+                        {/* Pin Shadow */}
+                        <div className="w-4 h-1.5 bg-slate-900/30 rounded-full blur-[1px] mt-0.5" />
+                      </div>
+
                     </div>
+
                   </div>
-                  <p className="text-[9px] text-slate-500 font-medium">0.4 km • Open</p>
+
+                </div>
+              </div>
+
+              {/* ── RIGHT 2 CARDS ── */}
+              <div className="flex flex-col justify-between gap-5 sm:gap-6 w-[130px] sm:w-[155px] shrink-0">
+                
+                {/* CARD 3: Calls +42% */}
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-100 shadow-xl shadow-slate-200/60 text-left transition-transform hover:-translate-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">
+                    Calls
+                  </span>
+                  <span className="text-base sm:text-xl font-black text-slate-900 block mt-0.5">
+                    +42%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-normal leading-tight">
+                    vs last month
+                  </span>
+                  <div className="mt-1 w-full h-10 sm:h-12 overflow-visible">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path
+                        d="M 5,34 Q 35,30 55,16 T 85,18 L 94,6 L 94,40 L 5,40 Z"
+                        fill="url(#greenAreaGrad)"
+                      />
+                      <path
+                        d="M 5,34 Q 35,30 55,16 T 85,18 L 94,6"
+                        stroke="#10B981"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        fill="none"
+                        markerEnd="url(#greenArrow)"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* CARD 4: Bookings +35% */}
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-100 shadow-xl shadow-slate-200/60 text-left transition-transform hover:-translate-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">
+                    Bookings
+                  </span>
+                  <span className="text-base sm:text-xl font-black text-slate-900 block mt-0.5">
+                    +35%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-normal leading-tight">
+                    vs last month
+                  </span>
+                  <div className="mt-1 w-full h-10 sm:h-12 overflow-visible">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path
+                        d="M 5,34 Q 35,32 55,20 T 85,16 L 94,8 L 94,40 L 5,40 Z"
+                        fill="url(#greenAreaGrad)"
+                      />
+                      <path
+                        d="M 5,34 Q 35,32 55,20 T 85,16 L 94,8"
+                        stroke="#10B981"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        fill="none"
+                        markerEnd="url(#greenArrow)"
+                      />
+                    </svg>
+                  </div>
                 </div>
 
               </div>
-            </div>
 
-            {/* FLOATING CARD 1: Top Left - Visibility Score Low */}
-            <div className="absolute -top-3 sm:top-4 -left-2 sm:-left-6 z-20 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-3 sm:p-3.5 w-36 sm:w-40 text-left">
-              <span className="text-[10px] text-slate-500 font-semibold block">Visibility Score</span>
-              <span className="text-sm font-extrabold text-slate-900 block mt-0.5">Low</span>
-              <svg className="w-full h-8 mt-1 text-red-500" viewBox="0 0 100 30" fill="none">
-                <path d="M5,5 L35,15 L65,10 L95,25" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-
-            {/* FLOATING CARD 2: Bottom Left - Directions +31% */}
-            <div className="absolute -bottom-3 sm:bottom-6 -left-2 sm:-left-6 z-20 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-3 sm:p-3.5 w-36 sm:w-40 text-left">
-              <span className="text-[10px] text-slate-500 font-semibold block">Directions</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-sm font-black text-slate-900">+31%</span>
-                <span className="text-[9px] text-slate-400">vs last month</span>
-              </div>
-              <svg className="w-full h-8 mt-1 text-emerald-500" viewBox="0 0 100 30" fill="none">
-                <path d="M5,25 L35,18 L65,22 L95,8" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-
-            {/* FLOATING CARD 3: Top Right - Calls +42% */}
-            <div className="absolute -top-3 sm:top-4 -right-2 sm:-right-6 z-20 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-3 sm:p-3.5 w-36 sm:w-40 text-left">
-              <span className="text-[10px] text-slate-500 font-semibold block">Calls</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-sm font-black text-slate-900">+42%</span>
-                <span className="text-[9px] text-slate-400">vs last month</span>
-              </div>
-              <svg className="w-full h-8 mt-1 text-emerald-500" viewBox="0 0 100 30" fill="none">
-                <path d="M5,25 L35,20 L65,12 L95,5" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-
-            {/* FLOATING CARD 4: Bottom Right - Bookings +35% */}
-            <div className="absolute -bottom-3 sm:bottom-6 -right-2 sm:-right-6 z-20 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-3 sm:p-3.5 w-36 sm:w-40 text-left">
-              <span className="text-[10px] text-slate-500 font-semibold block">Bookings</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-sm font-black text-slate-900">+35%</span>
-                <span className="text-[9px] text-slate-400">vs last month</span>
-              </div>
-              <svg className="w-full h-8 mt-1 text-emerald-500" viewBox="0 0 100 30" fill="none">
-                <path d="M5,25 L35,22 L65,10 L95,6" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
             </div>
 
           </div>
 
-          {/* RIGHT: Value Proposition & Checklist */}
-          <div className="lg:col-span-6 space-y-6 text-left">
+          {/* RIGHT: Value Proposition & Checklist (Matching Reference Exactly) */}
+          <div className="lg:col-span-5 space-y-6 text-left">
             
             <div className="space-y-3">
               <span className="text-xs font-black text-[#1A56DB] uppercase tracking-wider block">
                 DATA-DRIVEN GROWTH
               </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-[1.2]">
+              <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-slate-900 tracking-tight leading-[1.18]">
                 We Help Clinics <span className="text-[#1A56DB]">Get Found.</span><br />
                 You Help Patients <span className="text-[#1A56DB]">Get Better.</span>
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed pt-1">
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed pt-1">
                 Gyrex helps clinics like yours improve their online presence, attract the right patients, and grow sustainably.
               </p>
             </div>
 
-            {/* Checkpoints */}
+            {/* Checkpoints with Solid Royal Blue Checkmark Circles */}
             <div className="space-y-3.5 pt-2">
               
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="text-sm font-bold text-slate-800">
+                <span className="text-sm sm:text-base font-bold text-slate-800">
                   Trusted by doctors & clinics across India
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="text-sm font-bold text-slate-800">
+                <span className="text-sm sm:text-base font-bold text-slate-800">
                   Transparent process & actionable insights
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#1A56DB] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="text-sm font-bold text-slate-800">
+                <span className="text-sm sm:text-base font-bold text-slate-800">
                   100% Free. No hidden charges.
                 </span>
               </div>
