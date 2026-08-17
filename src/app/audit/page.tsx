@@ -133,16 +133,16 @@ export default function AuditLandingPage() {
         
         {/* Full Hero Doctor Background - Desktop & Tablet */}
         <div 
-          className="absolute inset-0 hidden md:block bg-no-repeat bg-center bg-cover pointer-events-none"
+          className="absolute inset-0 hidden md:block bg-no-repeat bg-cover pointer-events-none"
           style={{
             backgroundImage: "url('/images/audit-hero-doctor-full.jpg')",
-            backgroundPosition: "center 20%",
+            backgroundPosition: "50% 25%",
           }}
         >
-          {/* Subtle gradient overlays to ensure left text & right form pop with ultra clarity */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#F8FAFF] via-[#F8FAFF]/40 to-transparent w-[50%]" />
-          <div className="absolute inset-0 bg-gradient-to-l from-[#F8FAFF] via-[#F8FAFF]/50 to-transparent left-auto w-[45%]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAFF]/40 via-transparent to-[#F8FAFF]/90" />
+          {/* Subtle gradient overlays to ensure left text & right form pop with ultra clarity while keeping doctor's face 100% visible */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/50 to-transparent w-[46%]" />
+          <div className="absolute inset-0 bg-gradient-to-l from-white/85 via-white/40 to-transparent left-auto w-[42%]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-white/90" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-14 py-10 lg:py-16 relative z-10">
