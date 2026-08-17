@@ -14,11 +14,8 @@ import {
   BarChart3,
   ShieldCheck,
   Clock,
-  CheckCircle2,
   Lock,
-  ArrowRight,
-  Sparkles,
-  PhoneCall,
+  MessageCircle,
   X,
   RefreshCcw,
   Check
@@ -36,7 +33,7 @@ export default function AuditLandingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [platformWhatsapp, setPlatformWhatsapp] = useState("919999999999");
-  
+
   // Audit Status Check Modal State
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusPhone, setStatusPhone] = useState("");
@@ -97,7 +94,6 @@ export default function AuditLandingPage() {
     setStatusResult(null);
 
     try {
-      // Direct user to WhatsApp with prefilled text for instant live audit dispatch
       window.open(
         `https://wa.me/${platformWhatsapp}?text=Hi%20Gyrex%2C%20I%20want%20to%20check%20the%20audit%20status%20for%20my%20number%3A%20${encodeURIComponent(statusPhone)}`,
         "_blank"
@@ -114,7 +110,7 @@ export default function AuditLandingPage() {
     <div className="min-h-screen bg-[#F9FBFF] text-slate-900 font-sans flex flex-col selection:bg-blue-600 selection:text-white">
       
       {/* ── TOP HEADER / NAVBAR ────────────────────────────────────────────── */}
-      <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-100 py-3.5 px-4 sm:px-8 lg:px-14 flex items-center justify-between sticky top-0 z-50">
+      <header className="w-full bg-white border-b border-slate-100 py-3.5 px-4 sm:px-8 lg:px-14 flex items-center justify-between sticky top-0 z-50 shadow-2xs">
         <Link href="/" className="flex items-center gap-2">
           <GyrexLogo size="md" />
         </Link>
@@ -132,203 +128,216 @@ export default function AuditLandingPage() {
         </div>
       </header>
 
-      {/* ── HERO SECTION ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#F0F5FF]/80 via-[#F8FAFF] to-white pt-8 pb-14 lg:pt-14 lg:pb-20 px-4 sm:px-8 lg:px-14 border-b border-slate-100">
+      {/* ── FULL HERO SECTION (WITH SEAMLESS DOCTOR BACKGROUND) ───────────── */}
+      <section className="relative overflow-hidden bg-[#F8FAFF] border-b border-slate-100">
         
-        {/* Subtle background glow effect */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl pointer-events-none -z-10" />
+        {/* Full Hero Doctor Background - Desktop & Tablet */}
+        <div 
+          className="absolute inset-0 hidden md:block bg-no-repeat bg-center bg-cover pointer-events-none"
+          style={{
+            backgroundImage: "url('/images/audit-hero-doctor-full.jpg')",
+            backgroundPosition: "center 20%",
+          }}
+        >
+          {/* Subtle gradient overlays to ensure left text & right form pop with ultra clarity */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#F8FAFF] via-[#F8FAFF]/40 to-transparent w-[50%]" />
+          <div className="absolute inset-0 bg-gradient-to-l from-[#F8FAFF] via-[#F8FAFF]/50 to-transparent left-auto w-[45%]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#F8FAFF]/40 via-transparent to-[#F8FAFF]/90" />
+        </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
-          
-          {/* LEFT: Hindi/English Hybrid Headline + Stopwatch Badge */}
-          <div className="lg:col-span-5 space-y-6 z-10">
-            <div className="space-y-1">
-              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-black text-[#0F172A] tracking-tight leading-[1.15]">
-                Patients Kam<br />
-                Nahin Hain..<br />
-                <span className="inline-flex tracking-tight font-black mr-2">
-                  <span className="text-[#4285F4]">G</span>
-                  <span className="text-[#EA4335]">o</span>
-                  <span className="text-[#FBBC05]">o</span>
-                  <span className="text-[#4285F4]">g</span>
-                  <span className="text-[#34A853]">l</span>
-                  <span className="text-[#EA4335]">e</span>
-                </span>
-                pe <span className="text-[#1A56DB]">Aap</span><br />
-                <span className="text-[#1A56DB]">Kam Dikhte ho.</span>
-              </h1>
-
-              {/* Accent Line Under Headline */}
-              <div className="w-14 h-1.5 bg-[#1A56DB] rounded-full mt-4" />
-            </div>
-
-            {/* Stopwatch / 60-Second Badge Card */}
-            <div className="pt-2">
-              <div className="inline-flex items-center gap-3.5 bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:px-5 shadow-lg shadow-slate-200/50">
-                <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[#1A56DB] shrink-0">
-                  <Clock className="w-6 h-6 stroke-[2.2]" />
-                </div>
-                <div>
-                  <p className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
-                    Get <span className="text-[#1A56DB] font-extrabold">Free</span> audit
-                  </p>
-                  <p className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
-                    in <span className="text-[#1A56DB] font-extrabold">60</span> seconds
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CENTER: Female Doctor Hero Image (Integrated Seamlessly) */}
-          <div className="lg:col-span-3 flex justify-center items-center relative py-4 lg:py-0">
-            <div className="relative w-full max-w-[320px] lg:max-w-none">
-              <div className="rounded-3xl overflow-hidden shadow-xl border border-white/60 bg-white">
-                <img
-                  src="/images/audit-doctor-hero.jpg"
-                  alt="Doctor at Gyrex Clinic"
-                  className="w-full h-auto object-cover max-h-[380px] lg:max-h-[420px] object-top hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: High-Converting Audit Lead Form */}
-          <div className="lg:col-span-4 w-full">
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-300/40 p-6 sm:p-7 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-14 py-10 lg:py-16 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            
+            {/* LEFT COLUMN: Headline & Stopwatch Badge */}
+            <div className="lg:col-span-7 space-y-6 text-left">
               
-              {/* Form Header */}
-              <div className="mb-5">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Get Your <span className="text-[#1A56DB]">Free Audit</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-1 font-medium">
-                  Discover how visible your clinic is online
-                </p>
+              <div className="space-y-1 max-w-xl">
+                <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black text-[#0F172A] tracking-tight leading-[1.12]">
+                  Patients Kam<br />
+                  Nahin Hain..<br />
+                  <span className="inline-flex tracking-tight font-black mr-2">
+                    <span className="text-[#4285F4]">G</span>
+                    <span className="text-[#EA4335]">o</span>
+                    <span className="text-[#FBBC05]">o</span>
+                    <span className="text-[#4285F4]">g</span>
+                    <span className="text-[#34A853]">l</span>
+                    <span className="text-[#EA4335]">e</span>
+                  </span>
+                  pe <span className="text-[#1A56DB]">Aap</span><br />
+                  <span className="text-[#1A56DB]">Kam Dikhte ho.</span>
+                </h1>
+
+                {/* Blue Underline Bar */}
+                <div className="w-14 h-1.5 bg-[#1A56DB] rounded-full mt-4" />
               </div>
 
-              {submitted ? (
-                <div className="py-6 text-center space-y-4 animate-in fade-in duration-300">
-                  <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
-                    <Check className="w-7 h-7 stroke-[3]" />
+              {/* Stopwatch Badge */}
+              <div className="pt-2">
+                <div className="inline-flex items-center gap-3.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3.5 sm:px-5 shadow-lg shadow-slate-200/50">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[#1A56DB] shrink-0">
+                    <Clock className="w-6 h-6 stroke-[2.2]" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">Audit Request Received!</h3>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Thank you, <strong>Dr. {formData.fullName}</strong>. We are generating your clinic visibility audit and sending it straight to your WhatsApp right now.
+                    <p className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
+                      Get <span className="text-[#1A56DB] font-extrabold">Free</span> audit
+                    </p>
+                    <p className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
+                      in <span className="text-[#1A56DB] font-extrabold">60</span> seconds
                     </p>
                   </div>
-
-                  <a
-                    href={`https://wa.me/${platformWhatsapp}?text=Hi%20Gyrex%2C%20I%20just%20submitted%20my%20clinic%20audit%20request%20for%20Dr.%20${encodeURIComponent(formData.fullName)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all shadow-md shadow-emerald-600/20"
-                  >
-                    <MessageSquare className="w-4 h-4" /> Open Instant WhatsApp Audit
-                  </a>
-
-                  <button
-                    onClick={() => {
-                      setSubmitted(false);
-                      setFormData({ fullName: "", clinicName: "", specialization: "", mobileNumber: "" });
-                    }}
-                    className="text-xs text-slate-400 font-semibold hover:text-slate-600 underline block mx-auto pt-1"
-                  >
-                    Submit another clinic
-                  </button>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-3.5">
-                  {errorMsg && (
-                    <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
-                      {errorMsg}
-                    </div>
-                  )}
+              </div>
 
-                  {/* Field 1: Full Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter your full name"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  {/* Field 2: Clinic / Hospital Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Clinic / Hospital Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter clinic name"
-                      value={formData.clinicName}
-                      onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
-                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  {/* Field 3: Specialization */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Specialization
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter specialization"
-                      value={formData.specialization}
-                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  {/* Field 4: Mobile Number */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Mobile Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Enter mobile number"
-                      value={formData.mobileNumber}
-                      onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value.replace(/[^\d+]/g, "") })}
-                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-12 bg-[#1A56DB] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
-                  >
-                    {loading ? (
-                      <><RefreshCcw className="w-4 h-4 animate-spin" /> Processing Audit...</>
-                    ) : (
-                      "Get Free Audit Now"
-                    )}
-                  </button>
-
-                  {/* Security Footer Note */}
-                  <div className="pt-1 text-center">
-                    <p className="text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
-                      <Lock className="w-3 h-3 text-slate-400" /> Your information is secure and confidential.
-                    </p>
-                  </div>
-                </form>
-              )}
+              {/* Mobile Doctor Visual (visible only on small screens) */}
+              <div className="block md:hidden pt-4">
+                <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+                  <img
+                    src="/images/audit-hero-doctor-full.jpg"
+                    alt="Doctor at Gyrex Clinic"
+                    className="w-full h-48 object-cover object-top"
+                  />
+                </div>
+              </div>
 
             </div>
-          </div>
 
+            {/* RIGHT COLUMN: Floating Lead Capture Form */}
+            <div className="lg:col-span-5 w-full">
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-300/40 p-6 sm:p-7 relative overflow-hidden">
+                
+                {/* Form Header */}
+                <div className="mb-5 text-left">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Get Your <span className="text-[#1A56DB]">Free Audit</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">
+                    Discover how visible your clinic is online
+                  </p>
+                </div>
+
+                {submitted ? (
+                  <div className="py-6 text-center space-y-4 animate-in fade-in duration-300">
+                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
+                      <Check className="w-7 h-7 stroke-[3]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">Audit Request Received!</h3>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        Thank you, <strong>Dr. {formData.fullName}</strong>. We are generating your clinic visibility audit and sending it straight to your WhatsApp right now.
+                      </p>
+                    </div>
+
+                    <a
+                      href={`https://wa.me/${platformWhatsapp}?text=Hi%20Gyrex%2C%20I%20just%20submitted%20my%20clinic%20audit%20request%20for%20Dr.%20${encodeURIComponent(formData.fullName)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3.5 px-4 rounded-xl transition-all shadow-md shadow-emerald-600/20"
+                    >
+                      <MessageCircle className="w-4 h-4" /> Open Instant WhatsApp Audit
+                    </a>
+
+                    <button
+                      onClick={() => {
+                        setSubmitted(false);
+                        setFormData({ fullName: "", clinicName: "", specialization: "", mobileNumber: "" });
+                      }}
+                      className="text-xs text-slate-400 font-semibold hover:text-slate-600 underline block mx-auto pt-1"
+                    >
+                      Submit another clinic
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
+                    {errorMsg && (
+                      <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+                        {errorMsg}
+                      </div>
+                    )}
+
+                    {/* Field 1: Full Name */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter your full name"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Field 2: Clinic / Hospital Name */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Clinic / Hospital Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter clinic name"
+                        value={formData.clinicName}
+                        onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
+                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Field 3: Specialization */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Specialization
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter specialization"
+                        value={formData.specialization}
+                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Field 4: Mobile Number */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Mobile Number
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="Enter mobile number"
+                        value={formData.mobileNumber}
+                        onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value.replace(/[^\d+]/g, "") })}
+                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-12 bg-[#1A56DB] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                    >
+                      {loading ? (
+                        <><RefreshCcw className="w-4 h-4 animate-spin" /> Processing Audit...</>
+                      ) : (
+                        "Get Free Audit Now"
+                      )}
+                    </button>
+
+                    {/* Security Footer Note */}
+                    <div className="pt-1 text-center">
+                      <p className="text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
+                        <Lock className="w-3 h-3 text-slate-400" /> Your information is secure and confidential.
+                      </p>
+                    </div>
+                  </form>
+                )}
+
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 
@@ -475,7 +484,6 @@ export default function AuditLandingPage() {
 
                 {/* Google Map Mockup */}
                 <div className="flex-1 bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                  {/* Subtle map roads illustration */}
                   <svg className="w-full h-full opacity-40" viewBox="0 0 200 200">
                     <path d="M0,50 Q100,60 200,40" stroke="#CBD5E1" strokeWidth="8" fill="none" />
                     <path d="M50,0 Q60,100 40,200" stroke="#CBD5E1" strokeWidth="8" fill="none" />
@@ -611,13 +619,13 @@ export default function AuditLandingPage() {
         </div>
       </section>
 
-      {/* ── ROYAL BLUE BOTTOM FOOTER BANNER ──────────────────────────────── */}
+      {/* ── ROYAL BLUE FOOTER BAR (MATCHING EXACT REFERENCE) ─────────────── */}
       <footer className="w-full bg-[#0A47C2] py-8 px-6 sm:px-12 text-white mt-auto">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           
           {/* Left Side: 100% Free Audit with Shield Icon */}
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/20">
+            <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/20">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -649,7 +657,7 @@ export default function AuditLandingPage() {
             
             <button
               onClick={() => setShowStatusModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -686,7 +694,7 @@ export default function AuditLandingPage() {
                 {checkingStatus ? (
                   <><RefreshCcw className="w-4 h-4 animate-spin" /> Verifying...</>
                 ) : (
-                  <><MessageSquare className="w-4 h-4" /> Check Audit on WhatsApp</>
+                  <><MessageCircle className="w-4 h-4" /> Check Audit on WhatsApp</>
                 )}
               </button>
             </form>
