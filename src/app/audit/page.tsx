@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import {
@@ -18,19 +19,36 @@ import {
   MessageCircle,
   X,
   RefreshCcw,
-  Check
+  Check,
+  Activity
 } from "lucide-react";
 
+interface PlacePrediction {
+  place_id: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text?: string;
+  };
+  types: string[];
+}
+
 export default function AuditLandingPage() {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     fullName: "",
-    clinicName: "",
     specialization: "",
     mobileNumber: "",
   });
 
+  // Google Places Autocomplete state
+  const [clinicQuery, setClinicQuery] = useState("");
+  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlacePrediction | null>(null);
+
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [platformWhatsapp, setPlatformWhatsapp] = useState("919999999999");
 
@@ -39,6 +57,10 @@ export default function AuditLandingPage() {
   const [statusPhone, setStatusPhone] = useState("");
   const [statusResult, setStatusResult] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch("/api/platform/whatsapp-number")
@@ -51,38 +73,128 @@ export default function AuditLandingPage() {
       .catch(() => {});
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.fullName.trim() || !formData.mobileNumber.trim()) {
-      setErrorMsg("Please enter your Full Name and Mobile Number.");
+  // ── Google Places Autocomplete ─────────────────────────────────────────────
+  const fetchSuggestions = useCallback(async (input: string) => {
+    if (input.length < 2) {
+      setPredictions([]);
       return;
     }
+    setIsLoadingSuggestions(true);
+    try {
+      const res = await fetch(`/api/places?input=${encodeURIComponent(input)}&t=${Date.now()}`);
+      const data = await res.json();
+      setPredictions(data.predictions || []);
+    } catch {
+      setPredictions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, []);
+
+  const handleClinicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setClinicQuery(val);
+    setSelectedPlace(null);
+    setShowDropdown(true);
+    setErrorMsg("");
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+  };
+
+  const handleSelectPlace = (p: PlacePrediction) => {
+    setSelectedPlace(p);
+    const label = p.structured_formatting.secondary_text
+      ? `${p.structured_formatting.main_text}, ${p.structured_formatting.secondary_text}`
+      : p.structured_formatting.main_text;
+    setClinicQuery(label);
+    setShowDropdown(false);
+    setPredictions([]);
+    setErrorMsg("");
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // ── Submit & Launch Live 60-Second Audit ────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.fullName.trim()) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+    if (!clinicQuery.trim()) {
+      setErrorMsg("Please enter and select your clinic or hospital name.");
+      return;
+    }
+    if (!formData.mobileNumber.trim()) {
+      setErrorMsg("Please enter your mobile number.");
+      return;
+    }
+    if (formData.mobileNumber.replace(/\D/g, "").length < 10) {
+      setErrorMsg("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
     setErrorMsg("");
     setLoading(true);
 
     try {
-      const res = await fetch("/api/audit", {
+      // 1. Create Lead in the Database
+      const leadRes = await fetch("/api/audit/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.fullName.trim(),
           phone: formData.mobileNumber.trim(),
-          clinicName: formData.specialization
-            ? `${formData.clinicName || formData.fullName} (${formData.specialization})`
-            : formData.clinicName || formData.fullName,
-          specialization: formData.specialization,
+          placeId: selectedPlace?.place_id || undefined,
+          clinicName: selectedPlace?.structured_formatting.main_text || clinicQuery,
+          specialization: formData.specialization.trim() || undefined,
           leadSource: "landing_audit_exact",
           landingPage: "/audit",
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to submit audit request.");
+      const leadData = await leadRes.json();
+      if (!leadRes.ok || !leadData.lead?.id) {
+        throw new Error(leadData.error || "Failed to register audit request.");
+      }
 
-      setSubmitted(true);
+      // 2. Start Real-time Google Business Profile Diagnostic Scan
+      const scanRes = await fetch("/api/audit/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId: leadData.lead.id,
+          searchQuery: clinicQuery,
+          placeId: selectedPlace?.place_id || undefined,
+          name: selectedPlace?.structured_formatting.main_text || clinicQuery,
+          address: selectedPlace?.structured_formatting.secondary_text || "",
+        }),
+      });
+
+      const scanData = await scanRes.json();
+      if (scanData.auditId) {
+        // 3. Immediately redirect to the live 60-second scanning progress screen!
+        router.push(`/local-seo/free-audit/scan/${scanData.auditId}`);
+      } else {
+        throw new Error(scanData.error || "Failed to start Google audit scan.");
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || "Something went wrong. Please try again.");
-    } finally {
+      setErrorMsg(err.message || "Failed to connect to audit engine. Please try again.");
       setLoading(false);
     }
   };
@@ -201,9 +313,9 @@ export default function AuditLandingPage() {
 
             </div>
 
-            {/* RIGHT COLUMN: Floating Lead Capture Form */}
+            {/* RIGHT COLUMN: Floating Lead Capture Form Connected to Google API */}
             <div className="lg:col-span-5 w-full">
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-300/40 p-6 sm:p-7 relative overflow-hidden">
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-300/40 p-6 sm:p-7 relative overflow-visible">
                 
                 {/* Form Header */}
                 <div className="mb-5 text-left">
@@ -215,124 +327,157 @@ export default function AuditLandingPage() {
                   </p>
                 </div>
 
-                {submitted ? (
-                  <div className="py-6 text-center space-y-4 animate-in fade-in duration-300">
-                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
-                      <Check className="w-7 h-7 stroke-[3]" />
+                <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
+                  {errorMsg && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl animate-in fade-in">
+                      {errorMsg}
                     </div>
-                    <div>
-                      <h3 className="text-lg font-black text-slate-900">Audit Request Received!</h3>
-                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        Thank you, <strong>Dr. {formData.fullName}</strong>. We are generating your clinic visibility audit and sending it straight to your WhatsApp right now.
-                      </p>
-                    </div>
+                  )}
 
-                    <a
-                      href={`https://wa.me/${platformWhatsapp}?text=Hi%20Gyrex%2C%20I%20just%20submitted%20my%20clinic%20audit%20request%20for%20Dr.%20${encodeURIComponent(formData.fullName)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3.5 px-4 rounded-xl transition-all shadow-md shadow-emerald-600/20"
-                    >
-                      <MessageCircle className="w-4 h-4" /> Open Instant WhatsApp Audit
-                    </a>
-
-                    <button
-                      onClick={() => {
-                        setSubmitted(false);
-                        setFormData({ fullName: "", clinicName: "", specialization: "", mobileNumber: "" });
-                      }}
-                      className="text-xs text-slate-400 font-semibold hover:text-slate-600 underline block mx-auto pt-1"
-                    >
-                      Submit another clinic
-                    </button>
+                  {/* Field 1: Full Name */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter your full name"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      disabled={loading}
+                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                    />
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
-                    {errorMsg && (
-                      <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
-                        {errorMsg}
+
+                  {/* Field 2: Clinic / Hospital Name (Google Places Autocomplete) */}
+                  <div className="space-y-1 relative">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Clinic / Hospital Name *
+                    </label>
+                    <div className="relative">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        required
+                        placeholder="Start typing clinic name..."
+                        value={clinicQuery}
+                        onChange={handleClinicChange}
+                        onFocus={() => predictions.length > 0 && setShowDropdown(true)}
+                        disabled={loading}
+                        autoComplete="off"
+                        className="w-full h-11 pl-3.5 pr-8 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                      />
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+
+                      {/* Google Places Dropdown Results */}
+                      {showDropdown && clinicQuery.length > 1 && (
+                        <div
+                          ref={dropdownRef}
+                          className="absolute left-0 right-0 top-[calc(100%+6px)] bg-white rounded-xl border border-slate-200 shadow-2xl z-50 overflow-hidden text-left max-h-60 overflow-y-auto"
+                        >
+                          {isLoadingSuggestions && (
+                            <div className="px-4 py-3 text-xs text-slate-500 flex items-center gap-2">
+                              <Activity className="h-3.5 w-3.5 animate-spin text-[#1A56DB]" />
+                              Searching Google Places…
+                            </div>
+                          )}
+
+                          {predictions.map((place) => (
+                            <button
+                              key={place.place_id}
+                              type="button"
+                              onClick={() => handleSelectPlace(place)}
+                              className="w-full flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-blue-50/70 transition-colors text-left border-b border-slate-100 last:border-0 cursor-pointer"
+                            >
+                              <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+                                <Building2 className="h-3.5 w-3.5 text-[#1A56DB]" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-900 truncate">
+                                  {place.structured_formatting.main_text}
+                                </p>
+                                {place.structured_formatting.secondary_text && (
+                                  <p className="text-[10px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                                    <MapPin className="h-2.5 w-2.5 shrink-0 text-slate-400" />
+                                    {place.structured_formatting.secondary_text}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+
+                          {!isLoadingSuggestions && predictions.length === 0 && clinicQuery.length > 1 && (
+                            <div className="px-3.5 py-2.5 text-xs text-slate-400">
+                              No clinic found on Google Maps. Try typing with location.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedPlace && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg mt-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="text-[11px] font-semibold text-emerald-800 truncate">
+                          Verified on Google: {selectedPlace.structured_formatting.main_text}
+                        </span>
                       </div>
                     )}
+                  </div>
 
-                    {/* Field 1: Full Name */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Enter your full name"
-                        value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                      />
-                    </div>
-
-                    {/* Field 2: Clinic / Hospital Name */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Clinic / Hospital Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter clinic name"
-                        value={formData.clinicName}
-                        onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
-                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                      />
-                    </div>
-
-                    {/* Field 3: Specialization */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Specialization
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter specialization"
-                        value={formData.specialization}
-                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                      />
-                    </div>
-
-                    {/* Field 4: Mobile Number */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Mobile Number
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="Enter mobile number"
-                        value={formData.mobileNumber}
-                        onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value.replace(/[^\d+]/g, "") })}
-                        className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
-                      />
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
+                  {/* Field 3: Specialization */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Specialization (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Dental, Pediatrics, Dermatology"
+                      value={formData.specialization}
+                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
                       disabled={loading}
-                      className="w-full h-12 bg-[#1A56DB] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
-                    >
-                      {loading ? (
-                        <><RefreshCcw className="w-4 h-4 animate-spin" /> Processing Audit...</>
-                      ) : (
-                        "Get Free Audit Now"
-                      )}
-                    </button>
+                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                    />
+                  </div>
 
-                    {/* Security Footer Note */}
-                    <div className="pt-1 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
-                        <Lock className="w-3 h-3 text-slate-400" /> Your information is secure and confidential.
-                      </p>
-                    </div>
-                  </form>
-                )}
+                  {/* Field 4: Mobile Number */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Mobile Number *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Enter 10-digit mobile number"
+                      value={formData.mobileNumber}
+                      onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value.replace(/[^\d+]/g, "") })}
+                      disabled={loading}
+                      maxLength={15}
+                      className="w-full h-11 px-3.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1A56DB]/20 focus:border-[#1A56DB] focus:bg-white transition-all"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-12 bg-[#1A56DB] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                  >
+                    {loading ? (
+                      <><RefreshCcw className="w-4 h-4 animate-spin" /> Launching 60s Google Audit...</>
+                    ) : (
+                      "Get Free Audit Now"
+                    )}
+                  </button>
+
+                  {/* Security Footer Note */}
+                  <div className="pt-1 text-center">
+                    <p className="text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
+                      <Lock className="w-3 h-3 text-slate-400" /> Your information is secure and confidential.
+                    </p>
+                  </div>
+                </form>
 
               </div>
             </div>
