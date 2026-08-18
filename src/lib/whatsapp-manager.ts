@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { prisma } from '@/lib/prisma';
 import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
+import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-concierge.service';
 
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
@@ -239,6 +240,17 @@ class WhatsAppManager {
           if (isSpam) {
             console.log(`[WhatsAppManager] Blocked incoming spam message from ${patientPhone}`);
             continue; // Skip processing this message entirely
+          }
+
+          // --- Special Routing: Super Admin Platform WhatsApp Bot (Audits, Sales, Support) ---
+          if (doctorId === 'PLATFORM_SUPERADMIN') {
+            console.log(`[WhatsAppManager] Routing message from ${patientPhone} to PlatformWhatsAppConciergeService`);
+            try {
+              await PlatformWhatsAppConciergeService.handleIncomingMessage(patientPhone, textMessage, doctorId);
+            } catch (conciergeErr) {
+              console.error(`[WhatsAppManager] PlatformWhatsAppConciergeService error:`, conciergeErr);
+            }
+            continue;
           }
 
           // --- Process the incoming message via AI Agents ---
