@@ -1,5 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
 export interface SpecialityBenchmark {
   speciality: string;
   expectedRating: number;
@@ -34,8 +32,8 @@ function generateDynamicKeywords(category: string): string[] {
   ];
 }
 
-// ── Comprehensive Clinical & Surgical Medical Ontology ───────────────────────
-// Prioritized by clinical specialty and surgical depth.
+// ── Comprehensive 31-Specialty Clinical & Surgical Medical Ontology ─────────
+// Prioritized by clinical depth, surgical specialty, and patient intent.
 export const CLINICAL_MEDICAL_RULES: Array<{
   label: string;
   matchers: string[];
@@ -60,7 +58,6 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
     priorityCheck: (corpus, businessName) => {
       const bLower = businessName.toLowerCase();
-      // True IVF centers prominently feature IVF/Fertility in their brand name
       return (
         bLower.includes("ivf") ||
         bLower.includes("fertility") ||
@@ -69,7 +66,7 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     },
   },
 
-  // 2. Obstetrician & Gynecologist (Includes general maternity, delivery, PCOS, and fertility care)
+  // 2. Obstetrician & Gynecologist (Maternity, deliveries, PCOS, and general fertility)
   {
     label: "Obstetrician & Gynecologist",
     matchers: [
@@ -96,7 +93,52 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 3. Orthopedic Surgeon (Surgical & Bone/Joint Care)
+  // 3. Hair Transplant & Restoration Specialist (Dedicated hair clinic)
+  {
+    label: "Hair Transplant Clinic",
+    matchers: [
+      "hair transplant",
+      "hair restoration",
+      "fue hair",
+      "fut hair",
+      "prp hair",
+      "baldness treatment",
+      "hair loss clinic",
+      "hair graft",
+    ],
+    priorityCheck: (corpus, businessName) => {
+      const bLower = businessName.toLowerCase();
+      return (
+        bLower.includes("hair transplant") ||
+        bLower.includes("hair restoration") ||
+        bLower.includes("hair clinic") ||
+        corpus.includes("hair transplant")
+      );
+    },
+  },
+
+  // 4. Plastic & Cosmetic Surgeon (Aesthetics, reconstructive, body contouring)
+  {
+    label: "Plastic & Cosmetic Surgeon",
+    matchers: [
+      "plastic surgeon",
+      "plastic surgery",
+      "cosmetic surgeon",
+      "cosmetic surgery",
+      "aesthetic surgeon",
+      "rhinoplasty",
+      "liposuction",
+      "gynecomastia",
+      "breast augmentation",
+      "breast reduction",
+      "tummy tuck",
+      "abdominoplasty",
+      "botox and fillers",
+      "facelift",
+    ],
+  },
+
+  // 5. Orthopedic Surgeon (Surgical bone, joint, and spine care)
   {
     label: "Orthopedic Surgeon",
     matchers: [
@@ -122,7 +164,69 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 4. Pediatrician (Child & Newborn Healthcare)
+  // 6. Rheumatologist (Arthritis & Autoimmune Joint Disease)
+  {
+    label: "Rheumatologist",
+    matchers: [
+      "rheumatol",
+      "rheumatologist",
+      "rheumatoid arthritis",
+      "lupus",
+      "ankylosing spondylitis",
+      "gout specialist",
+      "autoimmune arthritis",
+      "myositis",
+      "scleroderma",
+    ],
+  },
+
+  // 7. Interventional Pain Management Specialist
+  {
+    label: "Pain Management Specialist",
+    matchers: [
+      "pain management",
+      "pain clinic",
+      "pain specialist",
+      "interventional pain",
+      "nerve block",
+      "epidural injection",
+      "slip disc pain",
+      "sciatica specialist",
+      "chronic back pain clinic",
+    ],
+  },
+
+  // 8. Vascular Surgeon (Varicose Veins & Peripheral Vascular)
+  {
+    label: "Vascular Surgeon",
+    matchers: [
+      "vascular surgeon",
+      "vascular surgery",
+      "varicose veins clinic",
+      "laser varicose",
+      "evlt",
+      "dvt clinic",
+      "spider veins",
+      "endovascular",
+      "arterial disease",
+    ],
+  },
+
+  // 9. Bariatric & Metabolic Weight Loss Surgeon
+  {
+    label: "Bariatric Surgeon",
+    matchers: [
+      "bariatric surgeon",
+      "bariatric surgery",
+      "weight loss surgery",
+      "gastric bypass",
+      "sleeve gastrectomy",
+      "metabolic surgery",
+      "obesity surgeon",
+    ],
+  },
+
+  // 10. Pediatrician (Child & Newborn Healthcare)
   {
     label: "Pediatrician",
     matchers: [
@@ -141,7 +245,24 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 5. Dermatologist & Cosmetologist
+  // 11. Child Development & Autism Therapy Centre
+  {
+    label: "Child Development & Autism Centre",
+    matchers: [
+      "child development centre",
+      "child development center",
+      "autism centre",
+      "autism clinic",
+      "speech therapy clinic",
+      "occupational therapy clinic",
+      "sensory integration",
+      "adhd clinic",
+      "pediatric therapy",
+      "special educator",
+    ],
+  },
+
+  // 12. Dermatologist & Cosmetologist
   {
     label: "Dermatologist",
     matchers: [
@@ -152,13 +273,14 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "skin clinic",
       "skin care clinic",
       "acne treatment",
-      "hair transplant",
       "cosmetolog",
       "laser skin",
+      "chemical peel",
+      "pigmentation",
     ],
   },
 
-  // 6. Dental Clinic & Dentist
+  // 13. Dental Clinic & Dentist
   {
     label: "Dental Clinic",
     matchers: [
@@ -174,10 +296,11 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "dental clinic",
       "smile design",
       "teeth scaling",
+      "clear aligners",
     ],
   },
 
-  // 7. Ophthalmologist & Eye Surgeon
+  // 14. Ophthalmologist & Eye Surgeon
   {
     label: "Ophthalmologist",
     matchers: [
@@ -191,10 +314,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "retina specialist",
       "vision care",
       "eye hospital",
+      "squint surgery",
+      "cornea",
     ],
   },
 
-  // 8. ENT Specialist (Ear, Nose, Throat)
+  // 15. ENT Specialist (Ear, Nose, Throat)
   {
     label: "ENT Specialist",
     matchers: [
@@ -207,10 +332,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "tonsil",
       "audiolog",
       "hearing aid",
+      "vertigo clinic",
+      "tympanoplasty",
     ],
   },
 
-  // 9. Cardiologist & Heart Specialist
+  // 16. Cardiologist & Heart Specialist
   {
     label: "Cardiologist",
     matchers: [
@@ -224,10 +351,11 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "pacemaker",
       "cardiac care",
       "heart clinic",
+      "cardiac surgeon",
     ],
   },
 
-  // 10. Gastroenterologist & Liver Specialist
+  // 17. Gastroenterologist & Liver Specialist
   {
     label: "Gastroenterologist",
     matchers: [
@@ -239,10 +367,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "hepatolog",
       "stomach specialist",
       "gastric",
+      "fatty liver",
+      "acidity clinic",
     ],
   },
 
-  // 11. Urologist & Andrologist
+  // 18. Urologist & Andrologist
   {
     label: "Urologist",
     matchers: [
@@ -253,10 +383,26 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "urinary",
       "androlog",
       "lithotripsy",
+      "urinary tract",
+      "turp",
     ],
   },
 
-  // 12. Nephrologist & Kidney Specialist
+  // 19. Sexologist & Men's Health Specialist
+  {
+    label: "Sexologist & Men's Health",
+    matchers: [
+      "sexolog",
+      "sexologist",
+      "erectile dysfunction",
+      "premature ejaculation",
+      "male sexual health",
+      "gupt rog",
+      "men's wellness clinic",
+    ],
+  },
+
+  // 20. Nephrologist & Kidney Specialist
   {
     label: "Nephrologist",
     matchers: [
@@ -266,10 +412,11 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "dialysis",
       "renal care",
       "kidney failure",
+      "hemodialysis",
     ],
   },
 
-  // 13. Neurologist & Neurosurgeon
+  // 21. Neurologist & Neurosurgeon
   {
     label: "Neurologist",
     matchers: [
@@ -281,10 +428,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "epilepsy",
       "parkinson",
       "spine specialist",
+      "migraine clinic",
+      "paralysis",
     ],
   },
 
-  // 14. Pulmonologist & Chest Specialist
+  // 22. Pulmonologist & Chest Specialist
   {
     label: "Pulmonologist",
     matchers: [
@@ -295,10 +444,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "allergy care",
       "respiratory",
       "bronchoscop",
+      "sleep apnea",
+      "tb clinic",
     ],
   },
 
-  // 15. Endocrinologist & Diabetologist (Hormone, Thyroid, and Diabetes Care)
+  // 23. Endocrinologist & Diabetologist (Hormone, Thyroid, and Diabetes Care)
   {
     label: "Endocrinologist",
     matchers: [
@@ -329,7 +480,7 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 16. Oncologist & Cancer Specialist
+  // 24. Oncologist & Cancer Specialist
   {
     label: "Oncologist",
     matchers: [
@@ -340,10 +491,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "radiation oncology",
       "tumor",
       "cancer care",
+      "surgical oncologist",
+      "immunotherapy",
     ],
   },
 
-  // 17. Psychiatrist & Mental Health
+  // 25. Psychiatrist & Mental Health Clinic
   {
     label: "Psychiatrist",
     matchers: [
@@ -354,10 +507,12 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "counseling",
       "anxiety",
       "psycholog",
+      "de-addiction",
+      "behavioral health",
     ],
   },
 
-  // 18. Physiotherapist (Ancillary / Physical Rehab)
+  // 26. Physiotherapist & Physical Rehab Centre
   {
     label: "Physiotherapist",
     matchers: [
@@ -368,10 +523,81 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "rehab center",
       "rehabilitation center",
       "chiropract",
+      "manual therapy",
     ],
   },
 
-  // 19. General Physician
+  // 27. Diagnostic Lab & Pathology Centre
+  {
+    label: "Diagnostic Lab & Pathology",
+    matchers: [
+      "pathology lab",
+      "diagnostic lab",
+      "path lab",
+      "blood test centre",
+      "blood test center",
+      "diagnostic center",
+      "diagnostic centre",
+      "clinical laboratory",
+      "full body checkup",
+    ],
+    priorityCheck: (corpus, businessName) => {
+      const bLower = businessName.toLowerCase();
+      return (
+        bLower.includes("pathology") ||
+        bLower.includes("path lab") ||
+        bLower.includes("diagnostic lab") ||
+        bLower.includes("pathlabs")
+      );
+    },
+  },
+
+  // 28. Radiology & Imaging Centre
+  {
+    label: "Radiology & Imaging Centre",
+    matchers: [
+      "mri scan",
+      "ct scan",
+      "ultrasound clinic",
+      "sonography",
+      "radiology centre",
+      "radiology center",
+      "digital x-ray",
+      "mammography",
+      "color doppler",
+      "imaging center",
+      "imaging centre",
+    ],
+  },
+
+  // 29. Ayurvedic Clinic & Panchakarma Centre
+  {
+    label: "Ayurvedic Clinic",
+    matchers: [
+      "ayurved",
+      "panchakarma",
+      "vaidya",
+      "nadi pariksha",
+      "ayush clinic",
+      "ayurvedic doctor",
+      "herbal treatment",
+      "shirodhara",
+    ],
+  },
+
+  // 30. Homeopathic Clinic & Doctor
+  {
+    label: "Homeopathic Clinic",
+    matchers: [
+      "homeopath",
+      "homoeopath",
+      "homeopathy clinic",
+      "homeopathic doctor",
+      "classical homeopathy",
+    ],
+  },
+
+  // 31. General Physician & Family Doctor
   {
     label: "General Physician",
     matchers: [
@@ -468,9 +694,9 @@ export function detectSpeciality(
     };
   }
 
-  // ── Tier 3: Enhanced Clinical & Surgical Medical Ontology ───────────────────
+  // ── Tier 3: Enhanced 31-Specialty Clinical & Surgical Medical Ontology ─────
   for (const rule of CLINICAL_MEDICAL_RULES) {
-    // If rule has a custom priority check (e.g. IVF vs OB-GYN distinction)
+    // If rule has a custom priority check
     if (rule.priorityCheck) {
       if (rule.priorityCheck(fullCorpus, bName)) {
         console.log(`[Specialty Engine] Tier 3 (Priority Rule Match): "${rule.label}" for "${bName}"`);
