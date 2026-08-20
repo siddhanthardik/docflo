@@ -247,9 +247,15 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
               ? [
                   (placeData?.reviewCount || 0) < compAvgReviews
                     ? {
-                        issue: `Review Deficit: Only ${reviewCountStr} reviews found.`,
-                        evidence: `Nearby competitors average ${compAvgReviews} reviews on Google Maps.`,
-                        impact: "High",
+                        issue:
+                          userRank === 1
+                            ? `Review Velocity: Competitors average ${compAvgReviews} reviews.`
+                            : `Review Deficit: Only ${reviewCountStr} reviews found.`,
+                        evidence:
+                          userRank === 1
+                            ? `Although you currently hold the #1 rank, collecting regular monthly reviews protects your leadership against high-volume competitors.`
+                            : `Nearby competitors average ${compAvgReviews} reviews on Google Maps.`,
+                        impact: userRank === 1 ? "Medium" : "High",
                       }
                     : null,
                   !placeData?.website

@@ -822,6 +822,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             <MedicalEEATScorecard
               businessName={businessName}
               specialty={specialty}
+              userRank={userRankNum}
               rating={rating}
               reviewsCount={Number(reviewsCount) || 0}
               compAvgReviews={compAvgReviews || 100}

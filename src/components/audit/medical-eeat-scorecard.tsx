@@ -5,6 +5,7 @@ import { ShieldCheck, CheckCircle2, XCircle, AlertTriangle, Star, Building, Lock
 interface MedicalEEATScorecardProps {
   businessName: string;
   specialty: string;
+  userRank: number;
   rating: number | string;
   reviewsCount: number;
   compAvgReviews: number;
@@ -19,6 +20,7 @@ interface MedicalEEATScorecardProps {
 export function MedicalEEATScorecard({
   businessName,
   specialty,
+  userRank,
   rating,
   reviewsCount,
   compAvgReviews,
@@ -180,13 +182,21 @@ export function MedicalEEATScorecard({
                 {reviewsCount} vs {compAvgReviews} Avg
               </span>
             </div>
-            <p className="text-[11px] text-slate-600">
-              {reviewGap > 0 ? (
-                <>Your clinic is <span className="font-bold text-rose-600">{reviewGap} reviews</span> behind the local competitor average to lock in position #1.</>
+            <div className="text-[11px] text-slate-600">
+              {userRank === 1 ? (
+                reviewGap > 0 ? (
+                  <>Your clinic holds the <span className="font-bold text-emerald-700">#1 position on Google Maps</span>! Adding <span className="font-bold text-indigo-700">~{reviewGap} more reviews</span> will defend your top rank against high-volume competitors.</>
+                ) : (
+                  <>Your clinic holds the <span className="font-bold text-emerald-700">#1 position</span> and leads the local review benchmark!</>
+                )
               ) : (
-                <>Your clinic leads the local average review count in this category!</>
+                reviewGap > 0 ? (
+                  <>Your clinic has a gap of <span className="font-bold text-rose-600">{reviewGap} reviews</span> behind the local competitor average to reach the #1 position.</>
+                ) : (
+                  <>Your clinic has strong review volume ({reviewsCount} reviews). Optimize secondary categories to climb to #1.</>
+                )
               )}
-            </p>
+            </div>
           </div>
 
           <div className="w-full sm:w-48 space-y-1">
