@@ -9,6 +9,8 @@ import {
   ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw
 } from "lucide-react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
+import { Google3PackPreview } from "@/components/audit/google-3pack-preview";
+import { MedicalEEATScorecard } from "@/components/audit/medical-eeat-scorecard";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompetitorRow {
@@ -456,6 +458,14 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     },
   ].sort((a, b) => a.rank - b.rank);
 
+  const compReviewCounts = competitorRowsOnly
+    .map((c: any) => Number(c.reviewCount) || 0)
+    .filter((cnt: number) => cnt > 0);
+  const compAvgReviews =
+    compReviewCounts.length > 0
+      ? Math.round(compReviewCounts.reduce((a: number, b: number) => a + b, 0) / compReviewCounts.length)
+      : 100;
+
   const defaultCompletenessItems: CheckItem[] = [
     { name: "Business Name Verified", present: true },
     { name: "Primary Medical Category", present: true },
@@ -699,6 +709,18 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               searchContext={compIntel?.searchContext || city}
             />
 
+            {/* ── SECTION 2.5: Live Google 3-Pack SERP Visual Preview ──── */}
+            <Google3PackPreview
+              specialty={specialty}
+              city={city}
+              businessName={businessName}
+              userRank={userRankNum}
+              rating={rating}
+              reviewsCount={Number(reviewsCount) || 0}
+              address={address}
+              allCompetitors={allTableRows}
+            />
+
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}
             <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -795,6 +817,21 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </table>
               </div>
             </div>
+
+            {/* ── SECTION 3.5: Medical EEAT & Trust Signals Scorecard ─── */}
+            <MedicalEEATScorecard
+              businessName={businessName}
+              specialty={specialty}
+              rating={rating}
+              reviewsCount={Number(reviewsCount) || 0}
+              compAvgReviews={compAvgReviews || 100}
+              hasWebsite={!!overview?.website && overview.website !== "Not Available"}
+              isHttps={!!(overview?.website && overview.website.startsWith("https"))}
+              hasOpeningHours={completenessItems.some(i => i.name.includes("Hours") && i.present === true)}
+              hasPhone={!!overview?.phone && overview.phone !== "Not Available"}
+              hasPhotos={!!overview?.photoUrl || completenessItems.some(i => i.name.includes("Photos") && i.present === true)}
+              categoriesCount={Math.max(1, overview?.additionalCategories?.length ? overview.additionalCategories.length + 1 : 2)}
+            />
 
             {/* ── SECTION 4: Why You're Losing Patients (Issues) ───────────── */}
             <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
