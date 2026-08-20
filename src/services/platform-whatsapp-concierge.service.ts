@@ -3,7 +3,7 @@ import { executeAuditScan } from "./audit-scan.service";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 
 interface UserSession {
-  state: "IDLE" | "AWAITING_CLINIC_NAME" | "AWAITING_SUPPORT_MESSAGE";
+  state: "IDLE" | "AWAITING_CLINIC_NAME" | "AWAITING_DEMO_DETAILS" | "AWAITING_SUPPORT_MESSAGE";
   lastActivity: number;
   lastSearchedPlace?: any;
 }
@@ -128,15 +128,17 @@ export class PlatformWhatsAppConciergeService {
       return;
     }
 
-    // 4. Option 2: Sales & Demo Inquiry
+    // 4. Option 2: Sales, Demo & Consultation Inquiry
     if (
       textLower === "2" ||
       textLower === "sales" ||
       textLower === "demo" ||
       textLower === "pricing" ||
-      textLower === "talk"
+      textLower === "talk" ||
+      textLower === "consultation" ||
+      textLower === "expert"
     ) {
-      session.state = "IDLE";
+      session.state = "AWAITING_DEMO_DETAILS";
       userSessions.set(senderPhone, session);
 
       // Record Sales Lead in CRM
@@ -166,7 +168,7 @@ export class PlatformWhatsAppConciergeService {
           data: {
             leadId: lead.id,
             eventType: "SALES_INQUIRY",
-            message: `User requested Sales / 1-on-1 Growth Demo on WhatsApp: "${rawText}"`,
+            message: `User initiated Sales / Consultation flow on WhatsApp: "${rawText}"`,
             metadata: { message: rawText, phone: senderPhone },
           },
         });
@@ -181,10 +183,10 @@ export class PlatformWhatsAppConciergeService {
         `✅ Collect 5-star Google reviews automatically on WhatsApp\n` +
         `✅ Zero no-shows with automated WhatsApp appointment reminders\n` +
         `✅ 24/7 AI Medical Assistant to answer patient queries\n\n` +
-        `📅 *Book a Free 15-Minute Demo:*\n` +
-        `Reply with your *Name* and *Preferred Time (e.g., Tomorrow 4 PM)*.\n\n` +
+        `📅 *Book a 1-on-1 Consultation with our Expert Team:*\n` +
+        `Please reply with your *Name* and *Preferred Timing* (e.g., _"Dr. Siddhant, Tomorrow 3 PM"_).\n\n` +
         `🌐 Explore features & pricing: https://gyrex.in/pricing\n\n` +
-        `Our Growth Specialist will reach out to you shortly!`;
+        `Our Growth Specialist will connect with you at your preferred time!`;
 
       await waManager.sendMessage(socketDoctorId, senderPhone, salesMsg);
       return;
@@ -249,7 +251,74 @@ export class PlatformWhatsAppConciergeService {
       }
     }
 
-    // 7. If awaiting Support Message
+    // 7. If awaiting Demo / Consultation Details
+    if (session.state === "AWAITING_DEMO_DETAILS") {
+      session.state = "IDLE";
+      userSessions.set(senderPhone, session);
+
+      let prospectName = rawText;
+      let requestedTime = rawText;
+
+      const commaSplit = rawText.split(/,|\bat\b|\bon\b/i);
+      if (commaSplit.length >= 2) {
+        prospectName = commaSplit[0].trim();
+        requestedTime = commaSplit.slice(1).join(" ").trim();
+      }
+
+      try {
+        const lead = await prisma.auditLead.upsert({
+          where: {
+            phone_placeId: {
+              phone: senderPhone,
+              placeId: "WHATSAPP_SALES_INQUIRY",
+            },
+          },
+          update: {
+            name: prospectName || undefined,
+            status: "CONTACTED",
+            updatedAt: new Date(),
+          },
+          create: {
+            name: prospectName || `WhatsApp Prospect (+${senderPhone})`,
+            phone: senderPhone,
+            placeId: "WHATSAPP_SALES_INQUIRY",
+            leadSource: "WHATSAPP_SALES",
+            landingPage: "WhatsApp Super Admin",
+            status: "NEW",
+          },
+        });
+
+        await prisma.leadActivity.create({
+          data: {
+            leadId: lead.id,
+            eventType: "CONSULTATION_REQUESTED",
+            message: `Consultation Requested: "${rawText}" (Contact: ${prospectName}, Time: ${requestedTime})`,
+            metadata: {
+              rawMessage: rawText,
+              prospectName,
+              requestedTime,
+              phone: senderPhone,
+            },
+          },
+        });
+      } catch (e) {
+        console.error("[Concierge] Failed to log consultation request:", e);
+      }
+
+      const confirmMsg =
+        `✅ *Consultation Request Confirmed!*\n\n` +
+        `Thank you! We have received your consultation details:\n` +
+        `👤 *Contact:* ${prospectName}\n` +
+        `📅 *Requested Timing:* ${requestedTime}\n` +
+        `📞 *Phone:* +${senderPhone}\n\n` +
+        `Our Clinic Growth Specialist has been assigned and will connect with you at the scheduled time.\n\n` +
+        `💡 Want to run a free clinic audit while you wait? Reply *1* or send your *Clinic Name & City* anytime!`;
+
+      await waManager.sendMessage(socketDoctorId, senderPhone, confirmMsg);
+      return;
+    }
+
+    // 8. If awaiting Support Message
     if (session.state === "AWAITING_SUPPORT_MESSAGE") {
       session.state = "IDLE";
       userSessions.set(senderPhone, session);
@@ -295,9 +364,8 @@ export class PlatformWhatsAppConciergeService {
       return;
     }
 
-    // 8. Process Clinic Audit Request (Direct Query or State === AWAITING_CLINIC_NAME)
-    const looksLikeClinicSearch =
-      session.state === "AWAITING_CLINIC_NAME" ||
+    // 9. Process Clinic Audit Request (Strict Check: Either State === AWAITING_CLINIC_NAME or explicit healthcare keywords)
+    const hasHealthcareKeyword =
       textLower.includes("clinic") ||
       textLower.includes("hospital") ||
       textLower.includes("dental") ||
@@ -306,11 +374,21 @@ export class PlatformWhatsAppConciergeService {
       textLower.includes("dr ") ||
       textLower.includes("doctor") ||
       textLower.includes("skin") ||
+      textLower.includes("derma") ||
       textLower.includes("eye") ||
-      textLower.includes("care") ||
+      textLower.includes("ortho") ||
       textLower.includes("health") ||
-      textLower.includes("audit for") ||
-      rawText.length > 5;
+      textLower.includes("care") ||
+      textLower.includes("ivf") ||
+      textLower.includes("ayurved") ||
+      textLower.includes("homeopath") ||
+      textLower.startsWith("audit for") ||
+      textLower.startsWith("scan clinic") ||
+      textLower.startsWith("check clinic");
+
+    const looksLikeClinicSearch =
+      session.state === "AWAITING_CLINIC_NAME" ||
+      (hasHealthcareKeyword && !isGreeting);
 
     if (looksLikeClinicSearch) {
       session.state = "IDLE";
@@ -321,6 +399,7 @@ export class PlatformWhatsAppConciergeService {
         .replace(/^audit\s+for\s+/i, "")
         .replace(/^check\s+my\s+clinic\s+/i, "")
         .replace(/^generate\s+audit\s+for\s+/i, "")
+        .replace(/^scan\s+clinic\s+/i, "")
         .trim();
 
       await this.runWhatsAppClinicAudit(senderPhone, cleanedQuery, waManager, socketDoctorId);
@@ -344,7 +423,7 @@ export class PlatformWhatsAppConciergeService {
       `Your AI-powered Clinic Growth & Practice Management Assistant.\n\n` +
       `How can we help you today? Please reply with a number (*1*, *2*, *3*, or *4*):\n\n` +
       `1️⃣ *Free Google Business & SEO Audit* (Instant 60s Report)\n` +
-      `2️⃣ *Book a 1-on-1 Growth Demo / Sales Inquiry*\n` +
+      `2️⃣ *Book a 1-on-1 Growth Demo / Consultation*\n` +
       `3️⃣ *Doctor & Clinic Support Desk*\n` +
       `4️⃣ *Check Existing Audit Status*\n\n` +
       `💡 _You can also type your clinic name & city directly anytime to run an instant Google audit!_`;
@@ -400,7 +479,6 @@ export class PlatformWhatsAppConciergeService {
         },
       });
     } catch (err) {
-      // Fallback if duplicate constraint conflict
       lead = await prisma.auditLead.findFirst({
         where: { phone: senderPhone },
       });
