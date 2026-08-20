@@ -50,7 +50,7 @@ export function FloatingWhatsAppWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans print:hidden">
       {/* ── 1. Interactive Mini Popup Card ──────────────────────────────── */}
       {isOpen && (
         <div className="mb-3 w-[330px] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">

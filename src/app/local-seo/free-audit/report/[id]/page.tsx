@@ -290,7 +290,7 @@ function SearchGridVisualization({
   const searchKeyword = specialty ? `${specialty} near me` : "Doctor & Clinic near me";
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
       <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -304,14 +304,23 @@ function SearchGridVisualization({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Top 5 ({goodCount})
+          <span 
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-emerald-800"
+            style={{ backgroundColor: "#ecfdf5", borderColor: "#a7f3d0" }}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#10b981" }} /> Top 5 ({goodCount})
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-100">
-            <span className="w-2 h-2 rounded-full bg-amber-500" /> 6–20 ({avgCount})
+          <span 
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-amber-800"
+            style={{ backgroundColor: "#fffbeb", borderColor: "#fde68a" }}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#f59e0b" }} /> 6–20 ({avgCount})
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg border border-rose-100">
-            <span className="w-2 h-2 rounded-full bg-rose-500" /> &gt;20 ({poorCount})
+          <span 
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-rose-800"
+            style={{ backgroundColor: "#fff1f2", borderColor: "#fecdd3" }}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#f43f5e" }} /> &gt;20 ({poorCount})
           </span>
         </div>
       </div>
@@ -320,13 +329,19 @@ function SearchGridVisualization({
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden mb-5">
           <div className="relative z-10 grid grid-cols-5 gap-3 max-w-sm mx-auto">
             {gridRanks.map((item: { rank: number; status: string }, idx: number) => {
-              const bg = item.status === "good" ? "bg-emerald-500 text-white shadow-sm border border-emerald-600"
-                        : item.status === "avg" ? "bg-amber-500 text-white shadow-sm border border-amber-600"
-                        : "bg-white text-slate-500 shadow-sm border border-slate-200";
+              const isGood = item.status === "good";
+              const isAvg = item.status === "avg";
+              const bgStyle = isGood
+                ? { backgroundColor: "#10b981", color: "#ffffff", borderColor: "#059669" }
+                : isAvg
+                ? { backgroundColor: "#f59e0b", color: "#ffffff", borderColor: "#d97706" }
+                : { backgroundColor: "#ffffff", color: "#64748b", borderColor: "#cbd5e1" };
+
               return (
                 <div
                   key={idx}
-                  className={`aspect-square rounded-xl flex items-center justify-center font-semibold text-sm transition-all cursor-default ${bg}`}
+                  style={bgStyle}
+                  className="aspect-square rounded-xl flex items-center justify-center font-bold text-sm shadow-sm border transition-all cursor-default select-none"
                 >
                   {item.rank}
                 </div>
@@ -335,17 +350,37 @@ function SearchGridVisualization({
           </div>
         </div>
 
-        <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-4 h-4" />
+        {goodCount === totalGrid ? (
+          <div 
+            className="p-4 rounded-xl flex items-start gap-3 border text-emerald-900"
+            style={{ backgroundColor: "#ecfdf5", borderColor: "#a7f3d0" }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#d1fae5", color: "#059669" }}>
+              <Check className="w-4 h-4 stroke-[3]" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-emerald-950 mb-0.5">Exceptional Local Grid Dominance</h4>
+              <p className="text-[13px] text-emerald-800 font-normal leading-relaxed">
+                Your clinic ranks in the <span className="font-bold text-emerald-950">top 5 across all 25 of 25 nearby grid nodes</span> in {city}. You hold market-leading Google Maps Local Pack coverage across your entire radius!
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-semibold text-amber-900 mb-0.5">Local Visibility Radius Gap</h4>
-            <p className="text-[13px] text-amber-800 font-normal">
-              You rank in the <span className="font-semibold text-amber-900">top 5 in only {goodCount} of {totalGrid} nearby grid nodes</span>. Outside your immediate street address, neighboring patients find competing clinics first on Google Maps.
-            </p>
+        ) : (
+          <div 
+            className="p-4 rounded-xl flex items-start gap-3 border text-amber-900"
+            style={{ backgroundColor: "#fffbeb", borderColor: "#fde68a" }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#fef3c7", color: "#d97706" }}>
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950 mb-0.5">Local Visibility Radius Gap</h4>
+              <p className="text-[13px] text-amber-800 font-normal leading-relaxed">
+                You rank in the <span className="font-bold text-amber-950">top 5 in {goodCount} of {totalGrid} nearby grid nodes</span>. Outside your immediate street address, neighboring patients find competing clinics first on Google Maps.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -535,6 +570,35 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 print:pb-0 print:bg-white">
+      {/* ── High-Definition Print Stylesheet ─────────────────────────────── */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            margin: 10mm 10mm 10mm 10mm;
+            size: A4 portrait;
+          }
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          body {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+          }
+          .print-card {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin-bottom: 1.25rem !important;
+            box-shadow: none !important;
+            border: 1px solid #e2e8f0 !important;
+          }
+          header {
+            position: static !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+          }
+        }
+      `}} />
 
       {/* ── Top Navigation Bar ───────────────────────────────────────────── */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:static print:border-b">
@@ -580,7 +644,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
           <div className="flex-1 min-w-0 space-y-6 print:w-full print:max-w-none">
 
             {/* ── SECTION 1: Hero Diagnostic Banner ─────────────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               
               {/* Business Info Header */}
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
@@ -722,7 +786,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             />
 
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
@@ -835,7 +899,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             />
 
             {/* ── SECTION 4: Why You're Losing Patients (Issues) ───────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
@@ -880,7 +944,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 4.5: Treatment & Category Coverage Gap Card ───── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 font-bold">
@@ -906,7 +970,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 5: Profile Completeness Checklist ───────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
@@ -928,8 +992,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 <div className="relative pt-1 mb-6">
                   <div className="overflow-hidden h-3 text-xs flex rounded-full bg-slate-100">
                     <div 
-                      style={{ width: `${profilePct}%` }} 
-                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 rounded-full"
+                      style={{ width: `${profilePct}%`, backgroundColor: "#4f46e5" }} 
+                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-full"
                     ></div>
                   </div>
                 </div>
@@ -971,8 +1035,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
-            {/* ── SECTION 6: FAQ Accordion ───────────────────────────────── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* ── SECTION 6: FAQ Accordion (Hidden on Print & Downloaded PDF) ── */}
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm print:hidden">
               <div className="p-6 border-b border-slate-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <span className="font-serif text-base font-semibold italic">?</span>

@@ -54,7 +54,7 @@ export function MedicalEEATScorecard({
   const reviewGap = Math.max(0, compAvgReviews - reviewsCount);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
       {/* Header */}
       <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
