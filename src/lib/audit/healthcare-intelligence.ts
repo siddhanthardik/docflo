@@ -512,7 +512,7 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 26. Physiotherapist & Physical Rehab Centre
+  // 26. Physiotherapist & Physical Rehab Centre (Strict Physical Therapy ONLY)
   {
     label: "Physiotherapist",
     matchers: [
@@ -520,14 +520,61 @@ export const CLINICAL_MEDICAL_RULES: Array<{
       "physiotherapist",
       "physical therapy",
       "physiotherapy clinic",
+      "physiotherapy centre",
+      "physiotherapy center",
+      "sports physio",
       "rehab center",
       "rehabilitation center",
       "chiropract",
       "manual therapy",
+      "kinesiology",
+      "dry needling",
     ],
   },
 
-  // 27. Diagnostic Lab & Pathology Centre
+  // 27. Sports Medicine Specialist
+  {
+    label: "Sports Medicine Specialist",
+    matchers: [
+      "sports medicine",
+      "sports injury clinic",
+      "sports doctor",
+      "athletic rehab",
+      "sports rehab",
+    ],
+  },
+
+  // 28. Proctologist (Laser Piles, Fissure, Fistula Clinic)
+  {
+    label: "Proctologist",
+    matchers: [
+      "proctolog",
+      "proctologist",
+      "piles clinic",
+      "piles hospital",
+      "fissure treatment",
+      "fistula treatment",
+      "laser piles",
+      "anorectal",
+      "bawaseer",
+    ],
+  },
+
+  // 29. Audiologist & Hearing Care Centre
+  {
+    label: "Audiologist",
+    matchers: [
+      "audiolog",
+      "audiologist",
+      "hearing aid clinic",
+      "hearing centre",
+      "hearing center",
+      "speech and hearing",
+      "pure tone audiometry",
+    ],
+  },
+
+  // 30. Diagnostic Lab & Pathology Centre
   {
     label: "Diagnostic Lab & Pathology",
     matchers: [
