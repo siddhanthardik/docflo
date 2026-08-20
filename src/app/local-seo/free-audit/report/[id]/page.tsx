@@ -431,22 +431,29 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   // Unify and deduplicate all table rows, sorted strictly by Map Rank
   const competitorRowsOnly = rawCompetitors.filter((c: any) => !c.isYou);
   const allTableRows = [
-    ...competitorRowsOnly.map((c: any, i: number) => ({
-      name: c.name,
-      isYou: false,
-      rating: c.rating || "4.8",
-      reviewCount: c.reviewCount || "50+",
-      rank: c.rank || i + 1,
-      distanceKm: c.distanceKm
-    })),
+    ...competitorRowsOnly.map((c: any, i: number) => {
+      let computedRank = c.rank || c.googlePosition;
+      // If competitor has same rank as user or fallback index needed:
+      if (!computedRank || computedRank === userRankNum) {
+        computedRank = userRankNum <= i + 1 ? i + 2 : i + 1;
+      }
+      return {
+        name: c.name,
+        isYou: false,
+        rating: c.rating || "4.8",
+        reviewCount: c.reviewCount || "50+",
+        rank: computedRank,
+        distanceKm: c.distanceKm,
+      };
+    }),
     {
       name: businessName,
       isYou: true,
       rating: rating,
       reviewCount: reviewsCount,
-      rank: rawRank || userRankNum,
-      distanceKm: null
-    }
+      rank: userRankNum,
+      distanceKm: null,
+    },
   ].sort((a, b) => a.rank - b.rank);
 
   const defaultCompletenessItems: CheckItem[] = [

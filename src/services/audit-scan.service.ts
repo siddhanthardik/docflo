@@ -329,8 +329,8 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
               isYou: false,
               rating: c.rating || "N/A",
               reviewCount: c.reviewCount || 0,
-              rank: i + 1,
-              categories: "Unknown",
+              rank: c.googlePosition || (userRank <= i + 1 ? i + 2 : i + 1),
+              googlePosition: c.googlePosition,
               website: "Unknown",
             })),
             {

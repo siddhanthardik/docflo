@@ -357,7 +357,7 @@ export async function searchCompetitorsWithRank(
 
       // ── Step 3: Build competitor list from Google results ──
       // Preserve Google's ordering exactly — DO NOT re-sort by review count.
-      // Exclude the target clinic itself.
+      // ── Step 3: Build authentic competitor list from Google results ──
       const competitors: CompetitorData[] = [];
       let googlePos = 0;
 
@@ -370,63 +370,25 @@ export async function searchCompetitorsWithRank(
         if (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) continue;
 
         const pLabel = p.primaryTypeDisplayName?.text || "";
-        const pType = p.primaryType || "";
         const pName = p.displayName?.text || "";
-
-        // --- Dynamic Strict Specialty Filter ---
-        const excludeKeywords = [
-          'surgeon', 'surgery', 'physician', 'gastro', 'neuro', 'derma', 'uro', 'onco', 
-          'psych', 'ent ', 'eye', 'ophthalm', 'cardio', 'ortho', 'dental', 'dentist', 
-          'gynec', 'gynaec', 'diabetes', 'ivf', 'fertility', 'pediatr', 'paediatr', 'clinic'
-        ];
-
-        let isUnrelated = false;
-        const qStr = query.toLowerCase();
         const cStr = (pName + " " + pLabel).toLowerCase();
 
-        for (const kw of excludeKeywords) {
-          if (kw === 'clinic') continue; // Clinic is too generic to block
-          
-          if (cStr.includes(kw)) {
-            if ((kw === 'gynec' || kw === 'gynaec' || kw === 'ivf' || kw === 'fertility') && 
-                (qStr.includes('gynec') || qStr.includes('gynaec') || qStr.includes('ivf') || qStr.includes('fertility'))) continue;
-            if ((kw === 'pediatr' || kw === 'paediatr') && (qStr.includes('pediatr') || qStr.includes('paediatr'))) continue;
-            if ((kw === 'dental' || kw === 'dentist') && (qStr.includes('dental') || qStr.includes('dentist'))) continue;
-            
-            if (!qStr.includes(kw)) {
-              isUnrelated = true;
-              break;
-            }
-          }
-        }
-
-        // --- Positive Relevance Filter (Like GrexaAI strictness) ---
-        if (!isUnrelated) {
-          const targetRule = CLINICAL_MEDICAL_RULES.find(rule => 
-            qStr.includes(rule.label.toLowerCase()) || 
-            rule.matchers.some(m => qStr.includes(m))
-          );
-          
-          if (targetRule) {
-            const hasPositiveMatch = targetRule.matchers.some(m => cStr.includes(m)) || cStr.includes(targetRule.label.toLowerCase());
-            if (!hasPositiveMatch) {
-              isUnrelated = true;
-            }
-          }
-        }
-
-        if (isUnrelated) {
-          console.log(`[Competitor Filter] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
+        // Exclude obvious non-human-healthcare noise
+        if (
+          cStr.includes("veterinary") ||
+          cStr.includes("pet clinic") ||
+          cStr.includes("animal hospital") ||
+          cStr.includes("restaurant") ||
+          cStr.includes("hotel") ||
+          cStr.includes("car service")
+        ) {
           continue;
         }
-
-
 
         let distKm = null;
         if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
           distKm = calculateDistanceKm(location.lat, location.lng, p.location.latitude, p.location.longitude);
-          if (distKm > 5) {
-            console.log(`[Competitor Filter] Excluded: "${pName}" — too far away (${distKm}km)`);
+          if (distKm > 10) {
             continue;
           }
         }
@@ -439,7 +401,7 @@ export async function searchCompetitorsWithRank(
           googlePosition: googlePos, // Real Google list position
         });
 
-        if (competitors.length >= 10) break; // Show up to 10 real competitors
+        if (competitors.length >= 10) break; // Return top 10 authentic competitors
       }
 
       console.log(`[Competitor Search v1] "${textQuery}" → ${competitors.length} competitors found. User at Google position #${finalUserRank}.`);
