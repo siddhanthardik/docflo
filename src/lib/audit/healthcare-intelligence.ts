@@ -298,16 +298,34 @@ export const CLINICAL_MEDICAL_RULES: Array<{
     ],
   },
 
-  // 15. Endocrinologist & Diabetologist
+  // 15. Endocrinologist & Diabetologist (Hormone, Thyroid, and Diabetes Care)
   {
     label: "Endocrinologist",
     matchers: [
       "endocrinol",
       "endocrinologist",
-      "thyroid specialist",
-      "diabetes clinic",
       "diabetolog",
-      "metabolic",
+      "diabetologist",
+      "diabetes doctor",
+      "diabetes specialist",
+      "diabetes clinic",
+      "diabetes center",
+      "diabetes centre",
+      "thyroid specialist",
+      "thyroid doctor",
+      "thyroid clinic",
+      "hormone specialist",
+      "hormone doctor",
+      "metabolic clinic",
+      "metabolic disorder",
+      "insulin therapy",
+      "glycemic control",
+      "pituitary",
+      "adrenal",
+      "growth hormone",
+      "gestational diabetes",
+      "osteoporosis clinic",
+      "hba1c",
     ],
   },
 
