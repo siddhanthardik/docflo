@@ -75,7 +75,7 @@ export function FloatingWhatsAppWidget() {
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-300 border-2 border-emerald-700 rounded-full animate-pulse" />
               </div>
               <div>
-                <h4 className="font-bold text-sm tracking-tight leading-snug">Gyrex Clinic Growth Concierge</h4>
+                <h4 className="font-bold text-sm tracking-tight leading-snug">Gyrex Clinic Growth Team</h4>
                 <p className="text-[11px] text-emerald-100 flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
                   Typically replies instantly (AI Powered)
