@@ -64,11 +64,7 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
     const cityStr =
       addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "";
 
-    const gbpDisplayCategory = placeData?.primaryTypeDisplayName || null;
-    const specialtyLabel =
-      gbpDisplayCategory && gbpDisplayCategory.toLowerCase() !== "doctor"
-        ? gbpDisplayCategory
-        : specialityData.speciality;
+    const specialtyLabel = specialityData.speciality;
 
     const localSearchQuery = buildLocalSearchQuery(specialtyLabel, locationStr);
     const apiKey =
