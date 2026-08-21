@@ -32,7 +32,9 @@ export async function GET() {
     }
 
     const pkgName = (doctor.package?.name || "").toUpperCase();
-    const isTrialActive = doctor.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
+    const isTrialActive = doctor.subscriptionExpiry 
+      ? new Date(doctor.subscriptionExpiry) > new Date() 
+      : (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000);
 
     // Helper to check feature flag or default package rank
     const isFeatureEnabled = (key: string) => {
@@ -116,7 +118,9 @@ export async function PUT(req: Request) {
     });
 
     const pkgName = (doctor?.package?.name || "").toUpperCase();
-    const isTrialActive = doctor?.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) > new Date() : false;
+    const isTrialActive = doctor?.subscriptionExpiry 
+      ? new Date(doctor.subscriptionExpiry) > new Date() 
+      : (doctor?.createdAt ? (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000) : false);
     const isFeatureEnabled = (key: string) => {
       const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
       return feat?.isEnabled ?? false;

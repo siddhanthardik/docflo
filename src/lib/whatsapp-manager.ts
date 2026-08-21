@@ -264,6 +264,8 @@ class WhatsAppManager {
                 name: true,
                 clinicName: true,
                 specialty: true,
+                createdAt: true,
+                subscriptionStatus: true,
                 subscriptionExpiry: true,
                 package: {
                   include: {
@@ -512,7 +514,59 @@ class WhatsAppManager {
               where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
             });
 
-            // AI Receptionist is enabled by default for all connected clinic numbers unless explicitly turned off
+            // ── 14-Day Free Trial & Package Subscription Access Control ────────
+            const now = new Date();
+            
+            // 1. Free 14-Day Trial: active if doctor signed up within the last 14 days OR has unexpired trial subscriptionExpiry
+            const isWithin14DaysOfSignup = doctorInfo?.createdAt 
+              ? (now.getTime() - new Date(doctorInfo.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000)
+              : false;
+
+            const hasActiveSubscriptionExpiry = doctorInfo?.subscriptionExpiry 
+              ? new Date(doctorInfo.subscriptionExpiry) > now 
+              : false;
+
+            const isTrialActive = isWithin14DaysOfSignup || hasActiveSubscriptionExpiry;
+
+            // 2. Paid Package Upgrade Check:
+            const pkgName = (doctorInfo?.package?.name || "").toUpperCase();
+            const hasPaidPackage = Boolean(
+              doctorInfo?.package && 
+              !pkgName.includes("FREE") && 
+              doctorInfo?.subscriptionStatus === "ACTIVE" && 
+              hasActiveSubscriptionExpiry
+            );
+
+            const hasAiReceptionistAccess = isTrialActive || hasPaidPackage;
+
+            if (!hasAiReceptionistAccess) {
+              console.log(`[WhatsAppManager] 14-day trial expired for doctor ${doctorId}. AI Receptionist is paused until package upgrade.`);
+              
+              // Create a dashboard notification for the doctor (rate-limited to 1 per 24h)
+              prisma.notification.findFirst({
+                where: {
+                  doctorId,
+                  title: { contains: "14-Day Free Trial Ended" },
+                  createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                }
+              }).then(recentNotif => {
+                if (!recentNotif) {
+                  prisma.notification.create({
+                    data: {
+                      doctorId,
+                      title: "14-Day Free Trial Ended ⏳",
+                      message: "Your 14-day free trial has ended. Please upgrade your package to reactivate 24/7 AI Receptionist auto-replies & automated patient bookings.",
+                      type: "WARNING",
+                      actionUrl: "/settings/subscription"
+                    }
+                  }).catch(() => {});
+                }
+              }).catch(() => {});
+
+              return; // Skip auto-responder execution
+            }
+
+            // AI Receptionist is enabled by default during 14-day trial and on active paid packages
             const isAutoResponderEnabled = doctorInfo?.enableAIAutoResponder !== false && (agentConfig ? agentConfig.enabled : true);
 
             if (isAutoResponderEnabled) {
