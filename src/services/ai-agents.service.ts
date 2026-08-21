@@ -45,9 +45,18 @@ function buildDeterministicReceptionistReply(
   const textLower = text.toLowerCase();
   const docTitle = formatDoctorDisplayName(rawDoctorName);
 
-  // Language Detection
-  const isHindiScript = /[\u0900-\u097F]/.test(text);
-  const isHinglish = !isHindiScript && /\b(kya|kab|kahan|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees)\b/i.test(textLower);
+  // ════ Indian Language Script Detection ═══════════════════════════════════
+  const isDevanagari = /[\u0900-\u097F]/.test(text); // Hindi / Marathi
+  const isTamil = /[\u0B80-\u0BFF]/.test(text);
+  const isTelugu = /[\u0C00-\u0C7F]/.test(text);
+  const isKannada = /[\u0C80-\u0CFF]/.test(text);
+  const isMalayalam = /[\u0D00-\u0D7F]/.test(text);
+  const isBengali = /[\u0980-\u09FF]/.test(text);
+  const isGujarati = /[\u0A80-\u0AFF]/.test(text);
+  const isPunjabi = /[\u0A00-\u0A7F]/.test(text);
+
+  const isHinglish = !isDevanagari && !isTamil && !isTelugu && !isKannada && !isMalayalam && !isBengali && !isGujarati && !isPunjabi &&
+    /\b(kya|kab|kahan|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees)\b/i.test(textLower);
   
   // User explicitly asking for phone / human call
   const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
@@ -60,8 +69,93 @@ function buildDeterministicReceptionistReply(
   // Clean fee string
   const cleanFee = consultationFee ? consultationFee.replace(/[^\d.,]/g, '').trim() : "";
 
-  // ════ 1. HINDI SCRIPT (हिंदी) ══════════════════════════════════════════════
-  if (isHindiScript) {
+  // ════ 1. TAMIL (தமிழ்) ════════════════════════════════════════════════════
+  if (isTamil) {
+    if (/வணக்கம்|ஹலோ|ஹாய்/.test(text) || text.length <= 4) {
+      return `வணக்கம்! 🙏 நான் ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) வரவேற்பாளர்.\n\nஇன்று உங்களுக்கு அப்பாயின்ட்மென்ட் அல்லது கிளினிக் தகவலில் எவ்வாறு உதவ முடியும்?${phoneSuffix}`;
+    }
+    if (/நேரம்|டைம்|எப்போது|opd/.test(text)) {
+      return `${docTitle} கிளினிக்கில் ஆலோசனைக்கு கிடைக்கும் நேரம்:\n🕒 *${clinicTimings}*\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+    }
+    if (/கட்டணம்|பீஸ்|விலை|செலவு/.test(text)) {
+      const feeText = cleanFee ? `ஆலோசனைக் கட்டணம் *₹${cleanFee}*` : "ஆலோசனைக் கட்டண விவரங்கள் கிளினிக்கில் தெரிவிக்கப்படும்";
+      return `${docTitle} (${specialty}) ${feeText}.\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+    }
+    return `வணக்கம்! ${clinicName} தொடர்பு கொண்டதற்கு நன்றி. நான் ${assistantName}. ${docTitle} (${specialty}) அவர்களுடன் அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+  }
+
+  // ════ 2. TELUGU (తెలుగు) ═════════════════════════════════════════════════
+  if (isTelugu) {
+    if (/నమస్కారం|హలో|హాయ్/.test(text) || text.length <= 4) {
+      return `నమస్కారం! 🙏 నేను ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) రిసెప్షనిస్ట్.\n\nనేను మీకు అపాయింట్‌మెంట్ లేదా క్లినిక్ వివరాలలో ఎలా సహాయపడగలను?${phoneSuffix}`;
+    }
+    if (/సమయం|టైమింగ్|ఎప్పుడు|opd/.test(text)) {
+      return `${docTitle} క్లినిక్‌లో సంప్రదింపులకు అందుబాటులో ఉండే సమయం:\n🕒 *${clinicTimings}*\n\nమీరు ఈరోజు లేదా రేపటికి అపాయింట్‌మెంట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
+    }
+    if (/ఫీజు|ఖర్చు|ధర/.test(text)) {
+      const feeText = cleanFee ? `కన్సల్టేషన్ ఫీజు *₹${cleanFee}*` : "ఫీజు వివరాలు క్లినిక్‌లో తెలియజేయబడతాయి";
+      return `${docTitle} (${specialty}) ${feeText}.\n\nమీరు స్లాట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
+    }
+    return `నమస్కారం! ${clinicName} ను సంప్రదించినందుకు ధన్యవాదాలు. నేను ${assistantName}. ${docTitle} తో అపాయింట్‌మెంట్ బుక్ చేయడానికి నేను మీకు సహాయపడగలను.${phoneSuffix}`;
+  }
+
+  // ════ 3. KANNADA (ಕನ್ನಡ) ═════════════════════════════════════════════════
+  if (isKannada) {
+    if (/ನಮಸ್ಕಾರ|ಹಲೋ|ಹಾಯ್/.test(text) || text.length <= 4) {
+      return `ನಮಸ್ಕಾರ! 🙏 ನಾನು ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ರಿಸೆಪ್ಷನಿಸ್ಟ್.\n\nಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಅಥವಾ ಕ್ಲಿನಿಕ್ ಮಾಹಿತಿಯಲ್ಲಿ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?${phoneSuffix}`;
+    }
+    if (/ಸಮಯ|ಟೈಮಿಂಗ್|ಯಾವಾಗ|opd/.test(text)) {
+      return `${docTitle} ಕ್ಲಿನಿಕ್‌ನಲ್ಲಿ ಲಭ್ಯವಿರುವ ಸಮಯ:\n🕒 *${clinicTimings}*\n\nನೀವು ಇಂದು ಅಥವಾ ನಾಳೆಗೆ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಕಾಯ್ದಿರಿಸಲು ಬಯಸುವಿರಾ?${phoneSuffix}`;
+    }
+    return `ನಮಸ್ಕಾರ! ${clinicName} ಸಂಪರ್ಕಿಸಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು. ನಾನು ${assistantName}. ${docTitle} ಅವರೊಂದಿಗೆ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಬುಕ್ ಮಾಡಲು ನಾನು ಇಲ್ಲಿದ್ದೇನೆ.${phoneSuffix}`;
+  }
+
+  // ════ 4. MALAYALAM (മലയാളം) ═════════════════════════════════════════════
+  if (isMalayalam) {
+    if (/നമസ്കാരം|ഹലോ|ഹായ്/.test(text) || text.length <= 4) {
+      return `നമസ്കാരം! 🙏 ഞാൻ ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) റിസപ്ഷനിസ്റ്റ്.\n\nഅപ്പോയിന്റ്മെന്റിനോ ക്ലിനിക്ക് വിവരങ്ങൾക്കോ ഞാൻ എങ്ങനെ സഹായിക്കണം?${phoneSuffix}`;
+    }
+    if (/സമയം|ടൈം|എപ്പോൾ|opd/.test(text)) {
+      return `${docTitle} ക്ലിനിക്കിൽ ലഭ്യമാകുന്ന സമയം:\n🕒 *${clinicTimings}*\n\nഇന്നോ നാളെയോ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ ആഗ്രഹിക്കുന്നുണ്ടോ?${phoneSuffix}`;
+    }
+    return `നമസ്കാരം! ${clinicName} ലേക്ക് ബന്ധപ്പെട്ടതിന് നന്ദി. ഞാൻ ${assistantName}. ${docTitle} ന് അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ സഹായിക്കാം.${phoneSuffix}`;
+  }
+
+  // ════ 5. BENGALI (বাংলা) ═════════════════════════════════════════════════
+  if (isBengali) {
+    if (/নমস্কার|হ্যালো|হাই/.test(text) || text.length <= 4) {
+      return `নমস্কার! 🙏 আমি ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) এর রিসেপশনিস্ট।\n\nআজ আমি আপনাকে অ্যাপয়েন্টমেন্ট বা ক্লিনিক সংক্রান্ত তথ্যে কীভাবে সাহায্য করতে পারি?${phoneSuffix}`;
+    }
+    if (/সময়|টাইম|কখন|opd/.test(text)) {
+      return `${docTitle} ক্লিনিকে পরামর্শের জন্য উপলব্ধ সময়:\n🕒 *${clinicTimings}*\n\nআপনি কি আজ বা আগামীকালের জন্য অ্যাপয়েন্টমেন্ট বুক করতে চান?${phoneSuffix}`;
+    }
+    return `নমস্কার! ${clinicName} এ যোগাযোগ করার জন্য ধন্যবাদ। আমি ${assistantName}, ${docTitle} এর সাথে অ্যাপয়েন্টমেন্ট বুক করতে সাহায্য করতে পারি।${phoneSuffix}`;
+  }
+
+  // ════ 6. GUJARATI (ગુજરાતી) ═════════════════════════════════════════════
+  if (isGujarati) {
+    if (/નમસ્તે|હેલો|હાય/.test(text) || text.length <= 4) {
+      return `નમસ્તે! 🙏 હું ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ના રિસેપ્શનિસ્ટ છું.\n\nઆજે એપોઇન્ટમેન્ટ અથવા ક્લિનિકની માહિતીમાં હું તમારી કેવી રીતે મદદ કરી શકું?${phoneSuffix}`;
+    }
+    if (/સમય|ટાઇમિંગ|ક્યારે|opd/.test(text)) {
+      return `${docTitle} ક્લિનિકમાં પરામર્શ માટે ઉપલબ્ધ સમય:\n🕒 *${clinicTimings}*\n\nશું તમે આજે અથવા આવતીકાલ માટે એપોઇન્ટમેન્ટ બુક કરવા માંગો છો?${phoneSuffix}`;
+    }
+    return `નમસ્તે! ${clinicName} નો સંપર્ક કરવા બદલ આભાર. હું ${assistantName}, ${docTitle} સાથે એપોઇન્ટમેન્ટ બુક કરવામાં તમારી સહાય કરી શકું છું.${phoneSuffix}`;
+  }
+
+  // ════ 7. PUNJABI (ਪੰਜਾਬੀ) ═══════════════════════════════════════════════
+  if (isPunjabi) {
+    if (/ਸਤਿ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|ਹੈਲੋ|ਹਾਏ/.test(text) || text.length <= 4) {
+      return `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! 🙏 ਮੈਂ ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ਤੋਂ ਰਿਸੈਪਸ਼ਨਿਸਟ ਬੋਲ ਰਹੀ ਹਾਂ।\n\nਮੈਂ ਅੱਜ ਅਪਾਇੰਟਮੈਂਟ ਜਾਂ ਕਲੀਨਿਕ ਸੰਬੰਧੀ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦੀ ਹਾਂ?${phoneSuffix}`;
+    }
+    if (/ਸਮਾਂ|ਟਾਈਮ|ਕਦੋਂ|opd/.test(text)) {
+      return `${docTitle} ਕਲੀਨਿਕ ਵਿੱਚ ਉਪਲਬਧ ਸਮਾਂ:\n🕒 *${clinicTimings}*\n\nਕੀ ਤੁਸੀਂ ਅੱਜ ਜਾਂ ਕੱਲ੍ਹ ਲਈ ਅਪਾਇੰਟਮੈਂਟ ਬੁੱਕ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?${phoneSuffix}`;
+    }
+    return `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! ${clinicName} ਨਾਲ ਸੰਪਰਕ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। ਮੈਂ ${assistantName}, ${docTitle} ਨਾਲ ਅਪਾਇੰਟਮੈਂਟ ਬੁੱਕ ਕਰਨ ਲਈ ਹਾਜ਼ਰ ਹਾਂ।${phoneSuffix}`;
+  }
+
+  // ════ 8. HINDI / MARATHI SCRIPT (हिंदी / मराठी) ═════════════════════════
+  if (isDevanagari) {
     if (/^(नमस्ते|प्रणाम|हेलो|हाय|हैलो)/.test(text) || text.length <= 4) {
       return `नमस्ते! 🙏 मैं ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) से बोल रही हूँ।\n\nमैं आज अपॉइंटमेंट या क्लिनिक जानकारी में आपकी किस प्रकार सहायता कर सकती हूँ?${phoneSuffix}`;
     }
