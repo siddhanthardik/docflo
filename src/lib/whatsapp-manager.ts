@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-concierge.service';
 import { formatDoctorDisplayName } from '@/services/ai-agents.service';
+import { logSystemError } from '@/lib/logger';
 
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
@@ -183,6 +184,13 @@ class WhatsAppManager {
           
           if (shouldReconnect) {
             const delay = statusCode === DisconnectReason.restartRequired ? 2000 : 3000;
+            if (statusCode && statusCode !== 428) {
+              logSystemError(new Error(`WhatsApp socket disconnected (status ${statusCode}) for doctor ${doctorId}`), {
+                path: 'whatsapp-manager:connection',
+                method: 'SOCKET_DISCONNECT',
+                metadata: { doctorId, statusCode, willReconnect: true }
+              });
+            }
             setTimeout(() => {
               console.log(`[WhatsAppManager] Auto-reconnecting ${doctorId} now...`);
               this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect error for ${doctorId}:`, e));
@@ -192,6 +200,12 @@ class WhatsAppManager {
             console.log(`[WhatsAppManager] Terminal auth failure for ${doctorId} (code ${statusCode}). Purging corrupted session on disk.`);
             this.clearSession(doctorId);
             
+            logSystemError(new Error(`WhatsApp terminal auth failure (code ${statusCode}) for doctor ${doctorId}`), {
+              path: 'whatsapp-manager:connection',
+              method: 'WA_TERMINAL_AUTH_FAILURE',
+              metadata: { doctorId, statusCode }
+            });
+
             prisma.notification.create({
               data: {
                 doctorId,
@@ -248,8 +262,13 @@ class WhatsAppManager {
             console.log(`[WhatsAppManager] Routing message from ${patientPhone} to PlatformWhatsAppConciergeService`);
             try {
               await PlatformWhatsAppConciergeService.handleIncomingMessage(patientPhone, textMessage, doctorId);
-            } catch (conciergeErr) {
+            } catch (conciergeErr: any) {
               console.error(`[WhatsAppManager] PlatformWhatsAppConciergeService error:`, conciergeErr);
+              logSystemError(conciergeErr, {
+                path: 'whatsapp-manager:concierge',
+                method: 'WA_CONCIERGE_ERROR',
+                metadata: { patientPhone, textMessage }
+              });
             }
             continue;
           }
@@ -1184,15 +1203,25 @@ class WhatsAppManager {
                 });
               }
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error(`[WhatsAppManager] Error processing message:`, err);
+            logSystemError(err, {
+              path: 'whatsapp-manager:messages.upsert',
+              method: 'WA_MESSAGE_PROCESSING_ERROR',
+              metadata: { doctorId, remoteJid, textMessage }
+            });
           }
         }
       }
     });
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[WhatsAppManager] Unhandled error during connect for ${doctorId}:`, err);
       this.connectingDoctors.delete(doctorId);
+      logSystemError(err, {
+        path: 'whatsapp-manager:connect',
+        method: 'WA_CONNECTION_ERROR',
+        metadata: { doctorId }
+      });
     }
   }
 
@@ -1213,7 +1242,13 @@ class WhatsAppManager {
   async sendMessage(doctorId: string, phone: string, text: string) {
     const sock = this.sockets.get(doctorId);
     if (!sock || !this.activeConnections.has(doctorId)) {
-      throw new Error("WhatsApp is not connected or device is logged out. Please connect your device in WhatsApp Settings.");
+      const err = new Error("WhatsApp is not connected or device is logged out. Please connect your device in WhatsApp Settings.");
+      logSystemError(err, {
+        path: 'whatsapp-manager:sendMessage',
+        method: 'WA_SEND_FAILED',
+        metadata: { doctorId, phone }
+      });
+      throw err;
     }
     
     const cleanPhone = this.normalizePhone(phone);
@@ -1231,7 +1266,13 @@ class WhatsAppManager {
 
     const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
     if (!sent) {
-      throw new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
+      const err = new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
+      logSystemError(err, {
+        path: 'whatsapp-manager:sendMessage',
+        method: 'WA_SEND_FAILED',
+        metadata: { doctorId, phone: cleanPhone }
+      });
+      throw err;
     }
 
     return cleanPhone; // Return the normalized phone so callers can use it for DB lookups

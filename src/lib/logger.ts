@@ -21,6 +21,13 @@ const ERROR_DICTIONARY: Record<string, string> = {
   // Payment Errors
   RAZORPAY_SIGNATURE_MISMATCH: "Invalid payment signature. Solution: The webhook payload signature did not match the expected secret. Check RAZORPAY_WEBHOOK_SECRET in environment variables.",
   STRIPE_WEBHOOK_FAILED: "Stripe webhook failed. Solution: Check STRIPE_WEBHOOK_SECRET and ensure the endpoint is publicly accessible.",
+
+  // WhatsApp Business & AI Receptionist Errors
+  WA_TERMINAL_AUTH_FAILURE: "WhatsApp authentication failed or session expired. Solution: Clear session in Settings > WhatsApp and re-scan the QR code.",
+  WA_MESSAGE_PROCESSING_ERROR: "WhatsApp incoming message handler crashed. Solution: Check patient message payload, database connectivity, or AI agent configuration.",
+  WA_SEND_FAILED: "WhatsApp outbound message delivery failed. Solution: Verify that the WhatsApp Business phone is online and connected.",
+  WA_CONNECTION_ERROR: "WhatsApp connection error. Solution: Verify internet connection and ensure Baileys multi-file auth credentials on disk are not corrupted.",
+  WA_CONCIERGE_ERROR: "Superadmin WhatsApp concierge bot exception. Solution: Check Google Places API key and audit scan services.",
 };
 
 function determineSolution(errorCode: string | null, errorMessage: string): string {
@@ -29,6 +36,12 @@ function determineSolution(errorCode: string | null, errorMessage: string): stri
   }
 
   // Fallback pattern matching
+  if (errorMessage.includes("WhatsApp") || errorMessage.includes("Baileys")) {
+    if (errorMessage.includes("loggedOut") || errorMessage.includes("badSession") || errorMessage.includes("401") || errorMessage.includes("405")) {
+      return "WhatsApp session logged out or expired. Solution: Scan the QR code in Clinic Settings to reconnect the WhatsApp Business number.";
+    }
+    return "WhatsApp service encountered an issue. Solution: Verify WhatsApp device connection status in Clinic Settings.";
+  }
   if (errorMessage.includes("ECONNREFUSED")) {
     return "Connection refused. Solution: A service you are trying to reach is down or blocking requests. Check database, Redis, or third-party API status.";
   }
