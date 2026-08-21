@@ -512,16 +512,10 @@ class WhatsAppManager {
               where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
             });
 
-            const pkgName = (doctorInfo?.package?.name || "").toUpperCase();
-            const isTrialActive = doctorInfo?.subscriptionExpiry ? new Date(doctorInfo.subscriptionExpiry) > new Date() : false;
-            const isFeatureEnabled = (key: string) => {
-              const feat = doctorInfo?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
-              return feat?.isEnabled ?? false;
-            };
+            // AI Receptionist is enabled by default for all connected clinic numbers unless explicitly turned off
+            const isAutoResponderEnabled = doctorInfo?.enableAIAutoResponder !== false && (agentConfig ? agentConfig.enabled : true);
 
-            const hasAiReceptionistAccess = isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST");
-
-            if (doctorInfo?.enableAIAutoResponder !== false && agentConfig && agentConfig.enabled && hasAiReceptionistAccess) {
+            if (isAutoResponderEnabled) {
               const { AIAgentsService } = await import('@/services/ai-agents.service');
               
               const recentMessages = await prisma.chatMessage.findMany({
@@ -529,6 +523,14 @@ class WhatsAppManager {
                 orderBy: { createdAt: "desc" },
                 take: 10,
               });
+
+              const effectiveConfig = (agentConfig?.config as any) || {
+                mode: "handoff",
+                tone: "warm_receptionist",
+                assistantName: "Riya",
+                servicesOffered: doctorInfo?.specialty ? `${doctorInfo.specialty} Consultation & Treatment` : "General OPD Consultation, Health Checkup",
+                clinicTimings: "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM",
+              };
 
               let aiReply = "";
 
@@ -728,7 +730,7 @@ class WhatsAppManager {
                   doctorId,
                   textMessage,
                   history,
-                  agentConfig.config as any,
+                  effectiveConfig,
                   clinicPhone,
                   {
                     doctorName: doctorInfo?.name || undefined,

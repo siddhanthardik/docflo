@@ -5,13 +5,66 @@ import { memoryCache } from "@/lib/memory-cache";
 // Initialize Gemini (Ensure GEMINI_API_KEY is in .env)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Fallback Model Cascade: Ensures 100% uptime even if a specific model tier experiences high demand (503)
+// Fallback Model Cascade: Ensures maximum uptime across latest Gemini releases
 const CANDIDATE_MODELS = [
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
+  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-flash-latest"
+  "gemini-1.5-flash",
+  "gemini-flash-latest",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash"
 ];
+
+function buildDeterministicReceptionistReply(
+  incomingMessage: string,
+  doctorName: string,
+  clinicName: string,
+  specialty: string,
+  clinicTimings: string,
+  consultationFee: string,
+  servicesOffered: string,
+  assistantName: string,
+  clinicAddress?: string | null,
+  clinicMapsUri?: string | null,
+  clinicPhone?: string
+): string {
+  const textLower = incomingMessage.trim().toLowerCase();
+  const phoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
+    ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
+    : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
+
+  // 1. Greetings (Hi, Hello, Hey, Namaste, Good morning/evening, etc.)
+  if (/^(hi|hello|hey|namaste|pranam|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower === "hi" || textLower === "hello" || textLower === "hl" || textLower === "hii") {
+    return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (Dr. ${doctorName} · ${specialty}).\n\nHow may I help you with an appointment or clinic inquiry today?\n\n${phoneDisclaimer}`;
+  }
+
+  // 2. Appointment Booking / Schedule
+  if (/appointment|book|visit|consult|slot|schedule|timing|available|doctor|kal|aana|milna|today|tomorrow/i.test(textLower)) {
+    return `Dr. ${doctorName} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please reply with your preferred date, time, and patient name.\n\n${phoneDisclaimer}`;
+  }
+
+  // 3. Fee / Price Inquiry
+  if (/fee|charge|cost|price|kitna|rupee|paisa|rate/i.test(textLower)) {
+    const feeText = consultationFee ? `Consultation fee is *₹${consultationFee.replace(/\D/g, '') || consultationFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
+    return `${feeText} for Dr. ${doctorName} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?\n\n${phoneDisclaimer}`;
+  }
+
+  // 4. Address / Location / Directions
+  if (/address|location|kahan|where|directions|map|clinic\s*kaha/i.test(textLower)) {
+    if (clinicAddress) {
+      return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nDr. ${doctorName} is available during OPD hours (${clinicTimings}).\n\n${phoneDisclaimer}`;
+    }
+    return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please call *${clinicPhone || "the clinic"}* directly.\n\n${phoneDisclaimer}`;
+  }
+
+  // 5. Symptom / Health / Treatment inquiry
+  if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment/i.test(textLower)) {
+    return `Thank you for sharing your concern. For proper medical diagnosis and care, we recommend an in-person consultation with Dr. ${doctorName} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?\n\n${phoneDisclaimer}`;
+  }
+
+  // 6. Default Fallback
+  return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with Dr. ${doctorName} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit today or tomorrow?\n\n${phoneDisclaimer}`;
+}
 
 async function generateWithFallback(prompt: string): Promise<string> {
   let lastError: any = null;
@@ -217,11 +270,36 @@ Write your direct, crisp, professional WhatsApp reply to the patient:
 
       return aiReply;
     } catch (error: any) {
-      console.error("Error in Appointment Agent:", error?.message || error);
-      const fallbackPhoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
-        ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
-        : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
-      return `Hello! Thank you for reaching out to our clinic. I am here to assist you with booking an appointment or answering any clinic questions. Would you like to schedule a visit today or tomorrow?\n\n${fallbackPhoneDisclaimer}`;
+      console.error("[AIAgentsService] LLM generation error in Appointment Agent, using intelligent receptionist fallback:", error?.message || error);
+      
+      const doctorName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
+      const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
+      const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
+      const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
+      const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
+      const sundayRule = config?.sundayRule || "Closed";
+      const clinicTimings = config?.clinicTimings || [
+        morningOpd ? `Morning OPD: ${morningOpd}` : "",
+        eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
+        `Sunday: ${sundayRule}`
+      ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
+      const consultationFee = config?.consultationFee || "";
+      const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
+      const assistantName = config?.assistantName || "Riya";
+
+      return buildDeterministicReceptionistReply(
+        incomingMessage,
+        doctorName,
+        clinicName,
+        specialty,
+        clinicTimings,
+        consultationFee,
+        servicesOffered,
+        assistantName,
+        clinicAddress,
+        clinicMapsUri,
+        clinicPhone
+      );
     }
   }
 
