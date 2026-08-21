@@ -40,11 +40,41 @@ function buildDeterministicReceptionistReply(
   clinicAddress?: string | null,
   clinicMapsUri?: string | null,
   clinicPhone?: string,
-  isOngoingChat: boolean = false
+  isOngoingChat: boolean = false,
+  morningOpd?: string,
+  eveningOpd?: string
 ): string {
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
   const docTitle = formatDoctorDisplayName(rawDoctorName);
+
+  // ════ Determine Active OPD Sessions (Morning / Evening / Single session) ═
+  const hasMorning = Boolean(
+    (morningOpd && morningOpd.trim().length > 0 && !/closed|none|na|n\/a/i.test(morningOpd)) ||
+    (/morning/i.test(clinicTimings) && !/morning\s*(opd)?:\s*(closed|none|na)/i.test(clinicTimings))
+  );
+
+  const hasEvening = Boolean(
+    (eveningOpd && eveningOpd.trim().length > 0 && !/closed|none|na|n\/a/i.test(eveningOpd)) ||
+    (/evening/i.test(clinicTimings) && !/evening\s*(opd)?:\s*(closed|none|na)/i.test(clinicTimings))
+  );
+
+  const activeEveningHours = eveningOpd || (clinicTimings.match(/Evening\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
+  const activeMorningHours = morningOpd || (clinicTimings.match(/Morning\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
+
+  let slotPromptEn = "preferred **Date** and **Time**";
+  let slotPromptHi = "**Date (aaj ya kal)** aur **Time**";
+
+  if (hasMorning && hasEvening) {
+    slotPromptEn = "preferred **Date**, and **Morning or Evening session**";
+    slotPromptHi = "**Date (aaj ya kal)** aur **Morning ya Evening time**";
+  } else if (hasEvening) {
+    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Evening OPD (${activeEveningHours || clinicTimings})**`;
+    slotPromptHi = `preferred **Date (aaj ya kal)** for **Evening OPD (${activeEveningHours || clinicTimings})**`;
+  } else if (hasMorning) {
+    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Morning OPD (${activeMorningHours || clinicTimings})**`;
+    slotPromptHi = `preferred **Date (aaj ya kal)** for **Morning OPD (${activeMorningHours || clinicTimings})**`;
+  }
 
   // Script & Dialect Detection
   const hasDevanagari = /[\u0900-\u097F]/.test(text);
@@ -111,7 +141,7 @@ function buildDeterministicReceptionistReply(
   if (isHindiOrHinglish) {
     // 2.1 Late / Traffic / Timing delay / "Mushkil pahuch payenge" / "6:30 ho gya"
     if (/late|delay|pahuch|mushkil|already|traffic|time\s*pe|aaj\s*nahi|nahi\s*ho\s*payega|deir|der|time\s*kam|ruk|wait|paunch|मुश्किल|पहुँच|देर/i.test(textLower) || text.includes("मुश्किल")) {
-      return `Koi baat nahi ji! Agar aaj clinic time pe pahunchne me dikkat ho rahi hai, toh kya main aapka slot **kal (tomorrow)** ke liye book kar doon?\n\nDr. Siddhant kal shaam *${clinicTimings}* tak OPD me uplabdh rahenge.${phoneSuffix}`;
+      return `Koi baat nahi ji! Agar aaj clinic time pe pahunchne me dikkat ho rahi hai, toh kya main aapka slot **kal (tomorrow)** ke liye book kar doon?\n\n${docTitle} kal *${clinicTimings}* OPD me uplabdh rahenge.${phoneSuffix}`;
     }
 
     // 2.2 Address / Location / Directions / "Clinic kaha hai"
@@ -135,7 +165,7 @@ function buildDeterministicReceptionistReply(
 
     // 2.5 Appointment Booking Request / "Appointment chahiye" / "Kal milna hai"
     if (/appointment|book|visit|consult|slot|milna|dikhana|aana|chahiye|booking|apointment|apointmnt|अपॉइंटमेंट|बुक|मिलना|दिखाना|चाहिए|स्लॉट/i.test(textLower) || text.includes("अपॉइंटमेंट") || text.includes("चाहिए")) {
-      return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam**, **Date (aaj ya kal)** aur **Morning ya Evening session** share karein. Main turant confirm kar dungi!${phoneSuffix}`;
+      return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam** aur ${slotPromptHi} share karein. Main turant confirm kar dungi!${phoneSuffix}`;
     }
 
     // 2.6 Tomorrow / Specific Date / Kal preference
@@ -158,7 +188,7 @@ function buildDeterministicReceptionistReply(
       return `Ji! Kya aap ${docTitle} ke sath **aaj** ya **kal** ke liye appointment slot book karna chahenge? Kripya apna naam aur samay batayein.${phoneSuffix}`;
     }
 
-    return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
+    return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se बोल रही हूँ। क्या आप आज या कल के लिए अपॉइंटमेंट बुक करना चाहेंगे?${phoneSuffix}`;
   }
 
   // ════ 3. ENGLISH (Professional, Warm & Human) ════════════════════════════
@@ -174,7 +204,7 @@ function buildDeterministicReceptionistReply(
 
   // 3.3 Appointment Booking / Schedule
   if (/appointment|book|visit|consult|slot|schedule|available|doctor|reserve/i.test(textLower)) {
-    return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name**, preferred **Date**, and **Morning or Evening session**. I will be happy to confirm it for you!${phoneSuffix}`;
+    return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name** and your ${slotPromptEn}. I will be happy to confirm it for you!${phoneSuffix}`;
   }
 
   // 3.4 Fees & Pricing
@@ -389,7 +419,9 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
         clinicAddress,
         clinicMapsUri,
         clinicPhone,
-        isOngoingChat
+        isOngoingChat,
+        morningOpd,
+        eveningOpd
       );
     }
   }
