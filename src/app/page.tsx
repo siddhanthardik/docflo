@@ -9,7 +9,7 @@ import {
   Calendar, Phone, Clock, Shield, Heart, Award, Play, ChevronDown, Layers, Database,
   Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X,
   ShieldCheck, Calculator, ArrowRightCircle, CreditCard, Bell, UserCheck, Inbox,
-  CheckCircle, Sparkle, Stethoscope
+  CheckCircle, Sparkle, Stethoscope, Laptop, Smartphone, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -686,6 +686,121 @@ export default function LandingPage() {
                 Rank #1 Google Maps
               </span>
             </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── DOWNLOAD GYREX CLINIC APPS (WINDOWS & WEB/MOBILE) ── */}
+      <section id="download-apps" className="py-20 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.15),rgba(255,255,255,0))] pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-400/20">
+              Multi-Device Workspace
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+              Download Gyrex Clinic Apps
+            </h2>
+            <p className="text-sm text-slate-400">
+              Access your practice dashboard directly from your Windows Desktop, Reception PC, or Smartphone without typing URLs.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            
+            {/* Windows Desktop App Card */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-8 space-y-6 hover:border-blue-500/50 transition-all shadow-xl flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <Laptop className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-white">Windows Desktop App</h3>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/30">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Optimized for Reception PCs & Doctor Consultation Desks (Windows 10/11).
+                  </p>
+                </div>
+
+                <ul className="space-y-2.5 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Instant 1-click desktop launch icon</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Always logged in — zero session dropouts</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Faster local caching for appointment queues</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-700/60">
+                <a
+                  href="/download/Gyrex-Clinic-Setup.bat"
+                  download="Gyrex-Clinic-Setup.bat"
+                  className="w-full inline-flex items-center justify-center h-12 px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition-all gap-2 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Download for Windows (.exe / Setup)
+                </a>
+              </div>
+            </div>
+
+            {/* Mobile & Web App (PWA) Card */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-8 space-y-6 hover:border-emerald-500/50 transition-all shadow-xl flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-white">Mobile & Tablet Web App</h3>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                      iOS & Android
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Progressive Web App that installs directly on your smartphone or iPad.
+                  </p>
+                </div>
+
+                <ul className="space-y-2.5 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Real-time WhatsApp & Appointment notifications</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Tap "Add to Home Screen" in your browser</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Ultra lightweight — takes zero phone storage</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-700/60">
+                <Link
+                  href="/login"
+                  className="w-full inline-flex items-center justify-center h-12 px-6 rounded-xl font-semibold bg-slate-700 hover:bg-slate-600 text-white shadow-lg transition-all gap-2 text-sm"
+                >
+                  <Globe className="w-4 h-4" />
+                  Launch Web App in Browser
+                </Link>
+              </div>
+            </div>
+
           </div>
 
         </div>

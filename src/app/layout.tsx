@@ -3,7 +3,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import Providers from "@/components/providers";
-import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import Script from "next/script";
 
 import { FloatingWhatsAppWidget } from "@/components/floating-whatsapp-widget";
@@ -76,7 +75,6 @@ export default function RootLayout({
         </noscript>
 
         <Providers>
-          <PwaInstallBanner />
           {children}
           <FloatingWhatsAppWidget />
           <Toaster />

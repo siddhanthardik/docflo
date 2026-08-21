@@ -22,6 +22,7 @@ export function Footer() {
               <li><Link href="/#data-architecture" className="hover:text-white transition">Data Architecture</Link></li>
               <li><Link href="/#features" className="hover:text-white transition">Core Modules</Link></li>
               <li><Link href="/local-seo/free-audit" className="hover:text-white transition">Free Audit Tool</Link></li>
+              <li><Link href="/#download-apps" className="hover:text-cyan-400 font-medium transition">Download Apps (Windows & Mobile)</Link></li>
             </ul>
           </div>
 

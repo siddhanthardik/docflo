@@ -24,7 +24,8 @@ import {
   MessageSquare,
   TrendingUp,
   ShieldAlert,
-  PanelLeft
+  PanelLeft,
+  Download
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
@@ -148,8 +149,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Anchored Bottom Footer: Settings & Sign Out */}
+      {/* Anchored Bottom Footer: Download App, Settings & Sign Out */}
       <div className="p-2 border-t border-slate-100 bg-slate-50/50 space-y-0.5 shrink-0">
+        <a
+          href="/download/Gyrex-Clinic-Setup.bat"
+          download="Gyrex-Clinic-Setup.bat"
+          className={cn(
+            "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-600 hover:bg-white hover:text-blue-600 border border-transparent hover:border-slate-200 transition-all duration-150",
+            isCollapsed ? "justify-center" : "gap-3"
+          )}
+          title="Download Desktop App"
+        >
+          <Download className="h-4 w-4 shrink-0 text-slate-400" />
+          {!isCollapsed && <span>Download App</span>}
+        </a>
+
         <Link
           href="/settings"
           className={cn(

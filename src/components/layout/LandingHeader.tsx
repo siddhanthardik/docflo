@@ -26,6 +26,7 @@ export function LandingHeader() {
               { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
               { label: "Patient Management", href: "/#patient-management" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
+              { label: "Download Apps", href: "/#download-apps" },
             ].map((item) => (
               <Link
                 key={item.label}
@@ -79,6 +80,7 @@ export function LandingHeader() {
               { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
               { label: "Patient Management", href: "/#patient-management" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
+              { label: "Download Apps", href: "/#download-apps" },
             ].map((item) => (
               <Link
                 key={item.label}
