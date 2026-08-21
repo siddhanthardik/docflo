@@ -516,28 +516,27 @@ class WhatsAppManager {
 
             // ── 14-Day Free Trial & Package Subscription Access Control ────────
             const now = new Date();
-            
-            // 1. Free 14-Day Trial: active if doctor signed up within the last 14 days OR has unexpired trial subscriptionExpiry
+            const pkgName = (doctorInfo?.package?.name || "").toUpperCase();
+            const hasExplicitExpiry = Boolean(doctorInfo?.subscriptionExpiry);
+            const isExpiryInFuture = doctorInfo?.subscriptionExpiry ? new Date(doctorInfo.subscriptionExpiry) > now : false;
+
+            // 1. Paid Package Upgrade: Active if doctor has an assigned paid plan (Starter, Growth, Premium, Enterprise)
+            // and status is not CANCELED, and expiry (if explicitly set) has not passed.
+            const hasPaidPackage = Boolean(
+              doctorInfo?.package && 
+              !pkgName.includes("FREE") && 
+              doctorInfo?.subscriptionStatus !== "CANCELED" &&
+              (!hasExplicitExpiry || isExpiryInFuture)
+            );
+
+            // 2. Free 14-Day Trial: Active if doctor signed up within the last 14 days OR has an active trial expiry
             const isWithin14DaysOfSignup = doctorInfo?.createdAt 
               ? (now.getTime() - new Date(doctorInfo.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000)
               : false;
 
-            const hasActiveSubscriptionExpiry = doctorInfo?.subscriptionExpiry 
-              ? new Date(doctorInfo.subscriptionExpiry) > now 
-              : false;
+            const isTrialActive = isWithin14DaysOfSignup || (hasExplicitExpiry && isExpiryInFuture);
 
-            const isTrialActive = isWithin14DaysOfSignup || hasActiveSubscriptionExpiry;
-
-            // 2. Paid Package Upgrade Check:
-            const pkgName = (doctorInfo?.package?.name || "").toUpperCase();
-            const hasPaidPackage = Boolean(
-              doctorInfo?.package && 
-              !pkgName.includes("FREE") && 
-              doctorInfo?.subscriptionStatus === "ACTIVE" && 
-              hasActiveSubscriptionExpiry
-            );
-
-            const hasAiReceptionistAccess = isTrialActive || hasPaidPackage;
+            const hasAiReceptionistAccess = hasPaidPackage || isTrialActive;
 
             if (!hasAiReceptionistAccess) {
               console.log(`[WhatsAppManager] 14-day trial expired for doctor ${doctorId}. AI Receptionist is paused until package upgrade.`);
