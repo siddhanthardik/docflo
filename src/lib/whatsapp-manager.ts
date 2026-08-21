@@ -5,6 +5,7 @@ import * as path from 'path';
 import { prisma } from '@/lib/prisma';
 import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-concierge.service';
+import { formatDoctorDisplayName } from '@/services/ai-agents.service';
 
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
@@ -629,12 +630,12 @@ class WhatsAppManager {
                           data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
 
-                        const docName = doctorInfo?.name || 'the Doctor';
+                        const docName = formatDoctorDisplayName(doctorInfo?.name);
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                         const patientJid = `${phoneDigits}@s.whatsapp.net`;
                         await sock.sendMessage(patientJid, {
-                          text: `Hi ${newPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                          text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                         });
 
                         const confirmMsg = `Done, Doctor! I have created a new patient profile for *${patientName}* and booked their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
@@ -679,13 +680,13 @@ class WhatsAppManager {
                            data: { patientId: selectedPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                          });
 
-                         const docName = doctorInfo?.name || 'the Doctor';
+                         const docName = formatDoctorDisplayName(doctorInfo?.name);
                          const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                          const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                          if (selectedPatient.phone) {
                            const patientJid = `${selectedPatient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
                            await sock.sendMessage(patientJid, {
-                             text: `Hi ${selectedPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                             text: `Hi ${selectedPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                            });
                          }
                          const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
@@ -726,12 +727,12 @@ class WhatsAppManager {
                         await prisma.appointment.create({
                           data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
-                        const docName = doctorInfo?.name || 'the Doctor';
+                        const docName = formatDoctorDisplayName(doctorInfo?.name);
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                         const patientJid = `${phoneDigits4}@s.whatsapp.net`;
                         await sock.sendMessage(patientJid, {
-                          text: `Hi ${newPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                          text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                         });
                         const confirmMsg = `Done, Doctor! I have created a new profile for *${patientName}* (Phone: ${phoneDigits4}) and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
@@ -819,8 +820,8 @@ class WhatsAppManager {
                        // Notify patient via WhatsApp
                        if (apt.patient?.phone) {
                          const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                         const docName = doctorInfo?.name || "the doctor";
-                         const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because Dr. ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
+                         const docName = formatDoctorDisplayName(doctorInfo?.name);
+                         const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
                          await sock.sendMessage(patientJid, { text: msg });
                          console.log(`[WhatsAppManager] Sent cancellation to ${patientJid}`);
                        }
@@ -988,11 +989,11 @@ class WhatsAppManager {
                       await prisma.appointment.create({
                         data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
-                      const docName = doctorInfo?.name || 'the Doctor';
+                      const docName = formatDoctorDisplayName(doctorInfo?.name);
                       const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                       const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                       await sock.sendMessage(`${prefilledPhone}@s.whatsapp.net`, {
-                        text: `Hi ${newPatient.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                        text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                       });
                       finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                     } else {
@@ -1019,11 +1020,11 @@ class WhatsAppManager {
                         });
                         if (pt.phone) {
                           const patientJid = `${pt.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                          const docName = doctorInfo?.name || 'the Doctor';
+                          const docName = formatDoctorDisplayName(doctorInfo?.name);
                           const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                           const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                           await sock.sendMessage(patientJid, {
-                            text: `Hi ${pt.firstName}, your appointment with Dr. ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                            text: `Hi ${pt.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
                           });
                           finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
                         }

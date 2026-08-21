@@ -15,9 +15,22 @@ const CANDIDATE_MODELS = [
   "gemini-3.5-flash"
 ];
 
+// Clean and format doctor display name without repetitive "Dr." prefixes
+export function formatDoctorDisplayName(rawName?: string): string {
+  if (!rawName || rawName.trim() === "" || rawName.toLowerCase() === "doctor") {
+    return "the Doctor";
+  }
+  // Strip all leading "Dr.", "Dr", "Doctor", "Dr. Dr" case-insensitively
+  let clean = rawName.trim();
+  while (/^(dr\.?|doctor)\s+/i.test(clean)) {
+    clean = clean.replace(/^(dr\.?|doctor)\s+/i, "").trim();
+  }
+  return clean ? `Dr. ${clean}` : "the Doctor";
+}
+
 function buildDeterministicReceptionistReply(
   incomingMessage: string,
-  doctorName: string,
+  rawDoctorName: string,
   clinicName: string,
   specialty: string,
   clinicTimings: string,
@@ -28,42 +41,107 @@ function buildDeterministicReceptionistReply(
   clinicMapsUri?: string | null,
   clinicPhone?: string
 ): string {
-  const textLower = incomingMessage.trim().toLowerCase();
-  const phoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
-    ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
-    : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
+  const text = incomingMessage.trim();
+  const textLower = text.toLowerCase();
+  const docTitle = formatDoctorDisplayName(rawDoctorName);
 
-  // 1. Greetings (Hi, Hello, Hey, Namaste, Good morning/evening, etc.)
-  if (/^(hi|hello|hey|namaste|pranam|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower === "hi" || textLower === "hello" || textLower === "hl" || textLower === "hii") {
-    return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (Dr. ${doctorName} · ${specialty}).\n\nHow may I help you with an appointment or clinic inquiry today?\n\n${phoneDisclaimer}`;
-  }
+  // Language Detection
+  const isHindiScript = /[\u0900-\u097F]/.test(text);
+  const isHinglish = !isHindiScript && /\b(kya|kab|kahan|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees)\b/i.test(textLower);
+  
+  // User explicitly asking for phone / human call
+  const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
+  const phoneSuffix = (wantsCallOrHuman && clinicPhone && clinicPhone.trim().length > 3)
+    ? `\n\n📞 Aap direct clinic reception par *${clinicPhone.trim()}* par bhi call kar sakte hain.`
+    : (wantsCallOrHuman && clinicPhone)
+    ? `\n\n📞 You can also reach our clinic reception directly at *${clinicPhone.trim()}*.`
+    : "";
 
-  // 2. Appointment Booking / Schedule
-  if (/appointment|book|visit|consult|slot|schedule|timing|available|doctor|kal|aana|milna|today|tomorrow/i.test(textLower)) {
-    return `Dr. ${doctorName} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please reply with your preferred date, time, and patient name.\n\n${phoneDisclaimer}`;
-  }
+  // Clean fee string
+  const cleanFee = consultationFee ? consultationFee.replace(/[^\d.,]/g, '').trim() : "";
 
-  // 3. Fee / Price Inquiry
-  if (/fee|charge|cost|price|kitna|rupee|paisa|rate/i.test(textLower)) {
-    const feeText = consultationFee ? `Consultation fee is *₹${consultationFee.replace(/\D/g, '') || consultationFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
-    return `${feeText} for Dr. ${doctorName} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?\n\n${phoneDisclaimer}`;
-  }
-
-  // 4. Address / Location / Directions
-  if (/address|location|kahan|where|directions|map|clinic\s*kaha/i.test(textLower)) {
-    if (clinicAddress) {
-      return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nDr. ${doctorName} is available during OPD hours (${clinicTimings}).\n\n${phoneDisclaimer}`;
+  // ════ 1. HINDI SCRIPT (हिंदी) ══════════════════════════════════════════════
+  if (isHindiScript) {
+    if (/^(नमस्ते|प्रणाम|हेलो|हाय|हैलो)/.test(text) || text.length <= 4) {
+      return `नमस्ते! 🙏 मैं ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) से बोल रही हूँ।\n\nमैं आज अपॉइंटमेंट या क्लिनिक जानकारी में आपकी किस प्रकार सहायता कर सकती हूँ?${phoneSuffix}`;
     }
-    return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please call *${clinicPhone || "the clinic"}* directly.\n\n${phoneDisclaimer}`;
+    if (/अपॉइंटमेंट|बुक|मिलना|समय|टाइम|उपलब्ध|दिखाना|कल|आज/.test(text)) {
+      return `${docTitle} क्लिनिक में परामर्श (OPD) के लिए उपलब्ध हैं:\n🕒 *${clinicTimings}*\n\nक्या आप *आज* या *कल* के लिए अपॉइंटमेंट बुक करना चाहेंगे? कृपया अपना नाम और पसंदीदा समय बताएं।${phoneSuffix}`;
+    }
+    if (/फीस|शुल्क|खर्च|चार्ज|रुपये/.test(text)) {
+      const feeText = cleanFee ? `परामर्श शुल्क *₹${cleanFee}* है` : "परामर्श शुल्क की जानकारी क्लिनिक पर दी जाती है";
+      return `${docTitle} (${specialty}) का ${feeText}।\n\nक्या आप आज या कल के लिए परामर्श स्लॉट बुक करना चाहेंगे?${phoneSuffix}`;
+    }
+    if (/पता|कहाँ|लोकेशन|एड्रेस|दिशा|रास्ता/.test(text)) {
+      if (clinicAddress) {
+        return `हमारे क्लिनिक का पता:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD समय: *${clinicTimings}*\nक्या आप आज या कल आना चाहेंगे?${phoneSuffix}`;
+      }
+      return `हमारा क्लिनिक *${clinicName}* में स्थित है। सटीक पते के लिए कृपया क्लिनिक पर संपर्क करें।${phoneSuffix}`;
+    }
+    return `नमस्ते! *${clinicName}* में संपर्क करने के लिए धन्यवाद। मैं ${assistantName}, ${docTitle} (${specialty}) के साथ अपॉइंटमेंट बुक करने या क्लिनिक जानकारी के लिए उपलब्ध हूँ। क्या आप आज या कल का स्लॉट बुक करना चाहेंगे?${phoneSuffix}`;
   }
 
-  // 5. Symptom / Health / Treatment inquiry
-  if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment/i.test(textLower)) {
-    return `Thank you for sharing your concern. For proper medical diagnosis and care, we recommend an in-person consultation with Dr. ${doctorName} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?\n\n${phoneDisclaimer}`;
+  // ════ 2. HINGLISH ══════════════════════════════════════════════════════════
+  if (isHinglish) {
+    if (/^(hi|hello|hey|namaste|pranam|hlo|helo|hii+)\b/i.test(textLower) || textLower.length <= 4) {
+      return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon.\n\nMain aapki appointment ya clinic se judi kis jankari me madad kar sakti hoon?${phoneSuffix}`;
+    }
+    if (/timing|samay|kab|time|opd|hours|khula|schedule/i.test(textLower)) {
+      return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
+    }
+    if (/appointment|book|visit|consult|slot|milna|dikhana|aana/i.test(textLower)) {
+      return `${docTitle} (${specialty}) clinic me uplabdh hain:\n🕒 *${clinicTimings}*\n\nAppointment ke liye kripya apna **Naam**, **Date** aur **Morning ya Evening time** share karein. Main turant slot confirm kar dungi!${phoneSuffix}`;
+    }
+    if (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate/i.test(textLower)) {
+      const feeText = cleanFee ? `Consultation fees *₹${cleanFee}* hai` : "Consultation fees ki details clinic par consultation ke samay di jaati hain";
+      return `${docTitle} (${specialty}) ki ${feeText}.\n\nKya aap aaj ya kal ke liye slot book karna chahenge?${phoneSuffix}`;
+    }
+    if (/address|location|kahan|kaha|rasta|directions|map/i.test(textLower)) {
+      if (clinicAddress) {
+        return `Clinic ka address hai:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${clinicTimings}*\nKya aap aaj visit plan kar rahe hain?${phoneSuffix}`;
+      }
+      return `Hamara clinic *${clinicName}* par sthit hai. Exact address aur landmarks ke liye aap clinic reception par call kar sakte hain.${phoneSuffix}`;
+    }
+    return `Hello ji! *${clinicName}* me sampark karne ke liye dhanyawad. Main ${assistantName}, ${docTitle} (${specialty}) ke sath appointment book karne ke liye yahan hoon. Kya aap aaj ya kal visit karna chahenge?${phoneSuffix}`;
   }
 
-  // 6. Default Fallback
-  return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with Dr. ${doctorName} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit today or tomorrow?\n\n${phoneDisclaimer}`;
+  // ════ 3. ENGLISH (Professional, Warm & Human) ════════════════════════════
+  // 3.1. Greetings (Hi, Hello, Good morning, etc.)
+  if (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower === "hi" || textLower === "hello" || textLower === "hl" || textLower === "hii") {
+    return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}).\n\nHow may I assist you with an appointment or clinic inquiry today?${phoneSuffix}`;
+  }
+
+  // 3.2. Timings & OPD Hours
+  if (/timing|hours|schedule|time|open|when\s*is|opd/i.test(textLower)) {
+    return `${docTitle} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please share your preferred time and patient name.${phoneSuffix}`;
+  }
+
+  // 3.3. Appointment Booking / Schedule
+  if (/appointment|book|visit|consult|slot|schedule|available|doctor|reserve/i.test(textLower)) {
+    return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with your **Full Name**, preferred **Date**, and **Morning or Evening session**. I will be happy to confirm it for you!${phoneSuffix}`;
+  }
+
+  // 3.4. Fees & Pricing
+  if (/fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
+    const feeText = cleanFee ? `Consultation fee is *₹${cleanFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
+    return `${feeText} for ${docTitle} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?${phoneSuffix}`;
+  }
+
+  // 3.5. Address, Location & Directions
+  if (/address|location|where|directions|map|how\s*to\s*reach|find/i.test(textLower)) {
+    if (clinicAddress) {
+      return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\n${docTitle} is available during OPD hours (${clinicTimings}).\n\nWould you like to schedule a visit?${phoneSuffix}`;
+    }
+    return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please feel free to call our reception.${phoneSuffix}`;
+  }
+
+  // 3.6. Symptoms / Health Concern
+  if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment|sick|ill/i.test(textLower)) {
+    return `Thank you for sharing your concern. For proper clinical assessment and personalized care, we recommend an in-person OPD consultation with ${docTitle} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?${phoneSuffix}`;
+  }
+
+  // 3.7. Default Warm Fallback
+  return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
 }
 
 async function generateWithFallback(prompt: string): Promise<string> {
@@ -102,44 +180,38 @@ export class AIAgentsService {
     clinicAddress?: string | null,
     clinicMapsUri?: string | null
   ) {
+    const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
+    const doctorName = formatDoctorDisplayName(rawDocName);
+    const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "the Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
+    const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
+
+    // OPD Schedule Configuration
+    const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
+    const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
+    const sundayRule = config?.sundayRule || "Closed";
+    const clinicTimings = config?.clinicTimings || [
+      morningOpd ? `Morning OPD: ${morningOpd}` : "",
+      eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
+      `Sunday: ${sundayRule}`
+    ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
+
+    // Fees & Policy Configuration
+    const consultationFee = config?.consultationFee || "";
+    const followUpFee = config?.followUpFee || "";
+    const followUpDays = config?.followUpDays || "7 days";
+    const advanceBookingNotice = config?.advanceBookingNotice || "Same day booking allowed";
+    
+    // Services & Vaccination List
+    const vaccinationsList = config?.vaccinationsList || "BCG, Polio, Hepatitis B, DTP, Rotavirus, MMR, Flu Shot";
+    const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
+
+    // Persona & Language
+    const assistantName = config?.assistantName || "Riya";
+    const customRules = config?.trainingPrompt || config?.customRules || "";
+    const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
+
     try {
-      const mode = config?.mode || "handoff";
-      const tone = config?.tone || "warm_receptionist";
-      const customRules = config?.trainingPrompt || config?.customRules || "";
-      const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
-      
-      const doctorName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
-      const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
-      const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
-
-      // OPD Schedule Configuration
-      const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
-      const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
-      const sundayRule = config?.sundayRule || "Closed";
-      const clinicTimings = config?.clinicTimings || [
-        morningOpd ? `Morning OPD: ${morningOpd}` : "",
-        eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
-        `Sunday: ${sundayRule}`
-      ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
-
-      // Fees & Policy Configuration
-      const consultationFee = config?.consultationFee || "";
-      const followUpFee = config?.followUpFee || "";
-      const followUpDays = config?.followUpDays || "7 days";
-      const advanceBookingNotice = config?.advanceBookingNotice || "Same day booking allowed";
-      
-      // Services & Vaccination List
-      const vaccinationsList = config?.vaccinationsList || "BCG, Polio, Hepatitis B, DTP, Rotavirus, MMR, Flu Shot";
-      const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
-
-      // Persona & Language
-      const assistantName = config?.assistantName || "Riya";
-
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
-
-      const phoneDisclaimer = clinicPhone && clinicPhone.trim().length > 3
-        ? `(I am the clinic's AI assistant. To speak with human please call directly on ${clinicPhone.trim()})`
-        : `(I am the clinic's AI assistant. To speak with human staff, please call the clinic directly)`;
 
       // Emergency Trigger Check
       const lowerMsg = incomingMessage.toLowerCase();
@@ -147,7 +219,7 @@ export class AIAgentsService {
       const isEmergency = triggers.some((t: string) => lowerMsg.includes(t));
 
       if (isEmergency) {
-        return `⚠️ *Emergency Alert*: If you are experiencing a medical emergency, severe bleeding, or chest pain, please call emergency services immediately or visit the nearest emergency room.\n\n${phoneDisclaimer}`;
+        return `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency medical services.`;
       }
 
       const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -182,61 +254,36 @@ SERVICES & VACCINATION:
 ${isPediatrician ? `- Available Pediatric Vaccinations: ${vaccinationsList}` : ""}
 ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 
-CRITICAL RECEPTONIST INSTRUCTIONS (STRICTLY ENFORCED):
-1. **GREETING & INTRODUCTION**:
-   - Introduce yourself as ${assistantName}, receptionist at ${clinicName} on the FIRST greeting. In active back-and-forth conversations, keep your tone natural without re-introducing yourself.
+CRITICAL RECEPTIONIST INSTRUCTIONS:
+1. **NATURAL, WARM & EMPATHETIC TONE**:
+   - Write like a real, polite clinic receptionist on WhatsApp.
+   - NEVER include robotic disclaimers like "(I am the clinic's AI assistant...)" or template disclaimers.
+   - Do NOT duplicate titles (always refer to the doctor as "${doctorName}").
 
-2. **HANDLE PATIENT SYMPTOMS & HEALTH QUESTIONS (e.g. "I have fever what should I do?")**:
-   - If the patient describes symptoms (fever, cough, pain, stomach ache, rash):
+2. **AUTOMATIC LANGUAGE ADAPTATION (ENGLISH / HINGLISH / HINDI)**:
+   - Match the patient's language naturally:
+     * If the patient writes in Hindi/Devanagari ("नमस्ते", "अपॉइंटमेंट चाहिए", "फीस कितनी है"), respond in polite, warm Hindi.
+     * If the patient writes in Hinglish ("timing kya hai", "fees kitni hai", "appointment book karna hai"), respond in natural, polite Hinglish ("Namaste ji! ${doctorName} clinic me OPD consultation ke liye uplabdh hain...").
+     * If the patient writes in English, respond in warm, professional English.
+
+3. **HANDLE PATIENT SYMPTOMS & HEALTH QUESTIONS**:
+   - If the patient describes symptoms (fever, cough, pain, rash, weakness):
      * Acknowledge warmly and empathetically.
-     * State that as a receptionist, you recommend an in-person OPD consultation with Dr. ${doctorName} for proper diagnosis.
-     * Check OPD timings (${clinicTimings}) and offer an immediate OPD consultation slot for today or tomorrow!
+     * Recommend an in-person OPD consultation with ${doctorName} for proper evaluation.
+     * Offer available OPD slots (${clinicTimings}).
 
-3. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
-   - BEFORE offering morning or evening slots to a patient, YOU MUST CHECK the doctor's actual OPD hours.
-   - IF Morning OPD is NOT available (e.g. morning OPD is closed/not configured), DO NOT OFFER MORNING SLOTS. Inform the patient politely: "Dr. ${doctorName} is available for clinic OPD in the Evening from ${eveningOpd || clinicTimings}. Would you like to reserve an evening slot for today or tomorrow?"
-   - IF Evening OPD is NOT available, offer Morning slots ONLY.
-   - IF both Morning & Evening OPD are open, offer both!
-
-4. **AUTOMATIC LANGUAGE MATCHING (ENGLISH / HINGLISH / HINDI / AUTO)**:
-   - AUTOMATICALLY DETECT AND ADAPT TO THE PATIENT'S INPUT LANGUAGE:
-     * If the patient writes in Hinglish (mix of Hindi & English e.g. "appointment chahiye", "kal aana hai", "fees kitni hai"), respond in warm, natural Hinglish using polite terms like "Ji", "Namaste", "Ji bilkul".
-     * If the patient writes in Hindi ("मुझे अपॉइंटमेंट चाहिए"), respond in polite Hindi.
-     * If the patient writes in English, respond in warm, polite English.
+4. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
+   - Only offer slots during active OPD hours (${clinicTimings}).
+   - If Morning OPD is not available, offer Evening slots only.
 
 5. **APPOINTMENT BOOKING FLOW**:
-   - When patient requests to book an appointment or replies YES (e.g. "need appointment", "Yes", "want to visit tomorrow", "is slot available"):
-     * Check OPD timings first as instructed above.
-     * Ask for their preferred Date and Session (Morning or Evening).
-   - Once they select a Date, Session, and provide their Full Name to reserve the slot, you MUST confirm the booking.
-   - When confirming the booking, you MUST append this exact secret tag at the very end of your message: [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name]
-   - Example tag: [BOOK_APPOINTMENT: 2026-08-05, Morning, Rahul Kumar]
+   - To book an appointment, ask for their preferred **Date**, **Morning/Evening session**, and **Patient Full Name**.
+   - Once they provide these details to confirm the booking, append this exact tag at the very end of your confirmation message:
+     [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name]
 
-6. **STRICT VACCINATION RULE**:
-   - IF the patient asks about vaccinations ("is vaccine available", "vaccination", "flu shot"):
-     * IF this clinic is a Pediatrician / Child Care Clinic (${isPediatrician ? "YES" : "NO"}):
-       Confirm vaccination availability during OPD hours (${clinicTimings}). List vaccines if asked (${vaccinationsList}) and invite them to schedule a vaccination visit.
-     * IF this clinic is NOT a Pediatrician (e.g. Dermatologist, Gynecologist, Orthopedic, Dental):
-       State politely: "Our clinic specializes in ${specialty} and does not offer pediatric vaccinations. We recommend consulting a pediatrician for child vaccines."
-
-7. **TONE & FORMATTING**:
-   - Keep responses to 2 to 4 crisp WhatsApp sentences max.
-   - Use clean formatting (*bold* key details).
-   - NEVER output robotic template text like "We have received your message and a staff member will get back to you".
-
-8. **STRICT ANTI-HALLUCINATION & SAFETY RULE**:
-   - You MUST NOT invent, guess, or hallucinate any clinic services, prices, medical advice, doctor availability, or policies that are not explicitly provided in this system prompt. 
-   - DO NOT give medical advice or diagnose patients under any circumstances.
-   - If a patient asks a question you do not know the answer to (or if the information is missing from the config), politely state that you do not have that information and invite them to call the clinic directly to speak with human staff.
-
-9. **CLINIC LOCATION & DIRECTIONS**:
-${locationBlock
-  ? `   - When a patient asks for the clinic address, location, or how to reach the clinic, share the following:
-     Address: *${clinicAddress}*${clinicMapsUri ? `\n     Google Maps: ${clinicMapsUri}` : ''}
-   - Always include the Maps link so patients can navigate directly.
-   - NEVER say "I don't have the address" — you have the full address above. Use it.`
-  : `   - If a patient asks for the clinic address or directions, let them know warmly that our team is still updating location details on the system, and invite them to call *${clinicPhone || 'the clinic'}* directly for the exact address and directions.`
-}
+6. **HUMAN STAFF / PHONE INQUIRIES**:
+   - If the patient explicitly asks to speak to human staff or asks for a phone number:
+     * Share the clinic phone number warmly: "${clinicPhone ? `You can also call our clinic directly at ${clinicPhone}.` : ''}"
       `;
 
       const prompt = `
@@ -248,45 +295,23 @@ ${conversationHistory.join("\n")}
 
 Patient's New Message: "${incomingMessage}"
 
-Write your direct, crisp, professional WhatsApp reply to the patient:
+Write your direct, crisp, natural WhatsApp reply to the patient:
       `;
 
       let aiReply = await generateWithFallback(prompt);
 
-      // Clean up legacy disclaimers
+      // Clean up any stray legacy disclaimers or repetitive prefixes
       aiReply = aiReply
         .replace(/\(I am the clinic's AI assistant.*?\)/gi, "")
         .replace(/Our consultations are 30 minutes in duration\.?/gi, "")
         .replace(/30-minute consultation/gi, "consultation")
+        .replace(/Dr\.\s+Dr\.?/gi, "Dr.")
         .trim();
-
-      // Smart disclaimer logic: Only append on initial greeting or when patient explicitly asks for phone/contact/human
-      const hasAlreadyGreeted = conversationHistory.some(msg => msg.startsWith("Clinic:"));
-      const wantsContact = /human|speak|call|phone|number|contact|talk/i.test(incomingMessage);
-
-      if (!hasAlreadyGreeted || wantsContact) {
-        aiReply += `\n\n${phoneDisclaimer}`;
-      }
 
       return aiReply;
     } catch (error: any) {
       console.error("[AIAgentsService] LLM generation error in Appointment Agent, using intelligent receptionist fallback:", error?.message || error);
       
-      const doctorName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
-      const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
-      const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
-      const morningOpd = config?.morningOpdHours || config?.morningOpd || "";
-      const eveningOpd = config?.eveningOpdHours || config?.eveningOpd || "";
-      const sundayRule = config?.sundayRule || "Closed";
-      const clinicTimings = config?.clinicTimings || [
-        morningOpd ? `Morning OPD: ${morningOpd}` : "",
-        eveningOpd ? `Evening OPD: ${eveningOpd}` : "",
-        `Sunday: ${sundayRule}`
-      ].filter(Boolean).join(" | ") || "Mon-Sat: 10:00 AM - 1:30 PM & 5:00 PM - 8:30 PM";
-      const consultationFee = config?.consultationFee || "";
-      const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
-      const assistantName = config?.assistantName || "Riya";
-
       return buildDeterministicReceptionistReply(
         incomingMessage,
         doctorName,
