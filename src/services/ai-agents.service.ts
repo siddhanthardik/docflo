@@ -39,14 +39,15 @@ function buildDeterministicReceptionistReply(
   assistantName: string,
   clinicAddress?: string | null,
   clinicMapsUri?: string | null,
-  clinicPhone?: string
+  clinicPhone?: string,
+  isOngoingChat: boolean = false
 ): string {
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
   const docTitle = formatDoctorDisplayName(rawDoctorName);
 
-  // ════ Indian Language Script Detection ═══════════════════════════════════
-  const isDevanagari = /[\u0900-\u097F]/.test(text); // Hindi / Marathi
+  // Script & Dialect Detection
+  const hasDevanagari = /[\u0900-\u097F]/.test(text);
   const isTamil = /[\u0B80-\u0BFF]/.test(text);
   const isTelugu = /[\u0C00-\u0C7F]/.test(text);
   const isKannada = /[\u0C80-\u0CFF]/.test(text);
@@ -55,9 +56,8 @@ function buildDeterministicReceptionistReply(
   const isGujarati = /[\u0A80-\u0AFF]/.test(text);
   const isPunjabi = /[\u0A00-\u0A7F]/.test(text);
 
-  const isHinglish = !isDevanagari && !isTamil && !isTelugu && !isKannada && !isMalayalam && !isBengali && !isGujarati && !isPunjabi &&
-    /\b(kya|kab|kahan|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees)\b/i.test(textLower);
-  
+  const isHindiOrHinglish = hasDevanagari || /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower);
+
   // User explicitly asking for phone / human call
   const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
   const phoneSuffix = (wantsCallOrHuman && clinicPhone && clinicPhone.trim().length > 3)
@@ -66,14 +66,10 @@ function buildDeterministicReceptionistReply(
     ? `\n\n📞 You can also reach our clinic reception directly at *${clinicPhone.trim()}*.`
     : "";
 
-  // Clean fee string
   const cleanFee = consultationFee ? consultationFee.replace(/[^\d.,]/g, '').trim() : "";
 
-  // ════ 1. TAMIL (தமிழ்) ════════════════════════════════════════════════════
+  // ════ 1. SOUTH / EAST / REGIONAL INDIAN SCRIPTS ══════════════════════════
   if (isTamil) {
-    if (/வணக்கம்|ஹலோ|ஹாய்/.test(text) || text.length <= 4) {
-      return `வணக்கம்! 🙏 நான் ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) வரவேற்பாளர்.\n\nஇன்று உங்களுக்கு அப்பாயின்ட்மென்ட் அல்லது கிளினிக் தகவலில் எவ்வாறு உதவ முடியும்?${phoneSuffix}`;
-    }
     if (/நேரம்|டைம்|எப்போது|opd/.test(text)) {
       return `${docTitle} கிளினிக்கில் ஆலோசனைக்கு கிடைக்கும் நேரம்:\n🕒 *${clinicTimings}*\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
     }
@@ -81,14 +77,13 @@ function buildDeterministicReceptionistReply(
       const feeText = cleanFee ? `ஆலோசனைக் கட்டணம் *₹${cleanFee}*` : "ஆலோசனைக் கட்டண விவரங்கள் கிளினிக்கில் தெரிவிக்கப்படும்";
       return `${docTitle} (${specialty}) ${feeText}.\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
     }
-    return `வணக்கம்! ${clinicName} தொடர்பு கொண்டதற்கு நன்றி. நான் ${assistantName}. ${docTitle} (${specialty}) அவர்களுடன் அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+    if (isOngoingChat) {
+      return `சரிங்க! ${docTitle} (${specialty}) சந்திப்பிற்கு இன்று அல்லது நாளைக்கு நேரம் முன்பதிவு செய்ய விரும்புகிறீர்களா? உங்கள் பெயர் மற்றும் நேரத்தைத் தெரிவிக்கவும்.${phoneSuffix}`;
+    }
+    return `வணக்கம்! 🙏 நான் ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) வரவேற்பாளர்.\n\nஇன்று உங்களுக்கு அப்பாயின்ட்மென்ட் அல்லது கிளினிக் தகவலில் எவ்வாறு உதவ முடியும்?${phoneSuffix}`;
   }
 
-  // ════ 2. TELUGU (తెలుగు) ═════════════════════════════════════════════════
   if (isTelugu) {
-    if (/నమస్కారం|హలో|హాయ్/.test(text) || text.length <= 4) {
-      return `నమస్కారం! 🙏 నేను ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) రిసెప్షనిస్ట్.\n\nనేను మీకు అపాయింట్‌మెంట్ లేదా క్లినిక్ వివరాలలో ఎలా సహాయపడగలను?${phoneSuffix}`;
-    }
     if (/సమయం|టైమింగ్|ఎప్పుడు|opd/.test(text)) {
       return `${docTitle} క్లినిక్‌లో సంప్రదింపులకు అందుబాటులో ఉండే సమయం:\n🕒 *${clinicTimings}*\n\nమీరు ఈరోజు లేదా రేపటికి అపాయింట్‌మెంట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
     }
@@ -96,132 +91,99 @@ function buildDeterministicReceptionistReply(
       const feeText = cleanFee ? `కన్సల్టేషన్ ఫీజు *₹${cleanFee}*` : "ఫీజు వివరాలు క్లినిక్‌లో తెలియజేయబడతాయి";
       return `${docTitle} (${specialty}) ${feeText}.\n\nమీరు స్లాట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
     }
-    return `నమస్కారం! ${clinicName} ను సంప్రదించినందుకు ధన్యవాదాలు. నేను ${assistantName}. ${docTitle} తో అపాయింట్‌మెంట్ బుక్ చేయడానికి నేను మీకు సహాయపడగలను.${phoneSuffix}`;
+    if (isOngoingChat) {
+      return `సరేనండి! ${docTitle} గారి కోసం ఈరోజు లేదా రేపటికి అపాయింట్‌మెంట్ బుక్ చేయడానికి దయచేసి రోగి పేరు మరియు సమయాన్ని పంపండి.${phoneSuffix}`;
+    }
+    return `నమస్కారం! 🙏 నేను ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) రిసెప్షనిస్ట్.\n\nనేను మీకు అపాయింట్‌మెంట్ లేదా క్లినిక్ వివరాలలో ఎలా సహాయపడగలను?${phoneSuffix}`;
   }
 
-  // ════ 3. KANNADA (ಕನ್ನಡ) ═════════════════════════════════════════════════
-  if (isKannada) {
-    if (/ನಮಸ್ಕಾರ|ಹಲೋ|ಹಾಯ್/.test(text) || text.length <= 4) {
-      return `ನಮಸ್ಕಾರ! 🙏 ನಾನು ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ರಿಸೆಪ್ಷನಿಸ್ಟ್.\n\nಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಅಥವಾ ಕ್ಲಿನಿಕ್ ಮಾಹಿತಿಯಲ್ಲಿ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?${phoneSuffix}`;
+  if (isKannada || isMalayalam || isBengali || isGujarati || isPunjabi) {
+    if (/timing|samay|time|opd|hours/i.test(textLower)) {
+      return `${docTitle} OPD Timings: *${clinicTimings}*.\n\nWould you like to book an appointment for today or tomorrow?${phoneSuffix}`;
     }
-    if (/ಸಮಯ|ಟೈಮಿಂಗ್|ಯಾವಾಗ|opd/.test(text)) {
-      return `${docTitle} ಕ್ಲಿನಿಕ್‌ನಲ್ಲಿ ಲಭ್ಯವಿರುವ ಸಮಯ:\n🕒 *${clinicTimings}*\n\nನೀವು ಇಂದು ಅಥವಾ ನಾಳೆಗೆ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಕಾಯ್ದಿರಿಸಲು ಬಯಸುವಿರಾ?${phoneSuffix}`;
+    if (isOngoingChat) {
+      return `Sure! To book an appointment with ${docTitle} (${specialty}), please share the **Patient Name** and preferred **Date (Today or Tomorrow)**.${phoneSuffix}`;
     }
-    return `ನಮಸ್ಕಾರ! ${clinicName} ಸಂಪರ್ಕಿಸಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು. ನಾನು ${assistantName}. ${docTitle} ಅವರೊಂದಿಗೆ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಬುಕ್ ಮಾಡಲು ನಾನು ಇಲ್ಲಿದ್ದೇನೆ.${phoneSuffix}`;
+    return `Namaste! 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}). How may I help you with an appointment today?${phoneSuffix}`;
   }
 
-  // ════ 4. MALAYALAM (മലയാളം) ═════════════════════════════════════════════
-  if (isMalayalam) {
-    if (/നമസ്കാരം|ഹലോ|ഹായ്/.test(text) || text.length <= 4) {
-      return `നമസ്കാരം! 🙏 ഞാൻ ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) റിസപ്ഷനിസ്റ്റ്.\n\nഅപ്പോയിന്റ്മെന്റിനോ ക്ലിനിക്ക് വിവരങ്ങൾക്കോ ഞാൻ എങ്ങനെ സഹായിക്കണം?${phoneSuffix}`;
+  // ════ 2. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
+  if (isHindiOrHinglish) {
+    // 2.1 Late / Traffic / Timing delay / "Mushkil pahuch payenge" / "6:30 ho gya"
+    if (/late|delay|pahuch|mushkil|already|traffic|time\s*pe|aaj\s*nahi|nahi\s*ho\s*payega|deir|der|time\s*kam|ruk|wait|paunch|मुश्किल|पहुँच|देर/i.test(textLower) || text.includes("मुश्किल")) {
+      return `Koi baat nahi ji! Agar aaj clinic time pe pahunchne me dikkat ho rahi hai, toh kya main aapka slot **kal (tomorrow)** ke liye book kar doon?\n\nDr. Siddhant kal shaam *${clinicTimings}* tak OPD me uplabdh rahenge.${phoneSuffix}`;
     }
-    if (/സമയം|ടൈം|എപ്പോൾ|opd/.test(text)) {
-      return `${docTitle} ക്ലിനിക്കിൽ ലഭ്യമാകുന്ന സമയം:\n🕒 *${clinicTimings}*\n\nഇന്നോ നാളെയോ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ ആഗ്രഹിക്കുന്നുണ്ടോ?${phoneSuffix}`;
-    }
-    return `നമസ്കാരം! ${clinicName} ലേക്ക് ബന്ധപ്പെട്ടതിന് നന്ദി. ഞാൻ ${assistantName}. ${docTitle} ന് അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ സഹായിക്കാം.${phoneSuffix}`;
-  }
 
-  // ════ 5. BENGALI (বাংলা) ═════════════════════════════════════════════════
-  if (isBengali) {
-    if (/নমস্কার|হ্যালো|হাই/.test(text) || text.length <= 4) {
-      return `নমস্কার! 🙏 আমি ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) এর রিসেপশনিস্ট।\n\nআজ আমি আপনাকে অ্যাপয়েন্টমেন্ট বা ক্লিনিক সংক্রান্ত তথ্যে কীভাবে সাহায্য করতে পারি?${phoneSuffix}`;
-    }
-    if (/সময়|টাইম|কখন|opd/.test(text)) {
-      return `${docTitle} ক্লিনিকে পরামর্শের জন্য উপলব্ধ সময়:\n🕒 *${clinicTimings}*\n\nআপনি কি আজ বা আগামীকালের জন্য অ্যাপয়েন্টমেন্ট বুক করতে চান?${phoneSuffix}`;
-    }
-    return `নমস্কার! ${clinicName} এ যোগাযোগ করার জন্য ধন্যবাদ। আমি ${assistantName}, ${docTitle} এর সাথে অ্যাপয়েন্টমেন্ট বুক করতে সাহায্য করতে পারি।${phoneSuffix}`;
-  }
-
-  // ════ 6. GUJARATI (ગુજરાતી) ═════════════════════════════════════════════
-  if (isGujarati) {
-    if (/નમસ્તે|હેલો|હાય/.test(text) || text.length <= 4) {
-      return `નમસ્તે! 🙏 હું ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ના રિસેપ્શનિસ્ટ છું.\n\nઆજે એપોઇન્ટમેન્ટ અથવા ક્લિનિકની માહિતીમાં હું તમારી કેવી રીતે મદદ કરી શકું?${phoneSuffix}`;
-    }
-    if (/સમય|ટાઇમિંગ|ક્યારે|opd/.test(text)) {
-      return `${docTitle} ક્લિનિકમાં પરામર્શ માટે ઉપલબ્ધ સમય:\n🕒 *${clinicTimings}*\n\nશું તમે આજે અથવા આવતીકાલ માટે એપોઇન્ટમેન્ટ બુક કરવા માંગો છો?${phoneSuffix}`;
-    }
-    return `નમસ્તે! ${clinicName} નો સંપર્ક કરવા બદલ આભાર. હું ${assistantName}, ${docTitle} સાથે એપોઇન્ટમેન્ટ બુક કરવામાં તમારી સહાય કરી શકું છું.${phoneSuffix}`;
-  }
-
-  // ════ 7. PUNJABI (ਪੰਜਾਬੀ) ═══════════════════════════════════════════════
-  if (isPunjabi) {
-    if (/ਸਤਿ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|ਹੈਲੋ|ਹਾਏ/.test(text) || text.length <= 4) {
-      return `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! 🙏 ਮੈਂ ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) ਤੋਂ ਰਿਸੈਪਸ਼ਨਿਸਟ ਬੋਲ ਰਹੀ ਹਾਂ।\n\nਮੈਂ ਅੱਜ ਅਪਾਇੰਟਮੈਂਟ ਜਾਂ ਕਲੀਨਿਕ ਸੰਬੰਧੀ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦੀ ਹਾਂ?${phoneSuffix}`;
-    }
-    if (/ਸਮਾਂ|ਟਾਈਮ|ਕਦੋਂ|opd/.test(text)) {
-      return `${docTitle} ਕਲੀਨਿਕ ਵਿੱਚ ਉਪਲਬਧ ਸਮਾਂ:\n🕒 *${clinicTimings}*\n\nਕੀ ਤੁਸੀਂ ਅੱਜ ਜਾਂ ਕੱਲ੍ਹ ਲਈ ਅਪਾਇੰਟਮੈਂਟ ਬੁੱਕ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?${phoneSuffix}`;
-    }
-    return `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! ${clinicName} ਨਾਲ ਸੰਪਰਕ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। ਮੈਂ ${assistantName}, ${docTitle} ਨਾਲ ਅਪਾਇੰਟਮੈਂਟ ਬੁੱਕ ਕਰਨ ਲਈ ਹਾਜ਼ਰ ਹਾਂ।${phoneSuffix}`;
-  }
-
-  // ════ 8. HINDI / MARATHI SCRIPT (हिंदी / मराठी) ═════════════════════════
-  if (isDevanagari) {
-    if (/^(नमस्ते|प्रणाम|हेलो|हाय|हैलो)/.test(text) || text.length <= 4) {
-      return `नमस्ते! 🙏 मैं ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) से बोल रही हूँ।\n\nमैं आज अपॉइंटमेंट या क्लिनिक जानकारी में आपकी किस प्रकार सहायता कर सकती हूँ?${phoneSuffix}`;
-    }
-    if (/अपॉइंटमेंट|बुक|मिलना|समय|टाइम|उपलब्ध|दिखाना|कल|आज/.test(text)) {
-      return `${docTitle} क्लिनिक में परामर्श (OPD) के लिए उपलब्ध हैं:\n🕒 *${clinicTimings}*\n\nक्या आप *आज* या *कल* के लिए अपॉइंटमेंट बुक करना चाहेंगे? कृपया अपना नाम और पसंदीदा समय बताएं।${phoneSuffix}`;
-    }
-    if (/फीस|शुल्क|खर्च|चार्ज|रुपये/.test(text)) {
-      const feeText = cleanFee ? `परामर्श शुल्क *₹${cleanFee}* है` : "परामर्श शुल्क की जानकारी क्लिनिक पर दी जाती है";
-      return `${docTitle} (${specialty}) का ${feeText}।\n\nक्या आप आज या कल के लिए परामर्श स्लॉट बुक करना चाहेंगे?${phoneSuffix}`;
-    }
-    if (/पता|कहाँ|लोकेशन|एड्रेस|दिशा|रास्ता/.test(text)) {
-      if (clinicAddress) {
-        return `हमारे क्लिनिक का पता:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD समय: *${clinicTimings}*\nक्या आप आज या कल आना चाहेंगे?${phoneSuffix}`;
-      }
-      return `हमारा क्लिनिक *${clinicName}* में स्थित है। सटीक पते के लिए कृपया क्लिनिक पर संपर्क करें।${phoneSuffix}`;
-    }
-    return `नमस्ते! *${clinicName}* में संपर्क करने के लिए धन्यवाद। मैं ${assistantName}, ${docTitle} (${specialty}) के साथ अपॉइंटमेंट बुक करने या क्लिनिक जानकारी के लिए उपलब्ध हूँ। क्या आप आज या कल का स्लॉट बुक करना चाहेंगे?${phoneSuffix}`;
-  }
-
-  // ════ 2. HINGLISH ══════════════════════════════════════════════════════════
-  if (isHinglish) {
-    if (/^(hi|hello|hey|namaste|pranam|hlo|helo|hii+)\b/i.test(textLower) || textLower.length <= 4) {
-      return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon.\n\nMain aapki appointment ya clinic se judi kis jankari me madad kar sakti hoon?${phoneSuffix}`;
-    }
-    if (/timing|samay|kab|time|opd|hours|khula|schedule/i.test(textLower)) {
-      return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
-    }
-    if (/appointment|book|visit|consult|slot|milna|dikhana|aana/i.test(textLower)) {
-      return `${docTitle} (${specialty}) clinic me uplabdh hain:\n🕒 *${clinicTimings}*\n\nAppointment ke liye kripya apna **Naam**, **Date** aur **Morning ya Evening time** share karein. Main turant slot confirm kar dungi!${phoneSuffix}`;
-    }
-    if (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate/i.test(textLower)) {
-      const feeText = cleanFee ? `Consultation fees *₹${cleanFee}* hai` : "Consultation fees ki details clinic par consultation ke samay di jaati hain";
-      return `${docTitle} (${specialty}) ki ${feeText}.\n\nKya aap aaj ya kal ke liye slot book karna chahenge?${phoneSuffix}`;
-    }
-    if (/address|location|kahan|kaha|rasta|directions|map/i.test(textLower)) {
+    // 2.2 Address / Location / Directions / "Clinic kaha hai"
+    if (/address|location|kahan|kaha|rasta|directions|map|कहाँ|पता|लोकेशन|रास्ता|एड्रेस/i.test(textLower) || text.includes("कहाँ") || text.includes("पता")) {
       if (clinicAddress) {
         return `Clinic ka address hai:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${clinicTimings}*\nKya aap aaj visit plan kar rahe hain?${phoneSuffix}`;
       }
-      return `Hamara clinic *${clinicName}* par sthit hai. Exact address aur landmarks ke liye aap clinic reception par call kar sakte hain.${phoneSuffix}`;
+      return `Hamara clinic *${clinicName}* par sthit hai. Exact address ke liye aap clinic reception par direct call bhi kar sakte hain.${phoneSuffix}`;
     }
-    return `Hello ji! *${clinicName}* me sampark karne ke liye dhanyawad. Main ${assistantName}, ${docTitle} (${specialty}) ke sath appointment book karne ke liye yahan hoon. Kya aap aaj ya kal visit karna chahenge?${phoneSuffix}`;
+
+    // 2.3 Fee / Pricing Inquiry
+    if (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower) || text.includes("फीस") || text.includes("शुल्क")) {
+      const feeText = cleanFee ? `Consultation fees *₹${cleanFee}* hai` : "Consultation fees ki details clinic par consultation ke samay di jaati hain";
+      return `${docTitle} (${specialty}) ki ${feeText}.\n\nKya aap aaj ya kal ke liye slot book karna chahenge?${phoneSuffix}`;
+    }
+
+    // 2.4 Timings / Schedule Inquiry
+    if (/timing|samay|kab|time|opd|hours|khula|schedule|समय|टाइम|कब/i.test(textLower) || text.includes("समय") || text.includes("टाइम")) {
+      return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
+    }
+
+    // 2.5 Appointment Booking Request / "Appointment chahiye" / "Kal milna hai"
+    if (/appointment|book|visit|consult|slot|milna|dikhana|aana|chahiye|booking|apointment|apointmnt|अपॉइंटमेंट|बुक|मिलना|दिखाना|चाहिए|स्लॉट/i.test(textLower) || text.includes("अपॉइंटमेंट") || text.includes("चाहिए")) {
+      return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam**, **Date (aaj ya kal)** aur **Morning ya Evening session** share karein. Main turant confirm kar dungi!${phoneSuffix}`;
+    }
+
+    // 2.6 Tomorrow / Specific Date / Kal preference
+    if (/\b(kal|tomorrow|parso|aaj|today|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(textLower) || text.includes("कल") || text.includes("आज")) {
+      return `Ji theek hai! Slot confirm karne ke liye kripya **Patient ka Pura Naam** bata dijiye. ${docTitle} OPD me *${clinicTimings}* uplabdh rahenge.${phoneSuffix}`;
+    }
+
+    // 2.7 Affirmation / Confirmation ("haan", "yes", "thik hai", "ok", "kardo")
+    if (/^(haan|ha|ji|yes|yep|sure|thik\s*hai|theek\s*hai|ok|okay|kardo|kar\s*do|theek)\b/i.test(textLower) || textLower === "ok" || textLower === "haan") {
+      return `Ji, kripya **Patient ka Pura Naam** aur preferred **Date** share karein, main turant booking confirm kar deti hoon!${phoneSuffix}`;
+    }
+
+    // 2.8 If it's a pure first greeting ("hi", "hello", "namaste") on an empty chat
+    if (!isOngoingChat && (/^(hi|hello|hey|namaste|pranam|hlo|helo|hii+)\b/i.test(textLower) || textLower.length <= 4)) {
+      return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon.\n\nMain aapki appointment ya clinic se judi kis jankari me madad kar sakti hoon?${phoneSuffix}`;
+    }
+
+    // 2.9 Ongoing conversation Hindi/Hinglish Fallback (NEVER re-greets)
+    if (isOngoingChat) {
+      return `Ji! Kya aap ${docTitle} ke sath **aaj** ya **kal** ke liye appointment slot book karna chahenge? Kripya apna naam aur samay batayein.${phoneSuffix}`;
+    }
+
+    return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
   }
 
   // ════ 3. ENGLISH (Professional, Warm & Human) ════════════════════════════
-  // 3.1. Greetings (Hi, Hello, Good morning, etc.)
-  if (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower === "hi" || textLower === "hello" || textLower === "hl" || textLower === "hii") {
-    return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}).\n\nHow may I assist you with an appointment or clinic inquiry today?${phoneSuffix}`;
+  // 3.1 Late / Delay handling
+  if (/late|delay|reach|traffic|cannot\s*make|difficult|not\s*possible|unable/i.test(textLower)) {
+    return `No problem at all! If today is difficult to reach on time, would you like me to schedule your consultation with ${docTitle} for **tomorrow** instead? (OPD Timings: ${clinicTimings})${phoneSuffix}`;
   }
 
-  // 3.2. Timings & OPD Hours
+  // 3.2 Timings & OPD Hours
   if (/timing|hours|schedule|time|open|when\s*is|opd/i.test(textLower)) {
     return `${docTitle} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please share your preferred time and patient name.${phoneSuffix}`;
   }
 
-  // 3.3. Appointment Booking / Schedule
+  // 3.3 Appointment Booking / Schedule
   if (/appointment|book|visit|consult|slot|schedule|available|doctor|reserve/i.test(textLower)) {
-    return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with your **Full Name**, preferred **Date**, and **Morning or Evening session**. I will be happy to confirm it for you!${phoneSuffix}`;
+    return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name**, preferred **Date**, and **Morning or Evening session**. I will be happy to confirm it for you!${phoneSuffix}`;
   }
 
-  // 3.4. Fees & Pricing
+  // 3.4 Fees & Pricing
   if (/fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
     const feeText = cleanFee ? `Consultation fee is *₹${cleanFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
     return `${feeText} for ${docTitle} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?${phoneSuffix}`;
   }
 
-  // 3.5. Address, Location & Directions
+  // 3.5 Address, Location & Directions
   if (/address|location|where|directions|map|how\s*to\s*reach|find/i.test(textLower)) {
     if (clinicAddress) {
       return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\n${docTitle} is available during OPD hours (${clinicTimings}).\n\nWould you like to schedule a visit?${phoneSuffix}`;
@@ -229,12 +191,20 @@ function buildDeterministicReceptionistReply(
     return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please feel free to call our reception.${phoneSuffix}`;
   }
 
-  // 3.6. Symptoms / Health Concern
+  // 3.6 Symptoms / Health Concern
   if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment|sick|ill/i.test(textLower)) {
     return `Thank you for sharing your concern. For proper clinical assessment and personalized care, we recommend an in-person OPD consultation with ${docTitle} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?${phoneSuffix}`;
   }
 
-  // 3.7. Default Warm Fallback
+  // 3.7 First Greeting vs Ongoing chat
+  if (!isOngoingChat && (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower.length <= 4)) {
+    return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}).\n\nHow may I assist you with an appointment or clinic inquiry today?${phoneSuffix}`;
+  }
+
+  if (isOngoingChat) {
+    return `Understood! Would you like me to book a consultation slot with ${docTitle} (${specialty}) for **today** or **tomorrow**? Please share the patient's name and preferred time.${phoneSuffix}`;
+  }
+
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
 }
 
@@ -406,6 +376,7 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
     } catch (error: any) {
       console.error("[AIAgentsService] LLM generation error in Appointment Agent, using intelligent receptionist fallback:", error?.message || error);
       
+      const isOngoingChat = conversationHistory && conversationHistory.length > 0;
       return buildDeterministicReceptionistReply(
         incomingMessage,
         doctorName,
@@ -417,7 +388,8 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
         assistantName,
         clinicAddress,
         clinicMapsUri,
-        clinicPhone
+        clinicPhone,
+        isOngoingChat
       );
     }
   }
