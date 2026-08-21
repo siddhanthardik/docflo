@@ -311,7 +311,19 @@ class WhatsAppManager {
 
             const practitioners = await prisma.practitioner.findMany({
               where: { doctorId, isActive: true },
-              select: { phone: true, name: true, isOwner: true }
+              select: {
+                id: true,
+                phone: true,
+                name: true,
+                specialty: true,
+                qualification: true,
+                consultationFee: true,
+                workingDays: true,
+                workingHoursStart: true,
+                workingHoursEnd: true,
+                isOwner: true,
+              },
+              orderBy: { displayOrder: "asc" }
             });
 
             const staffPhones = [doctorInfo?.phone, ...practitioners.map(p => p.phone)]
@@ -811,7 +823,8 @@ class WhatsAppManager {
                     specialty: doctorInfo?.specialty || undefined
                   },
                   clinicAddress,
-                  clinicMapsUri
+                  clinicMapsUri,
+                  practitioners
                 );
               }
 

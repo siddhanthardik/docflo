@@ -28,6 +28,28 @@ export function formatDoctorDisplayName(rawName?: string): string {
   return clean ? `Dr. ${clean}` : "the Doctor";
 }
 
+export interface ClinicPractitionerInfo {
+  id?: string;
+  name: string;
+  phone?: string | null;
+  specialty?: string | null;
+  qualification?: string | null;
+  consultationFee?: number | null;
+  workingDays?: string[];
+  workingHoursStart?: string | null;
+  workingHoursEnd?: string | null;
+  isOwner?: boolean;
+}
+
+function formatPractitionerTimings(p: ClinicPractitionerInfo): string {
+  const days = (p.workingDays && p.workingDays.length > 0)
+    ? p.workingDays.map(d => d.slice(0, 3)).join(", ")
+    : "Mon-Sat";
+  const start = p.workingHoursStart || "10:00 AM";
+  const end = p.workingHoursEnd || "7:00 PM";
+  return `${days}: ${start} - ${end}`;
+}
+
 function buildDeterministicReceptionistReply(
   incomingMessage: string,
   rawDoctorName: string,
@@ -42,25 +64,54 @@ function buildDeterministicReceptionistReply(
   clinicPhone?: string,
   isOngoingChat: boolean = false,
   morningOpd?: string,
-  eveningOpd?: string
+  eveningOpd?: string,
+  practitioners?: ClinicPractitionerInfo[]
 ): string {
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
-  const docTitle = formatDoctorDisplayName(rawDoctorName);
+
+  // ════ Multi-Doctor Matching: Check if patient asked for a specific doctor ═
+  let activeDoctorName = rawDoctorName;
+  let activeSpecialty = specialty;
+  let activeTimings = clinicTimings;
+  let activeFee = consultationFee;
+
+  if (practitioners && practitioners.length > 0) {
+    // Find if text matches any specific doctor name or specialty
+    const matchedDoctor = practitioners.find(p => {
+      const pNameClean = p.name.replace(/^(dr\.?|doctor)\s+/i, '').toLowerCase().trim();
+      const pSpecialty = (p.specialty || '').toLowerCase().trim();
+      return (
+        (pNameClean.length > 2 && textLower.includes(pNameClean)) ||
+        (pSpecialty.length > 3 && textLower.includes(pSpecialty))
+      );
+    });
+
+    if (matchedDoctor) {
+      activeDoctorName = matchedDoctor.name;
+      activeSpecialty = matchedDoctor.specialty || specialty;
+      activeTimings = formatPractitionerTimings(matchedDoctor);
+      if (matchedDoctor.consultationFee) {
+        activeFee = String(matchedDoctor.consultationFee);
+      }
+    }
+  }
+
+  const docTitle = formatDoctorDisplayName(activeDoctorName);
 
   // ════ Determine Active OPD Sessions (Morning / Evening / Single session) ═
   const hasMorning = Boolean(
     (morningOpd && morningOpd.trim().length > 0 && !/closed|none|na|n\/a/i.test(morningOpd)) ||
-    (/morning/i.test(clinicTimings) && !/morning\s*(opd)?:\s*(closed|none|na)/i.test(clinicTimings))
+    (/morning/i.test(activeTimings) && !/morning\s*(opd)?:\s*(closed|none|na)/i.test(activeTimings))
   );
 
   const hasEvening = Boolean(
     (eveningOpd && eveningOpd.trim().length > 0 && !/closed|none|na|n\/a/i.test(eveningOpd)) ||
-    (/evening/i.test(clinicTimings) && !/evening\s*(opd)?:\s*(closed|none|na)/i.test(clinicTimings))
+    (/evening/i.test(activeTimings) && !/evening\s*(opd)?:\s*(closed|none|na)/i.test(activeTimings))
   );
 
-  const activeEveningHours = eveningOpd || (clinicTimings.match(/Evening\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
-  const activeMorningHours = morningOpd || (clinicTimings.match(/Morning\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
+  const activeEveningHours = eveningOpd || (activeTimings.match(/Evening\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
+  const activeMorningHours = morningOpd || (activeTimings.match(/Morning\s*(?:OPD)?:\s*([^|]+)/i)?.[1]?.trim() || "");
 
   let slotPromptEn = "preferred **Date** and **Time**";
   let slotPromptHi = "**Date (aaj ya kal)** aur **Time**";
@@ -69,11 +120,11 @@ function buildDeterministicReceptionistReply(
     slotPromptEn = "preferred **Date**, and **Morning or Evening session**";
     slotPromptHi = "**Date (aaj ya kal)** aur **Morning ya Evening time**";
   } else if (hasEvening) {
-    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Evening OPD (${activeEveningHours || clinicTimings})**`;
-    slotPromptHi = `preferred **Date (aaj ya kal)** for **Evening OPD (${activeEveningHours || clinicTimings})**`;
+    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Evening OPD (${activeEveningHours || activeTimings})**`;
+    slotPromptHi = `preferred **Date (aaj ya kal)** for **Evening OPD (${activeEveningHours || activeTimings})**`;
   } else if (hasMorning) {
-    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Morning OPD (${activeMorningHours || clinicTimings})**`;
-    slotPromptHi = `preferred **Date (aaj ya kal)** for **Morning OPD (${activeMorningHours || clinicTimings})**`;
+    slotPromptEn = `preferred **Date (Today or Tomorrow)** for the **Morning OPD (${activeMorningHours || activeTimings})**`;
+    slotPromptHi = `preferred **Date (aaj ya kal)** for **Morning OPD (${activeMorningHours || activeTimings})**`;
   }
 
   // Script & Dialect Detection
@@ -272,7 +323,8 @@ export class AIAgentsService {
     clinicPhone?: string,
     doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string },
     clinicAddress?: string | null,
-    clinicMapsUri?: string | null
+    clinicMapsUri?: string | null,
+    practitioners?: ClinicPractitionerInfo[]
   ) {
     const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
     const doctorName = formatDoctorDisplayName(rawDocName);
@@ -323,19 +375,31 @@ export class AIAgentsService {
         ? `- Clinic Address: ${clinicAddress}${clinicMapsUri ? `\n- Google Maps Link: ${clinicMapsUri}` : ''}`
         : null;
 
+      // Multi-Doctor Directory
+      const practitionersBlock = practitioners && practitioners.length > 0
+        ? `\nCLINIC DOCTORS & PRACTITIONERS DIRECTORY:\n` + practitioners.map(p => {
+            const pName = formatDoctorDisplayName(p.name);
+            const pSpec = p.specialty || specialty;
+            const pTimings = formatPractitionerTimings(p);
+            const pFee = p.consultationFee ? `₹${p.consultationFee}` : (consultationFee ? `₹${consultationFee}` : "Standard");
+            return `- ${pName} (${pSpec}) | OPD Timings: ${pTimings} | Consultation Fee: ${pFee}`;
+          }).join("\n")
+        : null;
+
       const systemPrompt = `
 You are ${assistantName}, the warm, polite, highly experienced Senior WhatsApp Clinic Receptionist for ${clinicName} (${doctorName} - ${specialty}).
 
 TODAY'S DATE: ${currentDateStr} (Indian Standard Time)
 
 CLINIC OPD & SCHEDULE SPECIFICATIONS:
-- Doctor: ${doctorName}
+- Primary Doctor: ${doctorName}
 - Specialty: ${specialty}
 - Clinic Name: ${clinicName}
 - Morning OPD Hours: ${morningOpd || "Check Full Schedule"}
 - Evening OPD Hours: ${eveningOpd || "Check Full Schedule"}
 - Full Schedule Summary: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
+${practitionersBlock ? practitionersBlock : ""}
 ${locationBlock ? locationBlock : ""}
 
 FEES & POLICY:
@@ -357,21 +421,19 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
 2. **AUTOMATIC LANGUAGE ADAPTATION (ENGLISH / HINGLISH / HINDI)**:
    - Match the patient's language naturally:
      * If the patient writes in Hindi/Devanagari ("नमस्ते", "अपॉइंटमेंट चाहिए", "फीस कितनी है"), respond in polite, warm Hindi.
-     * If the patient writes in Hinglish ("timing kya hai", "fees kitni hai", "appointment book karna hai"), respond in natural, polite Hinglish ("Namaste ji! ${doctorName} clinic me OPD consultation ke liye uplabdh hain...").
+     * If the patient writes in Hinglish ("timing kya hai", "fees kitni hai", "appointment book karna hai"), respond in natural, polite Hinglish.
      * If the patient writes in English, respond in warm, professional English.
 
-3. **HANDLE PATIENT SYMPTOMS & HEALTH QUESTIONS**:
-   - If the patient describes symptoms (fever, cough, pain, rash, weakness):
-     * Acknowledge warmly and empathetically.
-     * Recommend an in-person OPD consultation with ${doctorName} for proper evaluation.
-     * Offer available OPD slots (${clinicTimings}).
+3. **MULTI-DOCTOR SCHEDULE & SPECIALTY MATCHING**:
+   - If the patient mentions a specific doctor or specialty (e.g. Skin, Dental, Child), provide THAT doctor's specific OPD timings and details.
+   - If the patient asks generally for clinic doctors, list the available doctors with their active schedules.
 
 4. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
-   - Only offer slots during active OPD hours (${clinicTimings}).
+   - Only offer slots during active OPD hours for the requested doctor.
    - If Morning OPD is not available, offer Evening slots only.
 
 5. **APPOINTMENT BOOKING FLOW**:
-   - To book an appointment, ask for their preferred **Date**, **Morning/Evening session**, and **Patient Full Name**.
+   - To book an appointment, ask for their preferred **Date**, **active OPD session (Morning or Evening as applicable)**, and **Patient Full Name**.
    - Once they provide these details to confirm the booking, append this exact tag at the very end of your confirmation message:
      [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name]
 
@@ -421,7 +483,8 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
         clinicPhone,
         isOngoingChat,
         morningOpd,
-        eveningOpd
+        eveningOpd,
+        practitioners
       );
     }
   }
