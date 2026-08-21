@@ -127,17 +127,27 @@ function buildDeterministicReceptionistReply(
     slotPromptHi = `preferred **Date (aaj ya kal)** for **Morning OPD (${activeMorningHours || activeTimings})**`;
   }
 
-  // Script & Dialect Detection
+  // ════ SCRIPT & DIALECT DETECTION (NATIVE SCRIPTS + ROMANIZED REGIONAL TRANSLITERATIONS) ═
   const hasDevanagari = /[\u0900-\u097F]/.test(text);
-  const isTamil = /[\u0B80-\u0BFF]/.test(text);
-  const isTelugu = /[\u0C00-\u0C7F]/.test(text);
-  const isKannada = /[\u0C80-\u0CFF]/.test(text);
-  const isMalayalam = /[\u0D00-\u0D7F]/.test(text);
-  const isBengali = /[\u0980-\u09FF]/.test(text);
-  const isGujarati = /[\u0A80-\u0AFF]/.test(text);
-  const isPunjabi = /[\u0A00-\u0A7F]/.test(text);
+  const hasTamil = /[\u0B80-\u0BFF]/.test(text);
+  const hasTelugu = /[\u0C00-\u0C7F]/.test(text);
+  const hasKannada = /[\u0C80-\u0CFF]/.test(text);
+  const hasMalayalam = /[\u0D00-\u0D7F]/.test(text);
+  const hasBengali = /[\u0980-\u09FF]/.test(text);
+  const hasGujarati = /[\u0A80-\u0AFF]/.test(text);
+  const hasPunjabi = /[\u0A00-\u0A7F]/.test(text);
 
-  const isHindiOrHinglish = hasDevanagari || /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower);
+  // Romanized Transliteration Keywords
+  const isBonglish = hasBengali || /\b(ami|amra|apni|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kotha|kothay|koto|lagbe|daktar|dekhte|dekhabo|shomoy|shomoye|ache|achhe|thakben|thakbe|hobe|korbo|parbo|bangla|bengali|dhonnobad|kalke|aajke|ajke)\b/i.test(textLower);
+  const isTanglish = hasTamil || /\b(vanakkam|naan|nanga|neenga|ungalukku|vara|varren|varen|vandhuten|naalaikku|nalaikku|innikku|iniku|epbo|eppo|evvalo|evvalavu|panam|kaasu|paakanum|paarka|pakanum|irukka|iruku|irukku|kedaikkuma|engae|enge|enga|solla|sollunga|nandri|seri|mudiyuma|mudiyum|tamil|thamizh)\b/i.test(textLower);
+  const isTelugish = hasTelugu || /\b(namaskaram|namaskaramu|nenu|memu|meeru|repu|ee\s*roju|eeroju|vastanu|vastam|vasta|eppudu|enta|entha|chupinchali|chudali|unnara|untara|undha|ekkada|ekada|cheppandi|cheppu|dhanyavadalu|telugu)\b/i.test(textLower);
+  const isMarathish = !hasDevanagari && /\b(namaskar|mee|amhi|tumhi|udya|aajch|yenar|yeto|yete|kadhi|kiti|dakhvaycha|bhetaycha|aahet|nahit|kuthe|kothe|sanga|saanga|dhanyawad|marathi)\b/i.test(textLower);
+  const isKanglish = hasKannada || /\b(namaskara|naanu|naavu|neevu|nimma|naale|ivathu|ee\s*dina|bartheeni|barodu|barala|yaavaga|yaava|eshtu|thorisbeku|nodbeku|iddara|irthara|elli|ellige|heli|helra|dhanyavadagalu|kannada)\b/i.test(textLower);
+  const isManglish = hasMalayalam || /\b(namaskaram|njan|njangal|ningal|naale|innu|varam|varunnu|eppol|eppozhum|ethra|kanikkanam|kaananam|undo|undavumo|evide|evidaya|parayamo|parayoo|nanni|malayalam)\b/i.test(textLower);
+  const isGujlish = hasGujarati || /\b(kem\s*cho|majama|hu|ame|tame|kale|aaje|aavishu|aavu|aavvu|kyare|ketla|ketli|batavvu|malvu|nathi|kyaan|janavo|aabhar|gujarati)\b/i.test(textLower);
+  const isPunlish = hasPunjabi || /\b(sat\s*sri\s*akaal|sasrikal|assi|tussi|ajj|aaunga|aunde|kadon|kado|kinne|kinni|dikhauna|hanji|haanji|kithe|kithay|dasso|dasan|dhanwad|punjabi)\b/i.test(textLower);
+
+  const isHindiOrHinglish = hasDevanagari || (!isBonglish && !isTanglish && !isTelugish && !isMarathish && !isKanglish && !isManglish && !isGujlish && !isPunlish && /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower));
 
   // User explicitly asking for phone / human call
   const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
@@ -149,43 +159,165 @@ function buildDeterministicReceptionistReply(
 
   const cleanFee = consultationFee ? consultationFee.replace(/[^\d.,]/g, '').trim() : "";
 
-  // ════ 1. SOUTH / EAST / REGIONAL INDIAN SCRIPTS ══════════════════════════
-  if (isTamil) {
-    if (/நேரம்|டைம்|எப்போது|opd/.test(text)) {
-      return `${docTitle} கிளினிக்கில் ஆலோசனைக்கு கிடைக்கும் நேரம்:\n🕒 *${clinicTimings}*\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+  // ════ 1. BENGALI / BONGLISH ══════════════════════════════════════════════
+  if (isBonglish) {
+    if (/bolchhen|bolchen|bolte|bangla|bengali|বাংলা/i.test(textLower)) {
+      return `Hyan! Ami Bangla bujhte o bolte pari 😊 *${clinicName}*-e ${docTitle} (${activeSpecialty})-er sathe appointment ba jankari-r jonno ami kivabe sahajjo korte pari?${phoneSuffix}`;
     }
-    if (/கட்டணம்|பீஸ்|விலை|செலவு/.test(text)) {
-      const feeText = cleanFee ? `ஆலோசனைக் கட்டணம் *₹${cleanFee}*` : "ஆலோசனைக் கட்டண விவரங்கள் கிளினிக்கில் தெரிவிக்கப்படும்";
-      return `${docTitle} (${specialty}) ${feeText}.\n\nஇன்று அல்லது நாளைக்கு அப்பாயின்ட்மென்ட் முன்பதிவு செய்ய விரும்புகிறீர்களா?${phoneSuffix}`;
+    if (/late|deri|somoy|ashchi|shomoy|time\s*pe|mushkil/i.test(textLower)) {
+      return `Kono byapar na! Aaj asha jodi oshubidha hoy, tahole ki ami aapnar slot **kal (tomorrow)**-er jonno book kore debo?\n\n${docTitle} kal OPD-te *${activeTimings}* thakben.${phoneSuffix}`;
+    }
+    if (/kothay|address|location|thikana|jaayga|map|কোথায়|ঠিকানা/i.test(textLower)) {
+      if (clinicAddress) {
+        return `Clinic-er address:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${activeTimings}*\nApni ki aaj visit korte chan?${phoneSuffix}`;
+      }
+      return `Amader clinic *${clinicName}*-e sthito. Exact address-er jonno reception-e jogajog korte paren.${phoneSuffix}`;
+    }
+    if (/koto|fee|fees|cost|charge|taka|টাকা|খরচ/i.test(textLower)) {
+      const feeText = cleanFee ? `Consultation fee *₹${cleanFee}*` : "Consultation fee clinic-e consultation-er somoy janano hoy";
+      return `${docTitle} (${activeSpecialty})-er ${feeText}.\n\nApni ki aaj ba kal slot book korte chan?${phoneSuffix}`;
+    }
+    if (/shomoy|timing|somoy|kokhon|khula|opd|সময়|কখন/i.test(textLower)) {
+      return `${docTitle} clinic-e OPD consultations-er jonno thakben:\n🕒 *${activeTimings}*\n\nApni ki *aaj* ba *kal* appointment schedule korte chan?${phoneSuffix}`;
+    }
+    if (/appointment|book|aasbo|ashbo|dekhte|dekhabo|daktar|slot|chahiye|kal|aaj|কাল|আজ|আসছি|দেখাতে/i.test(textLower)) {
+      return `Hyan nishchoi! ${docTitle} (${activeSpecialty})-er sathe appointment confirm korar jonno doya kore **Patient-er Puro Naam** o preferred **Date (Aaj ba Kal)** share korun. Main turant confirm kore debo!${phoneSuffix}`;
     }
     if (isOngoingChat) {
-      return `சரிங்க! ${docTitle} (${specialty}) சந்திப்பிற்கு இன்று அல்லது நாளைக்கு நேரம் முன்பதிவு செய்ய விரும்புகிறீர்களா? உங்கள் பெயர் மற்றும் நேரத்தைத் தெரிவிக்கவும்.${phoneSuffix}`;
+      return `Hyan! Apni ki ${docTitle} (${activeSpecialty})-er sathe **aaj** ba **kal** appointment slot book korte chan? Doya kore patient-er puro naam o somoy janan.${phoneSuffix}`;
     }
-    return `வணக்கம்! 🙏 நான் ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) வரவேற்பாளர்.\n\nஇன்று உங்களுக்கு அப்பாயின்ட்மென்ட் அல்லது கிளினிக் தகவலில் எவ்வாறு உதவ முடியும்?${phoneSuffix}`;
+    return `Nomoshkar! 🙏 Ami ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty})-er receptionist.\n\nAmi kivabe aapnar appointment ba clinic-er jankari-te sahajjo korte pari?${phoneSuffix}`;
   }
 
-  if (isTelugu) {
-    if (/సమయం|టైమింగ్|ఎప్పుడు|opd/.test(text)) {
-      return `${docTitle} క్లినిక్‌లో సంప్రదింపులకు అందుబాటులో ఉండే సమయం:\n🕒 *${clinicTimings}*\n\nమీరు ఈరోజు లేదా రేపటికి అపాయింట్‌మెంట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
+  // ════ 2. TAMIL / TANGLISH ════════════════════════════════════════════════
+  if (isTanglish) {
+    if (/tamil|thamizh|pesuveengala|தமிழ்/i.test(textLower)) {
+      return `Aam! Enakku Tamil theriyum 😊 *${clinicName}* la ${docTitle} (${activeSpecialty}) kooda appointment book panna eppadi udhava mudiyum?${phoneSuffix}`;
     }
-    if (/ఫీజు|ఖర్చు|ధర/.test(text)) {
-      const feeText = cleanFee ? `కన్సల్టేషన్ ఫీజు *₹${cleanFee}*` : "ఫీజు వివరాలు క్లినిక్‌లో తెలియజేయబడతాయి";
-      return `${docTitle} (${specialty}) ${feeText}.\n\nమీరు స్లాట్ బుక్ చేయాలనుకుంటున్నారా?${phoneSuffix}`;
+    if (/late|neram|mudiyala|varamudiyadhu|reach|traffic/i.test(textLower)) {
+      return `Kavalai pada vendaam! Innikku vara mudiyala na, ungalukku **naalaikku (tomorrow)** slot book panlatuma?\n\n${docTitle} naalaikku OPD la *${activeTimings}* irupaaru.${phoneSuffix}`;
+    }
+    if (/engae|enge|enga|address|location|edam|map|எங்கே|முகவரி/i.test(textLower)) {
+      if (clinicAddress) {
+        return `Clinic address:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${activeTimings}*\nInnikku visit panna poringala?${phoneSuffix}`;
+      }
+      return `Namma clinic *${clinicName}* la irukku. Address ku reception ku call pannalaam.${phoneSuffix}`;
+    }
+    if (/evvalo|evvalavu|fee|fees|cost|charge|panam|kaasu|கட்டணம்/i.test(textLower)) {
+      const feeText = cleanFee ? `Consultation fee *₹${cleanFee}*` : "Consultation fee vivaram clinic la therivikkapadum";
+      return `${docTitle} (${activeSpecialty}) ${feeText}.\n\nInnikku illa naalaikku slot book panna virumbureengala?${phoneSuffix}`;
+    }
+    if (/neram|timing|epbo|eppo|opd|நேரம்/i.test(textLower)) {
+      return `${docTitle} clinic la OPD consultation kidaikkum neram:\n🕒 *${activeTimings}*\n\nInnikku illa naalaikku appointment schedule panna virumbureengala?${phoneSuffix}`;
+    }
+    if (/appointment|book|vara|varren|varen|paakanum|paarka|slot|naalaikku|innikku|முன்பதிவு/i.test(textLower)) {
+      return `Kandippa! ${docTitle} (${activeSpecialty}) kooda appointment confirm panna **Patient Muzhu Peyar** matrum **Date (Innikku / Naalaikku)** sollunga. Naan udane confirm panniduren!${phoneSuffix}`;
     }
     if (isOngoingChat) {
-      return `సరేనండి! ${docTitle} గారి కోసం ఈరోజు లేదా రేపటికి అపాయింట్‌మెంట్ బుక్ చేయడానికి దయచేసి రోగి పేరు మరియు సమయాన్ని పంపండి.${phoneSuffix}`;
+      return `Seri! ${docTitle} (${activeSpecialty}) kooda **innikku** illa **naalaikku** appointment book panna patient peyar matrum neram sollunga.${phoneSuffix}`;
     }
-    return `నమస్కారం! 🙏 నేను ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) రిసెప్షనిస్ట్.\n\nనేను మీకు అపాయింట్‌మెంట్ లేదా క్లినిక్ వివరాలలో ఎలా సహాయపడగలను?${phoneSuffix}`;
+    return `Vanakkam! 🙏 Naan ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Ungalukku eppadi udhava mudiyum?${phoneSuffix}`;
   }
 
-  if (isKannada || isMalayalam || isBengali || isGujarati || isPunjabi) {
-    if (/timing|samay|time|opd|hours/i.test(textLower)) {
-      return `${docTitle} OPD Timings: *${clinicTimings}*.\n\nWould you like to book an appointment for today or tomorrow?${phoneSuffix}`;
+  // ════ 3. TELUGU / TELUGISH ══════════════════════════════════════════════
+  if (isTelugish) {
+    if (/telugu|matladathara|తెలుగు/i.test(textLower)) {
+      return `Avunu andi! Nenu Telugu matladagalanu 😊 *${clinicName}* lo ${docTitle} (${activeSpecialty}) garitho appointment kosam ela sahayam cheyagalanu?${phoneSuffix}`;
+    }
+    if (/late|raalenu|kudaradu|traffic|time\s*ki/i.test(textLower)) {
+      return `Parvaledu andi! Ee roju raavadam kastam ayithe, mee slot **repu (tomorrow)** ki book cheyannaa?\n\n${docTitle} repu OPD lo *${activeTimings}* untaru.${phoneSuffix}`;
+    }
+    if (/ekkada|ekada|address|location|chota|map|ఎక్కడ/i.test(textLower)) {
+      if (clinicAddress) {
+        return `Clinic address:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${activeTimings}*\nEe roju visit chestunnara?${phoneSuffix}`;
+      }
+      return `Maa clinic *${clinicName}* lo undi. Exact address kosam reception ki call cheyavachhu.${phoneSuffix}`;
+    }
+    if (/enta|entha|fee|fees|cost|charge|kharchu|ఫీజు/i.test(textLower)) {
+      const feeText = cleanFee ? `Consultation fee *₹${cleanFee}*` : "Fee vivaralu clinic lo theliyajeyabadathayi";
+      return `${docTitle} (${activeSpecialty}) ${feeText}.\n\nEe roju leda repu slot book cheyalanukuntunnara?${phoneSuffix}`;
+    }
+    if (/timing|samayam|eppudu|opd|సమయం/i.test(textLower)) {
+      return `${docTitle} clinic lo OPD consultation samayam:\n🕒 *${activeTimings}*\n\nMeeru *ee roju* leda *repu* appointment schedule cheyalanukuntunnara?${phoneSuffix}`;
+    }
+    if (/appointment|book|vastanu|vasta|chupinchali|chudali|slot|repu|ee\s*roju|అపాయింట్‌మెంట్/i.test(textLower)) {
+      return `Tappakunda andi! ${docTitle} (${activeSpecialty}) garitho appointment confirm cheyadaniki daya chesi **Patient Pura Peru** mariyu **Date (Ee roju / Repu)** cheppandi. Nenu ventane confirm chestanu!${phoneSuffix}`;
     }
     if (isOngoingChat) {
-      return `Sure! To book an appointment with ${docTitle} (${specialty}), please share the **Patient Name** and preferred **Date (Today or Tomorrow)**.${phoneSuffix}`;
+      return `Sare andi! ${docTitle} (${activeSpecialty}) garitho **ee roju** leda **repu** appointment book cheyadaniki patient peru mariyu samayam cheppandi.${phoneSuffix}`;
     }
-    return `Namaste! 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}). How may I help you with an appointment today?${phoneSuffix}`;
+    return `Namaskaram! 🙏 Nenu ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Nenu meeku ela sahayam cheyagalanu?${phoneSuffix}`;
+  }
+
+  // ════ 4. MARATHI / MARATHISH ══════════════════════════════════════════════
+  if (isMarathish) {
+    if (/marathi|bolta|मराठी/i.test(textLower)) {
+      return `Ho! Mala Marathi kalte o bolta yete 😊 *${clinicName}* madhe ${docTitle} (${activeSpecialty}) sobat appointment sathi me kashi madat karu shakte?${phoneSuffix}`;
+    }
+    if (/late|ushir|jamnar\s*nahi|traffic/i.test(textLower)) {
+      return `Kahi harkat nahi! Aaj yene shakya nasel, tar tumcha slot **udya (tomorrow)** sathi book karu ka?\n\n${docTitle} udya OPD madhe *${activeTimings}* uplabdha astil.${phoneSuffix}`;
+    }
+    if (/kuthe|kothe|address|location|patta|map|कुठे|पत्ता/i.test(textLower)) {
+      if (clinicAddress) {
+        return `Clinic cha patta:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${activeTimings}*\nTumhi aaj bhet denar aahat ka?${phoneSuffix}`;
+      }
+      return `Aamche clinic *${clinicName}* ye the aahe. Exact address sathi reception var call kara.${phoneSuffix}`;
+    }
+    if (/kiti|fee|fees|cost|charge|paise|फी/i.test(textLower)) {
+      const feeText = cleanFee ? `Consultation fee *₹${cleanFee}* aahe` : "Consultation fee chi mahiti clinic madhe dili jaate";
+      return `${docTitle} (${activeSpecialty}) chi ${feeText}.\n\nTumhi aaj ki udya sathi slot book karu ichhita ka?${phoneSuffix}`;
+    }
+    if (/vel|timing|kadhi|opd|वेळ/i.test(textLower)) {
+      return `${docTitle} clinic madhe OPD consultation sathi uplabdha astat:\n🕒 *${activeTimings}*\n\nTumhi *aaj* ki *udya* appointment schedule karu ichhita ka?${phoneSuffix}`;
+    }
+    if (/appointment|book|yenar|yeto|yete|dakhvaycha|bhetaycha|slot|udya|aaj|अपॉइंटमेंट/i.test(textLower)) {
+      return `Ho nishchit! ${docTitle} (${activeSpecialty}) sobat appointment confirm karnyasathi krupaya **Patient che Purna Naav** aani **Date (Aaj ki Udya)** sanga. Me lagech confirm karte!${phoneSuffix}`;
+    }
+    if (isOngoingChat) {
+      return `Ho! Tumhi ${docTitle} (${activeSpecialty}) sobat **aaj** ki **udya** sathi appointment book karu ichhita ka? Krupaya patient che naav aani vel sanga.${phoneSuffix}`;
+    }
+    return `Namaskar! 🙏 Me ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) chi receptionist. Me aapli kashi madat karu shakte?${phoneSuffix}`;
+  }
+
+  // ════ 5. KANNAda, MALAYALAM, GUJARATI, PUNJABI ══════════════════════════
+  if (isKanglish) {
+    if (/timing|samaya|yaavaga|opd/i.test(textLower)) {
+      return `${docTitle} OPD Timings: *${activeTimings}*.\n\nNaale athava ivathu appointment book maadabeka?${phoneSuffix}`;
+    }
+    if (isOngoingChat || /appointment|book|bartheeni|thorisbeku|naale|ivathu/i.test(textLower)) {
+      return `Khanditha! ${docTitle} (${activeSpecialty}) jothe appointment confirm maadalu daya maadi **Patient Purna Hesaru** mathu **Date (Ivathu / Naale)** thilisi.${phoneSuffix}`;
+    }
+    return `Namaskara! 🙏 Naanu ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Naanu nimage hege sahaya maadabahudu?${phoneSuffix}`;
+  }
+
+  if (isManglish) {
+    if (/samayam|timing|eppol|opd/i.test(textLower)) {
+      return `${docTitle} OPD Timings: *${activeTimings}*.\n\nInno athava naale appointment book cheyyano?${phoneSuffix}`;
+    }
+    if (isOngoingChat || /appointment|book|varam|kanikkanam|naale|innu/i.test(textLower)) {
+      return `Theerchayayum! ${docTitle} (${activeSpecialty}) aayi appointment confirm cheyyanayi **Patient-nte Muzhuvan Peru** mariyu **Date (Innu / Naale)** parayoo.${phoneSuffix}`;
+    }
+    return `Namaskaram! 🙏 Njan ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Njan engane sahayam cheyyatte?${phoneSuffix}`;
+  }
+
+  if (isGujlish) {
+    if (/samay|timing|kyare|opd/i.test(textLower)) {
+      return `${docTitle} OPD Timings: *${activeTimings}*.\n\nAaje ke kale appointment book karvu che?${phoneSuffix}`;
+    }
+    if (isOngoingChat || /appointment|book|aavishu|batavvu|kale|aaje/i.test(textLower)) {
+      return `Chokkas! ${docTitle} (${activeSpecialty}) sathe appointment confirm karva mate krupya **Patient nu Pura Naam** ane **Date (Aaje / Kale)** janavo.${phoneSuffix}`;
+    }
+    return `Namaste! 🙏 Hu ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Hu tamari shu madad kari shaku?${phoneSuffix}`;
+  }
+
+  if (isPunlish) {
+    if (/time|timing|kadon|opd/i.test(textLower)) {
+      return `${docTitle} OPD Timings: *${activeTimings}*.\n\nAjj ya kal appointment book karni hai?${phoneSuffix}`;
+    }
+    if (isOngoingChat || /appointment|book|aaunga|dikhauna|kal|ajj/i.test(textLower)) {
+      return `Hanji bilkul! ${docTitle} (${activeSpecialty}) naal appointment confirm karan layi **Patient da Pura Naam** te **Date (Ajj / Kal)** dasso.${phoneSuffix}`;
+    }
+    return `Sat Sri Akaal! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Main twadi ki madad kar sakdi aan?${phoneSuffix}`;
   }
 
   // ════ 2. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
@@ -418,11 +550,18 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
    - NEVER include robotic disclaimers like "(I am the clinic's AI assistant...)" or template disclaimers.
    - Do NOT duplicate titles (always refer to the doctor as "${doctorName}").
 
-2. **AUTOMATIC LANGUAGE ADAPTATION (ENGLISH / HINGLISH / HINDI)**:
-   - Match the patient's language naturally:
-     * If the patient writes in Hindi/Devanagari ("नमस्ते", "अपॉइंटमेंट चाहिए", "फीस कितनी है"), respond in polite, warm Hindi.
-     * If the patient writes in Hinglish ("timing kya hai", "fees kitni hai", "appointment book karna hai"), respond in natural, polite Hinglish.
-     * If the patient writes in English, respond in warm, professional English.
+2. **AUTOMATIC MULTI-LINGUAL ADAPTATION (NATIVE SCRIPTS & ROMANIZED TRANSLITERATIONS)**:
+   - Match the patient's language and dialect naturally and accurately:
+     * **Bengali / Bonglish** ("Ami kal ke aasbo", "Apni ki bangla bolchhen", "কখন আসব"): Respond in polite, natural Bengali / Bonglish ("Hyan nishchoi! Slot confirm korar jonno...").
+     * **Tamil / Tanglish** ("Naalaikku vara mudiyuma", "நாளை வருகிறேன்"): Respond in polite, natural Tamil / Tanglish.
+     * **Telugu / Telugish** ("Repu vasta", "రేపు వస్తాను"): Respond in polite, natural Telugu / Telugish.
+     * **Marathi / Marathish** ("Mee udya yenar", "उद्या येणार"): Respond in polite, natural Marathi / Marathish.
+     * **Kannada / Kanglish** ("Naale bartheeni", "ನಾಳೆ ಬರುತ್ತೇನೆ"): Respond in polite, natural Kannada / Kanglish.
+     * **Malayalam / Manglish** ("Naale varam", "നാളെ വరాം"): Respond in polite, natural Malayalam / Manglish.
+     * **Gujarati / Gujlish** ("Hu kale aavish", "હું કાલે આવીશ"): Respond in polite, natural Gujarati / Gujlish.
+     * **Punjabi / Punlish** ("Main kal aaunga", "ਮੈਂ ਕੱਲ੍ਹ ਆਵਾਂਗਾ"): Respond in polite, natural Punjabi / Punlish.
+     * **Hindi / Hinglish** ("Appointment chahiye", "कल आना है"): Respond in polite, natural Hindi / Hinglish.
+     * **English**: Respond in warm, professional English.
 
 3. **MULTI-DOCTOR SCHEDULE & SPECIALTY MATCHING**:
    - If the patient mentions a specific doctor or specialty (e.g. Skin, Dental, Child), provide THAT doctor's specific OPD timings and details.
