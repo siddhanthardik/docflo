@@ -19,9 +19,9 @@ export default async function BillingPage() {
     }
   });
 
-  // Get all active packages
+  // Get all active non-archived packages
   const rawPackages = await prisma.package.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isArchived: false },
     include: {
       packageFeatures: true,
       modules: { select: { moduleName: true } },
@@ -33,15 +33,16 @@ export default async function BillingPage() {
   const PACKAGE_RANK: Record<string, number> = {
     "FREE": 1,
     "STARTER": 2,
-    "AI_RECEPTIONIST": 2.5,
-    "RECEPTIONIST": 2.5,
-    "GROWTH": 3,
-    "PREMIUM": 4,
-    "AUTOPILOT": 4,
+    "AI RECEPTIONIST": 3,
+    "AI_RECEPTIONIST": 3,
+    "RECEPTIONIST": 3,
+    "GROWTH": 4,
+    "PREMIUM": 5,
+    "AUTOPILOT": 5,
   };
 
   const getRank = (name: string) => {
-    const upper = name.toUpperCase();
+    const upper = (name || "").toUpperCase();
     for (const [key, rank] of Object.entries(PACKAGE_RANK)) {
       if (upper.includes(key)) return rank;
     }
