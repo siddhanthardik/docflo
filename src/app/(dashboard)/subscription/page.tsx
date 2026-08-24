@@ -33,6 +33,8 @@ export default async function BillingPage() {
   const PACKAGE_RANK: Record<string, number> = {
     "FREE": 1,
     "STARTER": 2,
+    "AI_RECEPTIONIST": 2.5,
+    "RECEPTIONIST": 2.5,
     "GROWTH": 3,
     "PREMIUM": 4,
     "AUTOPILOT": 4,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, X, Star, ShieldCheck, Zap, CreditCard, ArrowRight, RefreshCcw } from "lucide-react";
+import { Check, X, Star, ShieldCheck, Zap, CreditCard, ArrowRight, RefreshCcw, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -205,12 +205,13 @@ export function BillingClient({
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mt-6">
           {availablePackages.map((pkg) => {
             const isCurrent = currentPackage?.id === pkg.id;
             const currency = getCurrency(pkg);
             const isPopular = pkg.name?.toUpperCase().includes("GROWTH");
             const isStarter = pkg.name?.toUpperCase().includes("STARTER");
+            const isAiReceptionist = pkg.name?.toUpperCase().includes("RECEPTIONIST") || pkg.slug === "ai-receptionist";
             const isFree = (pkg.priceMonthly || 0) === 0;
 
             const effectivePeriod = (isStarter && period === "monthly") ? "quarterly" : period;
@@ -243,6 +244,8 @@ export function BillingClient({
                     ? 'border-indigo-500 shadow-md ring-2 ring-indigo-500/20' 
                     : isPopular 
                     ? 'border-indigo-500 shadow-sm ring-1 ring-indigo-500/30' 
+                    : isAiReceptionist
+                    ? 'border-blue-400 shadow-sm ring-1 ring-blue-400/30'
                     : 'border-gray-200 shadow-2xs'
                 } overflow-hidden flex flex-col justify-between relative transition-all hover:shadow-md group`}
               >
@@ -255,6 +258,12 @@ export function BillingClient({
                 {isPopular && !isCurrent && (
                   <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1">
                     <Star className="w-3.5 h-3.5 fill-current" /> Most Popular
+                  </div>
+                )}
+
+                {isAiReceptionist && !isCurrent && !isPopular && (
+                  <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white text-[10px] font-extrabold uppercase tracking-widest text-center py-1 flex items-center justify-center gap-1">
+                    <Bot className="w-3.5 h-3.5" /> 24/7 AI Receptionist
                   </div>
                 )}
 
@@ -324,7 +333,7 @@ export function BillingClient({
                           if (mName === "CLINIC_CORE") label = "Clinic Operations (Patients, Billing, Calendar)";
                           if (mName === "GROWTH_SEO") label = "Growth & Local SEO (Google Profile & Rankings)";
                           if (mName === "WHATSAPP_CRM") label = "WhatsApp CRM (Automations & Reminders)";
-                          if (mName === "AI_ASSISTANT") label = "AI Practice Assistant";
+                          if (mName === "AI_ASSISTANT") label = isAiReceptionist ? "24/7 WhatsApp AI Receptionist & Booking" : "AI Practice Assistant";
 
                           return (
                             <li key={mName} className="flex items-start gap-2 font-semibold text-slate-800">
@@ -353,6 +362,16 @@ export function BillingClient({
                                 <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Google Business Profile & Local Search</li>
                                 <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 3 Staff Seats & 500 Patient Records</li>
                                 <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 90-Day Ranking Setup Support</li>
+                              </>
+                            );
+                          }
+                          if (pName.includes("RECEPTIONIST")) {
+                            return (
+                              <>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 24/7 WhatsApp AI Receptionist & Booking</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> Multilingual Support (Hindi, English, etc.)</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> OPD Calendar & Appointment Reminders</li>
+                                <li className="flex items-center gap-2 font-medium text-slate-800"><Check className="h-4 w-4 text-emerald-600 shrink-0" /> 3 Staff Seats & 2,000 Patient Records</li>
                               </>
                             );
                           }
