@@ -18,6 +18,10 @@ import { GbpPostPublisherService } from "./src/services/gbp-post-publisher.servi
 app.prepare().then(() => {
   console.log("Next.js started. WhatsApp Manager is ready in the main process.");
 
+  // Boot all saved WhatsApp sessions (Superadmin + Clinics) and activate 24/7 Watchdog
+  whatsappManager.autoConnectAll();
+  whatsappManager.startWatchdog();
+
   // Background sweep for scheduled GBP posts (runs every 2 minutes)
   const runGbpSweep = async () => {
     try {
