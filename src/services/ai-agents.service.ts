@@ -5,14 +5,13 @@ import { memoryCache } from "@/lib/memory-cache";
 // Initialize Gemini (Ensure GEMINI_API_KEY is in .env)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Fallback Model Cascade: Ensures maximum uptime across latest Gemini releases
+// Fallback Model Cascade: Prioritizes Gemini 3.6 Flash and Gemini 3.5 Flash
 const CANDIDATE_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-flash-latest",
-  "gemini-3.6-flash",
-  "gemini-3.5-flash"
+  "gemini-flash-latest"
 ];
 
 // Clean and format doctor display name without repetitive "Dr." prefixes
@@ -138,7 +137,7 @@ function buildDeterministicReceptionistReply(
   const hasPunjabi = /[\u0A00-\u0A7F]/.test(text);
 
   // Romanized Transliteration Keywords
-  const isBonglish = hasBengali || /\b(ami|amra|apni|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kotha|kothay|koto|lagbe|daktar|dekhte|dekhabo|shomoy|shomoye|ache|achhe|thakben|thakbe|hobe|korbo|parbo|bangla|bengali|dhonnobad|kalke|aajke|ajke)\b/i.test(textLower);
+  const isBonglish = hasBengali || /\b(ami|amra|apni|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kotha|kothay|koto|lagbe|daktar|dekhte|dekhabo|shomoy|shomoye|ache|achhe|thakben|thakbe|hobe|korbo|parbo|bangla|bengali|dhonnobad|kalke|aajke|ajke|raat|raate|rate)\b/i.test(textLower);
   const isTanglish = hasTamil || /\b(vanakkam|naan|nanga|neenga|ungalukku|vara|varren|varen|vandhuten|naalaikku|nalaikku|innikku|iniku|epbo|eppo|evvalo|evvalavu|panam|kaasu|paakanum|paarka|pakanum|irukka|iruku|irukku|kedaikkuma|engae|enge|enga|solla|sollunga|nandri|seri|mudiyuma|mudiyum|tamil|thamizh)\b/i.test(textLower);
   const isTelugish = hasTelugu || /\b(namaskaram|namaskaramu|nenu|memu|meeru|repu|ee\s*roju|eeroju|vastanu|vastam|vasta|eppudu|enta|entha|chupinchali|chudali|unnara|untara|undha|ekkada|ekada|cheppandi|cheppu|dhanyavadalu|telugu)\b/i.test(textLower);
   const isMarathish = !hasDevanagari && /\b(namaskar|mee|amhi|tumhi|udya|aajch|yenar|yeto|yete|kadhi|kiti|dakhvaycha|bhetaycha|aahet|nahit|kuthe|kothe|sanga|saanga|dhanyawad|marathi)\b/i.test(textLower);
@@ -147,7 +146,12 @@ function buildDeterministicReceptionistReply(
   const isGujlish = hasGujarati || /\b(kem\s*cho|majama|hu|ame|tame|kale|aaje|aavishu|aavu|aavvu|kyare|ketla|ketli|batavvu|malvu|nathi|kyaan|janavo|aabhar|gujarati)\b/i.test(textLower);
   const isPunlish = hasPunjabi || /\b(sat\s*sri\s*akaal|sasrikal|assi|tussi|ajj|aaunga|aunde|kadon|kado|kinne|kinni|dikhauna|hanji|haanji|kithe|kithay|dasso|dasan|dhanwad|punjabi)\b/i.test(textLower);
 
-  const isHindiOrHinglish = hasDevanagari || (!isBonglish && !isTanglish && !isTelugish && !isMarathish && !isKanglish && !isManglish && !isGujlish && !isPunlish && /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower));
+  // International / Global Languages
+  const isSpanish = /\b(hola|buenos\s*dias|buenas\s*tardes|buenas\s*noches|cita|doctor|gracias|precio|consulta|saludos|adonde|donde|quiero)\b/i.test(textLower);
+  const isFrench = /\b(bonjour|bonsoir|salut|rendez-vous|medecin|merci|horaires|docteur|combien)\b/i.test(textLower);
+  const isArabic = /[\u0600-\u06FF]/.test(text) || /\b(marhaban|salam|shukran|tabib|maw3id|ahlan)\b/i.test(textLower);
+
+  const isHindiOrHinglish = hasDevanagari || (!isBonglish && !isTanglish && !isTelugish && !isMarathish && !isKanglish && !isManglish && !isGujlish && !isPunlish && !isSpanish && !isFrench && !isArabic && /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower));
 
   // User explicitly asking for phone / human call
   const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
@@ -159,8 +163,33 @@ function buildDeterministicReceptionistReply(
 
   const cleanFee = consultationFee ? consultationFee.replace(/[^\d.,]/g, '').trim() : "";
 
-  // ════ 1. BENGALI / BONGLISH ══════════════════════════════════════════════
+  // ════ 1. SPANISH (Native & Polite) ═════════════════════════════════════════
+  if (isSpanish) {
+    if (/cita|consulta|reservar|agendar|doctor|horario/i.test(textLower)) {
+      return `¡Hola! Con gusto podemos agendar su cita con ${docTitle} (${activeSpecialty}). Por favor comparta el **Nombre completo del paciente** y la **Fecha deseada** (Hoy o Mañana). Horario de atención: *${activeTimings}*.${phoneSuffix}`;
+    }
+    return `¡Hola! 👋 Soy ${assistantName}, recepcionista de *${clinicName}* (${docTitle} · ${activeSpecialty}). ¿En qué puedo ayudarle hoy con su consulta o cita médica?${phoneSuffix}`;
+  }
+
+  // ════ 2. FRENCH (Native & Polite) ══════════════════════════════════════════
+  if (isFrench) {
+    if (/rendez-vous|rdv|reserver|consultation|docteur|horaires/i.test(textLower)) {
+      return `Bonjour ! Pour confirmer votre rendez-vous avec ${docTitle} (${activeSpecialty}), veuillez indiquer le **Nom complet du patient** et la **Date souhaitée**. Horaires : *${activeTimings}*.${phoneSuffix}`;
+    }
+    return `Bonjour ! 👋 Je suis ${assistantName}, réceptionniste à *${clinicName}* (${docTitle} · ${activeSpecialty}). Comment puis-je vous aider aujourd'hui ?${phoneSuffix}`;
+  }
+
+  // ════ 3. ARABIC (Native & Polite) ══════════════════════════════════════════
+  if (isArabic) {
+    return `مرحباً بك! 👋 أنا ${assistantName}، مساعدة العيادة في *${clinicName}* مع ${docTitle} (${activeSpecialty}). أوقات العيادة: *${activeTimings}*. كيف يمكنني مساعدتك في حجز موعد اليوم؟${phoneSuffix}`;
+  }
+
+  // ════ 4. BENGALI / BONGLISH ══════════════════════════════════════════════
   if (isBonglish) {
+    // 4.1 Late-night / 24x7 inquiry (e.g. "Eto raat tumi ki appointment dite paren?")
+    if (/eto\s*raat|eto\s*rat|raat\s*e|raate|rate|open|khula|24\/7|kokhon/i.test(textLower)) {
+      return `Hyan nishchoi! Amader 24/7 AI Receptionist shob shomoy active thake aapnar appointment book korar jonno 😊\n\n${docTitle} (${activeSpecialty}) clinic-e agami OPD consultations-er jonno thakben (*${activeTimings}*).\n\nSlot reserve korar jonno doya kore **Patient-er Puro Naam** o **Date (Aaj ba Kal)** share korun. Ami ekhoni confirm kore debo!${phoneSuffix}`;
+    }
     if (/bolchhen|bolchen|bolte|bangla|bengali|বাংলা/i.test(textLower)) {
       return `Hyan! Ami Bangla bujhte o bolte pari 😊 *${clinicName}*-e ${docTitle} (${activeSpecialty})-er sathe appointment ba jankari-r jonno ami kivabe sahajjo korte pari?${phoneSuffix}`;
     }
@@ -181,7 +210,10 @@ function buildDeterministicReceptionistReply(
       return `${docTitle} clinic-e OPD consultations-er jonno thakben:\n🕒 *${activeTimings}*\n\nApni ki *aaj* ba *kal* appointment schedule korte chan?${phoneSuffix}`;
     }
     if (/appointment|book|aasbo|ashbo|dekhte|dekhabo|daktar|slot|chahiye|kal|aaj|কাল|আজ|আসছি|দেখাতে/i.test(textLower)) {
-      return `Hyan nishchoi! ${docTitle} (${activeSpecialty})-er sathe appointment confirm korar jonno doya kore **Patient-er Puro Naam** o preferred **Date (Aaj ba Kal)** share korun. Main turant confirm kore debo!${phoneSuffix}`;
+      return `Hyan nishchoi! ${docTitle} (${activeSpecialty})-er sathe appointment confirm korar jonno doya kore **Patient-er Puro Naam** o preferred **Date (Aaj ba Kal)** share korun. Ami ekhoni confirm kore debo!${phoneSuffix}`;
+    }
+    if (/^(hi|hello|hey|namaste|nomoshkar|pranam|helo|hlo|hii+)\b/i.test(textLower) || textLower.length <= 4) {
+      return `Nomoshkar! 🙏 Ami ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty})-er receptionist.\n\nAmi kivabe aapnar appointment ba clinic-er jankari-te sahajjo korte pari?${phoneSuffix}`;
     }
     if (isOngoingChat) {
       return `Hyan! Apni ki ${docTitle} (${activeSpecialty})-er sathe **aaj** ba **kal** appointment slot book korte chan? Doya kore patient-er puro naam o somoy janan.${phoneSuffix}`;
@@ -189,7 +221,7 @@ function buildDeterministicReceptionistReply(
     return `Nomoshkar! 🙏 Ami ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty})-er receptionist.\n\nAmi kivabe aapnar appointment ba clinic-er jankari-te sahajjo korte pari?${phoneSuffix}`;
   }
 
-  // ════ 2. TAMIL / TANGLISH ════════════════════════════════════════════════
+  // ════ 5. TAMIL / TANGLISH ════════════════════════════════════════════════
   if (isTanglish) {
     if (/tamil|thamizh|pesuveengala|தமிழ்/i.test(textLower)) {
       return `Aam! Enakku Tamil theriyum 😊 *${clinicName}* la ${docTitle} (${activeSpecialty}) kooda appointment book panna eppadi udhava mudiyum?${phoneSuffix}`;
@@ -219,7 +251,7 @@ function buildDeterministicReceptionistReply(
     return `Vanakkam! 🙏 Naan ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Ungalukku eppadi udhava mudiyum?${phoneSuffix}`;
   }
 
-  // ════ 3. TELUGU / TELUGISH ══════════════════════════════════════════════
+  // ════ 6. TELUGU / TELUGISH ══════════════════════════════════════════════
   if (isTelugish) {
     if (/telugu|matladathara|తెలుగు/i.test(textLower)) {
       return `Avunu andi! Nenu Telugu matladagalanu 😊 *${clinicName}* lo ${docTitle} (${activeSpecialty}) garitho appointment kosam ela sahayam cheyagalanu?${phoneSuffix}`;
@@ -249,7 +281,7 @@ function buildDeterministicReceptionistReply(
     return `Namaskaram! 🙏 Nenu ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Nenu meeku ela sahayam cheyagalanu?${phoneSuffix}`;
   }
 
-  // ════ 4. MARATHI / MARATHISH ══════════════════════════════════════════════
+  // ════ 7. MARATHI / MARATHISH ══════════════════════════════════════════════
   if (isMarathish) {
     if (/marathi|bolta|मराठी/i.test(textLower)) {
       return `Ho! Mala Marathi kalte o bolta yete 😊 *${clinicName}* madhe ${docTitle} (${activeSpecialty}) sobat appointment sathi me kashi madat karu shakte?${phoneSuffix}`;
@@ -279,7 +311,7 @@ function buildDeterministicReceptionistReply(
     return `Namaskar! 🙏 Me ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) chi receptionist. Me aapli kashi madat karu shakte?${phoneSuffix}`;
   }
 
-  // ════ 5. KANNAda, MALAYALAM, GUJARATI, PUNJABI ══════════════════════════
+  // ════ 8. KANNADA, MALAYALAM, GUJARATI, PUNJABI ══════════════════════════
   if (isKanglish) {
     if (/timing|samaya|yaavaga|opd/i.test(textLower)) {
       return `${docTitle} OPD Timings: *${activeTimings}*.\n\nNaale athava ivathu appointment book maadabeka?${phoneSuffix}`;
@@ -320,14 +352,19 @@ function buildDeterministicReceptionistReply(
     return `Sat Sri Akaal! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${activeSpecialty}) receptionist. Main twadi ki madad kar sakdi aan?${phoneSuffix}`;
   }
 
-  // ════ 2. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
+  // ════ 9. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
   if (isHindiOrHinglish) {
-    // 2.1 Late / Traffic / Timing delay / "Mushkil pahuch payenge" / "6:30 ho gya"
+    // 9.1 Late night / 24x7 question
+    if (/itni\s*raat|raat\s*ko|raat\s*me|open|khula|24\/7/i.test(textLower) && /appointment|mil|hoga|book/i.test(textLower)) {
+      return `Ji bilkul! Hamara 24/7 automated receptionist kisi bhi samay agle din ke OPD slot ke liye appointment book kar sakta hai 😊\n\n${docTitle} (${specialty}) OPD me *${clinicTimings}* uplabdh rahenge. Kripya patient ka **Naam** aur **Date (aaj ya kal)** share karein, main turant reserve kar deti hoon!${phoneSuffix}`;
+    }
+
+    // 9.2 Late / Traffic / Timing delay
     if (/late|delay|pahuch|mushkil|already|traffic|time\s*pe|aaj\s*nahi|nahi\s*ho\s*payega|deir|der|time\s*kam|ruk|wait|paunch|मुश्किल|पहुँच|देर/i.test(textLower) || text.includes("मुश्किल")) {
       return `Koi baat nahi ji! Agar aaj clinic time pe pahunchne me dikkat ho rahi hai, toh kya main aapka slot **kal (tomorrow)** ke liye book kar doon?\n\n${docTitle} kal *${clinicTimings}* OPD me uplabdh rahenge.${phoneSuffix}`;
     }
 
-    // 2.2 Address / Location / Directions / "Clinic kaha hai"
+    // 9.3 Address / Location / Directions
     if (/address|location|kahan|kaha|rasta|directions|map|कहाँ|पता|लोकेशन|रास्ता|एड्रेस/i.test(textLower) || text.includes("कहाँ") || text.includes("पता")) {
       if (clinicAddress) {
         return `Clinic ka address hai:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\nOPD Timings: *${clinicTimings}*\nKya aap aaj visit plan kar rahe hain?${phoneSuffix}`;
@@ -335,68 +372,72 @@ function buildDeterministicReceptionistReply(
       return `Hamara clinic *${clinicName}* par sthit hai. Exact address ke liye aap clinic reception par direct call bhi kar sakte hain.${phoneSuffix}`;
     }
 
-    // 2.3 Fee / Pricing Inquiry
+    // 9.4 Fee / Pricing Inquiry
     if (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower) || text.includes("फीस") || text.includes("शुल्क")) {
       const feeText = cleanFee ? `Consultation fees *₹${cleanFee}* hai` : "Consultation fees ki details clinic par consultation ke samay di jaati hain";
       return `${docTitle} (${specialty}) ki ${feeText}.\n\nKya aap aaj ya kal ke liye slot book karna chahenge?${phoneSuffix}`;
     }
 
-    // 2.4 Timings / Schedule Inquiry
+    // 9.5 Timings / Schedule Inquiry
     if (/timing|samay|kab|time|opd|hours|khula|schedule|समय|टाइम|कब/i.test(textLower) || text.includes("समय") || text.includes("टाइम")) {
       return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
     }
 
-    // 2.5 Appointment Booking Request / "Appointment chahiye" / "Kal milna hai"
+    // 9.6 Appointment Booking Request
     if (/appointment|book|visit|consult|slot|milna|dikhana|aana|chahiye|booking|apointment|apointmnt|अपॉइंटमेंट|बुक|मिलना|दिखाना|चाहिए|स्लॉट/i.test(textLower) || text.includes("अपॉइंटमेंट") || text.includes("चाहिए")) {
       return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam** aur ${slotPromptHi} share karein. Main turant confirm kar dungi!${phoneSuffix}`;
     }
 
-    // 2.6 Tomorrow / Specific Date / Kal preference
+    // 9.7 Tomorrow / Specific Date
     if (/\b(kal|tomorrow|parso|aaj|today|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(textLower) || text.includes("कल") || text.includes("आज")) {
       return `Ji theek hai! Slot confirm karne ke liye kripya **Patient ka Pura Naam** bata dijiye. ${docTitle} OPD me *${clinicTimings}* uplabdh rahenge.${phoneSuffix}`;
     }
 
-    // 2.7 Affirmation / Confirmation ("haan", "yes", "thik hai", "ok", "kardo")
+    // 9.8 Affirmation / Confirmation
     if (/^(haan|ha|ji|yes|yep|sure|thik\s*hai|theek\s*hai|ok|okay|kardo|kar\s*do|theek)\b/i.test(textLower) || textLower === "ok" || textLower === "haan") {
       return `Ji, kripya **Patient ka Pura Naam** aur preferred **Date** share karein, main turant booking confirm kar deti hoon!${phoneSuffix}`;
     }
 
-    // 2.8 If it's a pure first greeting ("hi", "hello", "namaste") on an empty chat
-    if (!isOngoingChat && (/^(hi|hello|hey|namaste|pranam|hlo|helo|hii+)\b/i.test(textLower) || textLower.length <= 4)) {
+    // 9.9 Greetings in Hindi
+    if (/^(hi|hello|hey|namaste|pranam|hlo|helo|hii+)\b/i.test(textLower) || textLower.length <= 4) {
       return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon.\n\nMain aapki appointment ya clinic se judi kis jankari me madad kar sakti hoon?${phoneSuffix}`;
     }
 
-    // 2.9 Ongoing conversation Hindi/Hinglish Fallback (NEVER re-greets)
     if (isOngoingChat) {
       return `Ji! Kya aap ${docTitle} ke sath **aaj** ya **kal** ke liye appointment slot book karna chahenge? Kripya apna naam aur samay batayein.${phoneSuffix}`;
     }
 
-    return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se बोल रही हूँ। क्या आप आज या कल के लिए अपॉइंटमेंट बुक करना चाहेंगे?${phoneSuffix}`;
+    return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
   }
 
-  // ════ 3. ENGLISH (Professional, Warm & Human) ════════════════════════════
-  // 3.1 Late / Delay handling
+  // ════ 10. ENGLISH (Professional, Warm & Human) ═══════════════════════════
+  // 10.1 Late night / 24x7 inquiry
+  if (/late\s*night|night|open\s*now|24\/7|open\s*at\s*night/i.test(textLower)) {
+    return `Yes! Our 24/7 digital assistant is always active to reserve your upcoming consultation slot. ${docTitle} is available during OPD hours (${clinicTimings}). Would you like to reserve a slot for today or tomorrow?${phoneSuffix}`;
+  }
+
+  // 10.2 Late / Delay handling
   if (/late|delay|reach|traffic|cannot\s*make|difficult|not\s*possible|unable/i.test(textLower)) {
     return `No problem at all! If today is difficult to reach on time, would you like me to schedule your consultation with ${docTitle} for **tomorrow** instead? (OPD Timings: ${clinicTimings})${phoneSuffix}`;
   }
 
-  // 3.2 Timings & OPD Hours
+  // 10.3 Timings & OPD Hours
   if (/timing|hours|schedule|time|open|when\s*is|opd/i.test(textLower)) {
     return `${docTitle} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please share your preferred time and patient name.${phoneSuffix}`;
   }
 
-  // 3.3 Appointment Booking / Schedule
+  // 10.4 Appointment Booking / Schedule
   if (/appointment|book|visit|consult|slot|schedule|available|doctor|reserve/i.test(textLower)) {
     return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name** and your ${slotPromptEn}. I will be happy to confirm it for you!${phoneSuffix}`;
   }
 
-  // 3.4 Fees & Pricing
+  // 10.5 Fees & Pricing
   if (/fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
     const feeText = cleanFee ? `Consultation fee is *₹${cleanFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
     return `${feeText} for ${docTitle} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?${phoneSuffix}`;
   }
 
-  // 3.5 Address, Location & Directions
+  // 10.6 Address, Location & Directions
   if (/address|location|where|directions|map|how\s*to\s*reach|find/i.test(textLower)) {
     if (clinicAddress) {
       return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\n${docTitle} is available during OPD hours (${clinicTimings}).\n\nWould you like to schedule a visit?${phoneSuffix}`;
@@ -404,18 +445,18 @@ function buildDeterministicReceptionistReply(
     return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please feel free to call our reception.${phoneSuffix}`;
   }
 
-  // 3.6 Symptoms / Health Concern
+  // 10.7 Symptoms / Health Concern
   if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment|sick|ill/i.test(textLower)) {
     return `Thank you for sharing your concern. For proper clinical assessment and personalized care, we recommend an in-person OPD consultation with ${docTitle} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?${phoneSuffix}`;
   }
 
-  // 3.7 First Greeting vs Ongoing chat
-  if (!isOngoingChat && (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower.length <= 4)) {
+  // 10.8 Universal Greeting Matcher (First message or ongoing - NEVER says "Understood!" for a greeting)
+  if (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower.length <= 4) {
     return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}).\n\nHow may I assist you with an appointment or clinic inquiry today?${phoneSuffix}`;
   }
 
   if (isOngoingChat) {
-    return `Understood! Would you like me to book a consultation slot with ${docTitle} (${specialty}) for **today** or **tomorrow**? Please share the patient's name and preferred time.${phoneSuffix}`;
+    return `Certainly! Would you like me to schedule a consultation slot with ${docTitle} (${specialty}) for **today** or **tomorrow**? Please share the patient's name and preferred time.${phoneSuffix}`;
   }
 
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
@@ -580,6 +621,15 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
 6. **HUMAN STAFF / PHONE INQUIRIES**:
    - If the patient explicitly asks to speak to human staff or asks for a phone number:
      * Share the clinic phone number warmly: "${clinicPhone ? `You can also call our clinic directly at ${clinicPhone}.` : ''}"
+
+7. **NIGHT & 24/7 APPOINTMENT INQUIRIES**:
+   - If the patient messages late at night or asks if you can book at night (e.g. "Eto raat tumi ki appointment dite paren?", "Can you book so late?"):
+     * Reassure them warmly in their language that our 24/7 assistant is always active to reserve their upcoming daytime OPD slot with ${doctorName}.
+     * State the upcoming OPD timings and politely request their name and preferred date to reserve their slot.
+
+8. **GREETINGS & CASUAL MESSAGES**:
+   - If the patient sends a simple greeting ("hi", "hello", "hola", "bonjour", "namaste", "nomoshkar"):
+     * Respond with a warm, polite receptionist greeting in their language. NEVER say "Understood!" or jump abruptly into a booking pitch.
       `;
 
       const prompt = `
