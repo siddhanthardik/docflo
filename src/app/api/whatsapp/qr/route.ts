@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
   try {
     if (whatsappManager.isConnected(doctorId)) {
-      return NextResponse.json({ status: "CONNECTED" }, { status: 200 });
+      return NextResponse.json({ status: "CONNECTED", qr: null }, { status: 200 });
     }
 
     const qrStr = whatsappManager.getQR(doctorId);
@@ -24,8 +24,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ status: "SCAN_QR", qr: qrDataUrl }, { status: 200 });
     }
 
+    // If doctor already has a saved session on disk, auto-reconnect without generating new QR
+    if (whatsappManager.hasSavedSession(doctorId)) {
+      whatsappManager.connect(doctorId).catch((e) => console.error("[WhatsApp QR] Auto connect error:", e));
+      return NextResponse.json({ status: "CONNECTING", hasSavedSession: true, qr: null }, { status: 200 });
+    }
+
     // Start connection process in background if not already connected
-    whatsappManager.connect(doctorId).catch((e) => console.error("Auto connect error:", e));
+    whatsappManager.connect(doctorId).catch((e) => console.error("[WhatsApp QR] Fresh connect error:", e));
 
     return NextResponse.json({ status: "DISCONNECTED", qr: null }, { status: 200 });
   } catch (error: any) {

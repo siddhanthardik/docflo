@@ -1257,6 +1257,12 @@ class WhatsAppManager {
     return !!sock && this.activeConnections.has(doctorId) && !this.qrCodes.has(doctorId);
   }
 
+  hasSavedSession(doctorId: string): boolean {
+    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+    const credsPath = path.join(sessionDir, 'creds.json');
+    return fs.existsSync(credsPath);
+  }
+
   async logout(doctorId: string) {
     this.clearSession(doctorId);
   }
