@@ -196,16 +196,16 @@ export function ClinicDetailsClient({
                   size="sm"
                   disabled={loading}
                   onClick={async () => {
-                    if (!confirm("SUPERADMIN ACTION: Ensure you have explicit permission from clinic owner. Disconnect GBP profile for this clinic?")) return;
+                    if (!confirm("SUPERADMIN ACTION: Ensure you have explicit permission from clinic owner. Disconnect Google Business Profile for this clinic?")) return;
                     setLoading(true);
                     try {
                       const res = await fetch(`/api/gbp/disconnect?doctorId=${clinic.id}`, { method: "DELETE" });
                       if (res.ok) {
-                        toast({ title: "GBP Profile Reset!", description: "Disconnected GBP Profile for this clinic cleanly." });
+                        toast({ title: "Profile Reset!", description: "Disconnected Google Business Profile for this clinic cleanly." });
                         setClinic({ ...clinic, gbpAccounts: [] });
                         router.refresh();
                       } else {
-                        toast({ title: "Error", description: "Failed to disconnect GBP profile.", variant: "destructive" });
+                        toast({ title: "Error", description: "Failed to disconnect Google Business Profile.", variant: "destructive" });
                       }
                     } catch {
                       toast({ title: "Error", description: "Network error", variant: "destructive" });
@@ -215,7 +215,7 @@ export function ClinicDetailsClient({
                   }}
                   className="text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50"
                 >
-                  Disconnect GBP Profile
+                  Disconnect Profile
                 </Button>
               </div>
             ) : (

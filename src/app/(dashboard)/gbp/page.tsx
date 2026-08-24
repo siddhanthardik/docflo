@@ -266,7 +266,7 @@ export default function GBPProfilePage() {
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Select a Location</h2>
         <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
-          Please select a location from the dropdown in the navigation bar to view its GBP Profile details.
+          Please select a location from the dropdown in the navigation bar to view its Google Business Profile details.
         </p>
       </div>
     );
@@ -456,7 +456,7 @@ export default function GBPProfilePage() {
             <p className="text-xs text-gray-500">Manage your official Google listing fields with instant in-page sync.</p>
           </div>
           <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 self-start sm:self-auto">
-            GBP Synced
+            Google Synced
           </span>
         </div>
 

@@ -403,7 +403,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<{ pr
               {[
                 { label: "Book Appointment", href: "/appointments", icon: Calendar, color: "text-indigo-600", bg: "bg-indigo-50" },
                 { label: "Add Patient", href: "/patients", icon: User, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { label: "View GBP Profile", href: "/gbp", icon: Activity, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "View Google Profile", href: "/gbp", icon: Activity, color: "text-blue-600", bg: "bg-blue-50" },
                 { label: "WhatsApp Inbox", href: "/whatsapp", icon: MessageSquare, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Reports", href: "/reports", icon: TrendingUp, color: "text-violet-600", bg: "bg-violet-50" },
               ].map((action) => (

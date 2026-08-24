@@ -170,7 +170,7 @@ export default function IntegrationsPage() {
                 <h4 className="text-base font-bold text-slate-900">Google Business Profile</h4>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   {gbpStatus.connected
-                    ? `Connected: ${gbpStatus.locationName || 'Clinic GBP Profile'}. Sync reviews, posts, and search keywords.`
+                    ? `Connected: ${gbpStatus.locationName || 'Clinic Google Profile'}. Sync reviews, posts, and search keywords.`
                     : "Connect your official Google Business Profile to track local rankings, automate review replies, and post updates."}
                 </p>
               </div>
@@ -184,14 +184,14 @@ export default function IntegrationsPage() {
                     className="text-xs font-bold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 transition-colors disabled:opacity-50"
                   >
                     <XCircle className="w-3.5 h-3.5" />
-                    Disconnect GBP Profile
+                    Disconnect Google Profile
                   </button>
                 ) : (
                   <a
                     href="/gbp"
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 inline-flex items-center gap-1.5 transition-all"
                   >
-                    Go to GBP Profile Page <ArrowRight className="w-3.5 h-3.5" />
+                    Go to Google Profile Page <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 )}
               </div>
@@ -209,7 +209,7 @@ export default function IntegrationsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-rose-600 font-bold">
               <AlertTriangle className="h-5 w-5 text-rose-600" />
-              Confirm GBP Profile Disconnection
+              Confirm Google Business Profile Disconnection
             </DialogTitle>
             <DialogDescription className="text-xs pt-2 leading-relaxed">
               Disconnecting will un-link this Google Business Profile and reset stored snapshot cache. 

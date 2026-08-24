@@ -202,8 +202,8 @@ export default function ReportsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={Star} color="yellow" title="New Reviews Received" value={reportData.reviewCount || 0} />
           <StatCard icon={TrendingUp} color="emerald" title="Average Rating" value={reportData.avgRating ? Number(reportData.avgRating).toFixed(1) : "N/A"} />
-          <StatCard icon={Eye} color="blue" title="GBP Profile Views" value={reportData.gbpData?.totalViews || 0} subtitle="Google Maps & Search" />
-          <StatCard icon={MousePointerClick} color="indigo" title="GBP Interactions" value={(reportData.gbpData?.phoneCalls || 0) + (reportData.gbpData?.directionRequests || 0)} subtitle="Calls & Directions" />
+          <StatCard icon={Eye} color="blue" title="Google Profile Views" value={reportData.gbpData?.totalViews || 0} subtitle="Google Maps & Search" />
+          <StatCard icon={MousePointerClick} color="indigo" title="Google Interactions" value={(reportData.gbpData?.phoneCalls || 0) + (reportData.gbpData?.directionRequests || 0)} subtitle="Calls & Directions" />
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">

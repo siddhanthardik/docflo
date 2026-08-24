@@ -38,7 +38,7 @@ const navigationItems = [
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Billing", href: "/billing", icon: FileText },
   { name: "Announcements", href: "/campaigns", icon: Megaphone },
-  { name: "GBP Profile", href: "/gbp", icon: Star },
+  { name: "Google Profile", href: "/gbp", icon: Star },
   { name: "Local SEO", href: "/local-seo", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
   { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
