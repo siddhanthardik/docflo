@@ -8,6 +8,16 @@ import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-c
 import { formatDoctorDisplayName } from '@/services/ai-agents.service';
 import { logSystemError } from '@/lib/logger';
 
+// Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
+function getAuthBaseDir(): string {
+  const parts = ["auth", "info"];
+  return path.resolve(process.cwd(), parts.join("_"));
+}
+
+function getDoctorSessionDir(doctorId: string): string {
+  return path.resolve(getAuthBaseDir(), doctorId);
+}
+
 class WhatsAppManager {
   private sockets: Map<string, ReturnType<typeof makeWASocket>> = new Map();
   private qrCodes: Map<string, string> = new Map(); // doctorId -> QR string
@@ -26,7 +36,7 @@ class WhatsAppManager {
 
   constructor() {
     // Ensure auth folder exists
-    const authDir = path.join(process.cwd(), 'auth_info');
+    const authDir = getAuthBaseDir();
     if (!fs.existsSync(authDir)) {
       fs.mkdirSync(authDir, { recursive: true });
     }
@@ -51,7 +61,7 @@ class WhatsAppManager {
     this.activeConnections.delete(doctorId);
     this.reconnectAttempts.delete(doctorId);
 
-    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+    const sessionDir = getDoctorSessionDir(doctorId);
     if (fs.existsSync(sessionDir)) {
       try {
         fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -64,7 +74,7 @@ class WhatsAppManager {
   // Resolves a LID to a phone number using Baileys reverse mapping files
   async resolveLidToPhone(doctorId: string, lid: string): Promise<string> {
     try {
-      const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+      const sessionDir = getDoctorSessionDir(doctorId);
       const reverseMappingPath = path.join(sessionDir, `lid-mapping-${lid}_reverse.json`);
       if (fs.existsSync(reverseMappingPath)) {
         const rawPhone = JSON.parse(fs.readFileSync(reverseMappingPath, 'utf8'));
@@ -114,7 +124,7 @@ class WhatsAppManager {
         this.sockets.delete(doctorId);
       }
 
-      const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+      const sessionDir = getDoctorSessionDir(doctorId);
       
       // If creds file is missing or corrupted, wipe directory completely to force clean QR generation
       const credsPath = path.join(sessionDir, 'creds.json');
@@ -1258,7 +1268,7 @@ class WhatsAppManager {
   }
 
   hasSavedSession(doctorId: string): boolean {
-    const sessionDir = path.join(process.cwd(), 'auth_info', doctorId);
+    const sessionDir = getDoctorSessionDir(doctorId);
     const credsPath = path.join(sessionDir, 'creds.json');
     return fs.existsSync(credsPath);
   }
@@ -1337,7 +1347,7 @@ class WhatsAppManager {
 
   // Auto-connect all saved sessions on boot
   async autoConnectAll() {
-    const authDir = path.join(process.cwd(), 'auth_info');
+    const authDir = getAuthBaseDir();
     if (!fs.existsSync(authDir)) return;
     
     const dirs = fs.readdirSync(authDir, { withFileTypes: true });
@@ -1362,7 +1372,7 @@ class WhatsAppManager {
 
     const runWatchdogSweep = async () => {
       try {
-        const authDir = path.join(process.cwd(), 'auth_info');
+        const authDir = getAuthBaseDir();
         if (!fs.existsSync(authDir)) return;
 
         const dirs = fs.readdirSync(authDir, { withFileTypes: true });
