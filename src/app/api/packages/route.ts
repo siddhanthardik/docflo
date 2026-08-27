@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Public endpoint — no auth required.
+ * Public endpoint - no auth required.
  * Returns all active, non-archived packages with their
  * IN-country pricing, modules, and limits.
  * Used by the public landing page pricing section.
