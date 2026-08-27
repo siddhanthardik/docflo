@@ -6,7 +6,6 @@ import { ThemeRenderer } from "@/components/themes/ThemeRenderer";
 import { ClinicWebsiteData } from "@/components/themes/theme-types";
 import {
   Globe,
-  Sparkles,
   Palette,
   Layout,
   Layers,
@@ -37,6 +36,7 @@ import {
   Smartphone,
   Monitor,
   Tablet,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +112,7 @@ export default function WebsiteStudioPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncingGbp, setSyncingGbp] = useState(false);
   const [activeTab, setActiveTab] = useState("url");
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
@@ -123,19 +124,20 @@ export default function WebsiteStudioPage() {
 
   // Website State
   const [siteData, setSiteData] = useState<ClinicWebsiteData>({
-    subdomain: "my-clinic",
+    subdomain: "clinic",
     themeId: "apex-clinical",
     primaryColor: "#2563EB",
     secondaryColor: "#0F172A",
     accentColor: "#10B981",
     fontHeading: "Plus Jakarta Sans",
     fontBody: "Inter",
-    siteTitle: "Premier Medical Clinic",
-    tagline: "Comprehensive Healthcare Excellence",
+    siteTitle: "Clinic",
+    tagline: "Comprehensive Healthcare",
     heroHeading: "Advanced Healthcare & Dedicated Patient Care",
     heroSubheading: "Delivering compassionate clinical consultations, evidence-based treatments, and high patient satisfaction.",
     heroImage: null,
-    heroStyle: "SPLIT_FORM",
+    heroStyle: "IMAGE_ONLY",
+    showHeroBookingForm: false,
     announcementBar: "Now accepting new patient appointments online.",
     ctaButtonText: "Book Appointment",
     ctaButtonAction: "BOOKING_MODAL",
@@ -152,39 +154,29 @@ export default function WebsiteStudioPage() {
     customFaqs: [],
   });
 
-  const fetchWebsiteData = async () => {
+  const fetchWebsiteData = async (forceSync = false) => {
     try {
-      setLoading(true);
-      const res = await fetch("/api/website");
+      if (forceSync) setSyncingGbp(true);
+      else setLoading(true);
+
+      const res = await fetch(`/api/website${forceSync ? "?sync=true" : ""}`);
       const data = await res.json();
 
       if (data.website) {
         setSiteData(data.website);
         setUrlInput(data.website.subdomain || "");
-      } else if (data.doctor) {
-        const doc = data.doctor;
-        const clinicName = doc.clinicName || doc.name || "Clinic";
-        const cleanSub = (clinicName).toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
-
-        setSiteData((prev) => ({
-          ...prev,
-          siteTitle: clinicName,
-          subdomain: cleanSub.slice(0, 25),
-          tagline: `Top-rated ${doc.specialty || "Medical"} Care in ${doc.city || "Delhi"}`,
-          heroHeading: `Comprehensive ${doc.specialty || "Medical"} Care at ${clinicName}`,
-          heroSubheading: `Led by ${doc.name}. Providing evidence-based treatments and personalized care in ${doc.city || "your area"}.`,
-          contactPhone: doc.phone || "",
-          whatsappNumber: doc.phone || "",
-          doctor: doc,
-          customServices: doc.services?.map((s: any) => ({ name: s.name, description: s.description || "", price: s.price ? Number(s.price) : undefined })) || [],
-          reviews: doc.reviews || [],
-        }));
-        setUrlInput(cleanSub.slice(0, 25));
+        if (forceSync) {
+          toast({
+            title: "Synced with Google Business Profile! 🔄",
+            description: "Pulled latest clinic name, address, hours, reviews, and contact info.",
+          });
+        }
       }
     } catch (err: any) {
       toast({ title: "Failed to load website data", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
+      setSyncingGbp(false);
     }
   };
 
@@ -227,14 +219,14 @@ export default function WebsiteStudioPage() {
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
       setSiteData((prev) => ({ ...prev, heroImage: data.url }));
-      toast({ title: "Clinic Photo Uploaded 📸", description: "Image attached to website header." });
+      toast({ title: "Hero Photo Uploaded 📸", description: "Image attached to website header." });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
     }
   };
 
   // Save Website
-  const handleSaveWebsite = async () => {
+  const handleSaveWebsite = async (tabName?: string) => {
     if (!siteData.subdomain) {
       toast({ title: "Website URL Required", description: "Please enter your clinic website URL name.", variant: "destructive" });
       return;
@@ -252,11 +244,11 @@ export default function WebsiteStudioPage() {
       if (!res.ok) throw new Error(data.error || "Failed to save website");
 
       toast({
-        title: "Clinic Website Published Live! 🚀",
-        description: `Your site is active at https://${siteData.subdomain}.gyrex.in`,
+        title: tabName ? `${tabName} Saved Successfully! ✅` : "Clinic Website Published Live! 🚀",
+        description: `Website active at https://${siteData.subdomain}.gyrex.in`,
       });
     } catch (err: any) {
-      toast({ title: "Publish Error", description: err.message, variant: "destructive" });
+      toast({ title: "Save Error", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -312,6 +304,18 @@ export default function WebsiteStudioPage() {
           <Button
             type="button"
             variant="outline"
+            disabled={syncingGbp}
+            onClick={() => fetchWebsiteData(true)}
+            className="h-11 px-4 rounded-2xl border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+            title="Auto-fetch latest info from connected Google Business Profile"
+          >
+            <RefreshCw className={`w-4 h-4 text-emerald-600 ${syncingGbp ? "animate-spin" : ""}`} />
+            <span>{syncingGbp ? "Syncing GBP..." : "Sync from Google Profile"}</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => setShowPreviewModal(true)}
             className="h-11 px-5 rounded-2xl border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
           >
@@ -320,40 +324,61 @@ export default function WebsiteStudioPage() {
           </Button>
 
           <Button
-            onClick={handleSaveWebsite}
+            onClick={() => handleSaveWebsite()}
             disabled={saving}
             className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2"
           >
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>{saving ? "Publishing Changes..." : "Publish Website Live"}</span>
+            <Save className="w-4 h-4" />
+            <span>{saving ? "Publishing..." : "Publish Website Live"}</span>
           </Button>
         </div>
       </div>
 
-      {/* ── MAIN STUDIO WORKSPACE TABS ── */}
+      {/* ── REDESIGNED SINGLE-TIER SEGMENTED TABS ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs h-auto gap-1">
-          <TabsTrigger value="url" className="rounded-xl text-xs font-bold py-3 gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
-            <Globe className="w-4 h-4 text-blue-500" />
-            <span>Website URL</span>
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="rounded-xl text-xs font-bold py-3 gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
-            <Palette className="w-4 h-4 text-indigo-500" />
-            <span>Themes &amp; Colors</span>
-          </TabsTrigger>
-          <TabsTrigger value="header" className="rounded-xl text-xs font-bold py-3 gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
-            <Layout className="w-4 h-4 text-emerald-500" />
-            <span>Header &amp; Hero</span>
-          </TabsTrigger>
-          <TabsTrigger value="services" className="rounded-xl text-xs font-bold py-3 gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
-            <Stethoscope className="w-4 h-4 text-rose-500" />
-            <span>Services &amp; Bio</span>
-          </TabsTrigger>
-          <TabsTrigger value="sections" className="rounded-xl text-xs font-bold py-3 gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
-            <Layers className="w-4 h-4 text-amber-500" />
-            <span>Section Toggles</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="border-b border-slate-200 pb-2">
+          <TabsList className="flex items-center justify-start gap-2 bg-transparent p-0 h-auto overflow-x-auto w-full">
+            <TabsTrigger
+              value="url"
+              className="rounded-xl text-xs font-bold px-4 py-2.5 border border-transparent data-[state=active]:border-slate-300 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4 text-blue-600" />
+              <span>Website URL</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="theme"
+              className="rounded-xl text-xs font-bold px-4 py-2.5 border border-transparent data-[state=active]:border-slate-300 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 flex items-center gap-2"
+            >
+              <Palette className="w-4 h-4 text-indigo-600" />
+              <span>Themes &amp; Colors</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="header"
+              className="rounded-xl text-xs font-bold px-4 py-2.5 border border-transparent data-[state=active]:border-slate-300 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 flex items-center gap-2"
+            >
+              <Layout className="w-4 h-4 text-emerald-600" />
+              <span>Header &amp; Hero</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="services"
+              className="rounded-xl text-xs font-bold px-4 py-2.5 border border-transparent data-[state=active]:border-slate-300 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 flex items-center gap-2"
+            >
+              <Stethoscope className="w-4 h-4 text-rose-600" />
+              <span>Services &amp; Bio</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="sections"
+              className="rounded-xl text-xs font-bold px-4 py-2.5 border border-transparent data-[state=active]:border-slate-300 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 flex items-center gap-2"
+            >
+              <Layers className="w-4 h-4 text-amber-600" />
+              <span>Section Toggles</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── TAB 1: WEBSITE URL & DOMAIN ── */}
         <TabsContent value="url" className="space-y-6">
@@ -377,7 +402,7 @@ export default function WebsiteStudioPage() {
                   <Input
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                    placeholder="e.g. dr-anukriti-skin"
+                    placeholder="e.g. dr-vinay-kumar-rai"
                     className="h-12 pl-4 pr-24 rounded-2xl text-sm font-mono font-bold border-slate-300"
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
@@ -408,7 +433,7 @@ export default function WebsiteStudioPage() {
               )}
             </div>
 
-            {/* Feature Highlights */}
+            {/* Trust Badges */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-slate-100">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs">
@@ -419,27 +444,38 @@ export default function WebsiteStudioPage() {
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-2 text-blue-700 font-bold text-xs">
-                  <Sparkles className="w-4 h-4 text-blue-600" /> Google Search Ready
+                  <Globe className="w-4 h-4 text-blue-600" /> Google Search Ready
                 </div>
                 <p className="text-[11px] text-slate-500">Auto-structured JSON-LD schema for local Google rankings.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs">
-                  <Globe className="w-4 h-4 text-indigo-600" /> Custom Domain Ready
+                  <Building2 className="w-4 h-4 text-indigo-600" /> Custom Domain Ready
                 </div>
                 <p className="text-[11px] text-slate-500">Optional CNAME connection for your own .com or .in domain.</p>
               </div>
             </div>
+
+            {/* Per-Tab Save Action */}
+            <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Website URL")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save URL Settings"}</span>
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
-        {/* ── TAB 2: THEMES & VISUAL IDENTITY ── */}
+        {/* ── TAB 2: THEMES & BRAND COLORS ── */}
         <TabsContent value="theme" className="space-y-6">
-          {/* Theme Grid */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-bold text-slate-900">Select Specialty Theme</h3>
+              <h3 className="text-xl font-bold text-slate-900">Select Medical Theme</h3>
               <p className="text-xs text-slate-500">
                 Choose an agency-designed medical theme engineered for your clinical practice type.
               </p>
@@ -498,7 +534,7 @@ export default function WebsiteStudioPage() {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
             <div className="space-y-1">
               <h3 className="text-xl font-bold text-slate-900">Custom Brand Palette</h3>
-              <p className="text-xs text-slate-500">Pick a pre-designed medical harmony or specify your exact clinic colors.</p>
+              <p className="text-xs text-slate-500">Pick a pre-designed medical harmony or customize individual hex codes.</p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -566,14 +602,26 @@ export default function WebsiteStudioPage() {
                 </div>
               </div>
             </div>
+
+            {/* Per-Tab Save Action */}
+            <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Themes & Colors")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save Theme & Colors"}</span>
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
-        {/* ── TAB 3: HEADER, HERO & ANNOUNCEMENTS ── */}
+        {/* ── TAB 3: HEADER, HERO & CTAs ── */}
         <TabsContent value="header" className="space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-bold text-slate-900">Header, Hero Headline &amp; Actions</h3>
+              <h3 className="text-xl font-bold text-slate-900">Header &amp; Hero Headline</h3>
               <p className="text-xs text-slate-500">Configure what patients see immediately when landing on your clinic site.</p>
             </div>
 
@@ -592,7 +640,7 @@ export default function WebsiteStudioPage() {
                 <Input
                   value={siteData.tagline || ""}
                   onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
-                  placeholder="e.g. Leading Dermatology &amp; Laser Clinic"
+                  placeholder="e.g. Leading Pediatrics &amp; Child Care Clinic"
                   className="h-11 text-xs rounded-xl"
                 />
               </div>
@@ -620,15 +668,15 @@ export default function WebsiteStudioPage() {
             {/* Photo Selector */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Clinic Hero / Doctor Photo
+                Hero Section Image / Clinic Photo
               </label>
               <div className="flex items-center gap-4">
                 {siteData.heroImage ? (
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                     <img src={siteData.heroImage} alt="" className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs text-center p-2">
+                  <div className="w-24 h-24 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs text-center p-2">
                     No photo
                   </div>
                 )}
@@ -639,9 +687,9 @@ export default function WebsiteStudioPage() {
                     onClick={() => fileInputRef.current?.click()}
                     className="h-10 text-xs font-bold rounded-xl"
                   >
-                    <Upload className="w-4 h-4 mr-1.5 text-blue-600" /> Select Image from Computer
+                    <Upload className="w-4 h-4 mr-1.5 text-blue-600" /> Select Image from Local Computer
                   </Button>
-                  <p className="text-[11px] text-slate-500">Supports PNG, JPEG, WebP up to 5MB.</p>
+                  <p className="text-[11px] text-slate-500">Selected photo will be displayed prominently in the hero section placeholder.</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -653,8 +701,22 @@ export default function WebsiteStudioPage() {
               </div>
             </div>
 
+            {/* Header Booking Form Toggle */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-900">Show Instant Booking Form inside Hero Section</span>
+                <p className="text-[11px] text-slate-500">If disabled, the hero displays your large clinic photo with CTA buttons instead.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={siteData.showHeroBookingForm || false}
+                onChange={(e) => setSiteData({ ...siteData, showHeroBookingForm: e.target.checked })}
+                className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
+
             {/* CTA & Announcement */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">CTA Button Text</label>
                 <Input
@@ -685,9 +747,21 @@ export default function WebsiteStudioPage() {
               <Input
                 value={siteData.announcementBar || ""}
                 onChange={(e) => setSiteData({ ...siteData, announcementBar: e.target.value })}
-                placeholder="e.g. Dr. Vinay Kumar Rai is available for evening consultations this week."
+                placeholder="e.g. Now open for evening consultations this week."
                 className="h-11 text-xs rounded-xl"
               />
+            </div>
+
+            {/* Per-Tab Save Action */}
+            <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Header & Hero")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save Header & Hero"}</span>
+              </Button>
             </div>
           </div>
         </TabsContent>
@@ -781,6 +855,18 @@ export default function WebsiteStudioPage() {
               rows={4}
               className="text-xs rounded-2xl"
             />
+
+            {/* Per-Tab Save Action */}
+            <div className="flex items-center justify-end pt-4 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Services & Bio")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save Services & Bio"}</span>
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -861,6 +947,18 @@ export default function WebsiteStudioPage() {
                 );
               })}
             </div>
+
+            {/* Per-Tab Save Action */}
+            <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Section Toggles")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save Section Settings"}</span>
+              </Button>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
@@ -908,7 +1006,7 @@ export default function WebsiteStudioPage() {
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl"
               >
-                <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-300" /> Publish Now
+                <Save className="w-3.5 h-3.5 mr-1" /> Publish Now
               </Button>
 
               <button

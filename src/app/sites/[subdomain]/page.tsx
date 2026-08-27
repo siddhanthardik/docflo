@@ -87,6 +87,7 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     heroSubheading: site.heroSubheading,
     heroImage: site.heroImage,
     heroStyle: site.heroStyle,
+    showHeroBookingForm: site.showHeroBookingForm ?? false,
     announcementBar: site.announcementBar,
     ctaButtonText: site.ctaButtonText,
     ctaButtonAction: site.ctaButtonAction,

@@ -13,6 +13,7 @@ export interface ClinicWebsiteData {
   heroSubheading?: string | null;
   heroImage?: string | null;
   heroStyle?: string;
+  showHeroBookingForm?: boolean;
   announcementBar?: string | null;
   ctaButtonText: string;
   ctaButtonAction: string;

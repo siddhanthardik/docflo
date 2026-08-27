@@ -8,17 +8,16 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Star,
   CheckCircle2,
   ChevronDown,
   ShieldCheck,
   Award,
-  Sparkles,
   ArrowRight,
   ExternalLink,
   X,
   Stethoscope,
   Building2,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,21 +48,21 @@ export function ThemeRenderer({
   const services = data.customServices && data.customServices.length > 0
     ? data.customServices
     : [
-        { name: "General Consultation", description: "Comprehensive health check & diagnosis." },
+        { name: "General Consultation", description: "Comprehensive clinical health check & evaluation." },
         { name: "Specialized Treatment", description: "Targeted clinical therapy and procedures." },
       ];
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
     : [
-        { question: "How do I book an appointment?", answer: "Book online using our instant booking form or chat with us on WhatsApp." },
+        { question: "How do I book an appointment?", answer: "Book online using our booking button or connect with us directly on WhatsApp." },
         { question: "What are your operating hours?", answer: `Mon-Sat: ${data.doctor?.workingHoursStart || "09:00 AM"} - ${data.doctor?.workingHoursEnd || "08:00 PM"}` },
       ];
 
   const reviews = data.reviews && data.reviews.length > 0
     ? data.reviews
     : [
-        { reviewerName: "Priya M.", rating: 5, comment: "Exceptional doctor. Thorough diagnosis and very polite staff.", reviewDate: "2 weeks ago" },
+        { reviewerName: "Priya M.", rating: 5, comment: "Exceptional doctor. Thorough diagnosis and very caring staff.", reviewDate: "2 weeks ago" },
         { reviewerName: "Amit K.", rating: 5, comment: "Best clinical experience. No waiting time and modern equipment.", reviewDate: "1 month ago" },
         { reviewerName: "Sunita R.", rating: 5, comment: "Highly recommended for effective and caring treatment.", reviewDate: "2 months ago" },
       ];
@@ -84,7 +83,7 @@ export function ThemeRenderer({
 
   return (
     <div
-      className="min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white"
+      className="min-h-screen flex flex-col font-sans selection:bg-blue-500 selection:text-white"
       style={{
         backgroundColor: "#FFFFFF",
         color: secondaryColor,
@@ -93,20 +92,20 @@ export function ThemeRenderer({
       {/* Announcement Bar */}
       {data.announcementBar && (
         <div
-          className="text-xs font-bold text-center py-2 px-4 flex items-center justify-center gap-2 text-white transition-colors"
+          className="text-xs font-bold text-center py-2.5 px-4 flex items-center justify-center gap-2 text-white"
           style={{ backgroundColor: secondaryColor }}
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <Building2 className="w-3.5 h-3.5 text-blue-300" />
           <span>{data.announcementBar}</span>
         </div>
       )}
 
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-2xs">
+      {/* ── CLINIC NAVIGATION HEADER ── */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md"
+              className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md"
               style={{ backgroundColor: primaryColor }}
             >
               {data.siteTitle.charAt(0)}
@@ -125,17 +124,17 @@ export function ThemeRenderer({
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600">
             {data.showServices && <a href="#services" className="hover:text-blue-600 transition-colors">Services</a>}
-            {data.showReviews && <a href="#reviews" className="hover:text-blue-600 transition-colors">Patient Reviews</a>}
+            {data.showReviews && <a href="#reviews" className="hover:text-blue-600 transition-colors">Patient Feedback</a>}
             {data.showDoctorBio && <a href="#about" className="hover:text-blue-600 transition-colors">About Doctor</a>}
             {data.showFaq && <a href="#faq" className="hover:text-blue-600 transition-colors">FAQs</a>}
-            {data.showMap && <a href="#contact" className="hover:text-blue-600 transition-colors">Location</a>}
+            {data.showMap && <a href="#contact" className="hover:text-blue-600 transition-colors">Location &amp; Timings</a>}
           </nav>
 
           <div className="flex items-center gap-3">
             {phone && (
               <a
                 href={`tel:${phone}`}
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-700 hover:bg-slate-50 border border-slate-200 transition-all"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-slate-50 border border-slate-200 transition-all"
               >
                 <Phone className="w-3.5 h-3.5 text-slate-500" />
                 <span>Call Clinic</span>
@@ -154,17 +153,15 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* ── HERO SECTION ── */}
       <section className="relative overflow-hidden pt-12 pb-20 bg-gradient-to-b from-slate-50 via-white to-slate-50 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Column: Heading & Trust Badges */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold">
-                <span className="flex text-amber-400">
-                  {"★".repeat(5)}
-                </span>
-                <span>Verified 5.0 Star Google Rating</span>
+                <span className="flex text-amber-400 font-bold">★★★★★</span>
+                <span>Verified Google Patient Rating</span>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-slate-900">
@@ -200,14 +197,14 @@ export function ThemeRenderer({
               </div>
 
               {/* Trust metric chips */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200/80 max-w-lg mx-auto lg:mx-0 text-center">
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200 max-w-lg mx-auto lg:mx-0 text-center">
                 <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                   <p className="text-xl font-black text-slate-900">100%</p>
                   <p className="text-[11px] text-slate-500 font-semibold">Evidence-Based</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                   <p className="text-xl font-black text-slate-900">0 min</p>
-                  <p className="text-[11px] text-slate-500 font-semibold">Priority Booking</p>
+                  <p className="text-[11px] text-slate-500 font-semibold">Fast Confirmation</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                   <p className="text-xl font-black text-emerald-600">5.0 ★</p>
@@ -216,82 +213,92 @@ export function ThemeRenderer({
               </div>
             </div>
 
-            {/* Right Column: Hero Image or Instant Booking Box */}
+            {/* Right Column: Hero Image Container (or optional booking form if enabled) */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-6 relative">
-                {data.heroImage ? (
-                  <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100 border border-slate-200">
-                    <img src={data.heroImage} alt={data.siteTitle} className="w-full h-full object-cover" />
+              {data.showHeroBookingForm ? (
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                      Instant Booking
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900">Schedule Consultation</h3>
+                    <p className="text-xs text-slate-500">Fast confirmation directly to your phone.</p>
                   </div>
-                ) : null}
 
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
-                    Instant Schedule
-                  </span>
-                  <h3 className="text-xl font-bold text-slate-900">Schedule Your Consultation</h3>
-                  <p className="text-xs text-slate-500">Fast confirmation directly to your phone.</p>
+                  <form onSubmit={handleBookingSubmit} className="space-y-3.5">
+                    <Input
+                      value={patientName}
+                      onChange={(e) => setPatientName(e.target.value)}
+                      placeholder="Patient Full Name *"
+                      required
+                      className="h-11 rounded-xl text-xs"
+                    />
+                    <Input
+                      value={patientPhone}
+                      onChange={(e) => setPatientPhone(e.target.value)}
+                      placeholder="Mobile / WhatsApp Number *"
+                      required
+                      className="h-11 rounded-xl text-xs"
+                    />
+                    <select
+                      value={selectedService}
+                      onChange={(e) => setSelectedService(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-medium bg-white"
+                    >
+                      <option value="">Select Treatment / Consultation</option>
+                      {services.map((s, idx) => (
+                        <option key={idx} value={s.name}>{s.name}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="submit"
+                      className="w-full text-white font-bold text-xs h-11 rounded-xl shadow-lg flex items-center justify-center gap-1.5"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Confirm Appointment</span>
+                    </button>
+                  </form>
                 </div>
-
-                <form onSubmit={handleBookingSubmit} className="space-y-3.5">
-                  <Input
-                    value={patientName}
-                    onChange={(e) => setPatientName(e.target.value)}
-                    placeholder="Patient Full Name *"
-                    required
-                    className="h-11 rounded-xl text-xs"
-                  />
-                  <Input
-                    value={patientPhone}
-                    onChange={(e) => setPatientPhone(e.target.value)}
-                    placeholder="Mobile / WhatsApp Number *"
-                    required
-                    className="h-11 rounded-xl text-xs"
-                  />
-                  <select
-                    value={selectedService}
-                    onChange={(e) => setSelectedService(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">Select Treatment / Consultation</option>
-                    {services.map((s, idx) => (
-                      <option key={idx} value={s.name}>{s.name}</option>
-                    ))}
-                  </select>
-
-                  <Input
-                    type="date"
-                    value={preferredDate}
-                    onChange={(e) => setPreferredDate(e.target.value)}
-                    className="h-11 rounded-xl text-xs"
-                  />
-
-                  <button
-                    type="submit"
-                    className="w-full text-white font-bold text-xs h-11 rounded-xl shadow-lg transition-transform hover:scale-101 flex items-center justify-center gap-1.5"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Confirm Appointment Request</span>
-                  </button>
-                </form>
-
-                {bookingSuccess && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-bold text-center">
-                    Appointment request received! Our clinic team will connect with you shortly.
+              ) : (
+                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group">
+                  {data.heroImage ? (
+                    <img src={data.heroImage} alt={data.siteTitle} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex flex-col items-center justify-center text-white p-8 text-center space-y-3">
+                      <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center font-black text-2xl">
+                        {data.siteTitle.charAt(0)}
+                      </div>
+                      <h4 className="text-xl font-bold">{data.siteTitle}</h4>
+                      <p className="text-xs text-slate-300 max-w-xs">{data.doctor?.specialty || "Dedicated Clinical Practice"}</p>
+                    </div>
+                  )}
+                  <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3.5 rounded-2xl shadow-md border border-white/50 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{data.doctor?.name || data.siteTitle}</p>
+                      <p className="text-[11px] text-slate-500">{data.doctor?.specialty || "Senior Specialist"}</p>
+                    </div>
+                    <button
+                      onClick={() => setOpenBookingModal(true)}
+                      className="text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-xs"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Consult
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* ── SERVICES SECTION ── */}
       {data.showServices && (
         <section id="services" className="py-20 bg-white border-b border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-            <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <div className="text-center space-y-2 max-w-2xl mx-auto">
               <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                 Specialized Treatments
               </span>
@@ -339,11 +346,11 @@ export function ThemeRenderer({
         </section>
       )}
 
-      {/* Verified Google Reviews Grid */}
+      {/* ── GOOGLE PATIENT REVIEWS ── */}
       {data.showReviews && (
         <section id="reviews" className="py-20 bg-slate-50 border-b border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-            <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <div className="text-center space-y-2 max-w-2xl mx-auto">
               <span className="text-xs font-black uppercase tracking-wider text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
                 Patient Feedback
               </span>
@@ -378,35 +385,35 @@ export function ThemeRenderer({
         </section>
       )}
 
-      {/* Doctor Bio & E-E-A-T Credentials */}
+      {/* ── DOCTOR BIO & CREDENTIALS ── */}
       {data.showDoctorBio && (
         <section id="about" className="py-20 bg-white border-b border-slate-100">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
               <div className="md:col-span-4 text-center">
-                <div className="w-32 h-32 rounded-3xl bg-indigo-500/20 border-2 border-indigo-400/40 mx-auto overflow-hidden flex items-center justify-center shadow-lg">
+                <div className="w-32 h-32 rounded-3xl bg-slate-800 border-2 border-slate-700 mx-auto overflow-hidden flex items-center justify-center shadow-lg">
                   {data.doctor?.image ? (
                     <img src={data.doctor.image} alt={data.doctor.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-4xl font-black text-indigo-300">{data.doctor?.name?.charAt(0) || "D"}</span>
+                    <span className="text-4xl font-black text-slate-300">{data.doctor?.name?.charAt(0) || "D"}</span>
                   )}
                 </div>
                 <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Senior Consultant Doctor"}</h4>
-                <p className="text-xs text-indigo-300">{data.doctor?.specialty || "Medical Specialist"}</p>
+                <p className="text-xs text-slate-400">{data.doctor?.specialty || "Medical Specialist"}</p>
               </div>
 
               <div className="md:col-span-8 space-y-4">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs font-bold">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Medical Professional
                 </div>
-                <h3 className="text-2xl font-black tracking-tight">Clinical Philosophy &amp; Experience</h3>
+                <h3 className="text-2xl font-black tracking-tight">Clinical Philosophy &amp; Background</h3>
                 <p className="text-sm text-slate-300 leading-relaxed">
                   {data.customBio || `${data.doctor?.name || "Our lead doctor"} is committed to providing modern, patient-first clinical healthcare. Combining extensive diagnostic expertise with compassionate treatment, we ensure every patient receives customized, high-quality care.`}
                 </p>
                 <div className="flex items-center gap-4 pt-2">
                   <button
                     onClick={() => setOpenBookingModal(true)}
-                    className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-10 px-5 rounded-xl shadow-lg transition-transform hover:scale-105"
+                    className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-10 px-5 rounded-xl shadow-lg"
                   >
                     Consult Doctor Today
                   </button>
@@ -417,12 +424,12 @@ export function ThemeRenderer({
         </section>
       )}
 
-      {/* FAQ Accordion */}
+      {/* ── FAQ ACCORDION ── */}
       {data.showFaq && (
         <section id="faq" className="py-20 bg-slate-50 border-b border-slate-100">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <div className="text-center space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-700 bg-slate-200/80 px-3 py-1 rounded-full">
                 FAQs
               </span>
               <h3 className="text-3xl font-black text-slate-900 tracking-tight">Frequently Asked Questions</h3>
@@ -432,7 +439,7 @@ export function ThemeRenderer({
               {faqs.map((faq, idx) => (
                 <div
                   key={idx}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden transition-all"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden"
                 >
                   <button
                     onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
@@ -455,7 +462,7 @@ export function ThemeRenderer({
         </section>
       )}
 
-      {/* Location & Map Section */}
+      {/* ── LOCATION & TIMINGS ── */}
       {data.showMap && (
         <section id="contact" className="py-20 bg-white border-b border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -500,7 +507,7 @@ export function ThemeRenderer({
                 </div>
               </div>
 
-              {/* Map Placeholder / Embed */}
+              {/* Map Embed */}
               <div className="lg:col-span-7">
                 <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-xl aspect-[16/10] bg-slate-100 relative">
                   <iframe
@@ -516,7 +523,7 @@ export function ThemeRenderer({
         </section>
       )}
 
-      {/* Footer */}
+      {/* ── FOOTER ── */}
       <footer className="py-12 bg-slate-900 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -527,12 +534,12 @@ export function ThemeRenderer({
           </div>
           <p>© {new Date().getFullYear()} {data.siteTitle}. All rights reserved.</p>
           <p className="text-[11px] text-slate-500">
-            Powered by <a href="https://gyrex.in" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">Gyrex Healthcare Engine</a>
+            Powered by Gyrex Healthcare Engine
           </p>
         </div>
       </footer>
 
-      {/* Sticky Mobile Action Bar */}
+      {/* ── MOBILE STICKY ACTION BAR ── */}
       {data.showStickyBar && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 p-2.5 px-4 flex items-center justify-between gap-2 shadow-2xl">
           {phone && (
@@ -568,7 +575,7 @@ export function ThemeRenderer({
         </div>
       )}
 
-      {/* Booking Modal */}
+      {/* ── INSTANT APPOINTMENT BOOKING MODAL ── */}
       {openBookingModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-5 relative">
@@ -605,7 +612,7 @@ export function ThemeRenderer({
               <select
                 value={selectedService}
                 onChange={(e) => setSelectedService(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-medium bg-white"
               >
                 <option value="">Select Treatment / Consultation</option>
                 {services.map((s, idx) => (
@@ -621,7 +628,7 @@ export function ThemeRenderer({
 
               <button
                 type="submit"
-                className="w-full text-white font-bold text-xs h-11 rounded-xl shadow-lg transition-transform hover:scale-101 flex items-center justify-center gap-1.5"
+                className="w-full text-white font-bold text-xs h-11 rounded-xl shadow-lg flex items-center justify-center gap-1.5"
                 style={{ backgroundColor: primaryColor }}
               >
                 <Calendar className="w-3.5 h-3.5" />

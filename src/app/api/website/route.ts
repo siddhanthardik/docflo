@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { WebsiteFactoryService } from "@/services/website-factory.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,21 +11,93 @@ export async function GET(req: NextRequest) {
     }
 
     const doctorId = session.user.id;
+    const { searchParams } = new URL(req.url);
+    const forceSync = searchParams.get("sync") === "true";
 
-    // Fetch existing website or fetch doctor profile to create initial recommendation
-    const website = await prisma.clinicWebsite.findUnique({
+    let website = await prisma.clinicWebsite.findUnique({
       where: { doctorId },
     });
 
-    // Also fetch connected doctor profile for auto-generation reference
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       include: {
         serviceTypes: { where: { isActive: true } },
-        reviews: { orderBy: { reviewDate: "desc" }, take: 6 },
-        gbpAccounts: { take: 1 },
+        reviews: { orderBy: { reviewDate: "desc" }, take: 8 },
+        gbpAccounts: {
+          include: {
+            profileSnapshots: { orderBy: { createdAt: "desc" }, take: 1 },
+          },
+          take: 1,
+        },
       },
     });
+
+    // If website does not exist yet or user requested full GBP re-sync
+    if (!website || forceSync) {
+      const synth = await WebsiteFactoryService.synthesizeClinicWebsite(doctorId);
+
+      // Check slug collision
+      let targetSubdomain = synth.subdomain;
+      const existing = await prisma.clinicWebsite.findFirst({
+        where: { subdomain: targetSubdomain, doctorId: { not: doctorId } },
+      });
+      if (existing) {
+        targetSubdomain = `${targetSubdomain}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+
+      website = await prisma.clinicWebsite.upsert({
+        where: { doctorId },
+        create: {
+          doctorId,
+          subdomain: targetSubdomain,
+          themeId: synth.themeId,
+          primaryColor: synth.primaryColor,
+          secondaryColor: synth.secondaryColor,
+          accentColor: synth.accentColor,
+          fontHeading: synth.fontHeading,
+          fontBody: synth.fontBody,
+          siteTitle: synth.siteTitle,
+          tagline: synth.tagline,
+          heroHeading: synth.heroHeading,
+          heroSubheading: synth.heroSubheading,
+          heroImage: synth.heroImage,
+          heroStyle: synth.heroStyle,
+          showHeroBookingForm: synth.showHeroBookingForm,
+          announcementBar: synth.announcementBar,
+          ctaButtonText: synth.ctaButtonText,
+          ctaButtonAction: synth.ctaButtonAction,
+          whatsappNumber: synth.whatsappNumber,
+          contactPhone: synth.contactPhone,
+          contactEmail: synth.contactEmail,
+          showServices: synth.showServices,
+          showReviews: synth.showReviews,
+          showDoctorBio: synth.showDoctorBio,
+          showFaq: synth.showFaq,
+          showMap: synth.showMap,
+          showStickyBar: synth.showStickyBar,
+          customServices: synth.customServices,
+          customFaqs: synth.customFaqs,
+          customBio: synth.customBio,
+          metaTitle: synth.metaTitle,
+          metaDescription: synth.metaDescription,
+          isPublished: true,
+        },
+        update: forceSync
+          ? {
+              siteTitle: synth.siteTitle,
+              tagline: synth.tagline,
+              heroHeading: synth.heroHeading,
+              heroSubheading: synth.heroSubheading,
+              contactPhone: synth.contactPhone,
+              whatsappNumber: synth.whatsappNumber,
+              customServices: synth.customServices,
+              customFaqs: synth.customFaqs,
+              customBio: synth.customBio,
+              showHeroBookingForm: synth.showHeroBookingForm,
+            }
+          : {},
+      });
+    }
 
     return NextResponse.json({
       website,
@@ -74,7 +147,8 @@ export async function POST(req: NextRequest) {
       heroHeading,
       heroSubheading,
       heroImage,
-      heroStyle = "SPLIT_FORM",
+      heroStyle = "IMAGE_ONLY",
+      showHeroBookingForm = false,
       announcementBar,
       ctaButtonText = "Book Appointment",
       ctaButtonAction = "BOOKING_MODAL",
@@ -95,18 +169,17 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!subdomain) {
-      return NextResponse.json({ error: "Subdomain is required" }, { status: 400 });
+      return NextResponse.json({ error: "Website URL name is required" }, { status: 400 });
     }
 
     const cleanSubdomain = subdomain.toLowerCase().trim().replace(/[^a-z0-9-]/g, "");
 
-    // Check collision
     const existing = await prisma.clinicWebsite.findFirst({
       where: { subdomain: cleanSubdomain, doctorId: { not: doctorId } },
     });
 
     if (existing) {
-      return NextResponse.json({ error: `Subdomain "${cleanSubdomain}" is already taken.` }, { status: 400 });
+      return NextResponse.json({ error: `Website URL "${cleanSubdomain}.gyrex.in" is already claimed.` }, { status: 400 });
     }
 
     const website = await prisma.clinicWebsite.upsert({
@@ -126,6 +199,7 @@ export async function POST(req: NextRequest) {
         heroSubheading,
         heroImage,
         heroStyle,
+        showHeroBookingForm,
         announcementBar,
         ctaButtonText,
         ctaButtonAction,
@@ -159,6 +233,7 @@ export async function POST(req: NextRequest) {
         heroSubheading,
         heroImage,
         heroStyle,
+        showHeroBookingForm,
         announcementBar,
         ctaButtonText,
         ctaButtonAction,
@@ -182,7 +257,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(website);
   } catch (error: any) {
-    console.error("[WEBSITE API POST/PUT ERROR]:", error);
+    console.error("[WEBSITE API POST ERROR]:", error);
     return NextResponse.json({ error: error.message || "Failed to save website" }, { status: 500 });
   }
 }

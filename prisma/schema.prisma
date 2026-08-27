@@ -1470,6 +1470,7 @@ model ClinicWebsite {
   showFaq          Boolean         @default(true)
   showMap          Boolean         @default(true)
   showStickyBar    Boolean         @default(true)
+  showHeroBookingForm Boolean      @default(false)
   
   // Custom Content Overrides (JSON)
   customServices   Json?           // Array of { name, description, duration, price, icon }
