@@ -203,14 +203,15 @@ export function buildLocalSearchQuery(specialty: string, formattedAddress: strin
     .map(p => p.trim())
     .filter(Boolean)
     .filter(p => !/^india$/i.test(p))      // Remove country
-    .filter(p => !/\d{5,}/.test(p));       // Remove pincodes (6-digit)
+    .map(p => p.replace(/\b\d{5,6}\b/g, "").trim()) // Remove 5 or 6 digit pincodes
+    .filter(Boolean);
 
   if (parts.length >= 3) {
     // Structure: [house], [block], [neighborhood], [city], [state]
     // Neighborhood is 3rd from last, city is 2nd from last
     const neighborhood = parts[parts.length - 3];
     const city = parts[parts.length - 2];
-    return `${specialty} near ${neighborhood}, ${city}`;
+    return `${specialty} in ${neighborhood}, ${city}`;
   } else if (parts.length === 2) {
     return `${specialty} in ${parts[0]}, ${parts[1]}`;
   } else if (parts.length === 1) {
@@ -582,8 +583,14 @@ export async function extractNeighborhood(address: string, apiKey: string): Prom
   }
   
   // Fallback if Geocoding fails to yield components
-  const parts = address.split(",").map(p => p.trim()).filter(Boolean);
-  const fallback = parts.length >= 2 ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}` : address;
+  const parts = address
+    .split(",")
+    .map(p => p.trim())
+    .filter(Boolean)
+    .filter(p => !/^india$/i.test(p))
+    .map(p => p.replace(/\b\d{5,6}\b/g, "").trim())
+    .filter(Boolean);
+  const fallback = parts.length >= 2 ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}` : (parts[0] || address);
   return {
     neighborhood: fallback,
     city: fallback,

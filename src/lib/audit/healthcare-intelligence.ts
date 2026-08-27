@@ -8,9 +8,40 @@ export interface SpecialityBenchmark {
   isUnknown?: boolean;
 }
 
+// ── Map Google Commercial/Generic Categories to Patient Clinical Search Terms ──
+export const GOOGLE_CATEGORY_TO_CLINICAL_SPECIALTY: Record<string, string> = {
+  "skin_care_clinic": "Dermatologist",
+  "skin care clinic": "Dermatologist",
+  "skin clinic": "Dermatologist",
+  "dermatologist": "Dermatologist",
+  "pediatric_clinic": "Pediatrician",
+  "childrens_hospital": "Pediatrician",
+  "pediatrician": "Pediatrician",
+  "orthopedic_clinic": "Orthopedic Surgeon",
+  "orthopedic_surgeon": "Orthopedic Surgeon",
+  "dental_clinic": "Dental Clinic",
+  "dentist": "Dental Clinic",
+  "eye_care_center": "Ophthalmologist",
+  "ophthalmology_clinic": "Ophthalmologist",
+  "hair_transplantation_service": "Hair Transplant Clinic",
+  "hair_clinic": "Hair Transplant Clinic",
+  "physiotherapy_center": "Physiotherapist",
+  "physiotherapist": "Physiotherapist",
+  "ent_clinic": "ENT Specialist",
+  "ear_nose_throat": "ENT Specialist",
+  "gynecologist": "Obstetrician & Gynecologist",
+  "obstetrician_gynecologist": "Obstetrician & Gynecologist",
+  "womens_health_clinic": "Obstetrician & Gynecologist",
+  "fertility_clinic": "IVF & Fertility Center",
+};
+
 // ── Helper to format raw Google Places API category slugs ───────────────────
 function formatSlugToTitle(slug: string): string {
   if (!slug) return "";
+  const key = slug.toLowerCase().trim();
+  if (GOOGLE_CATEGORY_TO_CLINICAL_SPECIALTY[key]) {
+    return GOOGLE_CATEGORY_TO_CLINICAL_SPECIALTY[key];
+  }
   return slug
     .split("_")
     .map((word) => {
@@ -688,8 +719,9 @@ export function detectSpeciality(
     primaryTypeDisplayName &&
     !GENERIC_GOOGLE_SLUGS.includes(primaryTypeDisplayName.toLowerCase().trim())
   ) {
-    const categoryLabel = primaryTypeDisplayName.trim();
-    console.log(`[Specialty Engine] Tier 1 (Google API Display Name): "${categoryLabel}"`);
+    const rawLabel = primaryTypeDisplayName.trim();
+    const categoryLabel = formatSlugToTitle(rawLabel);
+    console.log(`[Specialty Engine] Tier 1 (Google API Display Name): "${rawLabel}" → "${categoryLabel}"`);
 
     return {
       speciality: categoryLabel,

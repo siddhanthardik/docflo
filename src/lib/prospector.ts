@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/prisma";
 import { calculateDistanceKm } from "@/lib/audit/google-places";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
+import { executeAuditScan } from "@/services/audit-scan.service";
 
 export interface DiscoveredClinicLead {
   id: string;
@@ -117,11 +118,12 @@ export class ProspectorService {
       const officialEmail = await this.scrapeEmailFromWebsite(officialWebsite);
 
       // Audit metric calculations
-      const auditScore = Math.min(95, Math.max(40, Math.floor(50 + (rating * 8) - (userRatingsTotal > 40 ? 5 : 18))));
-      const estimatedPatientsLost = Math.max(12, Math.floor((100 - auditScore) * 0.65));
-
-      // ─── PERSISTENT DATABASE AUDIT REPORT CREATION ────────────────────────────
+      // ─── AUTHENTIC DIAGNOSTIC AUDIT SCAN VIA PRODUCTION ENGINE ──────────────
       let auditReportId: string = "";
+      let auditScore: number = 70;
+      let estimatedPatientsLost: number = 15;
+      let userRank: number = 5;
+
       try {
         // 1. Create/upsert AuditLead record
         const safePhone = officialPhone || `UNLISTED_${Date.now()}_${i}`;
@@ -156,133 +158,31 @@ export class ProspectorService {
           data: {
             leadId: leadRecord.id,
             placeId: safePlaceId,
-            searchQuery: `${clinicName} ${address}`,
-            status: "COMPLETED",
-            progress: 100,
+            searchQuery: `${specialty} in ${areaOrPincode}, ${city}`,
+            status: "PROCESSING",
+            progress: 10,
           },
         });
 
-        // Extract real top area competitors from Google Places search results (strictly within 5 km radius)
-        const rawCompetitors = rawPlaces.filter(p => {
-          if (p.place_id === placeId) return false;
-          if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
-            const dist = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
-            return dist <= 5; // Discard clinics further than 5 km
-          }
-          return true;
-        }).slice(0, 4);
-
-        const compList = rawCompetitors.map(p => {
-          let distKm: number | undefined;
-          if (targetLat && targetLng && p.geometry?.location?.lat && p.geometry?.location?.lng) {
-            const rawDist = calculateDistanceKm(targetLat, targetLng, p.geometry.location.lat, p.geometry.location.lng);
-            distKm = Math.round(rawDist * 10) / 10;
-          }
-          return {
-            name: p.name || "Medical Clinic",
-            isYou: false,
-            rating: p.rating || 4.7,
-            reviewCount: p.user_ratings_total || 45,
-            distanceKm: distKm,
-          };
+        // 3. Execute authentic full-stack diagnostic audit scan
+        const scanRes = await executeAuditScan(auditRequest.id, {
+          placeId: safePlaceId,
+          name: clinicName,
+          address,
+          searchQuery: `${specialty} in ${areaOrPincode}, ${city}`,
         });
 
-        const compAvgReviews = compList.length > 0 
-          ? Math.round(compList.reduce((acc, c) => acc + (Number(c.reviewCount) || 0), 0) / compList.length)
-          : 45;
-
-        // 12-Point Google Business Profile Audit Standard
-        const completenessItems = [
-          { name: "Business Name Verified", present: true },
-          { name: "Primary Medical Category", present: true },
-          { name: "Secondary Medical Categories", present: false },
-          { name: "Geocoded Street Address", present: true },
-          { name: "Direct Phone Line", present: !!officialPhone },
-          { name: "Official Website Link", present: !!officialWebsite },
-          { name: "Medical Services Catalog Listed", present: false },
-          { name: "Weekly Google Posts Frequency", present: false },
-          { name: "Review Count Match", present: userRatingsTotal >= compAvgReviews },
-          { name: "Review Response Rate", present: false },
-          { name: "Profile Description & Bio", present: true },
-          { name: "Clinic Photos Count (30+)", present: false },
-        ];
-
-        const specBenchmark = detectSpeciality(clinicName, [], address, specialty);
-        const resolvedSpecialty = specBenchmark.speciality || specialty;
-
-        // 3. Create AuditReport record for live viewing at /local-seo/free-audit/report/[id]
-        const auditReport = await prisma.auditReport.create({
-          data: {
-            requestId: auditRequest.id,
-            businessName: clinicName,
-            speciality: resolvedSpecialty,
-            address,
-            websiteUrl: officialWebsite || null,
-            primaryCategory: resolvedSpecialty,
-            secondaryCategories: [],
-            businessType: "Local Healthcare Clinic",
-            rating: rating || null,
-            reviewCount: userRatingsTotal || null,
-            businessOverview: {
-              businessName: clinicName,
-              primaryCategory: resolvedSpecialty,
-              additionalCategories: [],
-              address,
-              phone: officialPhone || "Not Available",
-              website: officialWebsite || "Not Available",
-              rating: rating || "Not Available",
-              reviews: userRatingsTotal || "Not Available",
-              businessStatus: "OPERATIONAL",
-            },
-            businessSnapshot: {
-              metrics: [
-                { id: "reviews", label: "Total Reviews", observed: userRatingsTotal || 0, benchmark: compAvgReviews },
-                { id: "rating", label: "Average Rating", observed: rating || "0.0", benchmark: 4.8 },
-                { id: "photos", label: "Photos Published", observed: "10+", benchmark: "30+" },
-                { id: "posts", label: "Recent Google Posts", observed: "0 in 30 days", benchmark: "2-3/month" },
-                { id: "categories", label: "Categories Used", observed: 1, benchmark: 3 },
-              ],
-            },
-            visibilityIssues: {
-              issues: [
-                { issue: "Secondary medical categories missing.", evidence: "Profile lacks specialized secondary categories, reducing local map pack search radius.", impact: "High" },
-                userRatingsTotal < compAvgReviews ? { issue: `Review Deficit: ${userRatingsTotal} reviews vs competitor average of ${compAvgReviews}.`, evidence: "Nearby competing clinics receive 4x more post-visit reviews on Google Maps.", impact: "High" } : null,
-                !officialWebsite ? { issue: "No official website link published on Google Maps.", evidence: "Google ranks profiles higher when linked to verified medical domain structures.", impact: "High" } : null,
-                { issue: "Google Posts inactivity detected.", evidence: "Zero Google Posts published in the last 30 days lowers freshness ranking signals.", impact: "Medium" },
-                { issue: "Native medical services catalog unverified.", evidence: "Listing individual treatments natively on Google increases rank for treatment-specific searches.", impact: "Medium" },
-              ].filter(Boolean),
-            },
-            competitorIntelligence: {
-              competitors: [
-                ...compList.map((c, idx) => ({
-                  ...c,
-                  rank: idx + 1
-                })),
-                { name: clinicName, isYou: true, rating: rating || "N/A", reviewCount: userRatingsTotal || 0, rank: i + 1 },
-              ],
-            },
-            profileCompleteness: {
-              items: completenessItems,
-            },
-            priorityActionPlan: {
-              tasks: [
-                { problem: "Add Secondary Medical Categories", evidence: "Add specialized categories to capture nearby patient searches.", time: "10 mins", impact: "High", difficulty: "Easy" },
-                { problem: "Automate Patient Review Collection", evidence: "Collect 4x more positive reviews automatically via WhatsApp after visits.", time: "15 mins", impact: "High", difficulty: "Easy" },
-                { problem: "Publish Weekly Clinic Updates", evidence: "Signal active engagement to Google Maps search algorithms.", time: "10 mins", impact: "Medium", difficulty: "Easy" },
-              ],
-            },
-            growthOpportunities: {
-              strategies: [
-                { title: "Automate Patient WhatsApp Review Collection", description: "Collect 4x more 5-star Google reviews post-visit via automated WhatsApp." },
-                { title: "Enable 24/7 WhatsApp Appointment Assistant", description: "Convert searchers and profile visitors directly into confirmed clinic appointments." },
-              ],
-            },
-          },
-        });
-
-        auditReportId = auditReport.id;
-      } catch (dbErr) {
-        console.error(`[PROSPECTOR DB AUDIT ERROR] Failed to save report for ${clinicName}:`, dbErr);
+        if (scanRes && scanRes.report) {
+          auditReportId = scanRes.report.id;
+          auditScore = scanRes.overallScore || 70;
+          userRank = scanRes.userRank || 5;
+          estimatedPatientsLost = Math.max(
+            8,
+            Math.floor((100 - auditScore) * 0.4) + (userRank > 3 ? (userRank - 3) * 3 : 0)
+          );
+        }
+      } catch (scanErr) {
+        console.error(`[PROSPECTOR DIAGNOSTIC SCAN ERROR] for ${clinicName}:`, scanErr);
         auditReportId = `lead_${Date.now()}_${i}`;
       }
 
