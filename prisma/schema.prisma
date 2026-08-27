@@ -68,6 +68,7 @@ model Doctor {
   subscriptionHistories  SubscriptionHistory[]
   notifications          Notification[]
   aiAgentFeedbacks       AIAgentFeedback[]
+  website                ClinicWebsite?
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -1431,4 +1432,67 @@ enum BlogStatus {
   SCHEDULED
   ARCHIVED
 }
+
+model ClinicWebsite {
+  id               String          @id @default(cuid())
+  doctorId         String          @unique
+  subdomain        String          @unique // e.g. "drsharma" -> drsharma.gyrex.in
+  customDomain     String?         @unique // e.g. "drsharma.com"
+  
+  // Theme & Styling
+  themeId          String          @default("apex-clinical") // apex-clinical, serene-glow, minimal-luxe, warm-pediatrics, vitality-rehab
+  primaryColor     String          @default("#2563EB")
+  secondaryColor   String          @default("#0F172A")
+  accentColor      String          @default("#10B981")
+  fontHeading      String          @default("Plus Jakarta Sans")
+  fontBody         String          @default("Inter")
+  
+  // Content & Header
+  siteTitle        String
+  tagline          String?
+  heroHeading      String
+  heroSubheading   String?
+  heroImage        String?
+  heroStyle        String          @default("SPLIT_FORM") // SPLIT_FORM, CENTERED_BANNER, MINIMAL
+  announcementBar  String?
+  
+  // Navigation & CTAs
+  ctaButtonText    String          @default("Book Appointment")
+  ctaButtonAction  String          @default("BOOKING_MODAL") // BOOKING_MODAL, WHATSAPP, PHONE
+  whatsappNumber   String?
+  contactPhone     String?
+  contactEmail     String?
+  
+  // Structured Sections & Visibility Toggles
+  showServices     Boolean         @default(true)
+  showReviews      Boolean         @default(true)
+  showDoctorBio    Boolean         @default(true)
+  showFaq          Boolean         @default(true)
+  showMap          Boolean         @default(true)
+  showStickyBar    Boolean         @default(true)
+  
+  // Custom Content Overrides (JSON)
+  customServices   Json?           // Array of { name, description, duration, price, icon }
+  customFaqs       Json?           // Array of { question, answer }
+  customBio        String?         @db.Text
+  
+  // SEO & Social
+  metaTitle        String?
+  metaDescription  String?         @db.Text
+  ogImage          String?
+  
+  // State
+  isPublished      Boolean         @default(true)
+  viewCount        Int             @default(0)
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  doctor           Doctor          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([subdomain])
+  @@index([customDomain])
+  @@map("clinic_websites")
+}
+
 

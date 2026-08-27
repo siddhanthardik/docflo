@@ -25,7 +25,8 @@ import {
   TrendingUp,
   ShieldAlert,
   PanelLeft,
-  Download
+  Download,
+  Globe,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
@@ -33,6 +34,7 @@ import { Zap } from "lucide-react";
 
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Clinic Website", href: "/dashboard/website", icon: Globe },
   { name: "WhatsApp Inbox", href: "/whatsapp", icon: MessageCircle },
   { name: "Patients", href: "/patients", icon: Users },
   { name: "Appointments", href: "/appointments", icon: Calendar },
