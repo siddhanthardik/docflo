@@ -84,6 +84,20 @@ export default function LandingPage() {
   const monthlyRevenue = avgFee * newPatients;
   const annualRevenue = monthlyRevenue * 12;
 
+  // Live pricing from Super Admin panel
+  const [packages, setPackages] = useState<any[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/packages")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPackages(data);
+      })
+      .catch(() => {})
+      .finally(() => setPackagesLoading(false));
+  }, []);
+
   // Fetch suggestions from backend proxy
   const fetchSuggestions = useCallback(async (input: string) => {
     if (input.length < 2) {
@@ -814,7 +828,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING SECTION ── */}
+      {/* ── PRICING SECTION — Live from Super Admin ── */}
       <section id="pricing" className="py-20 bg-white border-t border-slate-200">
         <div ref={pricingRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
 
@@ -824,87 +838,108 @@ export default function LandingPage() {
             <p className="text-sm text-slate-600">No hidden fees. No long-term contracts. Cancel anytime.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {/* Loading skeleton */}
+          {packagesLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="rounded-3xl border border-slate-200 p-8 space-y-4 animate-pulse">
+                  <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  <div className="h-10 bg-slate-200 rounded w-2/3" />
+                  <div className="space-y-2 pt-4">
+                    {[...Array(5)].map((_, j) => <div key={j} className="h-3 bg-slate-100 rounded" />)}
+                  </div>
+                  <div className="h-12 bg-slate-200 rounded-xl mt-4" />
+                </div>
+              ))}
+            </div>
+          )}
 
-            {/* Starter */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
-              className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-6">
-              <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Starter</p>
-                <p className="text-4xl font-black text-slate-900">₹2,999<span className="text-sm font-medium text-slate-400">/mo</span></p>
-                <p className="text-xs text-slate-500 mt-1">Perfect for single-doctor clinics</p>
-              </div>
-              <ul className="space-y-3 text-sm text-slate-700">
-                {["Local SEO Audit Report", "5×5 Geo-Rank Heatmap", "WhatsApp Review Engine", "Competitor Gap Matrix", "50 Review Requests/Month"].map(f => (
-                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />{f}</li>
-                ))}
-              </ul>
-              <Link href="/register">
-                <Button variant="outline" className="w-full rounded-xl h-12 font-bold border-slate-300">Get Started</Button>
-              </Link>
-            </motion.div>
+          {/* Dynamic package cards */}
+          {!packagesLoading && packages.length > 0 && (
+            <div className={`grid grid-cols-1 gap-6 items-start ${packages.length === 3 ? "md:grid-cols-3" : packages.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-1 max-w-sm mx-auto"}`}>
+              {packages.map((pkg, i) => {
+                const isPopular = i === Math.floor(packages.length / 2); // middle card is featured
+                const price = pkg.priceMonthly;
+                const symbol = pkg.currency === "INR" ? "₹" : "$";
+                const features: string[] = pkg.features?.filter(Boolean) ?? [];
+                const isContactUs = price === 0;
 
-            {/* Growth — Popular */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.1 }}
-              className="bg-blue-600 border border-blue-500 rounded-3xl p-8 space-y-6 relative shadow-2xl shadow-blue-600/30 -mt-2 md:-mt-4">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-4 py-1.5 rounded-full shadow-md flex items-center gap-1">
-                  <Flame className="w-3 h-3" /> MOST POPULAR
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">Growth</p>
-                <p className="text-4xl font-black text-white">₹5,999<span className="text-sm font-medium text-blue-300">/mo</span></p>
-                <p className="text-xs text-blue-200 mt-1">For multi-doctor clinics scaling fast</p>
-              </div>
-              <ul className="space-y-3 text-sm text-white">
-                {[
-                  "Everything in Starter",
-                  "AI WhatsApp Receptionist (24/7)",
-                  "Shared WhatsApp Business Inbox",
-                  "Patient CRM & Appointment Scheduling",
-                  "Automated Reminders & Billing",
-                  "GBP Auto Posts Engine",
-                  "250 Review Requests/Month"
-                ].map(f => (
-                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-200 shrink-0" />{f}</li>
-                ))}
-              </ul>
-              <Link href="/register">
-                <Button className="w-full bg-white hover:bg-slate-100 text-blue-700 font-bold rounded-xl h-12 shadow-lg">Start Free 14-Day Trial</Button>
-              </Link>
-            </motion.div>
+                return (
+                  <motion.div key={pkg.id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={pricingInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    className={`rounded-3xl p-8 space-y-6 relative ${
+                      isPopular
+                        ? "bg-blue-600 border border-blue-500 shadow-2xl shadow-blue-600/30 -mt-2 md:-mt-4"
+                        : "bg-slate-50 border border-slate-200"
+                    }`}
+                  >
+                    {isPopular && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-4 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                          <Flame className="w-3 h-3" /> MOST POPULAR
+                        </span>
+                      </div>
+                    )}
 
-            {/* Pro */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.2 }}
-              className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-6">
-              <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pro / Chain</p>
-                <p className="text-4xl font-black text-slate-900">₹12,999<span className="text-sm font-medium text-slate-400">/mo</span></p>
-                <p className="text-xs text-slate-500 mt-1">For clinic chains &amp; enterprise practices</p>
-              </div>
-              <ul className="space-y-3 text-sm text-slate-700">
-                {[
-                  "Everything in Growth",
-                  "Multi-Location Dashboard",
-                  "Unlimited Review Requests",
-                  "Priority AI Support",
-                  "Custom Branding on Reports",
-                  "Dedicated Account Manager"
-                ].map(f => (
-                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />{f}</li>
-                ))}
-              </ul>
-              <Link href="/contact">
-                <Button variant="outline" className="w-full rounded-xl h-12 font-bold border-slate-300">Contact Sales</Button>
-              </Link>
-            </motion.div>
+                    <div>
+                      <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isPopular ? "text-blue-200" : "text-slate-500"}`}>
+                        {pkg.name}
+                      </p>
+                      {isContactUs ? (
+                        <p className={`text-3xl font-black ${isPopular ? "text-white" : "text-slate-900"}`}>Custom</p>
+                      ) : (
+                        <p className={`text-4xl font-black ${isPopular ? "text-white" : "text-slate-900"}`}>
+                          {symbol}{price.toLocaleString("en-IN")}
+                          <span className={`text-sm font-medium ${isPopular ? "text-blue-300" : "text-slate-400"}`}>/mo</span>
+                        </p>
+                      )}
+                      {pkg.description && (
+                        <p className={`text-xs mt-1 ${isPopular ? "text-blue-200" : "text-slate-500"}`}>{pkg.description}</p>
+                      )}
+                    </div>
 
-          </div>
+                    {features.length > 0 && (
+                      <ul className="space-y-3">
+                        {features.map((f: string) => (
+                          <li key={f} className={`flex items-center gap-2.5 text-sm ${isPopular ? "text-white" : "text-slate-700"}`}>
+                            <CheckCircle2 className={`w-4 h-4 shrink-0 ${isPopular ? "text-blue-200" : "text-emerald-500"}`} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {isContactUs ? (
+                      <Link href="/contact">
+                        <Button className={`w-full rounded-xl h-12 font-bold ${isPopular ? "bg-white hover:bg-slate-100 text-blue-700 shadow-lg" : "bg-slate-900 hover:bg-slate-800 text-white"}`}>
+                          Contact Sales
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href="/register">
+                        <Button className={`w-full rounded-xl h-12 font-bold ${isPopular ? "bg-white hover:bg-slate-100 text-blue-700 shadow-lg" : ""}`}
+                          variant={isPopular ? undefined : "outline"}>
+                          {isPopular ? "Start Free 14-Day Trial" : "Get Started"}
+                        </Button>
+                      </Link>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Fallback if no packages returned */}
+          {!packagesLoading && packages.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-8">Pricing plans coming soon. <Link href="/contact" className="text-blue-600 font-semibold hover:underline">Contact us</Link> for details.</p>
+          )}
 
           <p className="text-center text-xs text-slate-400">All plans include 14-day free trial · No credit card required to start · Cancel anytime</p>
         </div>
       </section>
+
 
       {/* ── FAQ SECTION ── */}
       <section className="py-20 bg-slate-50 border-t border-slate-200">
