@@ -11,11 +11,11 @@ import { logSystemError } from '@/lib/logger';
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
   const parts = ["auth", "info"];
-  return path.resolve(process.cwd(), parts.join("_"));
+  return path.resolve(/*turbopackIgnore: true*/ process.cwd(), parts.join("_"));
 }
 
 function getDoctorSessionDir(doctorId: string): string {
-  return path.resolve(getAuthBaseDir(), doctorId);
+  return path.resolve(/*turbopackIgnore: true*/ getAuthBaseDir(), doctorId);
 }
 
 class WhatsAppManager {
