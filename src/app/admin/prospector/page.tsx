@@ -19,6 +19,10 @@ import {
   RefreshCcw,
   ShieldCheck,
   Play,
+  MessageSquare,
+  Copy,
+  PhoneCall,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +62,45 @@ export default function AdminProspectorPage() {
   const [customRecipientEmail, setCustomRecipientEmail] = useState("");
   const [customSubject, setCustomSubject] = useState("");
   const [customMessage, setCustomMessage] = useState("");
+
+  // Call Script Modal State
+  const [callScriptLead, setCallScriptLead] = useState<DiscoveredClinicLead | null>(null);
+
+  const cleanWhatsAppPhone = (phone?: string) => {
+    if (!phone) return "";
+    let digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) digits = "91" + digits;
+    if (digits.startsWith("0")) digits = "91" + digits.slice(1);
+    return digits;
+  };
+
+  const getWhatsAppPitch = (lead: DiscoveredClinicLead) => {
+    const docName = lead.doctorName || "Doctor";
+    return `Hello ${docName},
+
+I ran an automated 5km Google Maps audit for ${lead.clinicName} in ${lead.city}.
+
+📊 Google Visibility Score: ${lead.auditScore}/100
+⚠️ Est. Patient Inquiries Lost: ~${lead.estimatedPatientsLostMonthly}/month due to unoptimized ranking and missing review pipeline.
+
+Here is your clinic's complimentary 10-point audit report:
+👉 ${lead.auditReportLink}
+
+Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on Google Maps in your area?`;
+  };
+
+  const handleCopyPitch = (lead: DiscoveredClinicLead) => {
+    const pitch = getWhatsAppPitch(lead);
+    navigator.clipboard.writeText(pitch);
+    toast({
+      title: "Outreach Pitch Copied! 📋",
+      description: `Personalized message for ${lead.clinicName} copied to clipboard. Ready to paste in WhatsApp, SMS, or Email.`,
+    });
+  };
+
+  const handleOpenCallScript = (lead: DiscoveredClinicLead) => {
+    setCallScriptLead(lead);
+  };
 
   const SCAN_STEPS = [
     "Step 1/5: Searching Google Business Places in Area...",
@@ -262,21 +305,6 @@ export default function AdminProspectorPage() {
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-500">Scans Google Maps & Places API for local clinics needing review & SEO optimization.</p>
-          <Button
-            type="submit"
-            disabled={scanning}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-11 px-6 rounded-xl shadow-sm"
-          >
-            {scanning ? (
-              <><RefreshCcw className="w-4 h-4 mr-2 animate-spin" /> Executing Prospecting Engine...</>
-            ) : (
-              <><Play className="w-4 h-4 mr-2 text-amber-300" /> Run Prospecting Scan</>
-            )}
-          </Button>
-        </div>
-
         {/* Live Stepper Indicator */}
         {scanning && (
           <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2">
@@ -295,7 +323,7 @@ export default function AdminProspectorPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             Outreach Domain Isolation Active (<span className="font-semibold text-slate-700">getgyrex.com</span>)
@@ -309,7 +337,7 @@ export default function AdminProspectorPage() {
             {scanning ? (
               <><RefreshCcw className="w-4 h-4 mr-2 animate-spin" /> Executing Prospecting Engine...</>
             ) : (
-              <><Play className="w-4 h-4 mr-2 text-amber-300" /> Run Prospecting Engine</>
+              <><Play className="w-4 h-4 mr-2 text-amber-300" /> Launch Prospecting Engine</>
             )}
           </Button>
         </div>
@@ -318,14 +346,26 @@ export default function AdminProspectorPage() {
       {/* Results Table */}
       {leads.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden space-y-4 p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-gray-900">Discovered Authentic Doctor Leads</h3>
-              <p className="text-xs text-gray-500">{leads.length} official clinic listings parsed and synced to Google Sheets</p>
+              <p className="text-xs text-gray-500">{leads.length} official clinic listings parsed and synced to Google Sheets CRM</p>
             </div>
-            <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100">
-              {leads.length} Leads Ready
-            </span>
+            <div className="flex items-center gap-2">
+              {sheetUrl && (
+                <a
+                  href={sheetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-200 transition-colors"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> View in Google Sheets <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+              <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full border border-indigo-100">
+                {leads.length} Leads Ready
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -336,13 +376,15 @@ export default function AdminProspectorPage() {
                   <th className="py-3 px-4">Contact Info</th>
                   <th className="py-3 px-4 text-center">Audit Score</th>
                   <th className="py-3 px-4 text-center">Patient Loss</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 text-right">Zero-Ad Outreach Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs">
                 {leads.map((lead) => {
                   const isDispatched = dispatchedMap[lead.id];
                   const isSending = dispatchingId === lead.id;
+                  const waPhone = cleanWhatsAppPhone(lead.phone);
+                  const waPitch = getWhatsAppPitch(lead);
 
                   return (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
@@ -378,7 +420,7 @@ export default function AdminProspectorPage() {
                         <div className="flex items-center gap-1.5 text-gray-500 text-[11px]">
                           <Phone className="w-3 h-3 text-gray-400 shrink-0" />
                           {lead.phone ? (
-                            <span>{lead.phone}</span>
+                            <span className="font-mono">{lead.phone}</span>
                           ) : (
                             <span className="text-gray-400 italic">Not Listed</span>
                           )}
@@ -391,7 +433,7 @@ export default function AdminProspectorPage() {
                             rel="noreferrer"
                             className="flex items-center gap-1 text-[11px] text-indigo-600 hover:underline font-medium"
                           >
-                            <Globe className="w-3 h-3 text-indigo-400 shrink-0" /> Visit Official Website
+                            <Globe className="w-3 h-3 text-indigo-400 shrink-0" /> Official Site
                           </a>
                         ) : (
                           <span className="text-[11px] text-gray-400 italic flex items-center gap-1">
@@ -412,34 +454,69 @@ export default function AdminProspectorPage() {
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 text-right space-x-2">
-                        <a
-                          href={lead.auditReportLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center text-xs font-semibold text-slate-700 hover:text-indigo-600 border border-gray-200 px-3 py-1.5 rounded-lg bg-white shadow-2xs hover:bg-slate-50 transition-colors"
-                        >
-                          Audit Report <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* 1. View Report */}
+                          <a
+                            href={lead.auditReportLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center text-[11px] font-semibold text-slate-700 hover:text-indigo-600 border border-gray-200 px-2.5 py-1.5 rounded-lg bg-white shadow-2xs hover:bg-slate-50 transition-colors"
+                          >
+                            Report <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
 
-                        <Button
-                          onClick={() => handleOpenEmailPreview(lead)}
-                          disabled={isDispatched || isSending}
-                          size="sm"
-                          className={
-                            isDispatched
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs h-8 px-3"
-                              : "bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-3"
-                          }
-                        >
-                          {isSending ? (
-                            <><RefreshCcw className="w-3 h-3 mr-1 animate-spin" /> Sending...</>
-                          ) : isDispatched ? (
-                            <><CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Sent</>
-                          ) : (
-                            <><Send className="w-3.5 h-3.5 mr-1" /> Send Email</>
-                          )}
-                        </Button>
+                          {/* 2. 1-Click WhatsApp Direct Pitch */}
+                          {waPhone ? (
+                            <a
+                              href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waPitch)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg shadow-2xs transition-colors"
+                              title="Open direct WhatsApp conversation with pre-filled audit pitch"
+                            >
+                              <MessageSquare className="w-3 h-3 mr-1" /> WhatsApp
+                            </a>
+                          ) : null}
+
+                          {/* 3. Copy Pitch to Clipboard */}
+                          <button
+                            onClick={() => handleCopyPitch(lead)}
+                            className="inline-flex items-center text-[11px] font-semibold text-slate-700 hover:text-indigo-600 border border-gray-200 px-2.5 py-1.5 rounded-lg bg-white shadow-2xs hover:bg-slate-50 transition-colors"
+                            title="Copy personalized doctor outreach message"
+                          >
+                            <Copy className="w-3 h-3 mr-1" /> Copy Pitch
+                          </button>
+
+                          {/* 4. Call Script View */}
+                          <button
+                            onClick={() => handleOpenCallScript(lead)}
+                            className="inline-flex items-center text-[11px] font-semibold text-slate-700 hover:text-indigo-600 border border-gray-200 px-2.5 py-1.5 rounded-lg bg-white shadow-2xs hover:bg-slate-50 transition-colors"
+                            title="View quick telephone talking points for reception"
+                          >
+                            <PhoneCall className="w-3 h-3 mr-1 text-blue-600" /> Script
+                          </button>
+
+                          {/* 5. Send Cold Email */}
+                          <Button
+                            onClick={() => handleOpenEmailPreview(lead)}
+                            disabled={isDispatched || isSending}
+                            size="sm"
+                            className={
+                              isDispatched
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] h-7 px-2.5"
+                                : "bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] h-7 px-2.5"
+                            }
+                          >
+                            {isSending ? (
+                              <><RefreshCcw className="w-3 h-3 mr-1 animate-spin" /> Sending...</>
+                            ) : isDispatched ? (
+                              <><CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" /> Sent</>
+                            ) : (
+                              <><Send className="w-3 h-3 mr-1" /> Email</>
+                            )}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -546,7 +623,94 @@ export default function AdminProspectorPage() {
           </div>
         </div>
       )}
+
+      {/* ─── TELEPHONE CALL SCRIPT & TALKING POINTS MODAL ───────────────────── */}
+      {callScriptLead && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 flex items-center justify-between border-b border-slate-800">
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <PhoneCall className="w-5 h-5 text-blue-400" /> Phone Call Script & Talking Points
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {callScriptLead.clinicName} ({callScriptLead.phone || "No phone listed"})
+                </p>
+              </div>
+              <button
+                onClick={() => setCallScriptLead(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-sm font-bold transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-sm leading-relaxed">
+              {/* Step 1 */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100 space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded-md">
+                  1. Front Desk / Reception Opening
+                </span>
+                <p className="text-xs text-slate-800 font-medium">
+                  &ldquo;Hello, this is calling regarding {callScriptLead.clinicName}&apos;s Google Business listing in {callScriptLead.city}. May I speak with {callScriptLead.doctorName || "the clinic manager / Dr."}? We just completed an automated local visibility audit for your area.&rdquo;
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100 space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-md">
+                  2. Pain Point Hook (Google Maps Rank Gap)
+                </span>
+                <p className="text-xs text-slate-800 font-medium">
+                  &ldquo;When patients in {callScriptLead.pincode} search for {callScriptLead.specialty}, {callScriptLead.clinicName} has an audit score of {callScriptLead.auditScore}/100, losing an estimated ~{callScriptLead.estimatedPatientsLostMonthly} inquiries/month to competitor clinics nearby.&rdquo;
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">
+                  3. The Offer (Zero-Cost Walkthrough)
+                </span>
+                <p className="text-xs text-slate-800 font-medium">
+                  &ldquo;We have generated a 10-point audit report that pinpoints the exact keywords and review gaps needed to reach Rank #1. Would Dr. / clinic team have 5 minutes this week for a quick screen-share walkthrough?&rdquo;
+                </p>
+              </div>
+
+              {/* Audit link box */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Report Link to Share:</span>
+                <a
+                  href={callScriptLead.auditReportLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                >
+                  Open Report <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopyPitch(callScriptLead)}
+                className="h-9 px-3 rounded-xl text-xs font-bold"
+              >
+                <Copy className="w-3.5 h-3.5 mr-1" /> Copy WhatsApp Pitch
+              </Button>
+              <Button
+                onClick={() => setCallScriptLead(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 rounded-xl"
+              >
+                Close Script
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 

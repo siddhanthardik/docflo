@@ -102,6 +102,26 @@ export class GoogleSheetsService {
         console.warn("[GOOGLE SHEETS] Could not fetch sheet metadata, defaulting range to Sheet1", metaErr);
       }
 
+      // 1. Ensure header row exists (check row 1 first)
+      const headerCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(primarySheetName)}!A1:M1`;
+      const headerCheckRes = await fetch(headerCheckUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const headerCheckData = headerCheckRes.ok ? await headerCheckRes.json() : {};
+      const hasHeader = headerCheckData.values && headerCheckData.values.length > 0;
+
+      if (!hasHeader) {
+        const headerRow = [["Date", "Clinic Name", "Doctor Name", "Specialty", "Address", "City", "Area/PIN", "Phone", "Email", "Website", "Audit Score", "Audit Report Link", "Status"]];
+        await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(primarySheetName)}!A1:M1?valueInputOption=USER_ENTERED`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ values: headerRow }),
+          }
+        );
+      }
+
       // Format rows: [Date, Clinic Name, Doctor Name, Specialty, Address, City, PIN, Phone, Email, Website, Audit Score, Report Link, Status]
       const rows = leads.map((lead) => [
         new Date().toLocaleDateString("en-IN"),
@@ -119,8 +139,9 @@ export class GoogleSheetsService {
         lead.status || "",
       ]);
 
-      // 2. Append rows to detected sheet tab
-      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(primarySheetName)}!A:M:append?valueInputOption=USER_ENTERED`;
+      // 2. Append rows — correct Google Sheets API URL format: /values/{range}:append
+      const range = `${encodeURIComponent(primarySheetName)}!A:M`;
+      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
       
       const appendRes = await fetch(appendUrl, {
         method: "POST",
@@ -133,17 +154,25 @@ export class GoogleSheetsService {
 
       if (!appendRes.ok) {
         const errData = await appendRes.json();
-        console.error("[GOOGLE SHEETS ERROR]", errData);
-        // Fallback retry without tab name prefix
-        const fallbackUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:M:append?valueInputOption=USER_ENTERED`;
-        await fetch(fallbackUrl, {
+        console.error("[GOOGLE SHEETS APPEND ERROR]", JSON.stringify(errData));
+        // Fallback: retry with plain A:M range (no sheet name prefix)
+        const fallbackUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:M:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+        const fallbackRes = await fetch(fallbackUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ values: rows }),
         });
+        if (!fallbackRes.ok) {
+          const fallbackErr = await fallbackRes.json();
+          const errCode = fallbackErr.error?.code || fallbackRes.status;
+          const errMsg = fallbackErr.error?.message || JSON.stringify(fallbackErr);
+          
+          if (errCode === 403 || errCode === 404 || errMsg.toLowerCase().includes("permission") || errMsg.toLowerCase().includes("not found")) {
+            throw new Error(`Google Sheets Access Error (${errCode}): Please share spreadsheet ID "${spreadsheetId}" with service account "${clientEmail}" and give it "Editor" permissions.`);
+          }
+          throw new Error(`Google Sheets append failed (${errCode}): ${errMsg}`);
+        }
+        console.log(`[GOOGLE SHEETS] Fallback append succeeded for ${leads.length} rows`);
       } else {
         console.log(`[GOOGLE SHEETS SUCCESS] Appended ${leads.length} rows to sheet tab "${primarySheetName}"!`);
       }
@@ -151,7 +180,7 @@ export class GoogleSheetsService {
       return {
         success: true,
         syncedCount: leads.length,
-        message: `Successfully appended ${leads.length} rows to sheet tab "${primarySheetName}"!`,
+        message: `Successfully appended ${leads.length} rows to Google Sheet!`,
         spreadsheetUrl,
       };
     } catch (error: any) {
@@ -165,3 +194,4 @@ export class GoogleSheetsService {
     }
   }
 }
+
