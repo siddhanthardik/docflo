@@ -1381,3 +1381,54 @@ model SystemErrorLog {
   @@index([createdAt])
   @@map("system_error_logs")
 }
+
+model BlogPost {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  excerpt         String?       @db.Text
+  content         String        @db.Text
+  heroImage       String?
+  heroImageAlt    String?
+  
+  // SEO & Social Meta
+  metaTitle       String?
+  metaDescription String?       @db.Text
+  canonicalUrl    String?
+  focusKeywords   String[]      @default([])
+  ogImage         String?
+  
+  // AI Search / GEO Features
+  keyTakeaways    String[]      @default([])
+  faqItems        Json?         // Array of { question: string, answer: string }
+  
+  // Categorization & Author E-E-A-T
+  category        String        @default("Growth & Marketing")
+  tags            String[]      @default([])
+  authorName      String        @default("Gyrex Medical Growth Team")
+  authorRole      String?       @default("Clinical SEO & Patient Acquisition")
+  authorAvatar    String?
+  
+  // State & Metrics
+  readingTimeMin  Int           @default(5)
+  status          BlogStatus    @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledFor    DateTime?
+  viewCount       Int           @default(0)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@index([category])
+  @@map("blog_posts")
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+

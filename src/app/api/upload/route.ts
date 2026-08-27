@@ -44,6 +44,8 @@ export async function POST(req: Request) {
       uploadDir = path.join(process.cwd(), "public", "uploads", "logos");
     } else if (type === "announcement") {
       uploadDir = path.join(process.cwd(), "public", "uploads", "announcements");
+    } else if (type === "blog") {
+      uploadDir = path.join(process.cwd(), "public", "uploads", "blogs");
     }
 
     const filepath = path.join(uploadDir, filename);
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
     await writeFile(filepath, buffer);
 
     // Return the relative URL using the dynamic API route
-    const folder = type === "logo" ? "logos/" : type === "announcement" ? "announcements/" : "";
+    const folder = type === "logo" ? "logos/" : type === "announcement" ? "announcements/" : type === "blog" ? "blogs/" : "";
     const url = `/api/uploads/${folder}${filename}`;
 
     return NextResponse.json({ url });

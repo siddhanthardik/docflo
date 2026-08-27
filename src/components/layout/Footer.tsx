@@ -30,6 +30,7 @@ export function Footer() {
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Company</h4>
             <ul className="space-y-2.5 text-xs text-slate-400">
               <li><Link href="/about" className="hover:text-white transition font-medium text-cyan-400">About Us</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition font-medium text-blue-400">Clinical Growth Blog</Link></li>
               <li><Link href="/login" className="hover:text-white transition">Doctor Portal</Link></li>
               <li><Link href="/register" className="hover:text-white transition">Register Practice</Link></li>
               <li><Link href="/affiliates/login" className="hover:text-white transition">Partner Portal</Link></li>
