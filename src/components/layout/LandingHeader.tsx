@@ -21,12 +21,10 @@ export function LandingHeader() {
 
           <nav className="hidden md:flex items-center gap-8">
             {[
-              { label: "Growth Platform", href: "/#growth-platform" },
-              { label: "Local SEO", href: "/#local-seo" },
-              { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
-              { label: "Patient Management", href: "/#patient-management" },
+              { label: "Features", href: "/#local-seo" },
+              { label: "Pricing", href: "/#pricing" },
+              { label: "WhatsApp AI", href: "/#whatsapp-engine" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
-              { label: "Download Apps", href: "/#download-apps" },
             ].map((item) => (
               <Link
                 key={item.label}
@@ -75,12 +73,10 @@ export function LandingHeader() {
           
           <nav className="flex flex-col gap-6 text-lg font-semibold text-slate-700">
             {[
-              { label: "Growth Platform", href: "/#growth-platform" },
-              { label: "Local SEO", href: "/#local-seo" },
-              { label: "WhatsApp Engine", href: "/#whatsapp-engine" },
-              { label: "Patient Management", href: "/#patient-management" },
+              { label: "Features", href: "/#local-seo" },
+              { label: "Pricing", href: "/#pricing" },
+              { label: "WhatsApp AI", href: "/#whatsapp-engine" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
-              { label: "Download Apps", href: "/#download-apps" },
             ].map((item) => (
               <Link
                 key={item.label}

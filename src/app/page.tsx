@@ -2,14 +2,17 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
   Activity, Star, ArrowRight, CheckCircle2, TrendingUp, Users, MessageSquare,
   Search, MapPin, Building2, ChevronRight, Zap, Globe, BarChart3,
   Calendar, Phone, Clock, Shield, Heart, Award, Play, ChevronDown, Layers, Database,
   Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X,
   ShieldCheck, Calculator, ArrowRightCircle, CreditCard, Bell, UserCheck, Inbox,
-  CheckCircle, Sparkle, Stethoscope, Laptop, Smartphone, Download
+  CheckCircle, Sparkle, Stethoscope, Laptop, Smartphone, Download, Bot, ChevronUp,
+  HelpCircle, BadgeCheck, Flame
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -34,6 +37,20 @@ export default function LandingPage() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlacePrediction | null>(null);
   const [activeFeatureCategory, setActiveFeatureCategory] = useState<"growth" | "operations">("growth");
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [heroImgError, setHeroImgError] = useState(false);
+
+  // Scroll-reveal refs
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsInView = useInView(statsRef, { once: true, margin: "-80px" });
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const featuresInView = useInView(featuresRef, { once: true, margin: "-80px" });
+  const testimonialsRef = useRef<HTMLDivElement>(null);
+  const testimonialsInView = useInView(testimonialsRef, { once: true, margin: "-80px" });
+  const pricingRef = useRef<HTMLDivElement>(null);
+  const pricingInView = useInView(pricingRef, { once: true, margin: "-80px" });
+  const faqRef = useRef<HTMLDivElement>(null);
+  const faqInView = useInView(faqRef, { once: true, margin: "-80px" });
 
   // Rotating Hero Punchlines
   const punchlines = [
@@ -170,7 +187,7 @@ export default function LandingPage() {
                     Free Google Profile Booster
                   </Button>
                 </Link>
-                <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
+                <Link href="/contact" className="w-full sm:w-auto">
                   <Button variant="outline" className="w-full sm:w-auto border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl px-7 h-13 text-base transition-all">
                     Book Free Demo
                   </Button>
@@ -240,11 +257,27 @@ export default function LandingPage() {
             {/* Hero Right Visual: Professional Doctor Image & Floating Growth Card */}
             <div className="lg:col-span-5 relative">
               <div className="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-white">
-                <img
-                  src="/doctor_hero_portrait.jpg"
-                  alt="Professional Clinic Doctor"
-                  className="w-full h-[420px] object-cover object-top rounded-2xl"
-                />
+                {!heroImgError ? (
+                  <img
+                    src="/doctor_hero_portrait.jpg"
+                    alt="Professional Clinic Doctor"
+                    className="w-full h-[420px] object-cover object-top rounded-2xl"
+                    onError={() => setHeroImgError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-[420px] rounded-2xl bg-gradient-to-br from-blue-100 via-indigo-50 to-emerald-100 flex flex-col items-center justify-center gap-4">
+                    <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center">
+                      <Stethoscope className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <div className="text-center px-6">
+                      <p className="text-base font-bold text-slate-700">Trusted by 500+ Clinics</p>
+                      <p className="text-sm text-slate-500 mt-1">Dermatologists · Pediatricians · Dentists</p>
+                    </div>
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
+                    </div>
+                  </div>
+                )}
                 <div className="absolute top-4 right-4 z-10">
                   <span className="bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md border border-emerald-400">
                     Rank #1 Google Maps
@@ -363,7 +396,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── COMPLETE FEATURE MATRIX SECTION (EXPANDED MODULES) ── */}
+      {/* ── COMPLETE FEATURE MATRIX SECTION ── */}
       <section id="local-seo" className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           
@@ -384,7 +417,7 @@ export default function LandingPage() {
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
                 }`}
               >
-                Local SEO & Growth Modules
+                Local SEO & Growth
               </button>
               <button
                 onClick={() => setActiveFeatureCategory("operations")}
@@ -394,139 +427,207 @@ export default function LandingPage() {
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
                 }`}
               >
-                Clinic Operations & WhatsApp
+                Operations &amp; WhatsApp
               </button>
             </div>
           </div>
 
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* 1. 5-Star WhatsApp Review Engine */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                <Star className="w-5 h-5 fill-emerald-600" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">5-Star WhatsApp Review Engine</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Automatically dispatches 2-step feedback surveys via WhatsApp after consultations. Converts 70%+ of happy patients into 5-star Google reviews.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 98% Patient Response Rate
-              </div>
-            </div>
+          {/* Feature Grid — categorized & animated */}
+          <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-            {/* 2. 5×5 Geo-Rank Heatmap Tracker */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">5×5 Geo-Rank Heatmap Tracker</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Simulates 25 virtual searchers across a 5km radius to discover your clinic's exact position for keywords like "Pediatrician near me" or "Skin Specialist".
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-blue-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Real-time Google Map Pack Audit
-              </div>
-            </div>
+            {/* ── GROWTH FEATURES ── */}
+            {activeFeatureCategory === "growth" && (<>
 
-            {/* 3. 4-Pillar Competitor Gap Matrix */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">4-Pillar Competitor Gap Matrix</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Live Google Places API competitor benchmark analyzing review counts, star ratings, and category coverage. Pinpoints the exact review gap required to overtake Rank #1.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Exact Review Volume Benchmark
-              </div>
-            </div>
+              {/* 1. 5×5 Geo-Rank Heatmap Tracker */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">5×5 Geo-Rank Heatmap Tracker</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Simulates 25 virtual searchers across a 5km radius to show your clinic&apos;s exact Google Maps position for keywords like &quot;Dermatologist near me&quot;.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-blue-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Real-time Google Map Pack Audit
+                </div>
+              </motion.div>
 
-            {/* 4. Shared WhatsApp Business Inbox */}
-            <div id="whatsapp-engine" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
-                <Inbox className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Shared WhatsApp Business Inbox</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Clinic-wide shared inbox for managing patient conversations, appointment tags, and inquiry logs with multi-staff assignment.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-teal-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Unified Patient Conversations
-              </div>
-            </div>
+              {/* 2. 5-Star WhatsApp Review Engine */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.07 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Star className="w-5 h-5 fill-emerald-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">5-Star WhatsApp Review Engine</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Automatically dispatches 2-step feedback surveys via WhatsApp after consultations. Converts 70%+ of happy patients into 5-star Google reviews.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 98% Patient Response Rate
+                </div>
+              </motion.div>
 
-            {/* 5. Patient Management (CRM) */}
-            <div id="patient-management" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Patient Management (CRM)</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Centralized patient database containing medical profiles, visit histories, practitioner assignments, and communication logs.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-indigo-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Structured Patient Records
-              </div>
-            </div>
+              {/* 3. Competitor Gap Matrix */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.14 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">4-Pillar Competitor Gap Matrix</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Live Google Places API competitor benchmark. Pinpoints the exact review count gap required to overtake Rank #1 on Google Maps.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Exact Review Volume Benchmark
+                </div>
+              </motion.div>
 
-            {/* 6. Appointment Scheduling */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Appointment Scheduling</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Smart booking calendar for slot management, consultation scheduling, walk-in management, and practitioner availability.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Effortless Slot Booking
-              </div>
-            </div>
+              {/* 4. AI Receptionist */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.21 }}
+                className="bg-gradient-to-br from-violet-50 to-indigo-50 p-6 sm:p-7 rounded-3xl border border-violet-200 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3 relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="bg-violet-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> AI-Powered
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">AI WhatsApp Receptionist</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  24/7 AI receptionist that books appointments and handles patient queries in Hindi, Bengali, Tamil, English &amp; Arabic — automatically.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-violet-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Responds in 6 Languages, 24/7
+                </div>
+              </motion.div>
 
-            {/* 7. Automated Appointment Reminders */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
-                <Bell className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Automated Appointment Reminders</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Instant WhatsApp booking confirmation & 24h pre-consultation reminders to reduce clinic no-shows by over 60%.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 60% Reduction in No-Shows
-              </div>
-            </div>
+              {/* 5. GBP Auto Posts */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.28 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Google Updates &amp; Posts Engine</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Automated weekly Google Business Profile posts — signaling active engagement to Google&apos;s ranking algorithm.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-sky-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Active Google Profile Signal
+                </div>
+              </motion.div>
 
-            {/* 8. Billing & Receipts */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Billing & Receipts</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Generate digital clinic invoices and share receipt PDFs directly with patients via WhatsApp with Razorpay payment tracking.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Instant Receipt Delivery
-              </div>
-            </div>
+              {/* 6. Free Audit */}
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.35 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                  <Target className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">60-Second Local SEO Audit</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Instantly surfaces GBP gaps, missing keyword categories, review deficits, and competitor ranks for any clinic in India.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Free — No Account Needed
+                </div>
+              </motion.div>
 
-            {/* 9. Google Updates & Posts Engine */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                <Globe className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Google Updates & Posts Engine</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Automated weekly Google Business Profile posts to share health tips and clinic updates, signaling active engagement to Google.
-              </p>
-              <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-sky-700">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Active Google Profile Signal
-              </div>
-            </div>
+            </>)}
+
+            {/* ── OPERATIONS FEATURES ── */}
+            {activeFeatureCategory === "operations" && (<>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
+                id="whatsapp-engine" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+                  <Inbox className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Shared WhatsApp Business Inbox</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Clinic-wide shared inbox for managing patient conversations, appointment tags, and inquiry logs with multi-staff assignment.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-teal-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Unified Patient Conversations
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.07 }}
+                id="patient-management" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Patient Management (CRM)</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Centralized patient database with medical profiles, visit histories, practitioner assignments, and full communication logs.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-indigo-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Structured Patient Records
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.14 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Appointment Scheduling</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Smart booking calendar for slot management, consultation scheduling, and practitioner availability.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Effortless Slot Booking
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.21 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Automated Appointment Reminders</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Instant WhatsApp booking confirmation &amp; 24h pre-consultation reminders to reduce clinic no-shows by over 60%.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 60% Reduction in No-Shows
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.28 }}
+                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Billing &amp; Receipts</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Generate digital clinic invoices and share receipt PDFs directly with patients via WhatsApp with Razorpay payment tracking.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Instant Receipt Delivery
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.35 }}
+                className="bg-gradient-to-br from-violet-50 to-indigo-50 p-6 sm:p-7 rounded-3xl border border-violet-200 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3 relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="bg-violet-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> AI-Powered
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">AI WhatsApp Receptionist</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Auto-handles patient inquiries, books appointments, and responds in Hindi, Bengali, Tamil, English &amp; Arabic — even at 2am.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-violet-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 24/7 Patient Intake Automation
+                </div>
+              </motion.div>
+
+            </>)}
 
           </div>
 
@@ -540,7 +641,7 @@ export default function LandingPage() {
             Want to See How Your Clinic Ranks Against Nearby Competitors Right Now?
           </h2>
           <p className="text-base text-blue-100 max-w-2xl mx-auto">
-            Run a instant 60-second local search audit on Google Maps across a 5km radius around your clinic.
+            Run an instant 60-second local search audit on Google Maps across a 5km radius around your clinic.
           </p>
           <div className="pt-2">
             <Link href="/local-seo/free-audit">
@@ -659,37 +760,222 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DOCTOR TESTIMONIALS & CASE STUDY ── */}
+      {/* ── DOCTOR TESTIMONIALS — 4-CARD GRID ── */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 text-center">
+        <div ref={testimonialsRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Verified Clinic Case Study</span>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trusted by Leading Doctors</h2>
+          <div className="text-center space-y-2">
+            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Verified Clinic Results</span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trusted by Doctors Across India</h2>
+            <p className="text-sm text-slate-500">Real clinics. Real ranks. Real patients.</p>
           </div>
 
-          <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200/80 shadow-sm max-w-3xl mx-auto text-left space-y-6">
-            <div className="flex items-center gap-1 text-amber-400">
-              {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-amber-400" />)}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <p className="text-base sm:text-lg text-slate-700 italic leading-relaxed">
-              "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #1 on Google Maps within a 5km radius. Patient WhatsApp response rates are incredible."
-            </p>
+            {([
+              {
+                quote: "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #1 on Google Maps within 5km. The WhatsApp pipeline is phenomenal.",
+                name: "Dr. Vinay Kumar Rai", role: "Pediatrician · South Delhi", badge: "Rank #1 Google Maps", delay: 0
+              },
+              {
+                quote: "The AI receptionist alone saved us 3 hours daily. Patients now get instant appointment confirmations in Hindi — our front desk can't believe it.",
+                name: "Dr. Priya Sharma", role: "Dermatologist · Vasant Kunj, Delhi", badge: "+42 Reviews / Month", delay: 0.08
+              },
+              {
+                quote: "We were invisible on Google Maps at Rank #9. After Gyrex optimized our GBP and started review automation, we reached Rank #2 in 6 weeks.",
+                name: "Dr. Arjun Mehta", role: "Dentist · Koramangala, Bangalore", badge: "Rank #2 in 6 Weeks", delay: 0.16
+              },
+              {
+                quote: "Review collection used to be awkward in person. Now Gyrex sends WhatsApp messages automatically — we get 8-10 new reviews every week without any effort.",
+                name: "Dr. Sneha Pillai", role: "Gynaecologist · Bandra, Mumbai", badge: "+8 Reviews / Week", delay: 0.24
+              }
+            ] as const).map((t, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: t.delay }}
+                className="bg-white p-7 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm text-left space-y-5"
+              >
+                <div className="flex items-center gap-1 text-amber-400">
+                  {[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-amber-400" />)}
+                </div>
+                <p className="text-sm sm:text-base text-slate-700 italic leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">{t.name}</h4>
+                    <p className="text-xs text-slate-500">{t.role}</p>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shrink-0 ml-3">{t.badge}</span>
+                </div>
+              </motion.div>
+            ))}
 
-            <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-              <div>
-                <h4 className="text-base font-bold text-slate-900">Dr. Vinay Kumar Rai</h4>
-                <p className="text-xs text-slate-500">Pediatric Specialist · Pediatric Clinic, South Delhi</p>
-              </div>
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                Rank #1 Google Maps
-              </span>
-            </div>
           </div>
-
         </div>
       </section>
+
+      {/* ── PRICING SECTION ── */}
+      <section id="pricing" className="py-20 bg-white border-t border-slate-200">
+        <div ref={pricingRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">Simple, Transparent Pricing</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Grow Your Clinic — Starting Today</h2>
+            <p className="text-sm text-slate-600">No hidden fees. No long-term contracts. Cancel anytime.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+
+            {/* Starter */}
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
+              className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-6">
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Starter</p>
+                <p className="text-4xl font-black text-slate-900">₹2,999<span className="text-sm font-medium text-slate-400">/mo</span></p>
+                <p className="text-xs text-slate-500 mt-1">Perfect for single-doctor clinics</p>
+              </div>
+              <ul className="space-y-3 text-sm text-slate-700">
+                {["Local SEO Audit Report", "5×5 Geo-Rank Heatmap", "WhatsApp Review Engine", "Competitor Gap Matrix", "50 Review Requests/Month"].map(f => (
+                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />{f}</li>
+                ))}
+              </ul>
+              <Link href="/register">
+                <Button variant="outline" className="w-full rounded-xl h-12 font-bold border-slate-300">Get Started</Button>
+              </Link>
+            </motion.div>
+
+            {/* Growth — Popular */}
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.1 }}
+              className="bg-blue-600 border border-blue-500 rounded-3xl p-8 space-y-6 relative shadow-2xl shadow-blue-600/30 -mt-2 md:-mt-4">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-4 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                  <Flame className="w-3 h-3" /> MOST POPULAR
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">Growth</p>
+                <p className="text-4xl font-black text-white">₹5,999<span className="text-sm font-medium text-blue-300">/mo</span></p>
+                <p className="text-xs text-blue-200 mt-1">For multi-doctor clinics scaling fast</p>
+              </div>
+              <ul className="space-y-3 text-sm text-white">
+                {[
+                  "Everything in Starter",
+                  "AI WhatsApp Receptionist (24/7)",
+                  "Shared WhatsApp Business Inbox",
+                  "Patient CRM & Appointment Scheduling",
+                  "Automated Reminders & Billing",
+                  "GBP Auto Posts Engine",
+                  "250 Review Requests/Month"
+                ].map(f => (
+                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-200 shrink-0" />{f}</li>
+                ))}
+              </ul>
+              <Link href="/register">
+                <Button className="w-full bg-white hover:bg-slate-100 text-blue-700 font-bold rounded-xl h-12 shadow-lg">Start Free 14-Day Trial</Button>
+              </Link>
+            </motion.div>
+
+            {/* Pro */}
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={pricingInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.2 }}
+              className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-6">
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pro / Chain</p>
+                <p className="text-4xl font-black text-slate-900">₹12,999<span className="text-sm font-medium text-slate-400">/mo</span></p>
+                <p className="text-xs text-slate-500 mt-1">For clinic chains &amp; enterprise practices</p>
+              </div>
+              <ul className="space-y-3 text-sm text-slate-700">
+                {[
+                  "Everything in Growth",
+                  "Multi-Location Dashboard",
+                  "Unlimited Review Requests",
+                  "Priority AI Support",
+                  "Custom Branding on Reports",
+                  "Dedicated Account Manager"
+                ].map(f => (
+                  <li key={f} className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />{f}</li>
+                ))}
+              </ul>
+              <Link href="/contact">
+                <Button variant="outline" className="w-full rounded-xl h-12 font-bold border-slate-300">Contact Sales</Button>
+              </Link>
+            </motion.div>
+
+          </div>
+
+          <p className="text-center text-xs text-slate-400">All plans include 14-day free trial · No credit card required to start · Cancel anytime</p>
+        </div>
+      </section>
+
+      {/* ── FAQ SECTION ── */}
+      <section className="py-20 bg-slate-50 border-t border-slate-200">
+        <div ref={faqRef} className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+
+          <div className="text-center space-y-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">FAQ</span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Common Questions</h2>
+          </div>
+
+          <div className="space-y-3">
+            {([
+              {
+                q: "Does my clinic need a Google Business Profile already?",
+                a: "Yes — Gyrex works with your existing GBP listing to boost your rank, reviews, and visibility. If you don't have one yet, our team will help you create it during onboarding."
+              },
+              {
+                q: "How does the AI Receptionist handle patient messages?",
+                a: "The AI Receptionist is connected to your clinic's WhatsApp Business number. It reads patient messages, books appointments in your calendar, answers common queries, and escalates complex cases to your staff — in Hindi, Bengali, Tamil, English, Spanish, and Arabic."
+              },
+              {
+                q: "Will this work for my type of clinic — dentist, dermatologist, gynecologist?",
+                a: "Yes. Gyrex is built for all medical specialties. Our system auto-detects your clinic's specialty and customizes the Google keyword targeting, competitor analysis, and patient communication accordingly."
+              },
+              {
+                q: "Is my patient data safe and HIPAA-compliant?",
+                a: "All patient data is encrypted at rest and in transit. We do not share any patient information with third parties. Your data stays within your clinic's account."
+              },
+              {
+                q: "Can I try it before paying?",
+                a: "Absolutely. Every plan comes with a 14-day free trial. No credit card required to start. You also get a free Google Profile Audit instantly — no signup needed."
+              },
+              {
+                q: "How long before I see results on Google Maps?",
+                a: "Most clinics see their Google Maps rank improve within 3–6 weeks of activating the review engine and GBP posts. Review count growth begins within the first 7 days."
+              }
+            ] as const).map((item, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 12 }}
+                animate={faqInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.35, delay: i * 0.06 }}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+              >
+                <button
+                  className="w-full flex items-center justify-between p-5 text-left gap-4"
+                  onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)}
+                >
+                  <span className="text-sm font-bold text-slate-900">{item.q}</span>
+                  <span className="shrink-0 text-slate-400">
+                    {openFaqIndex === i ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </span>
+                </button>
+                <AnimatePresence>
+                  {openFaqIndex === i && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">{item.a}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
 
       {/* ── DOWNLOAD GYREX CLINIC APPS (WINDOWS & WEB/MOBILE) ── */}
       <section id="download-apps" className="py-20 bg-slate-900 text-white relative overflow-hidden">
