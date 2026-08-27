@@ -126,6 +126,7 @@ export default auth((req) => {
   // Protect Application Routes
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/website") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/whatsapp") ||
