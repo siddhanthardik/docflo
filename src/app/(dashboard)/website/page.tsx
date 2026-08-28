@@ -222,6 +222,7 @@ export default function ElementorComposerPage() {
     },
     sections: [
       { id: "sec_hero", type: "HERO", badgeText: "", subtitle: "" },
+      { id: "sec_stats", type: "STATS_RIBBON" },
       { id: "sec_services", type: "SERVICES" },
       { id: "sec_reviews", type: "REVIEWS" },
       { id: "sec_bio", type: "DOCTOR_BIO" },

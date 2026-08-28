@@ -136,15 +136,31 @@ export function ThemeRenderer({
 
   const clinicAddressText = data.clinicAddress || data.doctor?.address || "Safdarjung Enclave, New Delhi, India";
 
-  const services = data.customServices && data.customServices.length > 0
+  const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "ophthalmology-vision"
+    ? [
+        { name: "Contoura Vision & Bladeless Femto-Lasik", description: "Permanent refractive freedom with US-FDA approved computer-guided laser technology.", icon: "eye", duration: "15" },
+        { name: "Micro-Incision Cataract Surgery (MICS)", description: "Painless stitchless phaco surgery with premium multifocal & toric lens implants.", icon: "microscope", duration: "20" },
+        { name: "Diabetic Retinopathy & Retina Laser", description: "Advanced optical coherence tomography (OCT) and targeted retinal green laser therapy.", icon: "sparkles", duration: "30" },
+        { name: "Glaucoma Diagnostic Suite & OCT", description: "Computerized visual field mapping, non-contact tonometry, and optic nerve imaging.", icon: "activity", duration: "25" },
+        { name: "Dry Eye Diagnostic Spa & IPL Therapy", description: "Advanced thermal pulsation and IPL therapy for lasting ocular tear film relief.", icon: "sparkles", duration: "30" },
+        { name: "Pediatric Eye Care & Squint Realignment", description: "Comprehensive lazy eye (amblyopia) vision therapy and micro-surgical squint realignment.", icon: "baby", duration: "30" },
+      ]
     : [
-        { name: "Comprehensive Clinical Consultation", description: "Detailed medical evaluation, diagnostic assessment, and personalized care plan." },
-        { name: "Specialized Treatment & Care", description: "Targeted clinical therapy, advanced procedure, and recovery monitoring." },
+        { name: "Comprehensive Clinical Consultation", description: "Detailed medical evaluation, diagnostic assessment, and personalized care plan.", icon: "stethoscope" },
+        { name: "Specialized Treatment & Care", description: "Targeted clinical therapy, advanced procedure, and recovery monitoring.", icon: "heart" },
       ];
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "ophthalmology-vision"
+    ? [
+        { question: "What is the recovery time after Bladeless Lasik surgery?", answer: "Most patients experience clear 20/20 vision within 24 to 48 hours and can resume light daily activities the very next day." },
+        { question: "Is Cataract surgery painful?", answer: "No, modern Micro-Incision Cataract Surgery (MICS) is performed under topical anesthetic eye drops without injections, stitches, or bandages." },
+        { question: "How often should I have a dilated retina eye exam?", answer: "Individuals with diabetes, high myopia, or aged 40+ are advised to have a comprehensive dilated eye and retinal exam at least once a year." },
+        { question: "How do I schedule an appointment?", answer: "Click 'Book Appointment' or message our eye care reception directly on WhatsApp." },
+      ]
     : [
         { question: "How do I schedule an appointment?", answer: "Click 'Book Appointment' or connect with our reception directly on WhatsApp." },
         { question: "What are the clinic consultation hours?", answer: `Mon-Sat: ${data.doctor?.workingHoursStart || "09:00 AM"} - ${data.doctor?.workingHoursEnd || "08:00 PM"}` },
@@ -189,6 +205,7 @@ export function ThemeRenderer({
     ? data.sections.filter((s) => s.isVisible !== false)
     : [
         { id: "sec_hero", type: "HERO" },
+        { id: "sec_stats", type: "STATS_RIBBON" as const },
         ...(data.showServices !== false ? [{ id: "sec_services", type: "SERVICES" as const }] : []),
         ...(data.showReviews !== false ? [{ id: "sec_reviews", type: "REVIEWS" as const }] : []),
         ...(data.showDoctorBio !== false ? [{ id: "sec_bio", type: "DOCTOR_BIO" as const }] : []),
@@ -657,10 +674,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "ophthalmology-vision"
+            ? [
+                { value: "25,000+", label: "Lasik & Cataract Surgeries", icon: "eye" },
+                { value: "100%", label: "Bladeless Laser Precision", icon: "shield" },
+                { value: "20/20", label: "Visual Acuity Goal", icon: "glasses" },
+                { value: "4.9 ★", label: "Google Rated", icon: "star" },
+              ]
             : [
                 { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
                 { value: "50,000+", label: "Patients Treated", icon: "user" },
