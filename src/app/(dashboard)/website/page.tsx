@@ -1,3 +1,4 @@
+import { getThemePreset, THEME_PRESETS } from "@/components/themes/theme-presets";
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -631,19 +632,54 @@ export default function ElementorComposerPage() {
             <select
               value={siteData.themeId}
               onChange={(e) => {
-                const found = THEME_OPTIONS.find((t) => t.id === e.target.value);
-                if (found) {
-                  const nextState = {
-                    ...siteData,
-                    themeId: found.id,
-                    primaryColor: found.primary,
-                    secondaryColor: found.secondary,
-                    accentColor: found.accent,
-                  };
-                  setSiteData(nextState);
-                  pushHistory(nextState);
-                  toast({ title: `Applied ${found.name} Theme! 🎨` });
-                }
+                const targetThemeId = e.target.value;
+                const preset = getThemePreset(targetThemeId);
+                const found = THEME_OPTIONS.find((t) => t.id === targetThemeId);
+
+                // Build sections tailored for this theme
+                const nextSections = preset.sections.map((sec) => {
+                  if (sec.type === "HERO") {
+                    return { ...sec, badgeText: preset.badgeText, subtitle: preset.heroSubheading };
+                  }
+                  if (sec.type === "STATS_RIBBON") {
+                    return { ...sec, stats: preset.stats };
+                  }
+                  if (sec.type === "PACKAGES" && preset.packages) {
+                    return { ...sec, packages: preset.packages };
+                  }
+                  return sec;
+                });
+
+                const nextState: ClinicWebsiteData = {
+                  ...siteData,
+                  themeId: targetThemeId,
+                  primaryColor: preset.primaryColor,
+                  secondaryColor: preset.secondaryColor,
+                  accentColor: preset.accentColor,
+                  fontHeading: preset.fontHeading,
+                  fontBody: preset.fontBody,
+                  buttonRadius: preset.buttonRadius,
+                  heroHeading: preset.heroHeading,
+                  heroSubheading: preset.heroSubheading,
+                  tagline: preset.tagline,
+                  customServices: preset.services,
+                  customFaqs: preset.faqs,
+                  sections: nextSections as any,
+                  doctor: {
+                    ...(siteData.doctor || {}),
+                    name: siteData.doctor?.name || "Doctor",
+                    specialty: siteData.doctor?.specialty || preset.specialty,
+                    degrees: siteData.doctor?.degrees || preset.degrees,
+                    designation: siteData.doctor?.designation || preset.designation,
+                  },
+                };
+
+                setSiteData(nextState);
+                pushHistory(nextState);
+                toast({
+                  title: `Applied ${preset.name}! 🎨`,
+                  description: `Loaded ${preset.category} hero, services, trust metrics, and FAQs.`,
+                });
               }}
               className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer"
             >
@@ -651,6 +687,51 @@ export default function ElementorComposerPage() {
                 <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={() => {
+                const preset = getThemePreset(siteData.themeId);
+                const nextSections = preset.sections.map((sec) => {
+                  if (sec.type === "HERO") return { ...sec, badgeText: preset.badgeText, subtitle: preset.heroSubheading };
+                  if (sec.type === "STATS_RIBBON") return { ...sec, stats: preset.stats };
+                  if (sec.type === "PACKAGES" && preset.packages) return { ...sec, packages: preset.packages };
+                  return sec;
+                });
+                const nextState: ClinicWebsiteData = {
+                  ...siteData,
+                  primaryColor: preset.primaryColor,
+                  secondaryColor: preset.secondaryColor,
+                  accentColor: preset.accentColor,
+                  fontHeading: preset.fontHeading,
+                  fontBody: preset.fontBody,
+                  buttonRadius: preset.buttonRadius,
+                  heroHeading: preset.heroHeading,
+                  heroSubheading: preset.heroSubheading,
+                  tagline: preset.tagline,
+                  customServices: preset.services,
+                  customFaqs: preset.faqs,
+                  sections: nextSections as any,
+                  doctor: {
+                    ...(siteData.doctor || {}),
+                    name: siteData.doctor?.name || "Doctor",
+                    specialty: siteData.doctor?.specialty || preset.specialty,
+                    degrees: siteData.doctor?.degrees || preset.degrees,
+                    designation: siteData.doctor?.designation || preset.designation,
+                  },
+                };
+                setSiteData(nextState);
+                pushHistory(nextState);
+                toast({
+                  title: "Theme Presets Reloaded! 🔄",
+                  description: "Refreshed hero headlines, specialty procedures, trust badges, and FAQs.",
+                });
+              }}
+              title="Reset and reload default services, FAQs, trust badges, and hero for this specialty theme"
+              className="h-8 px-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Reload Presets</span>
+            </button>
           </div>
         </div>
 

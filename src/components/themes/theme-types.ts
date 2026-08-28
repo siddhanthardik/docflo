@@ -109,7 +109,7 @@ export interface ClinicWebsiteData {
   clinicAddress?: string | null;
   mapEmbedUrl?: string | null;
   navLinks?: NavLinkItem[];
-  customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string; image?: string }>;
+  customServices?: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }>;
   customFaqs?: Array<{ question: string; answer: string }>;
   customBio?: string | null;
   galleryImages?: Array<{ url: string; caption?: string }>;
