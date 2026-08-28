@@ -11,11 +11,30 @@ export function FloatingWhatsAppWidget() {
   const [hasDismissedPrompt, setHasDismissedPrompt] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Exclude floating widget on internal clinic dashboard and superadmin view
+  const [isDoctorDomain, setIsDoctorDomain] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname.toLowerCase();
+      // If accessed via a subdomain like dr-vinay.gyrex.in or a custom domain, mark as doctor site
+      if (host.includes(".gyrex.in") && host !== "gyrex.in" && host !== "www.gyrex.in") {
+        setIsDoctorDomain(true);
+      } else if (host !== "gyrex.in" && host !== "www.gyrex.in" && !host.includes("localhost")) {
+        setIsDoctorDomain(true);
+      }
+    }
+  }, []);
+
+  // Exclude SaaS platform widget on doctor sites, dashboard, admin, and editor
   const isInternalApp =
+    isDoctorDomain ||
     pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/website") ||
+    pathname?.startsWith("/sites") ||
     pathname?.startsWith("/admin") ||
-    pathname?.startsWith("/affiliates/portal");
+    pathname?.startsWith("/affiliates") ||
+    pathname?.startsWith("/login") ||
+    pathname?.startsWith("/signup");
 
   useEffect(() => {
     // Fetch active platform WhatsApp number configured in SuperAdmin settings

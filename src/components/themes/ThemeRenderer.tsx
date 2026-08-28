@@ -1385,26 +1385,26 @@ export function ThemeRenderer({
       )}
 
 
-      {/* ── FLOATING WHATSAPP RECEPTIONIST WIDGET (ALL WEBSITES & SCREENS) ── */}
+      {/* ── FLOATING WHATSAPP RECEPTIONIST WIDGET ── */}
       {cleanWaNumber && (
-        <aside aria-label="WhatsApp Contact" className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+        <aside aria-label="WhatsApp Contact" className="fixed bottom-6 right-6 z-40">
           <a
             href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent(`Hello, I would like to book an appointment with ${data.doctor?.name || data.siteTitle || "the Doctor"}.`)}`}
             target="_blank"
             rel="noreferrer"
-            className="group flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white pl-4 pr-4 py-3 rounded-full shadow-2xl shadow-emerald-600/40 hover:scale-105 transition-all duration-300 border-2 border-white/80"
-            title="Chat with Clinic WhatsApp AI Receptionist"
+            className="group flex items-center gap-3 bg-[#25D366] hover:bg-[#20ba59] text-white px-4 py-3 rounded-full shadow-2xl shadow-emerald-600/40 hover:scale-105 transition-all duration-300 border-2 border-white ring-4 ring-black/5 cursor-pointer"
+            title="Chat on WhatsApp"
           >
-            <div className="relative">
-              <MessageSquare className="w-5 h-5 fill-white text-emerald-600" />
+            <div className="relative flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 fill-white text-[#25D366]" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-200"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
               </span>
             </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-100 leading-none">Online 24/7</span>
-              <span className="text-xs font-bold leading-tight mt-0.5">WhatsApp Receptionist</span>
+            <div className="flex flex-col text-left pr-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-950 leading-none">WhatsApp</span>
+              <span className="text-xs font-black text-white leading-tight">Chat with Clinic</span>
             </div>
           </a>
         </aside>
