@@ -391,7 +391,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
       {/* Top Header Bar */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-30 backdrop-blur-md bg-white/95">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/admin/blogs">
             <Button variant="ghost" size="sm" className="h-9 px-2 text-slate-600">
