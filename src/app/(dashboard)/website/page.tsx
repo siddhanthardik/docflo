@@ -582,7 +582,23 @@ export default function ElementorComposerPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save website");
+      if (!res.ok) {
+        if (res.status === 401) {
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("docflo_unsaved_website_draft", JSON.stringify(siteData));
+            } catch (e) {}
+          }
+          throw new Error("Your login session timed out. Your edits have been safely cached in your browser. Please log in in another tab or refresh to publish.");
+        }
+        throw new Error(data.error || "Failed to save website");
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("docflo_unsaved_website_draft");
+        } catch (e) {}
+      }
 
       toast({
         title: sectionName ? `${sectionName} Saved Successfully! ✅` : "Clinic Website Published Live! 🚀",

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = (session.user as any).doctorId || session.user.id;
     const url = new URL(req.url);
     const forceSync = url.searchParams.get("sync") === "true";
 
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = (session.user as any).doctorId || session.user.id;
     const body = await req.json();
 
     const {
