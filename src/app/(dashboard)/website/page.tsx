@@ -87,6 +87,7 @@ const THEME_OPTIONS = [
   { id: "executive-private", name: "Executive Private Practice", category: "VIP Concierge Suites", primary: "#CA8A04", secondary: "#0A0A0A", accent: "#EAB308" },
   { id: "blossom-gynae", name: "Blossom Gynae & Maternity", category: "Gynecology & Fertility", primary: "#E11D48", secondary: "#1E1B4B", accent: "#FB7185" },
   { id: "sculpt-aesthetics", name: "Sculpt Luxe Aesthetics", category: "Plastic & Cosmetic Surgery", primary: "#9D174D", secondary: "#09090B", accent: "#D97706" },
+  { id: "zenith-internal-medicine", name: "Zenith Internal Medicine", category: "General Physician & Internal Medicine", primary: "#1E3A8A", secondary: "#0F172A", accent: "#10B981" },
 ];
 
 const FONTS_HEADINGS = [

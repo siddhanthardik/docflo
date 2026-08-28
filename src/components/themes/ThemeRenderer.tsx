@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "zenith-internal-medicine"
+    ? [
+        { question: "What is an ideal target HbA1c level for diabetes management?", answer: "For most non-pregnant adults with diabetes, a general target HbA1c is below 7.0%, while an individualized target between 6.5% to 7.5% is personalized based on age and clinical profile." },
+        { question: "Can high blood pressure (hypertension) be managed without lifelong medication?", answer: "Early-stage hypertension can frequently be reversed or significantly controlled with dietary sodium reduction (DASH diet), 30 minutes of daily aerobic exercise, stress reduction, and weight management under physician supervision." },
+        { question: "When should I consult a physician for a fever?", answer: "Seek prompt medical consultation if a fever exceeds 101°F (38.3°C), persists for more than 48 hours, or is accompanied by severe headache, rash, vomiting, or breathing difficulty." },
+        { question: "How do I schedule an appointment with the consultant physician?", answer: "Click 'Book Appointment' or message our clinic OPD reception directly on WhatsApp." },
+      ]
     : themeId === "sculpt-aesthetics"
     ? [
         { question: "What is the typical recovery timeline after Rhinoplasty?", answer: "Most external swelling subsides within 7 to 10 days when the nasal splint is removed. You can return to social and work life in 10 to 14 days, with final contour refinement continuing over 6 to 12 months." },
@@ -820,10 +827,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-12: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-13: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "zenith-internal-medicine"
+            ? [
+                { value: "30,000+", label: "Patients Treated & Guided", icon: "user" },
+                { value: "100%", label: "Evidence-Based Protocols", icon: "shield" },
+                { value: "Same-Day", label: "OPD & Lab Report Review", icon: "clock" },
+                { value: "4.9 ★", label: "Google Verified Rating", icon: "star" },
+              ]
             : themeId === "sculpt-aesthetics"
             ? [
                 { value: "8,500+", label: "Aesthetic Transformations", icon: "sparkles" },
