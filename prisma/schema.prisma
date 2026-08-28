@@ -1450,15 +1450,22 @@ model ClinicWebsite {
   // Content & Header
   siteTitle        String
   tagline          String?
+  logoUrl          String?
   heroHeading      String
   heroSubheading   String?
   heroImage        String?
-  heroStyle        String          @default("SPLIT_FORM") // SPLIT_FORM, CENTERED_BANNER, MINIMAL
+  heroSliderImages Json?           // Array of string URLs
+  heroStyle        String          @default("SPLIT_FORM")
   announcementBar  String?
+  showAnnouncementBar Boolean      @default(true)
   
   // Navigation & CTAs
   ctaButtonText    String          @default("Book Appointment")
-  ctaButtonAction  String          @default("BOOKING_MODAL") // BOOKING_MODAL, WHATSAPP, PHONE
+  ctaButtonAction  String          @default("BOOKING_MODAL")
+  primaryCtaLink   String?
+  secondaryCtaText String?         @default("WhatsApp Chat")
+  secondaryCtaAction String?       @default("WHATSAPP")
+  secondaryCtaLink String?
   whatsappNumber   String?
   contactPhone     String?
   contactEmail     String?
@@ -1471,11 +1478,13 @@ model ClinicWebsite {
   showMap          Boolean         @default(true)
   showStickyBar    Boolean         @default(true)
   showHeroBookingForm Boolean      @default(false)
+  showPrices       Boolean         @default(true)
   
   // Custom Content Overrides (JSON)
   customServices   Json?           // Array of { name, description, duration, price, icon }
   customFaqs       Json?           // Array of { question, answer }
   customBio        String?         @db.Text
+  galleryImages    Json?           // Array of { url, caption }
   sections         Json?           // Array of PageSection { id, type, title, subtitle, content, ... }
   
   // SEO & Social

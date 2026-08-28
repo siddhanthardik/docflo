@@ -74,9 +74,9 @@ const THEME_OPTIONS = [
 ];
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
-  { type: "HERO", label: "Hero Banner & Welcome", icon: Layout, description: "Headline, multi-photo slider, rating badge, and booking action." },
+  { type: "HERO", label: "Hero Banner & Welcome", icon: Layout, description: "Headline, multi-photo slider, logo, and customizable CTA buttons." },
   { type: "SERVICES", label: "Services & Treatments Grid", icon: Stethoscope, description: "Clinical procedures, descriptions, icons, duration, and optional pricing." },
-  { type: "DOCTOR_BIO", label: "Doctor Bio & Experience", icon: ShieldCheck, description: "Doctor credentials, medical degrees, and clinical philosophy." },
+  { type: "DOCTOR_BIO", label: "Doctor Bio & Experience", icon: ShieldCheck, description: "Doctor credentials, medical degrees, portrait, and philosophy." },
   { type: "REVIEWS", label: "Google Patient Reviews", icon: Star, description: "Verified patient testimonials with 5-star Google rating badge." },
   { type: "CTA_BANNER", label: "Conversion CTA Callout", icon: MessageSquare, description: "High-impact banner to drive WhatsApp consultations and calls." },
   { type: "GALLERY", label: "Clinic Facilities Showcase", icon: ImageIcon, description: "Photo gallery showcase of your clinic ambiance and technology." },
@@ -89,6 +89,7 @@ const SERVICE_ICONS = ["stethoscope", "heart", "activity", "smile", "baby", "eye
 
 export default function ElementorComposerPage() {
   const { toast } = useToast();
+  const logoUploadRef = useRef<HTMLInputElement>(null);
   const heroUploadRef = useRef<HTMLInputElement>(null);
   const galleryUploadRef = useRef<HTMLInputElement>(null);
   const doctorPhotoRef = useRef<HTMLInputElement>(null);
@@ -121,6 +122,7 @@ export default function ElementorComposerPage() {
     fontBody: "Inter",
     siteTitle: "Clinic",
     tagline: "Comprehensive Healthcare",
+    logoUrl: null,
     heroHeading: "Advanced Healthcare & Dedicated Patient Care",
     heroSubheading: "",
     heroImage: null,
@@ -132,6 +134,10 @@ export default function ElementorComposerPage() {
     showAnnouncementBar: false,
     ctaButtonText: "Book Appointment",
     ctaButtonAction: "BOOKING_MODAL",
+    primaryCtaLink: "",
+    secondaryCtaText: "WhatsApp Chat",
+    secondaryCtaAction: "WHATSAPP",
+    secondaryCtaLink: "",
     whatsappNumber: "",
     contactPhone: "",
     contactEmail: "",
@@ -208,7 +214,7 @@ export default function ElementorComposerPage() {
   }, []);
 
   // 1-Click AI Copy Generator Helper
-  const generateAiCopy = (field: "hero" | "bio" | "service") => {
+  const generateAiCopy = (field: "hero" | "bio") => {
     const specialty = siteData.doctor?.specialty || siteData.tagline || "Healthcare & Clinical Care";
     const doctorName = siteData.doctor?.name || siteData.siteTitle || "Lead Consultant Doctor";
 
@@ -254,6 +260,7 @@ export default function ElementorComposerPage() {
       type,
       title: type === "CUSTOM_TEXT" ? "Custom Clinic Notice" : undefined,
       subtitle: type === "CUSTOM_TEXT" ? "Write announcements or patient guidance here." : undefined,
+      content: type === "CUSTOM_TEXT" ? "Add detailed patient notices, clinic policies, or special guidance here." : undefined,
       isVisible: true,
     };
 
@@ -291,6 +298,26 @@ export default function ElementorComposerPage() {
   };
 
   // Image Uploads (Auto-WebP)
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "logo");
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      setSiteData((prev) => ({ ...prev, logoUrl: data.url }));
+      toast({ title: "Clinic Logo Uploaded (WebP) 🏥", description: "Logo updated in header & footer." });
+    } catch (err: any) {
+      toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -558,6 +585,49 @@ export default function ElementorComposerPage() {
                       </Button>
                     </div>
 
+                    {/* Logo & Clinic Name */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-700">Clinic Logo / Icon</label>
+                        {siteData.logoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setSiteData({ ...siteData, logoUrl: null })}
+                            className="text-[10px] text-rose-600 font-bold hover:underline"
+                          >
+                            Remove Logo
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {siteData.logoUrl ? (
+                          <div className="h-10 px-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center">
+                            <img src={siteData.logoUrl} alt="Logo" className="h-7 object-contain" />
+                          </div>
+                        ) : (
+                          <div className="h-10 px-3 bg-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-600 font-bold">
+                            Using Name (No Logo)
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => logoUploadRef.current?.click()}
+                          className="h-8 text-xs font-bold rounded-xl"
+                        >
+                          <Upload className="w-3 h-3 mr-1 text-blue-600" /> Upload Logo (WebP)
+                        </Button>
+                        <input
+                          ref={logoUploadRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Clinic Name</label>
                       <Input
@@ -601,6 +671,73 @@ export default function ElementorComposerPage() {
                         rows={3}
                         className="text-xs rounded-xl leading-relaxed"
                       />
+                    </div>
+
+                    {/* Hero Buttons & Links Customizer */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                      <p className="font-bold text-slate-900">Hero Action Buttons</p>
+
+                      {/* Primary Button */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-600">Primary Button</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={siteData.ctaButtonText}
+                            onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
+                            placeholder="Button Text"
+                            className="h-8 text-xs bg-white rounded-lg"
+                          />
+                          <select
+                            value={siteData.ctaButtonAction}
+                            onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
+                            className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                          >
+                            <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                            <option value="WHATSAPP">WhatsApp Direct</option>
+                            <option value="PHONE">Phone Call</option>
+                            <option value="CUSTOM_URL">Custom URL Link</option>
+                          </select>
+                        </div>
+                        {siteData.ctaButtonAction === "CUSTOM_URL" && (
+                          <Input
+                            value={siteData.primaryCtaLink || ""}
+                            onChange={(e) => setSiteData({ ...siteData, primaryCtaLink: e.target.value })}
+                            placeholder="https://..."
+                            className="h-8 text-xs bg-white rounded-lg mt-1"
+                          />
+                        )}
+                      </div>
+
+                      {/* Secondary Button */}
+                      <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                        <label className="text-[11px] font-bold text-slate-600">Secondary Button</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={siteData.secondaryCtaText || "WhatsApp Chat"}
+                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaText: e.target.value })}
+                            placeholder="Button Text"
+                            className="h-8 text-xs bg-white rounded-lg"
+                          />
+                          <select
+                            value={siteData.secondaryCtaAction || "WHATSAPP"}
+                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaAction: e.target.value })}
+                            className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                          >
+                            <option value="WHATSAPP">WhatsApp Direct</option>
+                            <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                            <option value="PHONE">Phone Call</option>
+                            <option value="CUSTOM_URL">Custom URL Link</option>
+                          </select>
+                        </div>
+                        {siteData.secondaryCtaAction === "CUSTOM_URL" && (
+                          <Input
+                            value={siteData.secondaryCtaLink || ""}
+                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaLink: e.target.value })}
+                            placeholder="https://..."
+                            className="h-8 text-xs bg-white rounded-lg mt-1"
+                          />
+                        )}
+                      </div>
                     </div>
 
                     {/* Announcement Bar Toggle & Text */}
@@ -1067,7 +1204,32 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 7. REVIEWS INSPECTOR */}
+                {/* 7. CUSTOM TEXT INSPECTOR (Headline + Rich Text Content) */}
+                {selectedSection.type === "CUSTOM_TEXT" && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Section Headline</label>
+                      <Input
+                        value={selectedSection.title || ""}
+                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                        placeholder="e.g. Special Patient Notice / Accreditations"
+                        className="h-10 text-xs rounded-xl font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Content / Story Text</label>
+                      <Textarea
+                        value={selectedSection.content || ""}
+                        onChange={(e) => updateSelectedSection({ content: e.target.value })}
+                        rows={6}
+                        placeholder="Write detailed announcements, clinical certifications, emergency policies, or patient guidance..."
+                        className="text-xs rounded-xl leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 8. REVIEWS INSPECTOR */}
                 {selectedSection.type === "REVIEWS" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">

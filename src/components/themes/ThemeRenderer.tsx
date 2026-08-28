@@ -117,6 +117,15 @@ export function ThemeRenderer({
         "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80",
       ];
 
+  // Gallery Images (100% dynamic)
+  const galleryList = (data.galleryImages && data.galleryImages.length > 0)
+    ? data.galleryImages
+    : [
+        { url: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80", caption: "Consultation Suite" },
+        { url: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80", caption: "Clinical Care Room" },
+        { url: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80", caption: "Reception Lounge" },
+      ];
+
   // Auto rotate slider
   useEffect(() => {
     if (sliderImages.length <= 1) return;
@@ -151,6 +160,19 @@ export function ThemeRenderer({
     }
 
     setBookingSuccess(true);
+  };
+
+  // Button Click Handler (Handles Modal, WhatsApp, Phone, Custom URL)
+  const handleCtaClick = (action?: string, link?: string | null) => {
+    if (action === "CUSTOM_URL" && link) {
+      window.open(link, "_blank");
+    } else if (action === "WHATSAPP" && cleanWaNumber) {
+      window.open(`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent("Hello, I would like to book an appointment.")}`, "_blank");
+    } else if (action === "PHONE" && phone) {
+      window.location.href = `tel:${phone}`;
+    } else {
+      setOpenBookingModal(true);
+    }
   };
 
   // Section Container Wrapper with Elementor Controls
@@ -246,7 +268,7 @@ export function ThemeRenderer({
       style={{ color: secondaryColor }}
     >
       {/* ── TOP ANNOUNCEMENT BAR (Strictly Conditional) ── */}
-      {data.showAnnouncementBar !== false && data.announcementBar && data.announcementBar.trim().length > 0 ? (
+      {data.showAnnouncementBar === true && data.announcementBar && data.announcementBar.trim().length > 0 ? (
         <div
           className="text-xs font-bold text-center py-2.5 px-4 flex items-center justify-center gap-2 text-white shadow-2xs"
           style={{ backgroundColor: secondaryColor }}
@@ -256,16 +278,20 @@ export function ThemeRenderer({
         </div>
       ) : null}
 
-      {/* ── CLINIC NAVIGATION HEADER ── */}
+      {/* ── CLINIC NAVIGATION HEADER (Supports Logo or Monogram Name) ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md shrink-0"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {data.siteTitle?.charAt(0) || "C"}
-            </div>
+            {data.logoUrl ? (
+              <img src={data.logoUrl} alt={data.siteTitle} className="h-11 max-w-[160px] object-contain rounded-lg" />
+            ) : (
+              <div
+                className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md shrink-0"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {data.siteTitle?.charAt(0) || "C"}
+              </div>
+            )}
             <div>
               <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-slate-900">
                 {data.siteTitle}
@@ -298,7 +324,7 @@ export function ThemeRenderer({
             )}
 
             <button
-              onClick={() => setOpenBookingModal(true)}
+              onClick={() => handleCtaClick(data.ctaButtonAction, data.primaryCtaLink)}
               className="text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-1.5"
               style={{ backgroundColor: primaryColor }}
             >
@@ -355,7 +381,7 @@ export function ThemeRenderer({
 
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                     <button
-                      onClick={() => setOpenBookingModal(true)}
+                      onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
                       className="w-full sm:w-auto text-white text-sm font-bold h-12 px-8 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105"
                       style={{ backgroundColor: primaryColor }}
                     >
@@ -363,17 +389,13 @@ export function ThemeRenderer({
                       <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
                     </button>
 
-                    {cleanWaNumber && (
-                      <a
-                        href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent("Hello, I would like to book a consultation.")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>WhatsApp Chat</span>
-                      </a>
-                    )}
+                    <button
+                      onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                    </button>
                   </div>
                 </div>
               </section>,
@@ -416,7 +438,7 @@ export function ThemeRenderer({
 
                     <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                       <button
-                        onClick={() => setOpenBookingModal(true)}
+                        onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
                         className="w-full sm:w-auto text-white text-sm font-bold h-12 px-7 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105"
                         style={{ backgroundColor: primaryColor }}
                       >
@@ -424,17 +446,13 @@ export function ThemeRenderer({
                         <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
                       </button>
 
-                      {cleanWaNumber && (
-                        <a
-                          href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent("Hello, I would like to inquire about clinic consultation.")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          <span>WhatsApp Chat</span>
-                        </a>
-                      )}
+                      <button
+                        onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                      </button>
                     </div>
                   </div>
 
@@ -674,7 +692,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 4. DOCTOR BIO SECTION (STRICT DOCTOR PORTRAIT ONLY)
+        // 4. DOCTOR BIO SECTION (STRICT DOCTOR PORTRAIT ONLY, 0 HARDCODED BADGES)
         if (section.type === "DOCTOR_BIO") {
           return renderSectionContainer(
             section,
@@ -697,9 +715,6 @@ export function ThemeRenderer({
                   </div>
 
                   <div className="md:col-span-8 space-y-4">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Medical Professional
-                    </div>
                     <h3 className="text-2xl font-black tracking-tight">{section.title || "Clinical Philosophy & Background"}</h3>
                     <p className="text-sm text-slate-300 leading-relaxed">
                       {section.content || data.customBio || `${data.doctor?.name || "Our lead doctor"} is committed to providing modern, patient-first clinical healthcare. Combining extensive diagnostic expertise with compassionate treatment, we ensure every patient receives customized, high-quality care.`}
@@ -736,23 +751,19 @@ export function ThemeRenderer({
                 )}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
-                    onClick={() => setOpenBookingModal(true)}
+                    onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL", data.primaryCtaLink)}
                     className="w-full sm:w-auto bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-11 px-7 rounded-2xl shadow-xl flex items-center justify-center gap-2"
                   >
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span>{section.ctaText || "Book Appointment Now"}</span>
                   </button>
-                  {cleanWaNumber && (
-                    <a
-                      href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent("Hello, I would like to book an appointment.")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-11 px-6 rounded-2xl shadow-xl flex items-center justify-center gap-2"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>Chat on WhatsApp</span>
-                    </a>
-                  )}
+                  <button
+                    onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                    className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-11 px-6 rounded-2xl shadow-xl flex items-center justify-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{data.secondaryCtaText || "Chat on WhatsApp"}</span>
+                  </button>
                 </div>
               </div>
             </section>,
@@ -760,16 +771,8 @@ export function ThemeRenderer({
           );
         }
 
-        // 6. GALLERY WIDGET
+        // 6. GALLERY WIDGET (100% Dynamic)
         if (section.type === "GALLERY") {
-          const galleryList = (data.galleryImages && data.galleryImages.length > 0)
-            ? data.galleryImages
-            : [
-                { url: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80", caption: "Consultation Suite" },
-                { url: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80", caption: "Clinical Care Room" },
-                { url: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80", caption: "Reception Lounge" },
-              ];
-
           return renderSectionContainer(
             section,
             <section className="py-20 bg-white border-b border-slate-100">
@@ -934,9 +937,13 @@ export function ThemeRenderer({
       <footer className="py-12 bg-slate-900 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-              {data.siteTitle?.charAt(0) || "C"}
-            </div>
+            {data.logoUrl ? (
+              <img src={data.logoUrl} alt={data.siteTitle} className="h-7 max-w-[120px] object-contain rounded" />
+            ) : (
+              <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                {data.siteTitle?.charAt(0) || "C"}
+              </div>
+            )}
             <span className="font-bold text-white">{data.siteTitle}</span>
           </div>
           <p>© {new Date().getFullYear()} {data.siteTitle}. All rights reserved.</p>
@@ -972,7 +979,7 @@ export function ThemeRenderer({
           )}
 
           <button
-            onClick={() => setOpenBookingModal(true)}
+            onClick={() => handleCtaClick(data.ctaButtonAction, data.primaryCtaLink)}
             className="flex-1 text-white font-bold text-xs h-10 rounded-xl flex items-center justify-center gap-1 shadow-md"
             style={{ backgroundColor: primaryColor }}
           >

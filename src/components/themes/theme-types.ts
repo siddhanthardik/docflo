@@ -41,6 +41,7 @@ export interface ClinicWebsiteData {
   fontBody: string;
   siteTitle: string;
   tagline?: string | null;
+  logoUrl?: string | null;
   heroHeading: string;
   heroSubheading?: string | null;
   heroImage?: string | null;
@@ -51,6 +52,10 @@ export interface ClinicWebsiteData {
   showAnnouncementBar?: boolean;
   ctaButtonText: string;
   ctaButtonAction: string;
+  primaryCtaLink?: string | null;
+  secondaryCtaText?: string | null;
+  secondaryCtaAction?: string | null;
+  secondaryCtaLink?: string | null;
   whatsappNumber?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;

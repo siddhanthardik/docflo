@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { ThemeRenderer } from "@/components/themes/ThemeRenderer";
 import { ClinicWebsiteData } from "@/components/themes/theme-types";
 
-export const revalidate = 60; // ISR cache
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface SitePageProps {
   params: Promise<{ subdomain: string }>;
@@ -64,17 +65,10 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     notFound();
   }
 
-  // Increment view counter in background
-  prisma.clinicWebsite
-    .update({
-      where: { id: site.id },
-      data: { viewCount: { increment: 1 } },
-    })
-    .catch(() => {});
-
-  const shapedData: ClinicWebsiteData = {
+  const websiteData: ClinicWebsiteData = {
     id: site.id,
     subdomain: site.subdomain,
+    customDomain: site.customDomain,
     themeId: site.themeId,
     primaryColor: site.primaryColor,
     secondaryColor: site.secondaryColor,
@@ -83,16 +77,23 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     fontBody: site.fontBody,
     siteTitle: site.siteTitle,
     tagline: site.tagline,
+    logoUrl: site.logoUrl,
     heroHeading: site.heroHeading,
     heroSubheading: site.heroSubheading,
     heroImage: site.heroImage,
+    heroSliderImages: (site.heroSliderImages as string[]) || [],
     heroStyle: site.heroStyle,
-    showHeroBookingForm: site.showHeroBookingForm ?? false,
+    showHeroBookingForm: site.showHeroBookingForm,
     announcementBar: site.announcementBar,
+    showAnnouncementBar: site.showAnnouncementBar,
     ctaButtonText: site.ctaButtonText,
     ctaButtonAction: site.ctaButtonAction,
-    whatsappNumber: site.whatsappNumber,
-    contactPhone: site.contactPhone,
+    primaryCtaLink: site.primaryCtaLink,
+    secondaryCtaText: site.secondaryCtaText,
+    secondaryCtaAction: site.secondaryCtaAction,
+    secondaryCtaLink: site.secondaryCtaLink,
+    whatsappNumber: site.whatsappNumber || site.doctor?.phone,
+    contactPhone: site.contactPhone || site.doctor?.phone,
     contactEmail: site.contactEmail,
     showServices: site.showServices,
     showReviews: site.showReviews,
@@ -100,10 +101,14 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     showFaq: site.showFaq,
     showMap: site.showMap,
     showStickyBar: site.showStickyBar,
-    customServices: (site.customServices as any) || site.doctor?.serviceTypes.map((s) => ({ name: s.name, description: s.description || "" })),
-    customFaqs: (site.customFaqs as any) || [],
+    showPrices: site.showPrices,
+    customServices: (site.customServices as any) || undefined,
+    customFaqs: (site.customFaqs as any) || undefined,
     customBio: site.customBio,
+    galleryImages: (site.galleryImages as any) || undefined,
     sections: (site.sections as any) || undefined,
+    metaTitle: site.metaTitle,
+    metaDescription: site.metaDescription,
     doctor: site.doctor
       ? {
           name: site.doctor.name,
@@ -118,38 +123,13 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
           daysOff: site.doctor.daysOff,
         }
       : undefined,
-    reviews: site.doctor?.reviews.map((r) => ({
+    reviews: site.doctor?.reviews?.map((r) => ({
       reviewerName: r.reviewerName,
       rating: r.rating,
       comment: r.comment,
-      reviewDate: r.reviewDate.toLocaleDateString("en-IN"),
+      reviewDate: r.reviewDate,
     })) || [],
   };
 
-  // Structured Data Schema
-  const medicalBusinessSchema = {
-    "@context": "https://schema.org",
-    "@type": "MedicalBusiness",
-    name: site.siteTitle,
-    description: site.heroSubheading,
-    url: `https://${site.subdomain}.gyrex.in`,
-    telephone: site.contactPhone || site.doctor?.phone,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: site.doctor?.address || "",
-      addressLocality: site.doctor?.city || "New Delhi",
-      addressCountry: "IN",
-    },
-    openingHours: `Mo-Sa ${site.doctor?.workingHoursStart || "09:00"}-${site.doctor?.workingHoursEnd || "20:00"}`,
-  };
-
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(medicalBusinessSchema) }}
-      />
-      <ThemeRenderer data={shapedData} />
-    </>
-  );
+  return <ThemeRenderer data={websiteData} previewMode={false} />;
 }
