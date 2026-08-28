@@ -64,7 +64,8 @@ function buildDeterministicReceptionistReply(
   isOngoingChat: boolean = false,
   morningOpd?: string,
   eveningOpd?: string,
-  practitioners?: ClinicPractitionerInfo[]
+  practitioners?: ClinicPractitionerInfo[],
+  websiteUrl?: string | null
 ): string {
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
@@ -497,7 +498,8 @@ export class AIAgentsService {
     doctorProfile?: { doctorName?: string; clinicName?: string; specialty?: string },
     clinicAddress?: string | null,
     clinicMapsUri?: string | null,
-    practitioners?: ClinicPractitionerInfo[]
+    practitioners?: ClinicPractitionerInfo[],
+    websiteUrl?: string | null
   ) {
     const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
     const doctorName = formatDoctorDisplayName(rawDocName);
@@ -572,6 +574,7 @@ CLINIC OPD & SCHEDULE SPECIFICATIONS:
 - Evening OPD Hours: ${eveningOpd || "Check Full Schedule"}
 - Full Schedule Summary: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
+${websiteUrl ? `- Official Clinic Website: ${websiteUrl}` : ""}
 ${practitionersBlock ? practitionersBlock : ""}
 ${locationBlock ? locationBlock : ""}
 
@@ -674,7 +677,8 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
         isOngoingChat,
         morningOpd,
         eveningOpd,
-        practitioners
+        practitioners,
+        websiteUrl
       );
     }
   }

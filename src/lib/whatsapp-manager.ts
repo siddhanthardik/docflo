@@ -329,6 +329,14 @@ class WhatsAppManager {
             const clinicAddress = gbpInsights?.formattedAddress as string | null ?? null;
             const clinicMapsUri = gbpInsights?.mapsUri as string | null ?? null;
 
+            const clinicWebsite = await prisma.clinicWebsite.findUnique({
+              where: { doctorId },
+              select: { subdomain: true, customDomain: true, siteTitle: true }
+            });
+            const websiteUrl = clinicWebsite?.customDomain
+              ? `https://${clinicWebsite.customDomain}`
+              : (clinicWebsite?.subdomain ? `https://${clinicWebsite.subdomain}.gyrex.in` : null);
+
             const practitioners = await prisma.practitioner.findMany({
               where: { doctorId, isActive: true },
               select: {
@@ -844,7 +852,8 @@ class WhatsAppManager {
                   },
                   clinicAddress,
                   clinicMapsUri,
-                  practitioners
+                  practitioners,
+                  websiteUrl
                 );
               }
 
