@@ -15,6 +15,16 @@ export interface NavLinkItem {
   isExternal?: boolean;
 }
 
+export interface SectionDesignConfig {
+  layoutVariant?: string; // "variant_1", "variant_2", "variant_3", "variant_4"
+  bgType?: "solid" | "gradient" | "dark" | "light" | "cream" | "custom";
+  bgColor?: string;
+  textColor?: string;
+  cardBg?: string;
+  cardBorder?: string;
+  paddingSize?: "compact" | "normal" | "spacious";
+}
+
 export interface PageSection {
   id: string;
   type: SectionType;
@@ -23,7 +33,7 @@ export interface PageSection {
   content?: string;
   image?: string | null;
   sliderImages?: string[];
-  heroStyle?: "SPLIT" | "FULL_WIDTH";
+  heroStyle?: "SPLIT" | "FULL_WIDTH" | "BENTO" | "EDITORIAL";
   badgeText?: string;
   ctaText?: string;
   ctaAction?: string;
@@ -32,6 +42,7 @@ export interface PageSection {
   bgColor?: string;
   showPrices?: boolean;
   isVisible?: boolean;
+  design?: SectionDesignConfig;
   data?: any;
 }
 

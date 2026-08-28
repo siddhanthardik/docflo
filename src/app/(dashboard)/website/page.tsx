@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ThemeRenderer, ICON_MAP } from "@/components/themes/ThemeRenderer";
-import { ClinicWebsiteData, PageSection, SectionType, NavLinkItem } from "@/components/themes/theme-types";
+import { ClinicWebsiteData, PageSection, SectionType, NavLinkItem, SectionDesignConfig } from "@/components/themes/theme-types";
 import {
   Globe,
   Palette,
@@ -63,6 +63,8 @@ import {
   Key,
   Server,
   Shield,
+  SlidersVertical,
+  Paintbrush,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,11 +72,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
 const THEME_OPTIONS = [
-  { id: "apex-clinical", name: "Apex Multi-Specialty", category: "Polyclinic & Hospitals (Full-Width Slider)", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
-  { id: "serene-glow", name: "Serene Aesthetics", category: "Dermatology & Skin (Luxury Editorial)", primary: "#BE185D", secondary: "#1E1B4B", accent: "#F43F5E" },
-  { id: "minimal-luxe", name: "Minimal Luxe Dental", category: "Dentistry & Smile (Cyan Modern)", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
-  { id: "warm-pediatrics", name: "Warm Pediatrics", category: "Pediatrics & Kids (Comfort Mint)", primary: "#059669", secondary: "#1E293B", accent: "#F59E0B" },
-  { id: "vitality-rehab", name: "Vitality Rehab", category: "Ortho & Physio (Active Performance)", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
+  { id: "apex-clinical", name: "Apex Clinical Pro", category: "Hospital & Polyclinic", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
+  { id: "serene-glow", name: "Serene Glow Haute", category: "Dermatology & Skin", primary: "#BE185D", secondary: "#1E1B4B", accent: "#F43F5E" },
+  { id: "minimal-luxe", name: "Minimal Cyan Precision", category: "Dentistry & Smile", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
+  { id: "warm-pediatrics", name: "Warm Family & Kids", category: "Pediatrics & Child Care", primary: "#059669", secondary: "#1E293B", accent: "#F59E0B" },
+  { id: "vitality-rehab", name: "Vitality Active Carbon", category: "Ortho & Physio", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
+  { id: "ayurveda-earth", name: "Ayurveda & Holistic Earth", category: "Wellness & Integrative", primary: "#854D0E", secondary: "#1C1917", accent: "#15803D" },
+  { id: "ophthalmology-vision", name: "Ophthalmology Vision", category: "Eye & Lasik Clinics", primary: "#0369A1", secondary: "#082F49", accent: "#06B6D4" },
+  { id: "cardiocare-executive", name: "CardioCare Executive", category: "Cardiology & Vascular", primary: "#DC2626", secondary: "#0F172A", accent: "#E11D48" },
+  { id: "neuropsych-horizon", name: "NeuroPsych Horizon", category: "Mental & Neurology", primary: "#7C3AED", secondary: "#1E1B4B", accent: "#A855F7" },
+  { id: "executive-private", name: "Executive Private Practice", category: "VIP Concierge Suites", primary: "#CA8A04", secondary: "#0A0A0A", accent: "#EAB308" },
 ];
 
 const FONTS_HEADINGS = [
@@ -102,6 +109,15 @@ const BUTTON_RADII = [
   { id: "xl", label: "Classic (Rounded XL)" },
   { id: "lg", label: "Subtle (Rounded LG)" },
   { id: "none", label: "Sharp Square" },
+];
+
+const BG_PRESETS = [
+  { label: "Clean White", value: "#FFFFFF" },
+  { label: "Soft Slate", value: "#F8FAFC" },
+  { label: "Warm Sand", value: "#FAF8F5" },
+  { label: "Dark Obsidian", value: "#0F172A" },
+  { label: "Mint Tint", value: "#F0FDF4" },
+  { label: "Cyan Tint", value: "#F0FDFA" },
 ];
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
@@ -132,6 +148,7 @@ export default function ElementorComposerPage() {
   const [syncingGbp, setSyncingGbp] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"elements" | "structure" | "style" | "navbar" | "domain">("elements");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec_hero");
+  const [inspectorSubTab, setInspectorSubTab] = useState<"content" | "design">("content");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
 
@@ -286,6 +303,7 @@ export default function ElementorComposerPage() {
     const existing = (siteData.sections || []).find((s) => s.type === type);
     if (existing) {
       setSelectedSectionId(existing.id);
+      setInspectorSubTab("content");
       toast({ title: `Editing ${type.replace("_", " ")} Section ✏️` });
     } else {
       handleAddNewSection(type);
@@ -309,6 +327,7 @@ export default function ElementorComposerPage() {
     }));
 
     setSelectedSectionId(newId);
+    setInspectorSubTab("content");
     toast({ title: "New Section Added to Canvas! 🧩", description: `Inserted ${type.replace("_", " ")}.` });
   };
 
@@ -493,7 +512,14 @@ export default function ElementorComposerPage() {
     }));
   };
 
-  // Clean domain input helper
+  const updateSelectedSectionDesign = (designPatch: Partial<SectionDesignConfig>) => {
+    if (!selectedSectionId || !selectedSection) return;
+    const currentDesign = selectedSection.design || {};
+    updateSelectedSection({
+      design: { ...currentDesign, ...designPatch },
+    });
+  };
+
   const cleanDomainString = (val: string) => {
     return val.replace(/^https?:\/\//i, "").replace(/\/.*$/, "").trim().toLowerCase();
   };
@@ -502,7 +528,6 @@ export default function ElementorComposerPage() {
     <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
       {/* ── TOP CLEAN APPLE/FIGMA-STYLE STUDIO HEADER ── */}
       <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        {/* Left: Clean Brand & Layout Selector */}
         <div className="flex items-center gap-3">
           <span className="font-black text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
             <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black">G</span>
@@ -522,13 +547,13 @@ export default function ElementorComposerPage() {
                     secondaryColor: found.secondary,
                     accentColor: found.accent,
                   });
-                  toast({ title: `Applied ${found.name} Layout Theme! 🎨` });
+                  toast({ title: `Applied ${found.name} Design System! 🎨` });
                 }
               }}
               className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer"
             >
               {THEME_OPTIONS.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+                <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
               ))}
             </select>
           </div>
@@ -599,10 +624,10 @@ export default function ElementorComposerPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
         <aside className="w-[390px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs">
-          {/* Deep Section Inspector */}
+          {/* Deep Section Inspector with Dual Tabs (Content vs Canva Design) */}
           {selectedSection ? (
             <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedSectionId(null)}
@@ -615,8 +640,25 @@ export default function ElementorComposerPage() {
                     <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
                       {selectedSection.type.replace("_", " ")}
                     </span>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5">Section Inspector</p>
                   </div>
+                </div>
+
+                {/* Dual Sub-Tabs: Content vs Canva Design */}
+                <div className="flex items-center bg-slate-200/80 p-0.5 rounded-xl text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setInspectorSubTab("content")}
+                    className={`px-2.5 py-1 rounded-lg transition-all ${inspectorSubTab === "content" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-600"}`}
+                  >
+                    📝 Content
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectorSubTab("design")}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${inspectorSubTab === "design" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600"}`}
+                  >
+                    <Paintbrush className="w-3 h-3" /> Canva Style
+                  </button>
                 </div>
 
                 <button
@@ -629,774 +671,887 @@ export default function ElementorComposerPage() {
                 </button>
               </div>
 
-              {/* Inspector Form Fields */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
-                {/* 1. HERO SECTION INSPECTOR */}
-                {selectedSection.type === "HERO" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">Hero Section Content</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => generateAiCopy("hero")}
-                        className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
-                      >
-                        <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Magic Copy
-                      </Button>
-                    </div>
+              {/* ── SUB-TAB 2: CANVA-GRADE DESIGN & STYLING CONTROLS ── */}
+              {inspectorSubTab === "design" ? (
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Section Styling Engine</h4>
+                    <p className="text-[10px] text-slate-500">Customize backgrounds, card materials, and layout variants.</p>
+                  </div>
 
-                    {/* Logo & Clinic Name */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Clinic Logo Image</label>
-                        {siteData.logoUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setSiteData({ ...siteData, logoUrl: null })}
-                            className="text-[10px] text-rose-600 font-bold hover:underline"
-                          >
-                            Remove Logo
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {siteData.logoUrl ? (
-                          <div className="h-10 px-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center">
-                            <img src={siteData.logoUrl} alt="Logo" className="h-7 object-contain" />
-                          </div>
-                        ) : (
-                          <div className="h-10 px-3 bg-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-600 font-bold">
-                            Using Name (No Logo)
-                          </div>
-                        )}
-                        <Button
+                  {/* Section Background Presets & Custom Hex */}
+                  <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <label className="font-bold text-slate-800">Section Background Color</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {BG_PRESETS.map((preset) => (
+                        <button
+                          key={preset.value}
                           type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => logoUploadRef.current?.click()}
-                          className="h-8 text-xs font-bold rounded-xl"
+                          onClick={() => {
+                            updateSelectedSection({ bgColor: preset.value });
+                            updateSelectedSectionDesign({ bgColor: preset.value });
+                          }}
+                          className={`p-2 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 transition-all ${
+                            (selectedSection.bgColor || selectedSection.design?.bgColor) === preset.value
+                              ? "border-blue-600 ring-2 ring-blue-500/20 bg-white"
+                              : "border-slate-200 bg-white/70 hover:bg-white"
+                          }`}
                         >
-                          <Upload className="w-3 h-3 mr-1 text-blue-600" /> Upload Logo (WebP)
-                        </Button>
-                        <input
-                          ref={logoUploadRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleLogoUpload}
-                        />
-                      </div>
+                          <span className="w-3.5 h-3.5 rounded-md border border-slate-300 shrink-0" style={{ backgroundColor: preset.value }} />
+                          <span className="truncate">{preset.label}</span>
+                        </button>
+                      ))}
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Clinic Name (Shown if no logo)</label>
-                      <Input
-                        value={siteData.siteTitle}
-                        onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Specialty Tagline</label>
-                      <Input
-                        value={siteData.tagline || ""}
-                        onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
-                        placeholder="e.g. Leading Pediatrics in New Delhi"
-                        className="h-10 text-xs rounded-xl"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Hero Main Headline</label>
-                      <Input
-                        value={selectedSection.title !== undefined ? selectedSection.title : siteData.heroHeading}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-600">Custom Hex:</span>
+                      <input
+                        type="color"
+                        value={selectedSection.bgColor || selectedSection.design?.bgColor || "#FFFFFF"}
                         onChange={(e) => {
-                          updateSelectedSection({ title: e.target.value });
-                          setSiteData({ ...siteData, heroHeading: e.target.value });
+                          updateSelectedSection({ bgColor: e.target.value });
+                          updateSelectedSectionDesign({ bgColor: e.target.value });
                         }}
-                        className="h-10 text-xs rounded-xl font-bold"
+                        className="w-7 h-7 rounded-lg border-0 cursor-pointer"
                       />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Hero Subtitle / Description (Leave blank to remove)</label>
-                      <Textarea
-                        value={selectedSection.subtitle !== undefined ? selectedSection.subtitle : (siteData.heroSubheading || "")}
+                      <Input
+                        value={selectedSection.bgColor || selectedSection.design?.bgColor || ""}
                         onChange={(e) => {
-                          updateSelectedSection({ subtitle: e.target.value });
-                          setSiteData({ ...siteData, heroSubheading: e.target.value });
+                          updateSelectedSection({ bgColor: e.target.value });
+                          updateSelectedSectionDesign({ bgColor: e.target.value });
                         }}
-                        placeholder="Leave blank to completely hide description..."
-                        rows={3}
-                        className="text-xs rounded-xl leading-relaxed"
+                        placeholder="#FFFFFF"
+                        className="h-7 text-xs font-mono bg-white"
                       />
-                    </div>
-
-                    {/* Hero Buttons & Links Customizer */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                      <p className="font-bold text-slate-900">Hero Action Buttons</p>
-
-                      {/* Primary Button */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-600">Primary Button</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            value={siteData.ctaButtonText}
-                            onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
-                            placeholder="Button Text"
-                            className="h-8 text-xs bg-white rounded-lg"
-                          />
-                          <select
-                            value={siteData.ctaButtonAction}
-                            onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
-                            className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
-                          >
-                            <option value="BOOKING_MODAL">Instant Booking Modal</option>
-                            <option value="WHATSAPP">WhatsApp Direct</option>
-                            <option value="PHONE">Phone Call</option>
-                            <option value="CUSTOM_URL">Custom URL Link</option>
-                          </select>
-                        </div>
-                        {siteData.ctaButtonAction === "CUSTOM_URL" && (
-                          <Input
-                            value={siteData.primaryCtaLink || ""}
-                            onChange={(e) => setSiteData({ ...siteData, primaryCtaLink: e.target.value })}
-                            placeholder="https://..."
-                            className="h-8 text-xs bg-white rounded-lg mt-1"
-                          />
-                        )}
-                      </div>
-
-                      {/* Secondary Button */}
-                      <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                        <label className="text-[11px] font-bold text-slate-600">Secondary Button</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            value={siteData.secondaryCtaText || "WhatsApp Chat"}
-                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaText: e.target.value })}
-                            placeholder="Button Text"
-                            className="h-8 text-xs bg-white rounded-lg"
-                          />
-                          <select
-                            value={siteData.secondaryCtaAction || "WHATSAPP"}
-                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaAction: e.target.value })}
-                            className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
-                          >
-                            <option value="WHATSAPP">WhatsApp Direct</option>
-                            <option value="BOOKING_MODAL">Instant Booking Modal</option>
-                            <option value="PHONE">Phone Call</option>
-                            <option value="CUSTOM_URL">Custom URL Link</option>
-                          </select>
-                        </div>
-                        {siteData.secondaryCtaAction === "CUSTOM_URL" && (
-                          <Input
-                            value={siteData.secondaryCtaLink || ""}
-                            onChange={(e) => setSiteData({ ...siteData, secondaryCtaLink: e.target.value })}
-                            placeholder="https://..."
-                            className="h-8 text-xs bg-white rounded-lg mt-1"
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Announcement Bar Toggle & Text */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800">Top Announcement Bar</span>
-                        <input
-                          type="checkbox"
-                          checked={siteData.showAnnouncementBar === true}
-                          onChange={(e) => setSiteData({ ...siteData, showAnnouncementBar: e.target.checked })}
-                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                        />
-                      </div>
-                      {siteData.showAnnouncementBar === true && (
-                        <Input
-                          value={siteData.announcementBar || ""}
-                          onChange={(e) => setSiteData({ ...siteData, announcementBar: e.target.value })}
-                          placeholder="e.g. Now accepting new patient appointments online."
-                          className="h-9 text-xs rounded-xl bg-white"
-                        />
-                      )}
-                    </div>
-
-                    {/* Multi-Photo Carousel Slider Manager */}
-                    <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Hero Carousel Photos</label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => heroUploadRef.current?.click()}
-                          className="h-7 text-[11px] font-bold rounded-lg"
-                        >
-                          <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
-                        </Button>
-                        <input
-                          ref={heroUploadRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleHeroImageUpload}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        {(siteData.heroSliderImages && siteData.heroSliderImages.length > 0 ? siteData.heroSliderImages : (siteData.heroImage ? [siteData.heroImage] : [])).map((img, i) => (
-                          <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-slate-100">
-                            <img src={img} alt="" className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = (siteData.heroSliderImages || []).filter((_, idx) => idx !== i);
-                                setSiteData({ ...siteData, heroSliderImages: updated, heroImage: updated[0] || null });
-                              }}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* 2. SERVICES SECTION INSPECTOR */}
-                {selectedSection.type === "SERVICES" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Title</label>
-                      <Input
-                        value={selectedSection.title || "Clinical Services & Procedures"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
+                  {/* Card Background & Container Styling */}
+                  <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <label className="font-bold text-slate-800">Card &amp; Element Material</label>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                        <span className="font-bold text-[11px] text-slate-800">Show Prices</span>
-                        <input
-                          type="checkbox"
-                          checked={siteData.showPrices !== false}
-                          onChange={(e) => setSiteData({ ...siteData, showPrices: e.target.checked })}
-                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                        />
-                      </div>
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                        <span className="font-bold text-[11px] text-slate-800">Show Card Button</span>
-                        <input
-                          type="checkbox"
-                          checked={siteData.showServiceButtons === true}
-                          onChange={(e) => setSiteData({ ...siteData, showServiceButtons: e.target.checked })}
-                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedSectionDesign({ cardBg: "#FFFFFF" })}
+                        className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
+                          selectedSection.design?.cardBg === "#FFFFFF" ? "border-blue-600 bg-white ring-2 ring-blue-500/20" : "bg-white border-slate-200"
+                        }`}
+                      >
+                        Pure White Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedSectionDesign({ cardBg: "#F8FAFC" })}
+                        className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
+                          selectedSection.design?.cardBg === "#F8FAFC" ? "border-blue-600 bg-slate-50 ring-2 ring-blue-500/20" : "bg-slate-50 border-slate-200"
+                        }`}
+                      >
+                        Soft Slate Card
+                      </button>
                     </div>
+                  </div>
 
-                    <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                  {/* Vertical Padding Size */}
+                  <div className="space-y-1.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <label className="font-bold text-slate-800">Section Vertical Spacing</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {["compact", "normal", "spacious"].map((sz) => (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => updateSelectedSectionDesign({ paddingSize: sz as any })}
+                          className={`py-1.5 rounded-xl border text-[10px] font-bold capitalize transition-all ${
+                            (selectedSection.design?.paddingSize || "normal") === sz
+                              ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                              : "bg-white text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <Button
+                      onClick={() => handleSaveWebsite(`${selectedSection.type.replace("_", " ")} Design`)}
+                      disabled={saving}
+                      className="w-full h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center justify-center gap-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{saving ? "Saving..." : "Save Section Design"}</span>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* ── SUB-TAB 1: CONTENT EDITING ── */
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
+                  {/* 1. HERO SECTION INSPECTOR */}
+                  {selectedSection.type === "HERO" && (
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Treatments &amp; Procedures</label>
+                        <span className="font-bold text-slate-800">Hero Section Content</span>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const list = siteData.customServices || [];
-                            setSiteData({
-                              ...siteData,
-                              customServices: [...list, { name: "New Clinical Treatment", description: "Comprehensive procedure & specialized care.", icon: "stethoscope" }],
-                            });
-                          }}
-                          className="h-7 text-[11px] font-bold rounded-lg"
+                          onClick={() => generateAiCopy("hero")}
+                          className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
                         >
-                          <Plus className="w-3 h-3 mr-1" /> Add Service
+                          <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Magic Copy
                         </Button>
                       </div>
 
-                      <div className="space-y-3">
-                        {(siteData.customServices || []).map((s, idx) => (
-                          <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                value={s.name}
-                                onChange={(e) => {
-                                  const updated = [...(siteData.customServices || [])];
-                                  updated[idx].name = e.target.value;
-                                  setSiteData({ ...siteData, customServices: updated });
-                                }}
-                                placeholder="Service Name"
-                                className="h-8 text-xs font-bold bg-white"
-                              />
-                              {siteData.showPrices !== false && (
-                                <Input
-                                  type="number"
-                                  value={s.price || ""}
-                                  onChange={(e) => {
-                                    const updated = [...(siteData.customServices || [])];
-                                    updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
-                                    setSiteData({ ...siteData, customServices: updated });
-                                  }}
-                                  placeholder="Price (₹)"
-                                  className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
-                                />
-                              )}
+                      {/* Logo & Clinic Name */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Clinic Logo Image</label>
+                          {siteData.logoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setSiteData({ ...siteData, logoUrl: null })}
+                              className="text-[10px] text-rose-600 font-bold hover:underline"
+                            >
+                              Remove Logo
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {siteData.logoUrl ? (
+                            <div className="h-10 px-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center">
+                              <img src={siteData.logoUrl} alt="Logo" className="h-7 object-contain" />
+                            </div>
+                          ) : (
+                            <div className="h-10 px-3 bg-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-600 font-bold">
+                              Using Name (No Logo)
+                            </div>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => logoUploadRef.current?.click()}
+                            className="h-8 text-xs font-bold rounded-xl"
+                          >
+                            <Upload className="w-3 h-3 mr-1 text-blue-600" /> Upload Logo (WebP)
+                          </Button>
+                          <input
+                            ref={logoUploadRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleLogoUpload}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Clinic Name (Shown if no logo)</label>
+                        <Input
+                          value={siteData.siteTitle}
+                          onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Specialty Tagline</label>
+                        <Input
+                          value={siteData.tagline || ""}
+                          onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
+                          placeholder="e.g. Leading Pediatrics in New Delhi"
+                          className="h-10 text-xs rounded-xl"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Hero Main Headline</label>
+                        <Input
+                          value={selectedSection.title !== undefined ? selectedSection.title : siteData.heroHeading}
+                          onChange={(e) => {
+                            updateSelectedSection({ title: e.target.value });
+                            setSiteData({ ...siteData, heroHeading: e.target.value });
+                          }}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Hero Subtitle / Description (Leave blank to remove)</label>
+                        <Textarea
+                          value={selectedSection.subtitle !== undefined ? selectedSection.subtitle : (siteData.heroSubheading || "")}
+                          onChange={(e) => {
+                            updateSelectedSection({ subtitle: e.target.value });
+                            setSiteData({ ...siteData, heroSubheading: e.target.value });
+                          }}
+                          placeholder="Leave blank to completely hide description..."
+                          rows={3}
+                          className="text-xs rounded-xl leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Hero Buttons & Links Customizer */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                        <p className="font-bold text-slate-900">Hero Action Buttons</p>
+
+                        {/* Primary Button */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-600">Primary Button</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={siteData.ctaButtonText}
+                              onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
+                              placeholder="Button Text"
+                              className="h-8 text-xs bg-white rounded-lg"
+                            />
+                            <select
+                              value={siteData.ctaButtonAction}
+                              onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
+                              className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                            >
+                              <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                              <option value="WHATSAPP">WhatsApp Direct</option>
+                              <option value="PHONE">Phone Call</option>
+                              <option value="CUSTOM_URL">Custom URL Link</option>
+                            </select>
+                          </div>
+                          {siteData.ctaButtonAction === "CUSTOM_URL" && (
+                            <Input
+                              value={siteData.primaryCtaLink || ""}
+                              onChange={(e) => setSiteData({ ...siteData, primaryCtaLink: e.target.value })}
+                              placeholder="https://..."
+                              className="h-8 text-xs bg-white rounded-lg mt-1"
+                            />
+                          )}
+                        </div>
+
+                        {/* Secondary Button */}
+                        <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                          <label className="text-[11px] font-bold text-slate-600">Secondary Button</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={siteData.secondaryCtaText || "WhatsApp Chat"}
+                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaText: e.target.value })}
+                              placeholder="Button Text"
+                              className="h-8 text-xs bg-white rounded-lg"
+                            />
+                            <select
+                              value={siteData.secondaryCtaAction || "WHATSAPP"}
+                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaAction: e.target.value })}
+                              className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                            >
+                              <option value="WHATSAPP">WhatsApp Direct</option>
+                              <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                              <option value="PHONE">Phone Call</option>
+                              <option value="CUSTOM_URL">Custom URL Link</option>
+                            </select>
+                          </div>
+                          {siteData.secondaryCtaAction === "CUSTOM_URL" && (
+                            <Input
+                              value={siteData.secondaryCtaLink || ""}
+                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaLink: e.target.value })}
+                              placeholder="https://..."
+                              className="h-8 text-xs bg-white rounded-lg mt-1"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Announcement Bar Toggle & Text */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800">Top Announcement Bar</span>
+                          <input
+                            type="checkbox"
+                            checked={siteData.showAnnouncementBar === true}
+                            onChange={(e) => setSiteData({ ...siteData, showAnnouncementBar: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                          />
+                        </div>
+                        {siteData.showAnnouncementBar === true && (
+                          <Input
+                            value={siteData.announcementBar || ""}
+                            onChange={(e) => setSiteData({ ...siteData, announcementBar: e.target.value })}
+                            placeholder="e.g. Now accepting new patient appointments online."
+                            className="h-9 text-xs rounded-xl bg-white"
+                          />
+                        )}
+                      </div>
+
+                      {/* Multi-Photo Carousel Slider Manager */}
+                      <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Hero Carousel Photos</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => heroUploadRef.current?.click()}
+                            className="h-7 text-[11px] font-bold rounded-lg"
+                          >
+                            <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
+                          </Button>
+                          <input
+                            ref={heroUploadRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleHeroImageUpload}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {(siteData.heroSliderImages && siteData.heroSliderImages.length > 0 ? siteData.heroSliderImages : (siteData.heroImage ? [siteData.heroImage] : [])).map((img, i) => (
+                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-slate-100">
+                              <img src={img} alt="" className="w-full h-full object-cover" />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
-                                  setSiteData({ ...siteData, customServices: updated });
+                                  const updated = (siteData.heroSliderImages || []).filter((_, idx) => idx !== i);
+                                  setSiteData({ ...siteData, heroSliderImages: updated, heroImage: updated[0] || null });
                                 }}
-                                className="text-slate-400 hover:text-rose-600 p-1"
+                                className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <X className="w-3 h-3" />
                               </button>
                             </div>
-
-                            {/* Service Photo or Icon Library Picker */}
-                            <div className="space-y-1.5 p-2 bg-white rounded-xl border border-slate-200">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-600">Visual Badge:</span>
-                                <div className="flex items-center gap-2">
-                                  {s.image ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const updated = [...(siteData.customServices || [])];
-                                        updated[idx].image = undefined;
-                                        setSiteData({ ...siteData, customServices: updated });
-                                      }}
-                                      className="text-[10px] text-rose-600 font-bold hover:underline"
-                                    >
-                                      Use Icon Instead
-                                    </button>
-                                  ) : (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setActiveServiceUploadIdx(idx);
-                                        servicePhotoRef.current?.click();
-                                      }}
-                                      className="h-5 px-1.5 text-[9px] font-bold rounded"
-                                    >
-                                      <Upload className="w-2.5 h-2.5 mr-1 text-blue-600" /> Upload Image
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {!s.image && (
-                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-20 flex-wrap">
-                                  {ALL_ICON_KEYS.map((ic) => {
-                                    const IComp = ICON_MAP[ic];
-                                    return (
-                                      <button
-                                        key={ic}
-                                        type="button"
-                                        onClick={() => {
-                                          const updated = [...(siteData.customServices || [])];
-                                          updated[idx].icon = ic;
-                                          setSiteData({ ...siteData, customServices: updated });
-                                        }}
-                                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                                          (s.icon || "stethoscope") === ic
-                                            ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
-                                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                                        }`}
-                                        title={ic}
-                                      >
-                                        <IComp className="w-3.5 h-3.5" />
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-
-                            <Textarea
-                              value={s.description}
-                              onChange={(e) => {
-                                const updated = [...(siteData.customServices || [])];
-                                updated[idx].description = e.target.value;
-                                setSiteData({ ...siteData, customServices: updated });
-                              }}
-                              placeholder="Describe clinical procedure and benefits..."
-                              rows={2}
-                              className="text-[11px] bg-white rounded-xl"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      <input
-                        ref={servicePhotoRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleServicePhotoUpload}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. DOCTOR BIO INSPECTOR */}
-                {selectedSection.type === "DOCTOR_BIO" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">Doctor Credentials &amp; Bio</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => generateAiCopy("bio")}
-                        className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
-                      >
-                        <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Bio Generator
-                      </Button>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Doctor Name</label>
-                      <Input
-                        value={siteData.doctor?.name || ""}
-                        onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), name: e.target.value } })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Specialty</label>
-                        <Input
-                          value={siteData.doctor?.specialty || ""}
-                          onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), specialty: e.target.value } })}
-                          placeholder="e.g. Pediatrician"
-                          className="h-9 text-xs rounded-xl"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Degrees</label>
-                        <Input
-                          value={siteData.doctor?.degrees || ""}
-                          onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), degrees: e.target.value } })}
-                          placeholder="e.g. MBBS, MD, DNB"
-                          className="h-9 text-xs rounded-xl"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <label className="font-bold text-slate-700">Doctor Portrait</label>
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                          {siteData.doctor?.image ? (
-                            <img src={siteData.doctor.image} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-xs">Dr</div>
-                          )}
+                          ))}
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => doctorPhotoRef.current?.click()}
-                          className="h-8 text-xs font-bold rounded-xl"
-                        >
-                          <Upload className="w-3.5 h-3.5 mr-1 text-blue-600" /> Upload Portrait (WebP)
-                        </Button>
-                        <input
-                          ref={doctorPhotoRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleDoctorPhotoUpload}
-                        />
                       </div>
                     </div>
+                  )}
 
-                    <div className="space-y-1.5 pt-2">
-                      <label className="font-bold text-slate-700">Clinical Philosophy &amp; Background</label>
-                      <Textarea
-                        value={selectedSection.content !== undefined ? selectedSection.content : (siteData.customBio || "")}
-                        onChange={(e) => {
-                          updateSelectedSection({ content: e.target.value });
-                          setSiteData({ ...siteData, customBio: e.target.value });
-                        }}
-                        rows={5}
-                        placeholder="Detailed medical experience, qualifications, and patient care commitment..."
-                        className="text-xs rounded-xl leading-relaxed"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. GALLERY INSPECTOR */}
-                {selectedSection.type === "GALLERY" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Title</label>
-                      <Input
-                        value={selectedSection.title || "Our Modern Clinical Facilities"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Facility Photos</label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => galleryUploadRef.current?.click()}
-                          className="h-7 text-[11px] font-bold rounded-lg"
-                        >
-                          <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
-                        </Button>
-                        <input
-                          ref={galleryUploadRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleGalleryUpload}
+                  {/* 2. SERVICES SECTION INSPECTOR */}
+                  {selectedSection.type === "SERVICES" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Title</label>
+                        <Input
+                          value={selectedSection.title || "Clinical Services & Procedures"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        {(siteData.galleryImages || []).map((img, i) => (
-                          <div key={i} className="p-2 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 relative group">
-                            <div className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100">
-                              <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                          <span className="font-bold text-[11px] text-slate-800">Show Prices</span>
+                          <input
+                            type="checkbox"
+                            checked={siteData.showPrices !== false}
+                            onChange={(e) => setSiteData({ ...siteData, showPrices: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                          />
+                        </div>
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                          <span className="font-bold text-[11px] text-slate-800">Show Card Button</span>
+                          <input
+                            type="checkbox"
+                            checked={siteData.showServiceButtons === true}
+                            onChange={(e) => setSiteData({ ...siteData, showServiceButtons: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Treatments &amp; Procedures</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const list = siteData.customServices || [];
+                              setSiteData({
+                                ...siteData,
+                                customServices: [...list, { name: "New Clinical Treatment", description: "Comprehensive procedure & specialized care.", icon: "stethoscope" }],
+                              });
+                            }}
+                            className="h-7 text-[11px] font-bold rounded-lg"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add Service
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {(siteData.customServices || []).map((s, idx) => (
+                            <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={s.name}
+                                  onChange={(e) => {
+                                    const updated = [...(siteData.customServices || [])];
+                                    updated[idx].name = e.target.value;
+                                    setSiteData({ ...siteData, customServices: updated });
+                                  }}
+                                  placeholder="Service Name"
+                                  className="h-8 text-xs font-bold bg-white"
+                                />
+                                {siteData.showPrices !== false && (
+                                  <Input
+                                    type="number"
+                                    value={s.price || ""}
+                                    onChange={(e) => {
+                                      const updated = [...(siteData.customServices || [])];
+                                      updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
+                                      setSiteData({ ...siteData, customServices: updated });
+                                    }}
+                                    placeholder="Price (₹)"
+                                    className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
+                                  />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
+                                    setSiteData({ ...siteData, customServices: updated });
+                                  }}
+                                  className="text-slate-400 hover:text-rose-600 p-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Service Photo or Icon Library Picker */}
+                              <div className="space-y-1.5 p-2 bg-white rounded-xl border border-slate-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-slate-600">Visual Badge:</span>
+                                  <div className="flex items-center gap-2">
+                                    {s.image ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updated = [...(siteData.customServices || [])];
+                                          updated[idx].image = undefined;
+                                          setSiteData({ ...siteData, customServices: updated });
+                                        }}
+                                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                                      >
+                                        Use Icon Instead
+                                      </button>
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setActiveServiceUploadIdx(idx);
+                                          servicePhotoRef.current?.click();
+                                        }}
+                                        className="h-5 px-1.5 text-[9px] font-bold rounded"
+                                      >
+                                        <Upload className="w-2.5 h-2.5 mr-1 text-blue-600" /> Upload Image
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {!s.image && (
+                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-20 flex-wrap">
+                                    {ALL_ICON_KEYS.map((ic) => {
+                                      const IComp = ICON_MAP[ic];
+                                      return (
+                                        <button
+                                          key={ic}
+                                          type="button"
+                                          onClick={() => {
+                                            const updated = [...(siteData.customServices || [])];
+                                            updated[idx].icon = ic;
+                                            setSiteData({ ...siteData, customServices: updated });
+                                          }}
+                                          className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                                            (s.icon || "stethoscope") === ic
+                                              ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                          }`}
+                                          title={ic}
+                                        >
+                                          <IComp className="w-3.5 h-3.5" />
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              <Textarea
+                                value={s.description}
+                                onChange={(e) => {
+                                  const updated = [...(siteData.customServices || [])];
+                                  updated[idx].description = e.target.value;
+                                  setSiteData({ ...siteData, customServices: updated });
+                                }}
+                                placeholder="Describe clinical procedure and benefits..."
+                                rows={2}
+                                className="text-[11px] bg-white rounded-xl"
+                              />
                             </div>
-                            <Input
-                              value={img.caption || ""}
-                              onChange={(e) => {
-                                const updated = [...(siteData.galleryImages || [])];
-                                updated[i].caption = e.target.value;
-                                setSiteData({ ...siteData, galleryImages: updated });
-                              }}
-                              placeholder="Caption"
-                              className="h-7 text-[10px] bg-white rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = (siteData.galleryImages || []).filter((_, idx) => idx !== i);
-                                setSiteData({ ...siteData, galleryImages: updated });
-                              }}
-                              className="absolute top-3 right-3 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+
+                        <input
+                          ref={servicePhotoRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleServicePhotoUpload}
+                        />
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 5. MAP & HOURS INSPECTOR (Accurate Google Map Location) */}
-                {selectedSection.type === "MAP_HOURS" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Title</label>
-                      <Input
-                        value={selectedSection.title || "Clinic Location & Hours"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Clinic Verified Address (For Map Pin)</label>
-                      <Textarea
-                        value={siteData.clinicAddress || siteData.doctor?.address || ""}
-                        onChange={(e) => setSiteData({ ...siteData, clinicAddress: e.target.value })}
-                        placeholder="e.g. B-4/32, Safdarjung Enclave, New Delhi, Delhi 110029"
-                        rows={3}
-                        className="text-xs rounded-xl"
-                      />
-                      <p className="text-[10px] text-slate-500">Google Map automatically pins to this exact clinic building.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Custom Google Map Embed URL (Optional)</label>
-                      <Input
-                        value={siteData.mapEmbedUrl || ""}
-                        onChange={(e) => setSiteData({ ...siteData, mapEmbedUrl: e.target.value })}
-                        placeholder="https://maps.google.com/..."
-                        className="h-9 text-xs rounded-xl"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. FAQ INSPECTOR */}
-                {selectedSection.type === "FAQ" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Title</label>
-                      <Input
-                        value={selectedSection.title || "Frequently Asked Questions"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                  {/* 3. DOCTOR BIO INSPECTOR */}
+                  {selectedSection.type === "DOCTOR_BIO" && (
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Q&amp;A List</label>
+                        <span className="font-bold text-slate-800">Doctor Credentials &amp; Bio</span>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const list = siteData.customFaqs || [];
-                            setSiteData({
-                              ...siteData,
-                              customFaqs: [...list, { question: "New Question?", answer: "Answer details here." }],
-                            });
-                          }}
-                          className="h-7 text-[11px] font-bold rounded-lg"
+                          onClick={() => generateAiCopy("bio")}
+                          className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
                         >
-                          <Plus className="w-3 h-3 mr-1" /> Add FAQ
+                          <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Bio Generator
                         </Button>
                       </div>
 
-                      <div className="space-y-3">
-                        {(siteData.customFaqs || []).map((faq, idx) => (
-                          <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Doctor Name</label>
+                        <Input
+                          value={siteData.doctor?.name || ""}
+                          onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), name: e.target.value } })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-700">Specialty</label>
+                          <Input
+                            value={siteData.doctor?.specialty || ""}
+                            onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), specialty: e.target.value } })}
+                            placeholder="e.g. Pediatrician"
+                            className="h-9 text-xs rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="font-bold text-slate-700">Degrees</label>
+                          <Input
+                            value={siteData.doctor?.degrees || ""}
+                            onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), degrees: e.target.value } })}
+                            placeholder="e.g. MBBS, MD, DNB"
+                            className="h-9 text-xs rounded-xl"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <label className="font-bold text-slate-700">Doctor Portrait</label>
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                            {siteData.doctor?.image ? (
+                              <img src={siteData.doctor.image} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-xs">Dr</div>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => doctorPhotoRef.current?.click()}
+                            className="h-8 text-xs font-bold rounded-xl"
+                          >
+                            <Upload className="w-3.5 h-3.5 mr-1 text-blue-600" /> Upload Portrait (WebP)
+                          </Button>
+                          <input
+                            ref={doctorPhotoRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleDoctorPhotoUpload}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2">
+                        <label className="font-bold text-slate-700">Clinical Philosophy &amp; Background</label>
+                        <Textarea
+                          value={selectedSection.content !== undefined ? selectedSection.content : (siteData.customBio || "")}
+                          onChange={(e) => {
+                            updateSelectedSection({ content: e.target.value });
+                            setSiteData({ ...siteData, customBio: e.target.value });
+                          }}
+                          rows={5}
+                          placeholder="Detailed medical experience, qualifications, and patient care commitment..."
+                          className="text-xs rounded-xl leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. GALLERY INSPECTOR */}
+                  {selectedSection.type === "GALLERY" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Title</label>
+                        <Input
+                          value={selectedSection.title || "Our Modern Clinical Facilities"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Facility Photos</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => galleryUploadRef.current?.click()}
+                            className="h-7 text-[11px] font-bold rounded-lg"
+                          >
+                            <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
+                          </Button>
+                          <input
+                            ref={galleryUploadRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleGalleryUpload}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          {(siteData.galleryImages || []).map((img, i) => (
+                            <div key={i} className="p-2 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 relative group">
+                              <div className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100">
+                                <img src={img.url} alt="" className="w-full h-full object-cover" />
+                              </div>
                               <Input
-                                value={faq.question}
+                                value={img.caption || ""}
                                 onChange={(e) => {
-                                  const updated = [...(siteData.customFaqs || [])];
-                                  updated[idx].question = e.target.value;
-                                  setSiteData({ ...siteData, customFaqs: updated });
+                                  const updated = [...(siteData.galleryImages || [])];
+                                  updated[i].caption = e.target.value;
+                                  setSiteData({ ...siteData, galleryImages: updated });
                                 }}
-                                placeholder="Question"
-                                className="h-8 text-xs font-bold bg-white"
+                                placeholder="Caption"
+                                className="h-7 text-[10px] bg-white rounded-lg"
                               />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updated = (siteData.customFaqs || []).filter((_, i) => i !== idx);
-                                  setSiteData({ ...siteData, customFaqs: updated });
+                                  const updated = (siteData.galleryImages || []).filter((_, idx) => idx !== i);
+                                  setSiteData({ ...siteData, galleryImages: updated });
                                 }}
-                                className="text-slate-400 hover:text-rose-600 p-1"
+                                className="absolute top-3 right-3 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <X className="w-3 h-3" />
                               </button>
                             </div>
-                            <Textarea
-                              value={faq.answer}
-                              onChange={(e) => {
-                                const updated = [...(siteData.customFaqs || [])];
-                                updated[idx].answer = e.target.value;
-                                setSiteData({ ...siteData, customFaqs: updated });
-                              }}
-                              placeholder="Answer"
-                              rows={2}
-                              className="text-[11px] bg-white rounded-xl"
-                            />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 7. CTA BANNER INSPECTOR */}
-                {selectedSection.type === "CTA_BANNER" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Callout Heading</label>
-                      <Input
-                        value={selectedSection.title || "Ready to Book Your Consultation?"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Callout Subtitle</label>
-                      <Textarea
-                        value={selectedSection.subtitle || "Schedule your appointment in seconds."}
-                        onChange={(e) => updateSelectedSection({ subtitle: e.target.value })}
-                        rows={2}
-                        className="text-xs rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Button Text</label>
-                      <Input
-                        value={selectedSection.ctaText || "Book Appointment Now"}
-                        onChange={(e) => updateSelectedSection({ ctaText: e.target.value })}
-                        className="h-10 text-xs rounded-xl"
-                      />
-                    </div>
-                  </div>
-                )}
+                  {/* 5. MAP & HOURS INSPECTOR */}
+                  {selectedSection.type === "MAP_HOURS" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Title</label>
+                        <Input
+                          value={selectedSection.title || "Clinic Location & Hours"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
 
-                {/* 8. CUSTOM TEXT INSPECTOR */}
-                {selectedSection.type === "CUSTOM_TEXT" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Headline</label>
-                      <Input
-                        value={selectedSection.title || ""}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        placeholder="e.g. Special Patient Notice / Accreditations"
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Content / Story Text</label>
-                      <Textarea
-                        value={selectedSection.content || ""}
-                        onChange={(e) => updateSelectedSection({ content: e.target.value })}
-                        rows={6}
-                        placeholder="Write detailed announcements, clinical certifications, emergency policies, or patient guidance..."
-                        className="text-xs rounded-xl leading-relaxed"
-                      />
-                    </div>
-                  </div>
-                )}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Clinic Verified Address (For Map Pin)</label>
+                        <Textarea
+                          value={siteData.clinicAddress || siteData.doctor?.address || ""}
+                          onChange={(e) => setSiteData({ ...siteData, clinicAddress: e.target.value })}
+                          placeholder="e.g. B-4/32, Safdarjung Enclave, New Delhi, Delhi 110029"
+                          rows={3}
+                          className="text-xs rounded-xl"
+                        />
+                        <p className="text-[10px] text-slate-500">Google Map automatically pins to this exact clinic building.</p>
+                      </div>
 
-                {/* 9. REVIEWS INSPECTOR */}
-                {selectedSection.type === "REVIEWS" && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Section Heading</label>
-                      <Input
-                        value={selectedSection.title || "Verified Patient Feedback"}
-                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
-                        className="h-10 text-xs rounded-xl font-bold"
-                      />
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Custom Google Map Embed URL (Optional)</label>
+                        <Input
+                          value={siteData.mapEmbedUrl || ""}
+                          onChange={(e) => setSiteData({ ...siteData, mapEmbedUrl: e.target.value })}
+                          placeholder="https://maps.google.com/..."
+                          className="h-9 text-xs rounded-xl"
+                        />
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-500">Reviews are automatically synced from your connected Google Business Profile.</p>
-                  </div>
-                )}
+                  )}
 
-                {/* DEDICATED SAVE BUTTON INSIDE INSPECTOR */}
-                <div className="pt-6 border-t border-slate-100">
-                  <Button
-                    onClick={() => handleSaveWebsite(selectedSection.type.replace("_", " "))}
-                    disabled={saving}
-                    className="w-full h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{saving ? "Saving Changes..." : "Save Section Changes"}</span>
-                  </Button>
+                  {/* 6. FAQ INSPECTOR */}
+                  {selectedSection.type === "FAQ" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Title</label>
+                        <Input
+                          value={selectedSection.title || "Frequently Asked Questions"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Q&amp;A List</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const list = siteData.customFaqs || [];
+                              setSiteData({
+                                ...siteData,
+                                customFaqs: [...list, { question: "New Question?", answer: "Answer details here." }],
+                              });
+                            }}
+                            className="h-7 text-[11px] font-bold rounded-lg"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add FAQ
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {(siteData.customFaqs || []).map((faq, idx) => (
+                            <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <Input
+                                  value={faq.question}
+                                  onChange={(e) => {
+                                    const updated = [...(siteData.customFaqs || [])];
+                                    updated[idx].question = e.target.value;
+                                    setSiteData({ ...siteData, customFaqs: updated });
+                                  }}
+                                  placeholder="Question"
+                                  className="h-8 text-xs font-bold bg-white"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = (siteData.customFaqs || []).filter((_, i) => i !== idx);
+                                    setSiteData({ ...siteData, customFaqs: updated });
+                                  }}
+                                  className="text-slate-400 hover:text-rose-600 p-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <Textarea
+                                value={faq.answer}
+                                onChange={(e) => {
+                                  const updated = [...(siteData.customFaqs || [])];
+                                  updated[idx].answer = e.target.value;
+                                  setSiteData({ ...siteData, customFaqs: updated });
+                                }}
+                                placeholder="Answer"
+                                rows={2}
+                                className="text-[11px] bg-white rounded-xl"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7. CTA BANNER INSPECTOR */}
+                  {selectedSection.type === "CTA_BANNER" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Callout Heading</label>
+                        <Input
+                          value={selectedSection.title || "Ready to Book Your Consultation?"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Callout Subtitle</label>
+                        <Textarea
+                          value={selectedSection.subtitle || "Schedule your appointment in seconds."}
+                          onChange={(e) => updateSelectedSection({ subtitle: e.target.value })}
+                          rows={2}
+                          className="text-xs rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Button Text</label>
+                        <Input
+                          value={selectedSection.ctaText || "Book Appointment Now"}
+                          onChange={(e) => updateSelectedSection({ ctaText: e.target.value })}
+                          className="h-10 text-xs rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 8. CUSTOM TEXT INSPECTOR */}
+                  {selectedSection.type === "CUSTOM_TEXT" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Headline</label>
+                        <Input
+                          value={selectedSection.title || ""}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          placeholder="e.g. Special Patient Notice / Accreditations"
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Content / Story Text</label>
+                        <Textarea
+                          value={selectedSection.content || ""}
+                          onChange={(e) => updateSelectedSection({ content: e.target.value })}
+                          rows={6}
+                          placeholder="Write detailed announcements, clinical certifications, emergency policies, or patient guidance..."
+                          className="text-xs rounded-xl leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 9. REVIEWS INSPECTOR */}
+                  {selectedSection.type === "REVIEWS" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Heading</label>
+                        <Input
+                          value={selectedSection.title || "Verified Patient Feedback"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Reviews are automatically synced from your connected Google Business Profile.</p>
+                    </div>
+                  )}
+
+                  <div className="pt-6 border-t border-slate-100">
+                    <Button
+                      onClick={() => handleSaveWebsite(selectedSection.type.replace("_", " "))}
+                      disabled={saving}
+                      className="w-full h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center justify-center gap-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{saving ? "Saving Changes..." : "Save Section Changes"}</span>
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             /* Main Elementor Drawer Tabs */
@@ -1793,7 +1948,7 @@ export default function ElementorComposerPage() {
                 </div>
               )}
 
-              {/* TAB 5: COMPREHENSIVE CUSTOM DOMAIN GUIDE & DNS TABLE */}
+              {/* TAB 5: DOMAIN SETTINGS */}
               {sidebarTab === "domain" && (
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                   <div className="space-y-1">

@@ -44,6 +44,10 @@ import {
   Ambulance,
   Bed,
   User,
+  Check,
+  Star,
+  Layers,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,7 +201,7 @@ export function ThemeRenderer({
     setBookingSuccess(true);
   };
 
-  // Button Click Handler (Handles Modal, WhatsApp, Phone, Custom URL)
+  // Button Click Handler
   const handleCtaClick = (action?: string, link?: string | null) => {
     if (action === "CUSTOM_URL" && link) {
       window.open(link, "_blank");
@@ -298,7 +302,13 @@ export function ThemeRenderer({
     <div
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
-      } ${themeId === "serene-glow" ? "bg-[#FAF8F5]" : "bg-white"}`}
+      } ${
+        themeId === "serene-glow"
+          ? "bg-[#FAF8F5]"
+          : themeId === "ayurveda-earth"
+          ? "bg-[#FDFBF7]"
+          : "bg-white"
+      }`}
       style={{ color: secondaryColor }}
     >
       {/* ── TOP ANNOUNCEMENT BAR (Strictly Conditional) ── */}
@@ -312,7 +322,7 @@ export function ThemeRenderer({
         </div>
       ) : null}
 
-      {/* ── CLINIC NAVIGATION HEADER (Supports Logo or Monogram Name + Custom Nav Links) ── */}
+      {/* ── CLINIC NAVIGATION HEADER (Logo or Monogram Name Isolation) ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -382,18 +392,24 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* ── DYNAMIC SECTIONS RENDERER WITH 5 DISTINCT LAYOUTS ── */}
+      {/* ── DYNAMIC SECTIONS RENDERER WITH CANVA-GRADE CUSTOMIZATION ── */}
       {activeSections.map((section, index) => {
+        // Section Design Overrides
+        const d = section.design || {};
+        const customBg = section.bgColor || d.bgColor;
+        const paddingClass = d.paddingSize === "compact" ? "py-12" : d.paddingSize === "spacious" ? "py-28" : "py-20";
+
         // 1. HERO SECTION
         if (section.type === "HERO") {
           const heroHeadline = section.title !== undefined ? section.title : data.heroHeading;
           const heroSub = section.subtitle !== undefined ? section.subtitle : data.heroSubheading;
+          const heroVariant = d.layoutVariant || (themeId === "apex-clinical" || themeId === "executive-private" ? "full_width" : "split");
 
-          // THEME ARCHITECTURE 1: APEX (FULL-WIDTH AMBIENT HERO SLIDER)
-          if (themeId === "apex-clinical") {
+          // HERO VARIANT: FULL WIDTH LUXURY AMBIENT SLIDER
+          if (heroVariant === "full_width" || themeId === "apex-clinical" || themeId === "executive-private") {
             return renderSectionContainer(
               section,
-              <section className="relative min-h-[560px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-950 py-20 px-4">
+              <section className={`relative min-h-[580px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-950 ${paddingClass} px-4`}>
                 <div className="absolute inset-0 z-0">
                   {sliderImages.map((imgUrl, i) => (
                     <div
@@ -449,18 +465,25 @@ export function ThemeRenderer({
             );
           }
 
-          // THEME ARCHITECTURES 2, 3, 4, 5 (SPLIT LUXURY MULTI-PHOTO CAROUSEL)
+          // HERO VARIANT: MODERN SPLIT WITH MULTI-IMAGE CAROUSEL
           return renderSectionContainer(
             section,
-            <section className={`relative overflow-hidden pt-12 pb-20 border-b border-slate-100 ${
-              themeId === "serene-glow"
-                ? "bg-[#FAF8F5]"
-                : themeId === "warm-pediatrics"
-                ? "bg-emerald-50/40"
-                : themeId === "minimal-luxe"
-                ? "bg-cyan-50/30"
-                : "bg-slate-50/60"
-            }`}>
+            <section
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`relative overflow-hidden pt-12 pb-20 border-b border-slate-100 ${
+                !customBg
+                  ? themeId === "serene-glow"
+                    ? "bg-[#FAF8F5]"
+                    : themeId === "ayurveda-earth"
+                    ? "bg-[#FDFBF7]"
+                    : themeId === "warm-pediatrics"
+                    ? "bg-emerald-50/40"
+                    : themeId === "minimal-luxe"
+                    ? "bg-cyan-50/30"
+                    : "bg-slate-50/60"
+                  : ""
+              }`}
+            >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
@@ -502,7 +525,6 @@ export function ThemeRenderer({
                     </div>
                   </div>
 
-                  {/* Right Column: Multi-Image Slider Frame */}
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
                       <div className={`bg-white ${buttonRadiusClass} p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5`}>
@@ -617,7 +639,11 @@ export function ThemeRenderer({
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
-            <section id="services" className="py-20 bg-white border-b border-slate-100">
+            <section
+              id="services"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+            >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
                   <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
@@ -636,7 +662,10 @@ export function ThemeRenderer({
                     return (
                       <div
                         key={idx}
-                        className={`p-6 ${buttonRadiusClass} bg-slate-50/70 border border-slate-200/80 hover:border-blue-300 hover:shadow-lg transition-all space-y-4 flex flex-col justify-between`}
+                        style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
+                        className={`p-6 ${buttonRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
+                          !d.cardBg ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300" : "border-slate-200"
+                        }`}
                       >
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -697,7 +726,11 @@ export function ThemeRenderer({
         if (section.type === "REVIEWS") {
           return renderSectionContainer(
             section,
-            <section id="reviews" className="py-20 bg-slate-50 border-b border-slate-100">
+            <section
+              id="reviews"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-slate-50" : ""}`}
+            >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
                   <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
@@ -743,7 +776,11 @@ export function ThemeRenderer({
         if (section.type === "DOCTOR_BIO") {
           return renderSectionContainer(
             section,
-            <section id="about" className="py-20 bg-white border-b border-slate-100">
+            <section
+              id="about"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+            >
               <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className={`bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 ${buttonRadiusClass} p-8 sm:p-12 text-white shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}>
                   <div className="md:col-span-4 text-center">
@@ -786,7 +823,10 @@ export function ThemeRenderer({
         if (section.type === "CTA_BANNER") {
           return renderSectionContainer(
             section,
-            <section className="py-16 text-white text-center relative overflow-hidden" style={{ backgroundColor: primaryColor }}>
+            <section
+              style={customBg ? { backgroundColor: customBg } : { backgroundColor: primaryColor }}
+              className="py-16 text-white text-center relative overflow-hidden"
+            >
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
                 <h3 className="text-2xl sm:text-4xl font-black tracking-tight">
                   {section.title || "Ready to Book Your Consultation?"}
@@ -822,7 +862,10 @@ export function ThemeRenderer({
         if (section.type === "GALLERY") {
           return renderSectionContainer(
             section,
-            <section className="py-20 bg-white border-b border-slate-100">
+            <section
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+            >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
                   <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
@@ -857,7 +900,11 @@ export function ThemeRenderer({
         if (section.type === "FAQ") {
           return renderSectionContainer(
             section,
-            <section id="faq" className="py-20 bg-slate-50 border-b border-slate-100">
+            <section
+              id="faq"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-slate-50" : ""}`}
+            >
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
                 <div className="text-center space-y-2">
                   <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
@@ -896,14 +943,18 @@ export function ThemeRenderer({
           );
         }
 
-        // 8. MAP & HOURS SECTION (Accurate GBP Map Pinning)
+        // 8. MAP & HOURS SECTION
         if (section.type === "MAP_HOURS") {
           const mapQuery = encodeURIComponent(clinicAddressText);
           const mapSrc = data.mapEmbedUrl || `https://maps.google.com/maps?q=${mapQuery}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
 
           return renderSectionContainer(
             section,
-            <section id="contact" className="py-20 bg-white border-b border-slate-100">
+            <section
+              id="contact"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+            >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                   <div className="lg:col-span-5 space-y-6">
@@ -968,7 +1019,10 @@ export function ThemeRenderer({
         if (section.type === "CUSTOM_TEXT") {
           return renderSectionContainer(
             section,
-            <section className="py-16 bg-slate-50 border-b border-slate-100">
+            <section
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50" : ""}`}
+            >
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-center">
                 <h3 className="text-2xl font-bold text-slate-900">{section.title || "Custom Story & Information"}</h3>
                 {section.content && section.content.trim().length > 0 && (
@@ -983,7 +1037,7 @@ export function ThemeRenderer({
         return null;
       })}
 
-      {/* ── FOOTER (Logo or Name Isolation) ── */}
+      {/* ── FOOTER ── */}
       <footer className="py-12 bg-slate-900 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
