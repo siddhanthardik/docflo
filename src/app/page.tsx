@@ -169,6 +169,7 @@ export default function LandingPage() {
   const annualRevenue = monthlyRevenue * 12;
 
   // Live pricing from Super Admin panel
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [packages, setPackages] = useState<any[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
 
@@ -884,59 +885,167 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING SECTION ── */}
-      <section id="pricing" ref={pricingRef} className="py-24 bg-slate-50">
+      {/* ── PRICING SECTION: 3-TIER BALANCED UI/UX ── */}
+      <section id="pricing" ref={pricingRef} className="py-24 bg-slate-50 border-t border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-blue-100">
-              <CreditCard className="w-3.5 h-3.5 text-blue-600" /> Transparent Pricing
+              <CreditCard className="w-3.5 h-3.5 text-blue-600" /> Transparent Practice Plans
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Invest in Predictable Practice Growth</h2>
-            <p className="text-sm text-slate-600">Choose the right plan to power your local search rankings, website, and WhatsApp automation.</p>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              Invest in Predictable Practice Growth
+            </h2>
+            <p className="text-base text-slate-600 leading-relaxed">
+              Transparent plans tailored for solo clinics, busy specialty practices, and multi-location hospital networks.
+            </p>
+
+            {/* Monthly / Annual Toggle */}
+            <div className="flex items-center justify-center gap-3 pt-4">
+              <span className={`text-xs font-bold transition-colors ${billingCycle === "monthly" ? "text-slate-900" : "text-slate-500"}`}>
+                Billed Monthly
+              </span>
+              <button
+                type="button"
+                onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
+                className="relative inline-flex h-7 w-14 items-center rounded-full bg-slate-200 p-1 transition-colors focus:outline-none"
+                style={{ backgroundColor: billingCycle === "yearly" ? "#2563eb" : "#cbd5e1" }}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                    billingCycle === "yearly" ? "translate-x-7" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-bold transition-colors ${billingCycle === "yearly" ? "text-slate-900" : "text-slate-500"}`}>
+                  Billed Annually
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-200">
+                  Save 20%
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {packagesLoading ? (
-              <div className="col-span-3 text-center py-12 text-slate-400 font-bold text-sm">Loading plans...</div>
-            ) : packages.length > 0 ? (
-              packages.map((pkg, idx) => (
-                <div key={pkg.id || idx} className={`p-8 rounded-3xl bg-white border transition-all space-y-6 flex flex-col justify-between ${
-                  pkg.isFeatured ? "border-blue-600 shadow-xl ring-2 ring-blue-600/20 relative" : "border-slate-200/80 shadow-xs hover:shadow-lg"
-                }`}>
-                  {pkg.isFeatured && (
-                    <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
-                      Most Popular
-                    </span>
-                  )}
-                  <div className="space-y-3">
-                    <h3 className="text-xl font-bold text-slate-900">{pkg.name}</h3>
-                    <p className="text-xs text-slate-500">{pkg.description || "Complete practice growth suite."}</p>
-                    <div className="pt-2">
-                      <span className="text-3xl font-black text-slate-900">₹{pkg.priceINR?.toLocaleString("en-IN") || pkg.price}</span>
-                      <span className="text-xs text-slate-400 font-semibold"> / month</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5 pt-4 border-t border-slate-100 text-xs text-slate-700 font-medium">
-                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Specialty Clinic Website (20 Themes)</div>
-                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> WhatsApp AI Receptionist &amp; Booking</div>
-                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 5×5 Geo-Rank Heatmap Tracker</div>
-                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Automated 5-Star WhatsApp Review Engine</div>
-                  </div>
-
-                  <Link href="/register">
-                    <Button className={`w-full font-bold text-xs h-11 rounded-xl shadow-md ${
-                      pkg.isFeatured ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-900 hover:bg-black text-white"
-                    }`}>
-                      Get Started Now
-                    </Button>
-                  </Link>
+          {/* 3-Tier Comparison Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
+            
+            {/* TIER 1: Starter Practice */}
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">
+                  🌱 Solo Clinic
                 </div>
-              ))
-            ) : (
-              <div className="col-span-3 text-center py-12 text-slate-400">Plans available on registration.</div>
-            )}
+                <h3 className="text-xl font-black text-slate-900">Starter Practice</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Essential Google Maps visibility and basic WhatsApp patient communication.
+                </p>
+                <div className="pt-2">
+                  <span className="text-4xl font-black text-slate-900">
+                    ₹{billingCycle === "yearly" ? "1,999" : "2,499"}
+                  </span>
+                  <span className="text-xs text-slate-500 font-semibold"> / month</span>
+                </div>
+                <div className="space-y-3 pt-4 border-t border-slate-100 text-xs text-slate-700 font-medium">
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 3×3 Geo-Rank Heatmap Scanner</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 5-Star WhatsApp Review Engine (50/mo)</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Subdomain Clinic Website (e.g. drname.gyrex.in)</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Patient CRM &amp; OPD Booking Calendar</div>
+                  <div className="flex items-center gap-2.5 text-slate-400"><X className="w-4 h-4 text-slate-300 shrink-0" /> Custom Branded Domain</div>
+                  <div className="flex items-center gap-2.5 text-slate-400"><X className="w-4 h-4 text-slate-300 shrink-0" /> 24/7 WhatsApp AI Receptionist</div>
+                </div>
+              </div>
+              <Link href="/register">
+                <Button variant="outline" className="w-full font-bold text-xs h-12 rounded-xl border-slate-300 hover:bg-slate-50 text-slate-900">
+                  Start 14-Day Free Trial
+                </Button>
+              </Link>
+            </div>
+
+            {/* TIER 2: Growth & Domination (Featured) */}
+            <div className="bg-gradient-to-b from-white to-blue-50/40 p-8 rounded-3xl border-2 border-blue-600 shadow-2xl ring-4 ring-blue-600/10 flex flex-col justify-between space-y-6 relative md:-translate-y-2">
+              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-wider px-4 py-1 rounded-full shadow-md flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-300" /> Most Popular Choice
+              </span>
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">
+                  🚀 Specialty Practice
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Growth &amp; Domination</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Full practice OS with 20 Specialty Website themes, 24/7 AI receptionist &amp; automated 5-star review engine.
+                </p>
+                <div className="pt-2">
+                  <span className="text-4xl font-black text-blue-600">
+                    ₹{billingCycle === "yearly" ? "3,999" : "4,999"}
+                  </span>
+                  <span className="text-xs text-slate-500 font-semibold"> / month</span>
+                </div>
+                <div className="space-y-3 pt-4 border-t border-slate-200/60 text-xs text-slate-800 font-semibold">
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> 5×5 Geo-Rank Heatmap Tracker (25 Nodes)</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> 20 Specialty Clinical Website Themes</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> Custom Branded Domain + Free SSL</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> 24/7 WhatsApp AI Receptionist (6 Languages)</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> Unlimited 5-Star WhatsApp Reviews</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> Full WYSIWYG Patient Education Blog</div>
+                </div>
+              </div>
+              <Link href="/register">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs h-12 rounded-xl shadow-lg shadow-blue-500/20">
+                  Launch Growth Plan 🚀
+                </Button>
+              </Link>
+            </div>
+
+            {/* TIER 3: Elite & Multi-Location */}
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">
+                  🏥 Multi-Location / Chain
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Elite &amp; Multi-Clinic</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Enterprise growth suite for hospital chains and multi-practitioner centers.
+                </p>
+                <div className="pt-2">
+                  <span className="text-4xl font-black text-slate-900">
+                    ₹{billingCycle === "yearly" ? "7,999" : "9,999"}
+                  </span>
+                  <span className="text-xs text-slate-500 font-semibold"> / month</span>
+                </div>
+                <div className="space-y-3 pt-4 border-t border-slate-100 text-xs text-slate-700 font-medium">
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" /> Multi-Location GBP Sync (Up to 5 Clinics)</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" /> Multiple Doctor Sub-Domains &amp; Portals</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" /> Dedicated Account Manager &amp; Custom Onboarding</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" /> Custom WhatsApp Flow Integrations</div>
+                  <div className="flex items-center gap-2.5"><CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" /> Priority 24/7 Phone &amp; SLA Support</div>
+                </div>
+              </div>
+              <Link href="/contact">
+                <Button variant="outline" className="w-full font-bold text-xs h-12 rounded-xl border-slate-300 hover:bg-slate-50 text-slate-900">
+                  Talk to Enterprise Sales
+                </Button>
+              </Link>
+            </div>
+
           </div>
+
+          {/* Bottom Trust Guarantee */}
+          <div className="text-center pt-6 text-xs text-slate-500 flex items-center justify-center gap-6 flex-wrap">
+            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" /> 14-Day Money-Back Guarantee
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-blue-600" /> Cancel Anytime in 1 Click
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <Clock className="w-4 h-4 text-purple-600" /> Instant 2-Minute Setup
+            </span>
+          </div>
+
         </div>
       </section>
 
