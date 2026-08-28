@@ -164,10 +164,10 @@ export default function LandingPage() {
 
   // Rotating Hero Punchlines
   const punchlines = [
-    "Instant 5-Star Reviews on WhatsApp",
-    "Tailored Websites for 20 Medical Specialties",
     "24/7 WhatsApp AI Receptionist That Books Appointments",
     "Rank #1 on Google Maps in Your Neighborhood",
+    "Instant 5-Star Reviews on WhatsApp",
+    "Tailored Websites for 20 Medical Specialties",
   ];
   const [punchlineIndex, setPunchlineIndex] = useState(0);
   const [punchlineFade, setPunchlineFade] = useState(true);
@@ -257,13 +257,13 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       <LandingHeader />
 
-      {/* ── HERO SECTION: CLEAN, HIGH-IMPACT 2-COLUMN SHOWCASE ── */}
-      <section className="relative pt-28 pb-14 md:pt-36 md:pb-20 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
+            {/* ── HERO SECTION: CLEAN, HIGH-IMPACT 2-COLUMN SHOWCASE ── */}
+      <section className="relative pt-28 pb-12 md:pt-36 md:pb-16 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             
-            {/* Left Column: Headline, Scanner & CTAs (7 Cols) */}
-            <div className="lg:col-span-7 space-y-5 text-center lg:text-left">
+            {/* Left Column: Headline, Giant Rotating Punchline & High-Converting CTAs (7 Cols) */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               
               <motion.h1 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
                 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
@@ -273,85 +273,44 @@ export default function LandingPage() {
                 </span>
               </motion.h1>
 
-              {/* Rotating Dynamic Value Hook */}
-              <div className="h-9 flex items-center justify-center lg:justify-start">
-                <p className={`text-lg sm:text-2xl font-black text-indigo-700 transition-all duration-300 transform ${
-                  punchlineFade ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              {/* Giant Rotating Dynamic Punchlines */}
+              <div className="min-h-[56px] sm:min-h-[68px] flex items-center justify-center lg:justify-start">
+                <p className={`text-2xl sm:text-3xl lg:text-4xl font-black text-indigo-700 transition-all duration-300 transform leading-tight ${
+                  punchlineFade ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-98"
                 }`}>
                   ✨ {punchlines[punchlineIndex]}
                 </p>
               </div>
 
-              <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Automate your Google Maps SEO, launch tailored specialty clinic websites, capture patient inquiries 24/7 on WhatsApp, and build an unstoppable 5-star reputation.
-              </motion.p>
-
-              {/* 60-Second Instant GBP Audit Scanner */}
+              {/* Primary Direct CTAs */}
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-                className="pt-2 max-w-xl mx-auto lg:mx-0 relative">
-                <div className="bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80 flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1 flex items-center">
-                    <Search className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none" />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleInputChange}
-                      onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                      placeholder="Enter Clinic Name or City (e.g. Apollo Dental Indiranagar)"
-                      className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden font-medium"
-                    />
-                    {isLoadingSuggestions && (
-                      <RefreshCw className="w-4 h-4 text-blue-600 animate-spin absolute right-3" />
-                    )}
-                  </div>
-                  <Button
-                    onClick={() => handleScan()}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm px-6 h-12 rounded-xl shadow-md transition-transform hover:scale-102 flex items-center justify-center gap-2"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Run Free Audit</span>
+                className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+                <Link href="/register">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-13 px-8 rounded-2xl shadow-xl shadow-blue-500/25 transition-transform hover:scale-105 flex items-center gap-2">
+                    <span>Start 14-Day Free Trial</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Button>
-                </div>
-
-                {/* Suggestions Dropdown */}
-                {showDropdown && predictions.length > 0 && (
-                  <div
-                    ref={dropdownRef}
-                    className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-left divide-y divide-slate-100"
-                  >
-                    {predictions.map((p) => (
-                      <button
-                        key={p.place_id}
-                        onClick={() => handleSelectPlace(p)}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50/60 flex items-start gap-3 transition-colors"
-                      >
-                        <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-slate-900">{p.structured_formatting.main_text}</p>
-                          {p.structured_formatting.secondary_text && (
-                            <p className="text-[11px] text-slate-500">{p.structured_formatting.secondary_text}</p>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                </Link>
+                <Link href="#clinic-websites">
+                  <Button variant="outline" className="h-13 px-6 rounded-2xl border-slate-300 hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-xs flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-purple-600" />
+                    <span>Explore 20 Clinic Themes</span>
+                  </Button>
+                </Link>
               </motion.div>
 
               {/* Quick Trust Highlights */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-1 text-xs font-semibold text-slate-600">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2 text-xs font-semibold text-slate-600">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" /> No Credit Card Required
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-blue-600" /> 20 Specialty Themes
+                  <CheckCircle2 className="w-4 h-4 text-blue-600" /> Instant 2-Minute Setup
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-purple-600" /> 24/7 WhatsApp AI
+                  <CheckCircle2 className="w-4 h-4 text-purple-600" /> Cancel Anytime
                 </span>
               </div>
 
@@ -419,26 +378,55 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── METRICS & SOCIAL PROOF BAR ── */}
-      <section ref={statsRef} className="bg-white py-8 border-y border-slate-200/80">
+      {/* ── 4-PILLAR CORE CAPABILITY SHOWCASE (BELOW HERO) ── */}
+      <section className="py-10 bg-white border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-2xl sm:text-3xl font-black text-slate-900">500+</span>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Active Clinics</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            
+            {/* Pillar 1: Google Maps SEO */}
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-black text-slate-900">Automate Google Maps SEO</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                5×5 Geo-Rank heatmaps simulate virtual searchers to dominate local neighborhood map packs.
+              </p>
             </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-600">4.9 ★</span>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Average Rating</p>
+
+            {/* Pillar 2: Specialty Websites */}
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                <Layout className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-black text-slate-900">Specialty Clinic Websites</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                20 tailored clinical themes with Google 99+ PageSpeed and custom domain support.
+              </p>
             </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-2xl sm:text-3xl font-black text-blue-600">98%</span>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">WhatsApp Open Rate</p>
+
+            {/* Pillar 3: 24/7 WhatsApp Receptionist */}
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                <Bot className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-black text-slate-900">24/7 WhatsApp Receptionist</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Captures patient inquiries in 6+ languages and books appointments directly into your calendar.
+              </p>
             </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-2xl sm:text-3xl font-black text-purple-600">20</span>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Specialty Themes</p>
+
+            {/* Pillar 4: 5-Star Reputation */}
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+              </div>
+              <h3 className="text-sm font-black text-slate-900">5-Star Review Engine</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Automated 2-step WhatsApp surveys convert 70%+ of happy patients into 5-star Google reviews.
+              </p>
             </div>
+
           </div>
         </div>
       </section>
