@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "executive-private"
+    ? [
+        { name: "Executive Longevity & Biomarker Screening", description: "Full-body organ profiling, advanced genetic markers, cardiac CT score, and anti-aging biomarker analysis.", icon: "crown", duration: "60" },
+        { name: "Private Medical Concierge & Priority VIP Suite", description: "Seamless coordination of world-class specialist second opinions, private VIP suites, and priority care.", icon: "shield", duration: "60" },
+        { name: "Personalized Preventive Medicine & Metabolism", description: "Customized bio-identical hormone profiling, nutritional genomics, and continuous metabolic monitoring.", icon: "sparkles", duration: "45" },
+        { name: "Bespoke Family Health Advisory & Direct Access", description: "Dedicated private family physician with direct 24/7 WhatsApp access, home visits, and care coordination.", icon: "heart", duration: "45" },
+        { name: "Executive Stress, Sleep & Cognitive Boost", description: "Neuro-feedback monitoring, circadian rhythm optimization, and executive burnout recovery protocols.", icon: "brain", duration: "45" },
+        { name: "Global Medical Second Opinions & Concierge", description: "Direct case review by world-leading international medical specialists and cross-border coordination.", icon: "crown", duration: "60" },
+      ]
     : themeId === "neuropsych-horizon"
     ? [
         { name: "Digital Video EEG & Epilepsy Care", description: "32-channel video electroencephalogram mapping for seizures, fainting spells, and epilepsy.", icon: "brain", duration: "45" },
@@ -217,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "executive-private"
+    ? [
+        { question: "How does the VIP Medical Concierge model work?", answer: "Our practice limits total client enrollment to ensure immediate, unhurried, same-day access with direct 24/7 personal communication with your senior physician." },
+        { question: "How long are private consultation appointments?", answer: "Unlike standard clinics, each private executive consultation is scheduled for 45 to 60 minutes, ensuring exhaustive discussion of your health, longevity, and preventive goals." },
+        { question: "How is absolute privacy and discretion maintained for high-profile clients?", answer: "We provide private entrance access, dedicated private suites, zero waiting room overlap, and stringent VIP confidentiality protocols." },
+        { question: "How do I reserve a private consultation suite?", answer: "Click 'Book Appointment' or connect directly with our medical concierge on WhatsApp." },
+      ]
     : themeId === "neuropsych-horizon"
     ? [
         { question: "Are therapy and psychiatry sessions strictly confidential?", answer: "Yes, absolute patient confidentiality is guaranteed. All clinical records and consultations are strictly protected under medical privacy protocols." },
@@ -786,10 +802,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth, Theme 8: CardioCare Executive, Theme 9: NeuroPsych Horizon & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-10: All 10 Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "executive-private"
+            ? [
+                { value: "Zero", label: "Waiting Time Guaranteed", icon: "crown" },
+                { value: "1-on-1", label: "Dedicated Senior Physician", icon: "shield" },
+                { value: "24/7", label: "Direct Concierge Access", icon: "phone" },
+                { value: "5.0 ★", label: "Executive Client Rating", icon: "star" },
+              ]
             : themeId === "neuropsych-horizon"
             ? [
                 { value: "100%", label: "Confidential & Private", icon: "shield" },
