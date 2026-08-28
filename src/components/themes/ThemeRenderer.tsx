@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "warm-pediatrics"
+    ? [
+        { name: "Newborn Screening & Neonatal Care", description: "Comprehensive birth weight monitoring, jaundice evaluation, and lactation counseling.", icon: "baby", duration: "30" },
+        { name: "Complete IAP Vaccination & Immunization", description: "Painless baby vaccines following latest Indian Academy of Pediatrics (IAP) guidelines.", icon: "syringe", duration: "15" },
+        { name: "Growth & Developmental Tracking", description: "Physical height/weight charts, cognitive milestones, and nutritional dietary planning.", icon: "activity", duration: "30" },
+        { name: "Pediatric Allergy, Asthma & Nebulization", description: "Specialized pediatric nebulization, allergy testing, and childhood wheezing management.", icon: "heart", duration: "30" },
+        { name: "Childhood Infections & Acute Fever Care", description: "Fast accurate diagnosis of seasonal flu, dengue, typhoid, and viral infections.", icon: "thermometer", duration: "20" },
+        { name: "Behavioral & Adolescent Health Guidance", description: "ADHD assessment, speech milestone evaluation, and adolescent physical wellness.", icon: "user", duration: "30" },
+      ]
     : themeId === "minimal-luxe"
     ? [
         { name: "Clear Invisible Aligners & Orthodontics", description: "Discreet teeth straightening with 3D digital simulation and custom clear aligners.", icon: "smile", duration: "30" },
@@ -172,6 +181,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "warm-pediatrics"
+    ? [
+        { question: "What should I do immediately if my child has a high fever?", answer: "Keep the child lightly dressed in a well-ventilated room, administer prescribed antipyretic syrup as per doctor's exact dosage, do lukewarm sponging if needed, and contact the clinic." },
+        { question: "What happens if my baby misses a scheduled vaccination date?", answer: "Most missed vaccines can be caught up safely using the standard IAP catch-up immunization schedule without needing to restart the entire course." },
+        { question: "When should solid foods be introduced to infants?", answer: "Exclusive breastfeeding is advised for the first 6 months. Soft mashed foods (purees, dal water, khichdi) should be introduced gradually around 6 months of age." },
+        { question: "How do I schedule an appointment with the pediatrician?", answer: "Click 'Book Appointment' or message our pediatric reception directly on WhatsApp." },
+      ]
     : themeId === "minimal-luxe"
     ? [
         { question: "Is a Root Canal Treatment (RCT) painful?", answer: "Not at all. With modern local anesthesia, rotary endodontics, and digital apex locators, a root canal is completely painless and often completed in a single 45-minute visit." },
@@ -706,10 +722,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "warm-pediatrics"
+            ? [
+                { value: "20,000+", label: "Happy Kids Treated", icon: "baby" },
+                { value: "100%", label: "WHO & IAP Immunization", icon: "syringe" },
+                { value: "0-18 yrs", label: "Complete Child Care", icon: "user" },
+                { value: "4.9 ★", label: "Parent Trust Rating", icon: "star" },
+              ]
             : themeId === "minimal-luxe"
             ? [
                 { value: "15,000+", label: "Smiles Restored", icon: "smile" },
