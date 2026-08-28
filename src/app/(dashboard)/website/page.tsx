@@ -91,6 +91,7 @@ const THEME_OPTIONS = [
   { id: "nutrilife-dietetics", name: "NutriLife Dietetics", category: "Dietitian & Clinical Nutrition", primary: "#16A34A", secondary: "#1C1917", accent: "#D97706" },
   { id: "acculab-diagnostics", name: "AccuLab Diagnostics", category: "Pathology & Diagnostic Center", primary: "#4338CA", secondary: "#0F172A", accent: "#0891B2" },
   { id: "uropulse-advanced", name: "UroPulse Advanced", category: "Urology & Andrology", primary: "#1D4ED8", secondary: "#0F172A", accent: "#06B6D4" },
+  { id: "oncohorizon-cancer", name: "OncoHorizon Cancer Care", category: "Oncology & Cancer Center", primary: "#7E22CE", secondary: "#0F172A", accent: "#EC4899" },
 ];
 
 const FONTS_HEADINGS = [

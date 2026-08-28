@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "oncohorizon-cancer"
+    ? [
+        { question: "How does a Multidisciplinary Tumor Board improve cancer treatment?", answer: "Our Tumor Board brings together Medical Oncologists, Surgical Oncologists, Radiation Oncologists, Pathologists, and Radiologists to collectively review your case and create a consensus, personalized treatment roadmap." },
+        { question: "How does targeted therapy and immunotherapy differ from traditional chemotherapy?", answer: "Targeted therapy and immunotherapy specifically identify and attack cancer cells or empower your own immune system with significantly fewer side effects, preserving healthy normal cells." },
+        { question: "Can I get an urgent second opinion on my biopsy or PET-CT scan?", answer: "Yes, our oncology second-opinion clinic provides expedited 24-48 hour case reviews with comprehensive staging analysis." },
+        { question: "How do I book an oncology consultation?", answer: "Click 'Book Appointment' or message our cancer care desk directly on WhatsApp." },
+      ]
     : themeId === "uropulse-advanced"
     ? [
         { question: "How is laser kidney stone removal (RIRS) done without any cuts or incisions?", answer: "RIRS uses a flexible, ultra-thin endoscope passed naturally through the urinary tract. A high-precision Holmium/Thulium laser fiber pulverizes the kidney stone into fine dust, eliminating the need for skin cuts or stitches." },
@@ -852,10 +859,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-16: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-17: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "oncohorizon-cancer"
+            ? [
+                { value: "15,000+", label: "Cancer Patients Supported", icon: "heart" },
+                { value: "100%", label: "Tumor Board Consensus", icon: "shield" },
+                { value: "Next-Gen", label: "Targeted & Immunotherapy", icon: "sparkles" },
+                { value: "4.9 ★", label: "Patient & Family Trust", icon: "star" },
+              ]
             : themeId === "uropulse-advanced"
             ? [
                 { value: "12,500+", label: "Laser Uro-Surgeries Done", icon: "shield" },
