@@ -1,11 +1,11 @@
 # ==============================================================================
-# Gyrex Production Caddyfile with On-Demand Automated TLS for Clinic Domains
+# Gyrex Production Caddyfile with On-Demand Automated TLS
 # Location on VPS: /etc/caddy/Caddyfile
 # ==============================================================================
 
 {
-    # Security Ask Endpoint: Queries Gyrex to check if a domain is registered
-    # before issuing Let's Encrypt SSL certificates (prevents abuse / rate limits)
+    # Security Ask Endpoint: Queries Gyrex to check if a subdomain or custom domain
+    # is registered before issuing Let's Encrypt SSL certificates
     on_demand_tls {
         ask http://127.0.0.1:3000/api/websites/verify-domain
         interval 2m
@@ -13,8 +13,8 @@
     }
 }
 
-# 1. Main Gyrex SaaS Platform & All Clinic Subdomains (*.gyrex.in)
-gyrex.in, *.gyrex.in {
+# 1. Main Platform Domain & www
+gyrex.in, www.gyrex.in {
     reverse_proxy 127.0.0.1:3000 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
@@ -23,8 +23,7 @@ gyrex.in, *.gyrex.in {
     }
 }
 
-# 2. Automated On-Demand TLS for All External Custom Branded Clinic Domains
-# (e.g. www.drvinaykumar.com, skinclinicdelhi.in, etc.)
+# 2. Automated On-Demand TLS for ALL Subdomains (*.gyrex.in) & Custom Domains
 :443 {
     tls {
         on_demand
