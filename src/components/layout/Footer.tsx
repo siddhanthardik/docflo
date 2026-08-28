@@ -1,57 +1,126 @@
 import React from "react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
+import { ShieldCheck, Sparkles, CheckCircle2 } from "lucide-react";
 
 export function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 py-16 w-full mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          <div className="md:col-span-1">
-            <div className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-12">
+          
+          {/* Brand & Mission */}
+          <div className="md:col-span-4 space-y-4">
+            <div className="mb-2">
               <GyrexLogo size="md" lightText />
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Structured data-layer system engineered for medical practice growth and patient engagement.
+            <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+              The complete practice growth operating system for modern doctors and specialty clinics. Automated Google Maps SEO, custom clinic websites, 24/7 WhatsApp AI receptionist, and 5-star review growth.
             </p>
+            <div className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] font-bold text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Medical Data Privacy &amp; Secure Cloud Architecture</span>
+            </div>
           </div>
           
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Platform</h4>
-            <ul className="space-y-2.5 text-xs text-slate-400">
-              <li><Link href="/#data-architecture" className="hover:text-white transition">Data Architecture</Link></li>
-              <li><Link href="/#features" className="hover:text-white transition">Core Modules</Link></li>
-              <li><Link href="/local-seo/free-audit" className="hover:text-white transition">Free Audit Tool</Link></li>
-              <li><Link href="/#download-apps" className="hover:text-cyan-400 font-medium transition">Download Apps (Windows & Mobile)</Link></li>
+          {/* Platform Solutions */}
+          <div className="md:col-span-3">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <span>Platform Solutions</span>
+            </h4>
+            <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
+              <li>
+                <Link href="/#clinic-websites" className="hover:text-white transition-colors flex items-center gap-1">
+                  <span>Healthcare Website Builder</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">20 Themes</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/#features" className="hover:text-white transition-colors">
+                  5×5 Geo-Rank Heatmap Tracker
+                </Link>
+              </li>
+              <li>
+                <Link href="/#features" className="hover:text-white transition-colors">
+                  5-Star WhatsApp Review Engine
+                </Link>
+              </li>
+              <li>
+                <Link href="/#whatsapp-engine" className="hover:text-white transition-colors">
+                  24/7 WhatsApp AI Receptionist
+                </Link>
+              </li>
+              <li>
+                <Link href="/local-seo/free-audit" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>Free 60-Sec GBP Audit Scanner</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Company</h4>
-            <ul className="space-y-2.5 text-xs text-slate-400">
-              <li><Link href="/about" className="hover:text-white transition font-medium text-cyan-400">About Us</Link></li>
-              <li><Link href="/blog" className="hover:text-white transition font-medium text-blue-400">Clinical Growth Blog</Link></li>
-              <li><Link href="/login" className="hover:text-white transition">Doctor Portal</Link></li>
-              <li><Link href="/register" className="hover:text-white transition">Register Practice</Link></li>
-              <li><Link href="/affiliates/login" className="hover:text-white transition">Partner Portal</Link></li>
+          {/* Practice & Resources */}
+          <div className="md:col-span-3">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
+              Practice &amp; Resources
+            </h4>
+            <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
+              <li>
+                <Link href="/blog" className="hover:text-white transition-colors">
+                  Clinical Growth &amp; SEO Blog
+                </Link>
+              </li>
+              <li>
+                <Link href="/#roi-calculator" className="hover:text-white transition-colors">
+                  Interactive ROI Calculator
+                </Link>
+              </li>
+              <li>
+                <Link href="/#pricing" className="hover:text-white transition-colors">
+                  Pricing &amp; Subscription Plans
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="hover:text-white transition-colors">
+                  Doctor Portal (Sign In)
+                </Link>
+              </li>
+              <li>
+                <Link href="/register" className="hover:text-white transition-colors">
+                  Register Practice
+                </Link>
+              </li>
+              <li>
+                <Link href="/affiliates/login" className="hover:text-white transition-colors">
+                  Partner &amp; Affiliate Portal
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Compliance & Legal</h4>
-            <ul className="space-y-2.5 text-xs text-slate-400">
-              <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition">Terms of Service</Link></li>
-              <li><Link href="/refund" className="hover:text-white transition">Refund Policy</Link></li>
-              <li><Link href="/disclaimer" className="hover:text-white transition">Disclaimer</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition">Contact Us</Link></li>
+          {/* Legal & Support */}
+          <div className="md:col-span-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
+              Legal &amp; Support
+            </h4>
+            <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
+              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact Support</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/refund" className="hover:text-white transition-colors">Refund Policy</Link></li>
+              <li><Link href="/disclaimer" className="hover:text-white transition-colors">Medical Disclaimer</Link></li>
             </ul>
           </div>
+
         </div>
 
+        {/* Bottom Bar */}
         <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
           <p>© {new Date().getFullYear()} Gyrex Technologies. All rights reserved.</p>
-          <p>Built for healthcare professionals</p>
+          <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
+            <span>Built exclusively for healthcare professionals</span>
+          </div>
         </div>
       </div>
     </footer>
