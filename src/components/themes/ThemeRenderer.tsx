@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "serene-glow"
+    ? [
+        { name: "HydraFacial MD & Deep Pore Infusion", description: "Medical-grade hydra-dermabrasion, lymphatic drainage, and antioxidant serum infusion.", icon: "sparkles", duration: "45" },
+        { name: "Painless Laser Hair Reduction (US-FDA)", description: "Triple-wavelength diode laser with ice-cooling tip for smooth permanent hair reduction.", icon: "shield", duration: "30" },
+        { name: "Acne Scar Resurfacing (Fractional CO2 & MNRF)", description: "Collagen remodeling, subcision, and micro-needling radiofrequency for smooth texture.", icon: "activity", duration: "45" },
+        { name: "Anti-Aging & Medical Injectables (Botox & Fillers)", description: "Natural facial contouring, fine-line reduction, and volume restoration by certified dermatologist.", icon: "heart", duration: "30" },
+        { name: "Pigmentation & Advanced Chemical Peels", description: "Targeted Q-switched laser and medical peels for even-toned radiant complexion.", icon: "sparkles", duration: "30" },
+        { name: "Hair Restoration & PRP / GFC Therapy", description: "Growth factor concentrate and regenerative platelet therapy for hair thinning and alopecia.", icon: "dna", duration: "45" },
+      ]
     : themeId === "ophthalmology-vision"
     ? [
         { name: "Contoura Vision & Bladeless Femto-Lasik", description: "Permanent refractive freedom with US-FDA approved computer-guided laser technology.", icon: "eye", duration: "15" },
@@ -154,6 +163,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "serene-glow"
+    ? [
+        { question: "Is there any downtime after Laser Hair Reduction?", answer: "No downtime. You may experience slight transient redness for 30 minutes, after which you can immediately resume normal activities." },
+        { question: "How many sessions are recommended for Acne Scar resurfacing?", answer: "Most patients achieve significant texture improvement in 4 to 6 sessions spaced 4 weeks apart using combined Fractional CO2 & MNRF." },
+        { question: "How does HydraFacial MD differ from regular salon facials?", answer: "HydraFacial is a patented medical-grade clinical treatment combining vortex suction extraction with medical hyaluronic acid and peptide serum infusions." },
+        { question: "How do I schedule a consultation?", answer: "Click 'Book Appointment' or chat directly with our dermatology reception on WhatsApp." },
+      ]
     : themeId === "ophthalmology-vision"
     ? [
         { question: "What is the recovery time after Bladeless Lasik surgery?", answer: "Most patients experience clear 20/20 vision within 24 to 48 hours and can resume light daily activities the very next day." },
@@ -674,10 +690,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "serene-glow"
+            ? [
+                { value: "12,000+", label: "Skin & Laser Procedures", icon: "sparkles" },
+                { value: "100%", label: "US-FDA Approved Devices", icon: "shield" },
+                { value: "99.2%", label: "Patient Satisfaction", icon: "heart" },
+                { value: "4.9 ★", label: "Google Glow Rated", icon: "star" },
+              ]
             : themeId === "ophthalmology-vision"
             ? [
                 { value: "25,000+", label: "Lasik & Cataract Surgeries", icon: "eye" },
