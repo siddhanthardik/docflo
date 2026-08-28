@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,6 +29,29 @@ import {
   Calendar,
   ExternalLink,
   Bot,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Code,
+  List,
+  Quote,
+  Heading1,
+  Heading2,
+  Heading3,
+  Link2,
+  Table as TableIcon,
+  Minus,
+  Undo,
+  Redo,
+  Highlighter,
+  Lightbulb,
+  AlertTriangle,
+  BookmarkCheck,
+  Type,
+  Maximize2,
+  Minimize2,
+  Code2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,10 +80,13 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
+  const visualEditorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
+  const [editorMode, setEditorMode] = useState<"visual" | "code" | "preview">("visual");
 
   // Form State
   const [title, setTitle] = useState(initialData?.title || "");
@@ -74,6 +100,11 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
   const [scheduledFor, setScheduledFor] = useState(
     initialData?.scheduledFor ? new Date(initialData.scheduledFor).toISOString().slice(0, 16) : ""
   );
+
+  // Link Modal State
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
 
   // Author E-E-A-T
   const [authorName, setAuthorName] = useState(initialData?.authorName || "Gyrex Medical Growth Team");
@@ -101,6 +132,10 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
       : [{ question: "", answer: "" }]
   );
 
+  // Metrics
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
   // Auto-slugify on title change if creating new post
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -116,12 +151,60 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
     }
   };
 
+  // Helper to insert formatting tags at cursor position
+  const insertFormatting = (prefix: string, suffix: string = "", placeholder: string = "") => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end) || placeholder;
+      const replacement = prefix + selected + suffix;
+      const newContent = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+      setContent(newContent);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+      }, 50);
+    } else {
+      setContent((prev: string) => prev + "\n\n" + prefix + (placeholder || "Text") + suffix);
+    }
+  };
+
+  // Quick Insertion Helpers
+  const insertHeading = (level: 2 | 3 | 4) => {
+    const hashes = "#".repeat(level);
+    insertFormatting(`\n${hashes} `, "\n", `Heading ${level}`);
+  };
+
+  const insertCallout = (type: "tip" | "note" | "warning") => {
+    if (type === "tip") {
+      insertFormatting("\n> 💡 **Clinical Tip**: ", "\n", "Add actionable growth recommendation for clinic staff...");
+    } else if (type === "note") {
+      insertFormatting("\n> 📌 **Key Practice Note**: ", "\n", "Highlight critical patient retention or SEO guideline...");
+    } else {
+      insertFormatting("\n> ⚠️ **Important Caution**: ", "\n", "Mention pitfalls to avoid in medical advertising or compliance...");
+    }
+  };
+
+  const insertTable = () => {
+    const sampleTable = `\n| Metric / Feature | Traditional Method | Gyrex Automated System |\n| :--- | :--- | :--- |\n| Patient Booking Speed | 15-30 Mins Waiting | Instant in 10 Seconds |\n| Google Review Velocity | 1-2 Reviews / Month | 25+ 5-Star Reviews / Month |\n| 24/7 After-Hours OPD | Lost Inquiries | 100% Captured by AI |\n`;
+    insertFormatting(sampleTable);
+  };
+
+  const handleInsertLink = () => {
+    if (!linkUrl) return;
+    const anchor = linkText || linkUrl;
+    insertFormatting(`[${anchor}](`, `${linkUrl})`);
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
+  };
+
   // Local Image Upload Handler
   const handleLocalImageSelect = async (e: React.ChangeEvent<HTMLInputElement>, isInline = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File Too Large",
@@ -146,114 +229,64 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
       if (isInline) {
-        // Insert markdown image tag into content
-        const markdownImg = `\n\n![${file.name.replace(/\.[^/.]+$/, "")}](${data.url})\n\n`;
-        setContent((prev: string) => prev + markdownImg);
-        toast({
-          title: "Image Uploaded & Inserted 🖼️",
-          description: "Image markdown code appended to the content.",
-        });
+        const cleanName = file.name.replace(/\.[^/.]+$/, "");
+        const markdownImg = `\n\n![${cleanName}](${data.url})\n*Figure: ${cleanName}*\n\n`;
+        insertFormatting(markdownImg);
+        toast({ title: "Image Inserted! 🖼️", description: "Image successfully added into the article." });
       } else {
         setHeroImage(data.url);
-        if (!heroImageAlt) {
-          setHeroImageAlt(title || file.name.replace(/\.[^/.]+$/, ""));
-        }
-        toast({
-          title: "Hero Image Selected! 📸",
-          description: "Selected image uploaded to local storage successfully.",
-        });
+        toast({ title: "Hero Image Uploaded! 🚀", description: "Set as the primary article cover image." });
       }
     } catch (err: any) {
       toast({
         title: "Upload Failed",
-        description: err.message,
+        description: err.message || "Failed to upload image",
         variant: "destructive",
       });
     } finally {
       setUploadingImage(false);
-      if (e.target) e.target.value = "";
+      e.target.value = "";
     }
   };
 
-  // Key Takeaways helpers
-  const addTakeaway = () => setKeyTakeaways((prev) => [...prev, ""]);
-  const updateTakeaway = (idx: number, text: string) => {
-    const next = [...keyTakeaways];
-    next[idx] = text;
-    setKeyTakeaways(next);
-  };
-  const removeTakeaway = (idx: number) => {
-    setKeyTakeaways((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  // FAQ helpers
-  const addFaq = () => setFaqItems((prev) => [...prev, { question: "", answer: "" }]);
-  const updateFaq = (idx: number, field: "question" | "answer", val: string) => {
-    const next = [...faqItems];
-    next[idx][field] = val;
-    setFaqItems(next);
-  };
-  const removeFaq = (idx: number) => {
-    setFaqItems((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  // Keywords & Tags
-  const addKeyword = () => {
-    if (keywordInput.trim() && !focusKeywords.includes(keywordInput.trim())) {
-      setFocusKeywords((prev) => [...prev, keywordInput.trim()]);
-      setKeywordInput("");
-    }
-  };
-  const removeKeyword = (kw: string) => {
-    setFocusKeywords((prev) => prev.filter((k) => k !== kw));
-  };
-
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags((prev) => [...prev, tagInput.trim()]);
-      setTagInput("");
-    }
-  };
-  const removeTag = (tg: string) => {
-    setTags((prev) => prev.filter((t) => t !== tg));
-  };
-
-  // Save Handler
-  const handleSave = async (overrideStatus?: "DRAFT" | "PUBLISHED" | "SCHEDULED") => {
+  // Save Blog Post
+  const handleSave = async (targetStatus?: "DRAFT" | "PUBLISHED" | "SCHEDULED") => {
     if (!title.trim()) {
-      toast({ title: "Title Required", description: "Please enter an article title.", variant: "destructive" });
-      return;
-    }
-    if (!content.trim()) {
-      toast({ title: "Content Required", description: "Please write article content.", variant: "destructive" });
+      toast({ title: "Title Required", description: "Please provide an article title.", variant: "destructive" });
       return;
     }
 
-    const finalStatus = overrideStatus || status;
+    if (!slug.trim()) {
+      toast({ title: "URL Slug Required", description: "Please specify a URL slug for SEO.", variant: "destructive" });
+      return;
+    }
 
-    const payload = {
-      title,
-      slug: slug || undefined,
-      excerpt,
-      content,
-      heroImage: heroImage || null,
-      heroImageAlt,
-      category,
-      status: finalStatus,
-      scheduledFor: finalStatus === "SCHEDULED" && scheduledFor ? scheduledFor : null,
-      authorName,
-      authorRole,
-      metaTitle: metaTitle || title,
-      metaDescription: metaDescription || excerpt,
-      canonicalUrl: canonicalUrl || null,
-      focusKeywords,
-      tags,
-      keyTakeaways: keyTakeaways.filter((t) => t.trim().length > 0),
-      faqItems: faqItems.filter((f) => f.question.trim().length > 0 && f.answer.trim().length > 0),
-    };
+    const finalStatus = targetStatus || status;
 
     try {
       setSaving(true);
+
+      const payload = {
+        title,
+        slug,
+        excerpt,
+        content,
+        heroImage,
+        heroImageAlt,
+        category,
+        status: finalStatus,
+        scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+        authorName,
+        authorRole,
+        metaTitle: metaTitle || title,
+        metaDescription: metaDescription || excerpt,
+        canonicalUrl,
+        focusKeywords,
+        tags,
+        keyTakeaways: keyTakeaways.filter((t) => t.trim().length > 0),
+        faqItems: faqItems.filter((f) => f.question.trim().length > 0 && f.answer.trim().length > 0),
+      };
+
       const url = isNew ? "/api/admin/blogs" : `/api/admin/blogs/${initialData.id}`;
       const method = isNew ? "POST" : "PUT";
 
@@ -264,37 +297,101 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save blog post");
+      if (!res.ok) throw new Error(data.error || "Failed to save article");
 
       toast({
-        title: finalStatus === "PUBLISHED" ? "Article Published! 🚀" : "Draft Saved Successfully! 💾",
-        description: `"${title}" has been saved.`,
+        title: finalStatus === "PUBLISHED" ? "Article Published Live! 🚀" : "Draft Saved Successfully! 💾",
+        description: finalStatus === "PUBLISHED" ? `Live at gyrex.in/blog/${slug}` : "Your article updates have been saved.",
       });
 
-      if (isNew && data.id) {
-        router.push(`/admin/blogs/${data.id}`);
+      if (isNew) {
+        router.push(`/admin/blogs/${data.post.id}`);
       } else {
-        router.refresh();
+        setStatus(finalStatus);
       }
     } catch (err: any) {
-      toast({
-        title: "Save Error",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: "Save Error", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  // Length calculations for SEO
-  const effectiveMetaTitle = metaTitle || title;
-  const effectiveMetaDesc = metaDescription || excerpt;
+  // Render Formatted HTML Preview
+  const renderFormattedPreview = (rawText: string) => {
+    if (!rawText) return <p className="text-slate-400 italic">No content written yet. Start typing in the visual composer...</p>;
+
+    const lines = rawText.split("\n");
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={idx} className="h-4" />;
+
+      if (trimmed.startsWith("### ")) {
+        return <h3 key={idx} className="text-xl font-bold text-slate-900 mt-6 mb-2">{trimmed.replace("### ", "")}</h3>;
+      }
+      if (trimmed.startsWith("## ")) {
+        return <h2 key={idx} className="text-2xl font-black text-slate-900 mt-8 mb-3 pb-2 border-b border-slate-100">{trimmed.replace("## ", "")}</h2>;
+      }
+      if (trimmed.startsWith("# ")) {
+        return <h1 key={idx} className="text-3xl font-black text-slate-900 mt-8 mb-4">{trimmed.replace("# ", "")}</h1>;
+      }
+      if (trimmed.startsWith("> 💡")) {
+        return (
+          <div key={idx} className="p-4 my-4 rounded-2xl bg-amber-50 border-l-4 border-amber-500 text-amber-950 font-medium text-sm shadow-2xs">
+            {trimmed.replace("> ", "")}
+          </div>
+        );
+      }
+      if (trimmed.startsWith("> 📌")) {
+        return (
+          <div key={idx} className="p-4 my-4 rounded-2xl bg-indigo-50 border-l-4 border-indigo-600 text-indigo-950 font-medium text-sm shadow-2xs">
+            {trimmed.replace("> ", "")}
+          </div>
+        );
+      }
+      if (trimmed.startsWith("> ⚠️")) {
+        return (
+          <div key={idx} className="p-4 my-4 rounded-2xl bg-rose-50 border-l-4 border-rose-500 text-rose-950 font-medium text-sm shadow-2xs">
+            {trimmed.replace("> ", "")}
+          </div>
+        );
+      }
+      if (trimmed.startsWith("> ")) {
+        return (
+          <blockquote key={idx} className="p-4 my-4 rounded-2xl bg-slate-50 border-l-4 border-slate-400 text-slate-800 font-medium italic text-sm">
+            {trimmed.replace("> ", "")}
+          </blockquote>
+        );
+      }
+      if (trimmed.startsWith("![")) {
+        const match = trimmed.match(/!\[(.*?)\]\((.*?)\)/);
+        if (match) {
+          return (
+            <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+              <img src={match[2]} alt={match[1]} className="w-full h-auto object-cover max-h-[450px]" />
+              {match[1] && <p className="text-center text-xs text-slate-500 py-2 italic">{match[1]}</p>}
+            </div>
+          );
+        }
+      }
+      if (trimmed.startsWith("|")) {
+        return (
+          <div key={idx} className="overflow-x-auto my-2">
+            <span className="font-mono text-xs text-slate-600 bg-slate-100 p-1.5 rounded">{trimmed}</span>
+          </div>
+        );
+      }
+      return (
+        <p key={idx} className="text-slate-700 leading-relaxed mb-3 text-base">
+          {trimmed}
+        </p>
+      );
+    });
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-24">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+    <div className="space-y-6 max-w-7xl mx-auto pb-20">
+      {/* Top Header Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-30 backdrop-blur-md bg-white/95">
         <div className="flex items-center gap-3">
           <Link href="/admin/blogs">
             <Button variant="ghost" size="sm" className="h-9 px-2 text-slate-600">
@@ -309,7 +406,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
             <p className="text-xs text-gray-500">
               {status === "PUBLISHED" ? (
                 <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Live & Indexed
+                  <CheckCircle2 className="w-3 h-3" /> Live &amp; Indexed
                 </span>
               ) : status === "SCHEDULED" ? (
                 <span className="text-amber-600 font-semibold flex items-center gap-1">
@@ -360,7 +457,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-3 w-full bg-slate-100 p-1 rounded-xl h-11">
               <TabsTrigger value="content" className="rounded-lg text-xs font-bold gap-1.5">
-                <FileText className="w-3.5 h-3.5" /> Content & Media
+                <FileText className="w-3.5 h-3.5" /> WYSIWYG Composer
               </TabsTrigger>
               <TabsTrigger value="ai-geo" className="rounded-lg text-xs font-bold gap-1.5">
                 <Bot className="w-3.5 h-3.5 text-indigo-600" /> AI &amp; GEO Blocks
@@ -370,7 +467,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: Content & Hero Image */}
+            {/* TAB 1: Full-Fledged WYSIWYG Content & Hero Image */}
             <TabsContent value="content" className="space-y-6 mt-4">
               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-5">
                 {/* Title */}
@@ -399,11 +496,11 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                   />
                 </div>
 
-                {/* Hero Image Selector from Local Computer */}
+                {/* Hero Image Selector */}
                 <div className="space-y-2 pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <ImageIcon className="w-4 h-4 text-indigo-600" /> Hero Image (Select from Local File)
+                      <ImageIcon className="w-4 h-4 text-indigo-600" /> Hero Cover Image
                     </label>
                     {heroImage && (
                       <button
@@ -444,7 +541,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-800">
-                          Click to Select Hero Image from Your Local Computer
+                          Click to Select Hero Image from Your Computer
                         </p>
                         <p className="text-[11px] text-gray-500 mt-0.5">
                           Supports JPEG, PNG, WebP (Max 5MB)
@@ -483,24 +580,190 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                   )}
                 </div>
 
-                {/* Markdown / HTML Content Area */}
-                <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Article Content (Markdown Supported) *
-                    </label>
-                    
-                    {/* Inline Image Upload from Local Computer */}
+                {/* ── WYSIWYG VISUAL EDITOR SUITE ── */}
+                <div className="space-y-2 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
                     <div>
-                      <Button
+                      <label className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-indigo-600" /> Article Content (WYSIWYG Composer)
+                      </label>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        {wordCount} Words • ~{readingTime} Min Read
+                      </span>
+                    </div>
+
+                    {/* Editor Mode Switcher */}
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => inlineImageInputRef.current?.click()}
-                        className="h-7 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50"
+                        onClick={() => setEditorMode("visual")}
+                        className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                          editorMode === "visual" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
                       >
-                        <Upload className="w-3 h-3 mr-1" /> Insert Local Image
-                      </Button>
+                        <Type className="w-3.5 h-3.5" /> Visual Editor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode("code")}
+                        className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                          editorMode === "code" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <Code2 className="w-3.5 h-3.5" /> Source Code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode("preview")}
+                        className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                          editorMode === "preview" ? "bg-white text-indigo-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Live Preview
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── WYSIWYG FORMATTING TOOLBAR ── */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-t-2xl p-2 flex flex-wrap items-center gap-1 shadow-2xs">
+                    {/* Headings */}
+                    <div className="flex items-center gap-0.5 pr-2 border-r border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => insertHeading(2)}
+                        className="px-2 py-1 rounded-lg text-xs font-black text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+                        title="Major Heading (H2)"
+                      >
+                        H2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertHeading(3)}
+                        className="px-2 py-1 rounded-lg text-xs font-black text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+                        title="Subheading (H3)"
+                      >
+                        H3
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertHeading(4)}
+                        className="px-2 py-1 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+                        title="Minor Heading (H4)"
+                      >
+                        H4
+                      </button>
+                    </div>
+
+                    {/* Inline Formatting */}
+                    <div className="flex items-center gap-0.5 px-2 border-r border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("**", "**", "bold text")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Bold (Ctrl+B)"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("*", "*", "italic text")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Italic (Ctrl+I)"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<u>", "</u>", "underlined text")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Underline (Ctrl+U)"
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("~~", "~~", "strikethrough")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Strikethrough"
+                      >
+                        <Strikethrough className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<mark className='bg-amber-200 px-1 rounded'>", "</mark>", "highlighted text")}
+                        className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-100"
+                        title="Highlight Text"
+                      >
+                        <Highlighter className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Lists & Quotes */}
+                    <div className="flex items-center gap-0.5 px-2 border-r border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("\n- ", "\n", "List item")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Bulleted List"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("\n1. ", "\n", "Step 1")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Numbered List"
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("\n> ", "\n", "Blockquote")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Quote Block"
+                      >
+                        <Quote className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Clinical Callout Boxes */}
+                    <div className="flex items-center gap-0.5 px-2 border-r border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => insertCallout("tip")}
+                        className="px-2 py-1 rounded-lg text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1"
+                        title="Insert Clinical Tip Box"
+                      >
+                        <Lightbulb className="w-3 h-3 text-amber-600" /> Tip
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertCallout("note")}
+                        className="px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1"
+                        title="Insert Note Box"
+                      >
+                        <BookmarkCheck className="w-3 h-3 text-indigo-600" /> Note
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertCallout("warning")}
+                        className="px-2 py-1 rounded-lg text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 flex items-center gap-1"
+                        title="Insert Warning Box"
+                      >
+                        <AlertTriangle className="w-3 h-3 text-rose-600" /> Warning
+                      </button>
+                    </div>
+
+                    {/* Media, Links & Tables */}
+                    <div className="flex items-center gap-0.5 px-2">
+                      <button
+                        type="button"
+                        onClick={() => inlineImageInputRef.current?.click()}
+                        className="px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 flex items-center gap-1"
+                        title="Insert Local Image"
+                      >
+                        <Upload className="w-3.5 h-3.5" /> Image
+                      </button>
                       <input
                         ref={inlineImageInputRef}
                         type="file"
@@ -508,20 +771,80 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                         className="hidden"
                         onChange={(e) => handleLocalImageSelect(e, true)}
                       />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowLinkModal(true)}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Insert Hyperlink"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={insertTable}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Insert Comparison Table"
+                      >
+                        <TableIcon className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("\n\n---\n\n")}
+                        className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-200"
+                        title="Divider Line"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Write article in Markdown: # Heading, ## Subheading, **Bold**, - Lists, > Quotes, [Links](url)..."
-                    rows={18}
-                    className="font-mono text-xs leading-relaxed p-4 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    required
-                  />
-                  <p className="text-[11px] text-gray-400">
-                    Tip: Use ## for Major Headings and ### for Subheadings to auto-generate the reader Table of Contents.
-                  </p>
+                  {/* ── EDITOR BODY: WYSIWYG / CODE / PREVIEW ── */}
+                  {editorMode === "preview" ? (
+                    <div className="bg-white border border-slate-200 border-t-0 rounded-b-2xl p-6 sm:p-8 min-h-[450px] shadow-inner space-y-4">
+                      <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-900 font-semibold flex items-center justify-between">
+                        <span>👁️ Live Reader View (Formatted exactly as on gyrex.in/blog/{slug || "slug"})</span>
+                        <span className="font-bold">{wordCount} words</span>
+                      </div>
+                      <article className="prose prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:leading-relaxed prose-a:text-blue-600">
+                        {renderFormattedPreview(content)}
+                      </article>
+                    </div>
+                  ) : editorMode === "visual" ? (
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Write your high-converting healthcare article here... Use toolbar buttons above to format headings, bullet points, clinical callout boxes, and upload local images."
+                        rows={18}
+                        className="font-sans text-sm leading-relaxed p-5 rounded-t-none rounded-b-2xl border-slate-200 focus:ring-2 focus:ring-indigo-500 border-t-0 min-h-[400px]"
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Raw Markdown / HTML source code..."
+                        rows={18}
+                        className="font-mono text-xs leading-relaxed p-4 rounded-t-none rounded-b-2xl border-slate-200 bg-slate-900 text-emerald-400 focus:ring-2 focus:ring-indigo-500 border-t-0 min-h-[400px]"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {/* Quick Guide */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
+                    <span>💡 Tip: Insert <strong>H2</strong> and <strong>H3</strong> headings to automatically populate the reader Table of Contents.</span>
+                    <span className="font-semibold text-indigo-600 cursor-pointer hover:underline" onClick={() => setEditorMode("preview")}>
+                      Preview Article ↗
+                    </span>
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -551,87 +874,94 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={addTakeaway}
+                      onClick={() => setKeyTakeaways([...keyTakeaways, ""])}
                       className="h-7 text-xs font-bold"
                     >
-                      <Plus className="w-3 h-3 mr-1" /> Add Point
+                      <Plus className="w-3 h-3 mr-1" /> Add Takeaway
                     </Button>
                   </div>
-                  <p className="text-[11px] text-gray-500">
-                    Displayed in a highlighted banner at the top of the article. Highly cited by Perplexity and Google AI Overviews.
-                  </p>
 
                   <div className="space-y-2">
-                    {keyTakeaways.map((point, idx) => (
+                    {keyTakeaways.map((takeaway, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
                         <Input
-                          value={point}
-                          onChange={(e) => updateTakeaway(idx, e.target.value)}
-                          placeholder="e.g. 78% of local patient searches convert through the Google Map 3-pack."
-                          className="h-9 text-xs rounded-xl"
+                          value={takeaway}
+                          onChange={(e) => {
+                            const copy = [...keyTakeaways];
+                            copy[idx] = e.target.value;
+                            setKeyTakeaways(copy);
+                          }}
+                          placeholder={`Key Takeaway #${idx + 1} (e.g. 78% of local patients book doctors with 25+ recent reviews)`}
+                          className="text-xs rounded-xl h-10"
                         />
                         {keyTakeaways.length > 1 && (
-                          <button
+                          <Button
                             type="button"
-                            onClick={() => removeTakeaway(idx)}
-                            className="text-gray-400 hover:text-red-600 p-1"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setKeyTakeaways(keyTakeaways.filter((_, i) => i !== idx))}
+                            className="text-red-500 hover:text-red-700 h-9 w-9 p-0 shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* FAQ Builder & JSON-LD Schema */}
+                {/* In-Article FAQs (Rich Snippets) */}
                 <div className="space-y-3 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <HelpCircle className="w-4 h-4 text-emerald-600" /> Frequently Asked Questions (FAQ Schema Markup)
+                      <HelpCircle className="w-4 h-4 text-emerald-600" /> Article FAQs (Schema Rich Snippets)
                     </label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={addFaq}
+                      onClick={() => setFaqItems([...faqItems, { question: "", answer: "" }])}
                       className="h-7 text-xs font-bold"
                     >
                       <Plus className="w-3 h-3 mr-1" /> Add FAQ
                     </Button>
                   </div>
-                  <p className="text-[11px] text-gray-500">
-                    Automatically injects Google FAQPage Schema to trigger interactive expandable dropdowns directly on Google Search results.
-                  </p>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {faqItems.map((faq, idx) => (
-                      <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 relative">
+                      <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 relative">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-indigo-900">FAQ Question #{idx + 1}</span>
+                          <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider">
+                            FAQ Question #{idx + 1}
+                          </span>
                           {faqItems.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => removeFaq(idx)}
-                              className="text-gray-400 hover:text-red-600 text-xs flex items-center gap-1"
+                              onClick={() => setFaqItems(faqItems.filter((_, i) => i !== idx))}
+                              className="text-red-500 hover:text-red-700 text-xs font-semibold"
                             >
-                              <Trash2 className="w-3.5 h-3.5" /> Remove
+                              Remove
                             </button>
                           )}
                         </div>
                         <Input
                           value={faq.question}
-                          onChange={(e) => updateFaq(idx, "question", e.target.value)}
-                          placeholder="e.g. How fast does a Google Business Profile category update take to index?"
-                          className="h-9 text-xs bg-white rounded-lg font-medium"
+                          onChange={(e) => {
+                            const copy = [...faqItems];
+                            copy[idx].question = e.target.value;
+                            setFaqItems(copy);
+                          }}
+                          placeholder="e.g. How long does Google Maps verification take for a new clinic?"
+                          className="text-xs font-bold bg-white rounded-lg h-9"
                         />
                         <Textarea
                           value={faq.answer}
-                          onChange={(e) => updateFaq(idx, "answer", e.target.value)}
-                          placeholder="Answer: Category changes typically update within 7-14 days on Google Maps..."
+                          onChange={(e) => {
+                            const copy = [...faqItems];
+                            copy[idx].answer = e.target.value;
+                            setFaqItems(copy);
+                          }}
+                          placeholder="Direct, authoritative answer in 2-3 sentences..."
                           rows={2}
                           className="text-xs bg-white rounded-lg"
                         />
@@ -642,136 +972,95 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
               </div>
             </TabsContent>
 
-            {/* TAB 3: SEO, Canonical & Social Card Previews */}
+            {/* TAB 3: SEO, Social & Publishing Settings */}
             <TabsContent value="seo" className="space-y-6 mt-4">
               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-6">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Search Engine &amp; Social Optimization</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Customize meta tags and verify SERP snippet previews.</p>
-                </div>
-
-                {/* Meta Title */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">SEO Meta Title</label>
-                    <span className={`text-[11px] font-semibold ${effectiveMetaTitle.length > 60 ? "text-amber-600" : "text-gray-400"}`}>
-                      {effectiveMetaTitle.length}/60 chars
-                    </span>
-                  </div>
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">SEO Meta Title</label>
                   <Input
                     value={metaTitle}
                     onChange={(e) => setMetaTitle(e.target.value)}
-                    placeholder={title || "Article SEO Title..."}
-                    className="h-10 text-xs rounded-xl"
+                    placeholder={title || "SEO optimized title under 60 chars..."}
+                    className="text-xs rounded-xl h-10"
                   />
+                  <p className="text-[11px] text-gray-400">
+                    {metaTitle.length}/60 characters (Google search result title)
+                  </p>
                 </div>
 
-                {/* Meta Description */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">SEO Meta Description</label>
-                    <span className={`text-[11px] font-semibold ${effectiveMetaDesc.length > 160 ? "text-amber-600" : "text-gray-400"}`}>
-                      {effectiveMetaDesc.length}/160 chars
-                    </span>
-                  </div>
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">SEO Meta Description</label>
                   <Textarea
                     value={metaDescription}
                     onChange={(e) => setMetaDescription(e.target.value)}
-                    placeholder={excerpt || "Compelling 150-160 character description shown on Google SERP results..."}
+                    placeholder={excerpt || "Compelling summary under 160 characters..."}
                     rows={3}
                     className="text-xs rounded-xl"
                   />
+                  <p className="text-[11px] text-gray-400">
+                    {metaDescription.length}/160 characters (Snippet under search results)
+                  </p>
                 </div>
 
-                {/* Focus Keywords */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Target Focus Keywords</label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
-                      placeholder="e.g. Dermatologist SEO, Google Maps 3-pack"
-                      className="h-9 text-xs rounded-xl"
-                    />
-                    <Button type="button" size="sm" onClick={addKeyword} className="h-9 text-xs font-bold">
-                      Add
-                    </Button>
-                  </div>
-                  {focusKeywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {focusKeywords.map((kw) => (
-                        <span
-                          key={kw}
-                          className="inline-flex items-center gap-1 text-[11px] bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100"
-                        >
-                          {kw}
-                          <button type="button" onClick={() => removeKeyword(kw)} className="hover:text-red-600">
-                            ✕
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Canonical URL */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Canonical URL (Optional)</label>
                   <Input
                     value={canonicalUrl}
                     onChange={(e) => setCanonicalUrl(e.target.value)}
-                    placeholder="https://gyrex.in/blog/your-custom-canonical"
-                    className="h-9 text-xs rounded-xl"
+                    placeholder="https://gyrex.in/blog/article-slug"
+                    className="text-xs rounded-xl h-10"
                   />
                 </div>
 
-                {/* Google SERP Snippet Preview */}
-                <div className="space-y-2 pt-4 border-t border-gray-100">
-                  <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Search className="w-4 h-4 text-blue-600" /> Google Search SERP Preview
+                {/* Focus Keywords */}
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Focus Target Keywords (For Rank Tracking)
                   </label>
-                  <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1 max-w-xl">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 truncate">
-                      <span>https://gyrex.in</span>
-                      <span>›</span>
-                      <span>blog</span>
-                      <span>›</span>
-                      <span className="text-slate-700 font-mono">{slug || "article-slug"}</span>
-                    </div>
-                    <h4 className="text-base text-blue-700 hover:underline font-semibold cursor-pointer truncate">
-                      {effectiveMetaTitle || "Article Title on Google Search"}
-                    </h4>
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                      {effectiveMetaDesc || "Article meta description snippet showing how this article appears to searchers on Google and Bing."}
-                    </p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && keywordInput.trim()) {
+                          e.preventDefault();
+                          if (!focusKeywords.includes(keywordInput.trim())) {
+                            setFocusKeywords([...focusKeywords, keywordInput.trim()]);
+                          }
+                          setKeywordInput("");
+                        }
+                      }}
+                      placeholder="Type keyword and press Enter (e.g. clinic local seo)"
+                      className="text-xs rounded-xl h-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        if (keywordInput.trim() && !focusKeywords.includes(keywordInput.trim())) {
+                          setFocusKeywords([...focusKeywords, keywordInput.trim()]);
+                          setKeywordInput("");
+                        }
+                      }}
+                      className="text-xs font-bold h-10"
+                    >
+                      Add
+                    </Button>
                   </div>
-                </div>
 
-                {/* WhatsApp & Social Media Preview Card */}
-                <div className="space-y-2 pt-4 border-t border-gray-100">
-                  <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Share2 className="w-4 h-4 text-emerald-600" /> Social &amp; WhatsApp Share Preview
-                  </label>
-                  <div className="rounded-2xl overflow-hidden border border-slate-200 max-w-md bg-white shadow-xs">
-                    {heroImage ? (
-                      <div className="aspect-[1.91/1] bg-slate-100 overflow-hidden">
-                        <img src={heroImage} alt="Social Card" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="aspect-[1.91/1] bg-gradient-to-br from-indigo-900 to-slate-900 flex items-center justify-center text-white text-xs font-bold p-6 text-center">
-                        Gyrex Clinical Growth Blog
-                      </div>
-                    )}
-                    <div className="p-3.5 space-y-1 bg-slate-50 border-t border-slate-100">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">gyrex.in/blog</p>
-                      <h5 className="text-xs font-bold text-slate-900 truncate">
-                        {effectiveMetaTitle || "Article Title"}
-                      </h5>
-                      <p className="text-[11px] text-slate-600 line-clamp-2">
-                        {effectiveMetaDesc || "Short excerpt snippet..."}
-                      </p>
-                    </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {focusKeywords.map((kw, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs px-2.5 py-1 rounded-lg gap-1">
+                        {kw}
+                        <button
+                          type="button"
+                          onClick={() => setFocusKeywords(focusKeywords.filter((_, idx) => idx !== i))}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -779,18 +1068,21 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
           </Tabs>
         </div>
 
-        {/* Right Column: Publishing Sidebar Settings (1 Col) */}
+        {/* Right Column: Meta Controls & Publishing Card (1 Col) */}
         <div className="space-y-6">
-          {/* Status & Publication */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Publishing Controls</h3>
+          {/* Status & Publication Box */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-5">
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+              Publishing Settings
+            </h3>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-600">Status</label>
+            {/* Status Dropdown */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs font-bold bg-white text-gray-900"
               >
                 <option value="DRAFT">Draft</option>
                 <option value="PUBLISHED">Published (Live)</option>
@@ -798,53 +1090,28 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
               </select>
             </div>
 
-            {status === "SCHEDULED" && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-600" /> Schedule Date &amp; Time
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledFor}
-                  onChange={(e) => setScheduledFor(e.target.value)}
-                  className="h-10 text-xs rounded-xl"
-                />
-              </div>
-            )}
-
-            {/* Custom URL Slug */}
-            <div className="space-y-1.5 pt-2 border-t border-gray-100">
-              <label className="text-xs font-medium text-gray-600">URL Slug</label>
+            {/* URL Slug */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700">URL Slug *</label>
               <Input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 placeholder="article-slug"
-                className="h-9 text-xs font-mono rounded-lg"
+                className="text-xs font-mono rounded-xl h-10"
+                required
               />
-              <p className="text-[10px] text-gray-400 truncate">gyrex.in/blog/{slug || "slug"}</p>
+              <p className="text-[11px] text-gray-400 truncate">
+                gyrex.in/blog/{slug || "slug"}
+              </p>
             </div>
 
-            <Button
-              onClick={() => handleSave()}
-              disabled={saving}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 rounded-xl shadow-xs"
-            >
-              {saving ? "Saving..." : status === "PUBLISHED" ? "Update Live Article" : "Save Draft"}
-            </Button>
-          </div>
-
-          {/* Categorization & Tags */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-indigo-600" /> Category &amp; Tags
-            </h3>
-
+            {/* Primary Category */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">Primary Category</label>
+              <label className="text-xs font-semibold text-gray-700">Primary Category *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs font-semibold bg-white text-gray-900"
               >
                 {BLOG_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -854,67 +1121,140 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
               </select>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-gray-400" /> Article Tags
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                  placeholder="e.g. Dermatology"
-                  className="h-8 text-xs rounded-lg"
-                />
-                <Button type="button" size="sm" onClick={addTag} className="h-8 text-xs font-bold px-2.5">
-                  Add
-                </Button>
-              </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {tags.map((tg) => (
-                    <span
-                      key={tg}
-                      className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md"
-                    >
-                      {tg}
-                      <button type="button" onClick={() => removeTag(tg)} className="hover:text-red-600">
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+            {/* Primary Action Button */}
+            <div className="pt-2 border-t border-gray-100">
+              <Button
+                onClick={() => handleSave()}
+                disabled={saving}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-11 rounded-xl shadow-md flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? "Saving Changes..." : status === "PUBLISHED" ? "Update Published Post" : "Save Draft"}
+              </Button>
             </div>
           </div>
 
-          {/* Author E-E-A-T Profile */}
+          {/* Author E-E-A-T Profile Card */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-indigo-600" /> Author E-E-A-T Profile
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+              <User className="w-4 h-4 text-indigo-600" /> Author E-E-A-T Profile
             </h3>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">Author Name</label>
+              <label className="text-xs font-semibold text-gray-700">Author Name</label>
               <Input
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
-                className="h-9 text-xs rounded-lg"
+                placeholder="Dr. Siddhant / Gyrex Medical Team"
+                className="text-xs rounded-xl h-10"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">Author Clinical / SEO Role</label>
+              <label className="text-xs font-semibold text-gray-700">Author Role / Credential</label>
               <Input
                 value={authorRole}
                 onChange={(e) => setAuthorRole(e.target.value)}
-                placeholder="e.g. Clinical SEO Specialist"
-                className="h-9 text-xs rounded-lg"
+                placeholder="Senior Healthcare Growth Consultant"
+                className="text-xs rounded-xl h-10"
               />
+            </div>
+          </div>
+
+          {/* Tags Box */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-emerald-600" /> Article Tags
+            </h3>
+
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && tagInput.trim()) {
+                    e.preventDefault();
+                    if (!tags.includes(tagInput.trim())) {
+                      setTags([...tags, tagInput.trim()]);
+                    }
+                    setTagInput("");
+                  }
+                }}
+                placeholder="e.g. Dermatology"
+                className="text-xs rounded-xl h-9"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+                    setTags([...tags, tagInput.trim()]);
+                    setTagInput("");
+                  }
+                }}
+                className="text-xs font-bold h-9"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {tags.map((t, i) => (
+                <Badge key={i} variant="outline" className="text-xs px-2 py-0.5 rounded-lg gap-1">
+                  #{t}
+                  <button
+                    type="button"
+                    onClick={() => setTags(tags.filter((_, idx) => idx !== i))}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Insert Link Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Link2 className="w-4 h-4 text-indigo-600" /> Insert Hyperlink
+            </h3>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Display Text</label>
+                <Input
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="e.g. Book a Consultation"
+                  className="text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">URL / Destination Web Address *</label>
+                <Input
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://gyrex.in or /features"
+                  className="text-xs rounded-xl"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowLinkModal(false)} className="text-xs">
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleInsertLink} className="bg-indigo-600 text-white font-bold text-xs">
+                Insert Link
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
