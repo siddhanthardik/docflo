@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,8 @@ import {
   Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X,
   ShieldCheck, Calculator, ArrowRightCircle, CreditCard, Bell, UserCheck, Inbox,
   CheckCircle, Sparkle, Stethoscope, Laptop, Smartphone, Download, Bot, ChevronUp,
-  HelpCircle, BadgeCheck, Flame
+  HelpCircle, BadgeCheck, Flame, Palette, Layout, FileText, Monitor, CheckCircle as CheckIcon,
+  Smile, Baby, Eye, Pill, HeartPulse, Bone, Droplets, Sparkle as ToothIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -28,6 +29,88 @@ interface PlacePrediction {
   types: string[];
 }
 
+// Sample Specialty Themes for Interactive Showcase
+const SPECIALTY_THEMES = [
+  {
+    id: "warm-pediatrics",
+    name: "Pediatrics & Child Care",
+    tag: "Parent-Favorite",
+    icon: "🧸",
+    color: "#059669",
+    secondaryColor: "#F59E0B",
+    doctorName: "Dr. Vinay Kumar Rai",
+    specialty: "Senior Pediatrician & Neonatologist",
+    headline: "Gentle, Loving Healthcare for Happy, Healthy & Thriving Kids",
+    badges: ["🧸 Stress-Free Play Zone", "💉 Pain-Free Vaccines", "🌡️ 24/7 Fever Support"],
+    services: ["Newborn & Infant Care", "WHO & IAP Immunization", "Growth & Milestone Tracking", "Childhood Asthma & Allergy"],
+  },
+  {
+    id: "radiant-derma",
+    name: "Dermatology & Aesthetics",
+    tag: "Luxury Glow",
+    icon: "✨",
+    color: "#be185d",
+    secondaryColor: "#fda4af",
+    doctorName: "Dr. Ananya Sharma",
+    specialty: "Cosmetic Dermatologist & Trichologist",
+    headline: "Science-Backed Skin & Hair Transformations for Radiant Confidence",
+    badges: ["✨ US-FDA Laser Tech", "🔬 3D Skin Analysis", "🌿 Chemical-Free Peels"],
+    services: ["Acne & Scar Laser Treatment", "HydraFacial Glow", "PRP Hair Restoration", "Anti-Aging & Botox"],
+  },
+  {
+    id: "smile-dental",
+    name: "Dental & Orthodontics",
+    tag: "High-Converting",
+    icon: "🦷",
+    color: "#0284c7",
+    secondaryColor: "#38bdf8",
+    doctorName: "Dr. Rohan Malhotra",
+    specialty: "MDS Orthodontist & Implant Specialist",
+    headline: "Pain-Free Modern Dentistry for Your Family's Healthiest Smiles",
+    badges: ["🦷 Painless Digital Anesthesia", "⚡ Same-Day Ceramic Crowns", "✨ Invisible Aligners"],
+    services: ["Invisalign Clear Aligners", "Laser Teeth Whitening", "Root Canal in 1 Sitting", "Dental Implants"],
+  },
+  {
+    id: "cardiac-care",
+    name: "Cardiology & Vascular",
+    tag: "Clinical Trust",
+    icon: "❤️",
+    color: "#b91c1c",
+    secondaryColor: "#f87171",
+    doctorName: "Dr. Rajeshwar Sen",
+    specialty: "DM Senior Interventional Cardiologist",
+    headline: "Advanced Heart & Vascular Care with Compassionate Precision",
+    badges: ["❤️ Emergency Echo in 10 Mins", "🔬 2D/3D Color Doppler", "📊 Lipid Risk Assessment"],
+    services: ["Preventive Heart Screening", "Hypertension Clinic", "Post-Angioplasty Follow-up", "Holter & ECG Monitor"],
+  },
+  {
+    id: "miracle-ivf",
+    name: "IVF & Reproductive Health",
+    tag: "High Empathy",
+    icon: "🌸",
+    color: "#7c3aed",
+    secondaryColor: "#c084fc",
+    doctorName: "Dr. Meenakshi Sundaram",
+    specialty: "Reproductive Endocrinologist & Fertility Specialist",
+    headline: "Compassionate, Science-Driven Fertility Care on Your Journey to Parenthood",
+    badges: ["🌸 78% First-Cycle Success", "🔬 AI Blastocyst Scoring", "🤝 100% Confidential Care"],
+    services: ["Advanced IVF / ICSI Cycles", "Egg & Embryo Freezing", "PCOS Management Clinic", "Recurrent Loss Support"],
+  },
+  {
+    id: "endo-diabetes",
+    name: "Diabetology & Endocrine",
+    tag: "Chronic Care",
+    icon: "🩸",
+    color: "#0891b2",
+    secondaryColor: "#06b6d4",
+    doctorName: "Dr. K. S. Mukherjee",
+    specialty: "Consultant Endocrinologist & Diabetologist",
+    headline: "Evidence-Based Glycemic Control & Hormone Balance Solutions",
+    badges: ["📊 Continuous Glucose CGMS", "🩺 Diabetic Foot Screening", "⚖️ Thyroid & Hormone Panels"],
+    services: ["HbA1c & Diabetes Reversal", "Thyroid Disorder Clinic", "PCOD / Hormonal Imbalance", "Obesity & Metabolism Care"],
+  },
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,15 +119,17 @@ export default function LandingPage() {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlacePrediction | null>(null);
-  const [activeFeatureCategory, setActiveFeatureCategory] = useState<"growth" | "operations">("growth");
+  const [activeFeatureCategory, setActiveFeatureCategory] = useState<"growth" | "websites" | "operations">("growth");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [heroImgError, setHeroImgError] = useState(false);
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
 
   // Scroll-reveal refs
   const statsRef = useRef<HTMLDivElement>(null);
   const statsInView = useInView(statsRef, { once: true, margin: "-80px" });
   const featuresRef = useRef<HTMLDivElement>(null);
   const featuresInView = useInView(featuresRef, { once: true, margin: "-80px" });
+  const websitesRef = useRef<HTMLDivElement>(null);
+  const websitesInView = useInView(websitesRef, { once: true, margin: "-80px" });
   const testimonialsRef = useRef<HTMLDivElement>(null);
   const testimonialsInView = useInView(testimonialsRef, { once: true, margin: "-80px" });
   const pricingRef = useRef<HTMLDivElement>(null);
@@ -54,10 +139,10 @@ export default function LandingPage() {
 
   // Rotating Hero Punchlines
   const punchlines = [
-    "Delivers Real Patients",
-    "Fills Your Appointment Slots",
-    "Dominates Local Google Search",
-    "Grows Your 5-Star Reputation",
+    "Instant 5-Star Reviews on WhatsApp",
+    "Tailored Websites for 20 Medical Specialties",
+    "24/7 WhatsApp AI Receptionist That Books Appointments",
+    "Rank #1 on Google Maps in Your Neighborhood",
   ];
   const [punchlineIndex, setPunchlineIndex] = useState(0);
   const [punchlineFade, setPunchlineFade] = useState(true);
@@ -68,19 +153,18 @@ export default function LandingPage() {
       setTimeout(() => {
         setPunchlineIndex((prev) => (prev + 1) % punchlines.length);
         setPunchlineFade(true);
-      }, 400);
-    }, 2800);
+      }, 350);
+    }, 3200);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Interactive ROI Calculator State
   const [avgFee, setAvgFee] = useState<number>(3000);
-  const [newPatients, setNewPatients] = useState<number>(10);
+  const [newPatients, setNewPatients] = useState<number>(12);
   const monthlyRevenue = avgFee * newPatients;
   const annualRevenue = monthlyRevenue * 12;
 
@@ -98,283 +182,252 @@ export default function LandingPage() {
       .finally(() => setPackagesLoading(false));
   }, []);
 
-  // Fetch suggestions from backend proxy
-  const fetchSuggestions = useCallback(async (input: string) => {
-    if (input.length < 2) {
+  // Google Places Autocomplete Debounced Search
+  const fetchPredictions = async (query: string) => {
+    if (!query || query.trim().length < 3) {
       setPredictions([]);
+      setShowDropdown(false);
       return;
     }
-    setIsLoadingSuggestions(true);
     try {
-      const res = await fetch(`/api/places?input=${encodeURIComponent(input)}&t=${Date.now()}`);
+      setIsLoadingSuggestions(true);
+      const res = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`);
       const data = await res.json();
-      setPredictions(data.predictions || []);
-    } catch {
+      if (data.predictions && Array.isArray(data.predictions)) {
+        setPredictions(data.predictions);
+        setShowDropdown(true);
+      } else {
+        setPredictions([]);
+      }
+    } catch (err) {
+      console.error("Autocomplete error:", err);
       setPredictions([]);
     } finally {
       setIsLoadingSuggestions(false);
     }
-  }, []);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSearchQuery(val);
     setSelectedPlace(null);
-    setShowDropdown(true);
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+    debounceRef.current = setTimeout(() => {
+      fetchPredictions(val);
+    }, 300);
   };
 
-  const handleSelectPlace = (p: PlacePrediction) => {
-    setSelectedPlace(p);
-    const name = p.structured_formatting.main_text;
-    const addr = p.structured_formatting.secondary_text || "";
-    setSearchQuery(addr ? `${name}, ${addr}` : name);
+  const handleSelectPlace = (place: PlacePrediction) => {
+    setSelectedPlace(place);
+    setSearchQuery(place.structured_formatting.main_text);
     setShowDropdown(false);
-    setPredictions([]);
+    handleScan(place);
   };
 
-  const handleScanSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsScanning(true);
-
-    if (selectedPlace) {
-      router.push(`/local-seo/free-audit?place_id=${selectedPlace.place_id}`);
+  const handleScan = (placeToScan?: PlacePrediction) => {
+    const target = placeToScan || selectedPlace;
+    if (target) {
+      router.push(
+        `/local-seo/free-audit?placeId=${encodeURIComponent(target.place_id)}&clinicName=${encodeURIComponent(
+          target.structured_formatting.main_text
+        )}`
+      );
+    } else if (searchQuery.trim()) {
+      router.push(`/local-seo/free-audit?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
-      router.push(`/local-seo/free-audit?query=${encodeURIComponent(searchQuery)}`);
+      router.push("/local-seo/free-audit");
     }
   };
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current && !inputRef.current.contains(e.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  const activeTheme = SPECIALTY_THEMES[selectedThemeIndex];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
-      
-      {/* ── HEADER ── */}
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       <LandingHeader />
 
-      {/* ── HERO SECTION ── */}
-      <section id="growth-platform" className="relative pt-28 pb-20 overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      {/* ── HERO SECTION: 60-SECOND AUDIT & ROTATING VALUE HOOKS ── */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[350px] bg-gradient-to-tr from-blue-400/15 to-indigo-400/15 blur-[120px] pointer-events-none rounded-full" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-4xl mx-auto space-y-6">
             
-            {/* Hero Left Content */}
-            <div className="lg:col-span-7 space-y-6 text-left">
-              
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
-                Your All-in-One Clinic Growth Engine that{" "}
-                <span
-                  className="inline-block bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent"
-                  style={{
-                    transition: "opacity 0.4s ease, transform 0.4s ease",
-                    opacity: punchlineFade ? 1 : 0,
-                    transform: punchlineFade ? "translateY(0px)" : "translateY(12px)",
-                  }}
-                >
-                  {punchlines[punchlineIndex]}
-                </span>
-              </h1>
+            {/* Top Pill Badge */}
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-full px-4 py-1.5 shadow-2xs">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+              </span>
+              <span className="text-xs font-bold text-blue-900">
+                The Complete Practice Growth OS for Modern Doctors
+              </span>
+            </motion.div>
 
-              <p className="text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed font-normal">
-                Trusted by 500+ doctors, dermatologists, dentists, and healthcare practices to dominate local Google search, automate WhatsApp review collection, and manage clinic operations.
+            {/* Main Headline */}
+            <motion.h1 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
+              Dominate Local Search, Fill Your OPD &amp; Build Your{" "}
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-600">
+                Clinical Brand
+              </span>
+            </motion.h1>
+
+            {/* Rotating Dynamic Value Hook */}
+            <div className="h-10 flex items-center justify-center">
+              <p className={`text-lg sm:text-2xl font-black text-indigo-700 transition-all duration-300 transform ${
+                punchlineFade ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              }`}>
+                ✨ {punchlines[punchlineIndex]}
               </p>
-
-              {/* Dual Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
-                  <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-7 h-13 text-base shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 border border-emerald-500 transition-all transform hover:-translate-y-0.5">
-                    <MessageSquare className="w-5 h-5 text-white" />
-                    Free Google Profile Booster
-                  </Button>
-                </Link>
-                <Link href="/contact" className="w-full sm:w-auto">
-                  <Button variant="outline" className="w-full sm:w-auto border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl px-7 h-13 text-base transition-all">
-                    Book Free Demo
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Instant Search Bar Scanner */}
-              <div className="pt-4 max-w-xl">
-                <form onSubmit={handleScanSubmit} className="relative flex flex-col sm:flex-row items-center gap-2 bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80">
-                  <div className="relative flex-1 w-full flex items-center">
-                    <Search className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none" />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleInputChange}
-                      onFocus={() => predictions.length > 0 && setShowDropdown(true)}
-                      placeholder="Enter your clinic or doctor name..."
-                      className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none"
-                    />
-                    {isLoadingSuggestions && (
-                      <RefreshCw className="w-4 h-4 text-blue-600 animate-spin absolute right-3" />
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isScanning || !searchQuery.trim()}
-                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-6 h-12 text-sm shadow-md shrink-0"
-                  >
-                    {isScanning ? (
-                      <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Scanning...</>
-                    ) : (
-                      <>Run Free Scan <ArrowRight className="w-4 h-4 ml-1.5" /></>
-                    )}
-                  </Button>
-
-                  {/* Suggestions Dropdown */}
-                  {showDropdown && predictions.length > 0 && (
-                    <div
-                      ref={dropdownRef}
-                      className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 max-h-64 overflow-y-auto text-left"
-                    >
-                      {predictions.map((p) => (
-                        <div
-                          key={p.place_id}
-                          onClick={() => handleSelectPlace(p)}
-                          className="p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-start gap-2.5 transition-colors"
-                        >
-                          <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-bold text-slate-900">{p.structured_formatting.main_text}</p>
-                            {p.structured_formatting.secondary_text && (
-                              <p className="text-[11px] text-slate-500 truncate">{p.structured_formatting.secondary_text}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </form>
-                <p className="text-[11px] text-slate-400 mt-2">Instant 60-second local search audit · Live Google Places API</p>
-              </div>
-
             </div>
 
-            {/* Hero Right Visual: Professional Doctor Image & Floating Growth Card */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-white">
-                {!heroImgError ? (
-                  <img
-                    src="/doctor_hero_portrait.jpg"
-                    alt="Professional Clinic Doctor"
-                    className="w-full h-[420px] object-cover object-top rounded-2xl"
-                    onError={() => setHeroImgError(true)}
+            <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              Automate your Google Maps SEO, launch tailored specialty clinic websites, capture patient inquiries 24/7 on WhatsApp, and build an unstoppable 5-star reputation.
+            </motion.p>
+
+            {/* 60-Second Instant GBP Audit Scanner */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+              className="pt-4 max-w-2xl mx-auto relative">
+              <div className="bg-white p-2.5 rounded-2xl shadow-xl border border-slate-200/80 flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1 flex items-center">
+                  <Search className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                    placeholder="Enter Clinic Name or City (e.g. Apollo Dental Indiranagar)"
+                    className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden font-medium"
                   />
-                ) : (
-                  <div className="w-full h-[420px] rounded-2xl bg-gradient-to-br from-blue-100 via-indigo-50 to-emerald-100 flex flex-col items-center justify-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center">
-                      <Stethoscope className="w-10 h-10 text-blue-600" />
-                    </div>
-                    <div className="text-center px-6">
-                      <p className="text-base font-bold text-slate-700">Trusted by 500+ Clinics</p>
-                      <p className="text-sm text-slate-500 mt-1">Dermatologists · Pediatricians · Dentists</p>
-                    </div>
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
-                    </div>
-                  </div>
-                )}
-                <div className="absolute top-4 right-4 z-10">
-                  <span className="bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md border border-emerald-400">
-                    Rank #1 Google Maps
-                  </span>
+                  {isLoadingSuggestions && (
+                    <RefreshCw className="w-4 h-4 text-blue-600 animate-spin absolute right-3" />
+                  )}
                 </div>
+                <Button
+                  onClick={() => handleScan()}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm px-6 h-12 rounded-xl shadow-md transition-transform hover:scale-102 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Run Free Audit</span>
+                </Button>
               </div>
 
-              {/* Floating Performance Micro Card */}
-              <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-2xl border border-slate-200 hidden sm:flex items-center gap-3 animate-bounce duration-1000">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <TrendingUp className="w-5 h-5" />
+              {/* Suggestions Dropdown */}
+              {showDropdown && predictions.length > 0 && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-left divide-y divide-slate-100"
+                >
+                  {predictions.map((p) => (
+                    <button
+                      key={p.place_id}
+                      onClick={() => handleSelectPlace(p)}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50/60 flex items-start gap-3 transition-colors"
+                    >
+                      <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{p.structured_formatting.main_text}</p>
+                        {p.structured_formatting.secondary_text && (
+                          <p className="text-[11px] text-slate-500">{p.structured_formatting.secondary_text}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">+33 Google Reviews / mo</p>
-                  <p className="text-[11px] text-slate-500">Automated WhatsApp Pipeline</p>
-                </div>
-              </div>
+              )}
+            </motion.div>
+
+            {/* Quick Micro Trust Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-2 text-xs font-bold text-slate-600">
+              <span className="flex items-center gap-1.5 bg-white/80 border border-slate-200 px-3 py-1.5 rounded-full shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> No Credit Card Required
+              </span>
+              <span className="flex items-center gap-1.5 bg-white/80 border border-slate-200 px-3 py-1.5 rounded-full shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" /> 20 Specialty Website Themes
+              </span>
+              <span className="flex items-center gap-1.5 bg-white/80 border border-slate-200 px-3 py-1.5 rounded-full shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-purple-600" /> 24/7 WhatsApp AI Receptionist
+              </span>
             </div>
 
           </div>
 
-          {/* Floating Interactive 3D Dashboard Showcase */}
-          <div className="mt-16 relative max-w-5xl mx-auto">
-            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200/80 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* ── INTERACTIVE 3D PLATFORM DASHBOARD SHOWCASE ── */}
+          <div className="mt-14 relative max-w-5xl mx-auto">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200/90 grid grid-cols-1 md:grid-cols-3 gap-5">
               
-              {/* Heatmap Widget */}
-              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3">
+              {/* 1. 5×5 Geo Rank Heatmap Widget */}
+              <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/70 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">5×5 Geo Rank Heatmap</span>
-                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Top 3 Rank</span>
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">5×5 Geo Rank Heatmap</span>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Top 3 Rank</span>
                 </div>
-                <div className="grid grid-cols-5 gap-1.5 aspect-square bg-white p-2 rounded-xl border border-slate-200/50">
+                <div className="grid grid-cols-5 gap-1.5 aspect-square bg-white p-2.5 rounded-xl border border-slate-200/60">
                   {[1, 1, 2, 3, 2, 1, 1, 2, 2, 3, 2, 1, 1, 1, 2, 3, 2, 1, 2, 3, 2, 3, 2, 3, 3].map((rank, i) => (
                     <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center font-black text-xs text-emerald-700 hover:scale-110 transition-transform cursor-default">
                       {rank}
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium text-center">Rank #1–#3 across 25 neighborhood nodes</p>
+                <p className="text-[11px] text-slate-500 font-medium text-center">Rank #1–#3 across 25 neighborhood catchment nodes</p>
               </div>
 
-              {/* WhatsApp Review Widget */}
-              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3 flex flex-col justify-between">
+              {/* 2. WhatsApp 5-Star Review Pipeline Widget */}
+              <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/70 space-y-3 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">WhatsApp 5-Star Pipeline</span>
-                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">98% Open Rate</span>
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">WhatsApp 5-Star Engine</span>
+                    <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">98% Open Rate</span>
                   </div>
                   <div className="bg-emerald-600/10 border border-emerald-500/20 p-3 rounded-xl space-y-2">
-                    <p className="text-xs font-semibold text-emerald-900">Patient Consultation Survey</p>
-                    <p className="text-[11px] text-slate-600 leading-snug">"Thank you for visiting today! How was your experience?"</p>
+                    <p className="text-xs font-bold text-emerald-950">Patient Post-Consultation Survey</p>
+                    <p className="text-[11px] text-slate-600 leading-snug">&quot;Thank you for visiting today! How was your consultation with the doctor?&quot;</p>
                     <div className="flex gap-1 text-amber-400">
                       {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />)}
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700">Google Review Conversion</span>
-                  <span className="text-xs font-bold text-emerald-600">+70% Conversion</span>
+                <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Google Review Velocity</span>
+                  <span className="text-xs font-black text-emerald-600">+70% Conversion</span>
                 </div>
               </div>
 
-              {/* Competitor Gap Card */}
-              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/60 space-y-3 flex flex-col justify-between">
+              {/* 3. Specialty Website & AI Receptionist Widget */}
+              <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/70 space-y-3 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Competitor Gap Matrix</span>
-                    <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Target #1 Rank</span>
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Specialty Website &amp; AI</span>
+                    <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">Custom Domain</span>
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-slate-600">Review Gap to #1</span>
-                      <span className="font-bold text-red-600">+705 Reviews</span>
+                      <span className="font-semibold text-slate-600">Google PageSpeed</span>
+                      <span className="font-black text-emerald-600">99 / 100 ⚡</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-slate-600">Map Pack Reach</span>
-                      <span className="font-bold text-emerald-600">+15% Growth</span>
+                      <span className="font-semibold text-slate-600">AI Receptionist Status</span>
+                      <span className="font-bold text-emerald-700 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" /> Online 24/7
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-semibold text-slate-600">Specialty Theme</span>
+                      <span className="font-bold text-purple-700">20 Presets</span>
                     </div>
                   </div>
                 </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-xs font-bold shadow-xs">
-                  Automate Gap Fix
-                </Button>
+                <Link href="#clinic-websites">
+                  <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 text-xs font-bold shadow-xs flex items-center justify-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5" />
+                    <span>Explore 20 Themes</span>
+                  </Button>
+                </Link>
               </div>
 
             </div>
@@ -383,59 +436,227 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SOCIAL PROOF & METRICS BAR ── */}
-      <section className="bg-white py-10 border-y border-slate-200/80">
+      {/* ── METRICS & SOCIAL PROOF BAR ── */}
+      <section ref={statsRef} className="bg-white py-12 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-            Engineered For Medical Practices, Dentists & Dermatologists
+          <p className="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-8">
+            Engineered For Medical Practices, Dentists, Dermatologists &amp; Specialty Clinics
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100 transform hover:-translate-y-1 transition-all">
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={statsInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4 }}
+              className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-shadow">
               <span className="text-3xl sm:text-4xl font-black text-slate-900">500+</span>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Active Clinics</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100 transform hover:-translate-y-1 transition-all">
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1.5">Active Clinics</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={statsInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.1 }}
+              className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-shadow">
               <span className="text-3xl sm:text-4xl font-black text-emerald-600">4.9 ★</span>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Average Clinic Rating</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100 transform hover:-translate-y-1 transition-all">
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1.5">Average Rating</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={statsInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.2 }}
+              className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-shadow">
               <span className="text-3xl sm:text-4xl font-black text-blue-600">98%</span>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">WhatsApp Open Rate</p>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1.5">WhatsApp Open Rate</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={statsInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.3 }}
+              className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-md transition-shadow">
+              <span className="text-3xl sm:text-4xl font-black text-purple-600">20</span>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1.5">Specialty Themes</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION: HEALTHCARE WEBSITE BUILDER & 20 SPECIALTY THEMES ── */}
+      <section id="clinic-websites" ref={websitesRef} className="py-24 bg-white relative overflow-hidden border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-indigo-100">
+              <Layout className="w-3.5 h-3.5 text-indigo-600" /> Healthcare Website Builder
             </div>
-            <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100 transform hover:-translate-y-1 transition-all">
-              <span className="text-3xl sm:text-4xl font-black text-purple-600">+70%</span>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-1">Review Conversion</p>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              High-Converting Websites Built for 20 Medical Specialties
+            </h2>
+            <p className="text-base text-slate-600 leading-relaxed">
+              Launch a blazing-fast, custom branded clinic website in minutes. Pre-configured with clinical service menus, patient review trust badges, 1-click WhatsApp booking, and Google 99+ PageSpeed.
+            </p>
+
+            {/* Interactive Theme Switcher Pills */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+              {SPECIALTY_THEMES.map((theme, idx) => (
+                <button
+                  key={theme.id}
+                  onClick={() => setSelectedThemeIndex(idx)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    selectedThemeIndex === idx
+                      ? "bg-slate-900 text-white shadow-lg scale-105"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <span>{theme.icon}</span>
+                  <span>{theme.name}</span>
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Live Dynamic Theme Mockup Canvas */}
+          <motion.div
+            key={activeTheme.id}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35 }}
+            className="max-w-5xl mx-auto bg-gradient-to-b from-slate-50 to-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xl space-y-8"
+          >
+            {/* Browser Header Bar */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-rose-400" />
+                  <div className="w-3 h-3 rounded-full bg-amber-400" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                </div>
+                <span className="font-mono text-slate-500 text-[11px] ml-2 font-semibold">
+                  https://{activeTheme.id.replace("-", "")}.gyrex.in (or your own custom domain)
+                </span>
+              </div>
+              <span className="hidden sm:inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-[11px]">
+                <Zap className="w-3 h-3 text-emerald-600" /> 99+ PageSpeed
+              </span>
+            </div>
+
+            {/* Mockup Theme Hero Header */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+              <div className="md:col-span-7 space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold"
+                  style={{ backgroundColor: `${activeTheme.color}15`, color: activeTheme.color }}>
+                  <span>{activeTheme.icon}</span>
+                  <span>{activeTheme.specialty}</span>
+                </div>
+
+                <h3 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
+                  {activeTheme.headline}
+                </h3>
+
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {activeTheme.badges.map((b, i) => (
+                    <span key={i} className="text-xs font-bold px-3 py-1 bg-white border border-slate-200 rounded-xl shadow-2xs text-slate-800">
+                      {b}
+                    </span>
+                  ))}
+                </div>
+
+                {/* CTAs */}
+                <div className="flex flex-wrap items-center gap-3 pt-3">
+                  <button
+                    className="text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg transition-transform hover:scale-105"
+                    style={{ backgroundColor: activeTheme.color }}
+                  >
+                    📅 Book Appointment
+                  </button>
+                  <button className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg flex items-center gap-1.5 transition-transform hover:scale-105">
+                    <MessageSquare className="w-4 h-4 fill-white" />
+                    <span>WhatsApp Chat</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Doctor Card Mockup */}
+              <div className="md:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4 text-center">
+                <div className="w-24 h-24 mx-auto rounded-2xl flex items-center justify-center text-3xl font-black text-white shadow-lg"
+                  style={{ backgroundColor: activeTheme.color }}>
+                  {activeTheme.doctorName.charAt(3)}
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-900">{activeTheme.doctorName}</h4>
+                  <p className="text-xs font-semibold text-slate-500">{activeTheme.specialty}</p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-1 text-amber-400">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400" />)}
+                  <span className="text-xs font-black text-slate-700 ml-1">4.9 (120+ Verified Reviews)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mockup Services Grid */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Clinical Services &amp; Packages</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {activeTheme.services.map((svc, i) => (
+                  <div key={i} className="p-3 bg-white rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: activeTheme.color }} />
+                    <span className="truncate">{svc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 4 Feature Pillars for Website Builder */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2">
+              <Globe className="w-6 h-6 text-blue-600" />
+              <h4 className="text-base font-bold text-slate-900">Custom Branded Domain</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Connect your personal domain (e.g. drvinaykumar.com) with automatic free SSL security.</p>
+            </div>
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2">
+              <Palette className="w-6 h-6 text-purple-600" />
+              <h4 className="text-base font-bold text-slate-900">Zero-Code Elementor Builder</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Customize hero headlines, color palettes, clinical services, and packages in real time.</p>
+            </div>
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2">
+              <Bot className="w-6 h-6 text-emerald-600" />
+              <h4 className="text-base font-bold text-slate-900">24/7 WhatsApp Receptionist</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Floating pulse widget and hero booking CTAs link directly to your practice WhatsApp line.</p>
+            </div>
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2">
+              <Zap className="w-6 h-6 text-amber-600" />
+              <h4 className="text-base font-bold text-slate-900">Google 99+ PageSpeed &amp; SEO</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">Built on Next.js Turbopack with automated MedicalBusiness Schema for instant Google ranking.</p>
+            </div>
+          </div>
+
         </div>
       </section>
 
       {/* ── COMPLETE FEATURE MATRIX SECTION ── */}
-      <section id="local-seo" className="py-20 bg-slate-50">
+      <section id="features" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           
           <div className="text-center max-w-2xl mx-auto space-y-4">
-            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
-              <Layers className="w-3.5 h-3.5 text-blue-600" /> Platform Architecture
+            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-blue-100">
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> Full Growth Platform
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Everything Your Clinic Needs to Grow</h2>
-            <p className="text-sm text-slate-600">From local Google search domination to complete patient communication and clinic management.</p>
+            <p className="text-sm text-slate-600">From local Google search domination to specialty websites and automated WhatsApp practice management.</p>
             
-            {/* Category Filter Tabs */}
-            <div className="flex justify-center gap-2 pt-2">
+            {/* Category Filter Tabs (3 Tabs) */}
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
               <button
                 onClick={() => setActiveFeatureCategory("growth")}
-                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   activeFeatureCategory === "growth"
                     ? "bg-blue-600 text-white shadow-md"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
                 }`}
               >
-                Local SEO & Growth
+                Local SEO &amp; Growth
+              </button>
+              <button
+                onClick={() => setActiveFeatureCategory("websites")}
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeFeatureCategory === "websites"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                Websites &amp; CMS
               </button>
               <button
                 onClick={() => setActiveFeatureCategory("operations")}
-                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   activeFeatureCategory === "operations"
                     ? "bg-blue-600 text-white shadow-md"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
@@ -451,10 +672,8 @@ export default function LandingPage() {
 
             {/* ── GROWTH FEATURES ── */}
             {activeFeatureCategory === "growth" && (<>
-
-              {/* 1. 5×5 Geo-Rank Heatmap Tracker */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
                   <MapPin className="w-5 h-5" />
                 </div>
@@ -467,9 +686,8 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* 2. 5-Star WhatsApp Review Engine */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.07 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.07 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                   <Star className="w-5 h-5 fill-emerald-600" />
                 </div>
@@ -482,9 +700,8 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* 3. Competitor Gap Matrix */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.14 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.14 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
                   <BarChart3 className="w-5 h-5" />
                 </div>
@@ -496,64 +713,57 @@ export default function LandingPage() {
                   <CheckCircle2 className="w-3.5 h-3.5" /> Exact Review Volume Benchmark
                 </div>
               </motion.div>
-
-              {/* 4. AI Receptionist */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.21 }}
-                className="bg-gradient-to-br from-violet-50 to-indigo-50 p-6 sm:p-7 rounded-3xl border border-violet-200 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3 relative overflow-hidden">
-                <div className="absolute top-3 right-3">
-                  <span className="bg-violet-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> AI-Powered
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">AI WhatsApp Receptionist</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  24/7 AI receptionist that books appointments and handles patient queries in Hindi, Bengali, Tamil, English &amp; Arabic — automatically.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-violet-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Responds in 6 Languages, 24/7
-                </div>
-              </motion.div>
-
-              {/* 5. GBP Auto Posts */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.28 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">Google Updates &amp; Posts Engine</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Automated weekly Google Business Profile posts — signaling active engagement to Google&apos;s ranking algorithm.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-sky-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Active Google Profile Signal
-                </div>
-              </motion.div>
-
-              {/* 6. Free Audit */}
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.35 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
-                  <Target className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">60-Second Local SEO Audit</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Instantly surfaces GBP gaps, missing keyword categories, review deficits, and competitor ranks for any clinic in India.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Free — No Account Needed
-                </div>
-              </motion.div>
-
             </>)}
 
-            {/* ── OPERATIONS FEATURES ── */}
-            {activeFeatureCategory === "operations" && (<>
+            {/* ── WEBSITES & CMS FEATURES ── */}
+            {activeFeatureCategory === "websites" && (<>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">20 Specialty Clinical Themes</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Tailored presets for Pediatrics, Derma, Dental, IVF, Cardiology, Ortho, Diabetology, Ayurveda, and more with clinical service menus.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 1-Click Specialty Presets
+                </div>
+              </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0 }}
-                id="whatsapp-engine" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.07 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Full WYSIWYG Blog Composer</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Publish rich patient education playbooks with clinical callout boxes, comparison tables, inline images, and Google E-E-A-T schemas.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-indigo-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> SEO &amp; GEO Rich Snippets
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.14 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Custom Branded Domains</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Full white-label custom domain support (e.g. drvinaykumar.com) with automated SSL certification and 99+ PageSpeed optimization.
+                </p>
+                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Free Automated SSL
+                </div>
+              </motion.div>
+            </>)}
+
+            {/* ── OPERATIONS & WHATSAPP FEATURES ── */}
+            {activeFeatureCategory === "operations" && (<>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+                id="whatsapp-engine" className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
                   <Inbox className="w-5 h-5" />
                 </div>
@@ -566,8 +776,8 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.07 }}
-                id="patient-management" className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.07 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <UserCheck className="w-5 h-5" />
                 </div>
@@ -580,8 +790,8 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.14 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.14 }}
+                className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
                   <Calendar className="w-5 h-5" />
                 </div>
@@ -593,54 +803,6 @@ export default function LandingPage() {
                   <CheckCircle2 className="w-3.5 h-3.5" /> Effortless Slot Booking
                 </div>
               </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.21 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">Automated Appointment Reminders</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Instant WhatsApp booking confirmation &amp; 24h pre-consultation reminders to reduce clinic no-shows by over 60%.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-rose-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 60% Reduction in No-Shows
-                </div>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.28 }}
-                className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">Billing &amp; Receipts</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Generate digital clinic invoices and share receipt PDFs directly with patients via WhatsApp with Razorpay payment tracking.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Instant Receipt Delivery
-                </div>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={featuresInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.35 }}
-                className="bg-gradient-to-br from-violet-50 to-indigo-50 p-6 sm:p-7 rounded-3xl border border-violet-200 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 space-y-3 relative overflow-hidden">
-                <div className="absolute top-3 right-3">
-                  <span className="bg-violet-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> AI-Powered
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">AI WhatsApp Receptionist</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Auto-handles patient inquiries, books appointments, and responds in Hindi, Bengali, Tamil, English &amp; Arabic — even at 2am.
-                </p>
-                <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-violet-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 24/7 Patient Intake Automation
-                </div>
-              </motion.div>
-
             </>)}
 
           </div>
@@ -648,526 +810,185 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── MIDDLE CONVERSION CTA BANNER ── */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
-            Want to See How Your Clinic Ranks Against Nearby Competitors Right Now?
-          </h2>
-          <p className="text-base text-blue-100 max-w-2xl mx-auto">
-            Run an instant 60-second local search audit on Google Maps across a 5km radius around your clinic.
-          </p>
-          <div className="pt-2">
-            <Link href="/local-seo/free-audit">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl px-8 h-14 text-base shadow-xl flex items-center gap-2.5 mx-auto border border-emerald-400 transform hover:-translate-y-0.5 transition-all">
-                <MessageSquare className="w-5 h-5 fill-white" />
-                Run Free 60-Second Clinic Audit
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CLINIC OWNER ADVANTAGES & INTERACTIVE ROI CALCULATOR ── */}
-      <section id="roi-calculator" className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-          
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">Financial Impact</span>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Calculate Your Revenue Growth</h2>
-            <p className="text-sm text-slate-600">Acquiring just 1 extra patient per month pays for your entire Gyrex growth system multiple times over.</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* ── INTERACTIVE ROI CALCULATOR SECTION ── */}
+      <section id="roi-calculator" className="py-24 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
-            {/* ROI Calculator Card */}
-            <div className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200 space-y-6 shadow-sm">
-              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-4">
-                <Calculator className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-bold text-slate-900">Interactive Patient ROI Calculator</h3>
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 px-3.5 py-1.5 rounded-full text-xs font-bold border border-amber-400/30">
+                <Calculator className="w-3.5 h-3.5" /> Interactive Growth Calculator
               </div>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
+                Calculate Your Practice&apos;s Additional Annual Revenue
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
+                See how capturing even 10–15 additional high-ticket consultations per month from Google Maps and 24/7 WhatsApp response compounds your clinic earnings.
+              </p>
 
-              {/* Slider 1: Consultation / Treatment Fee */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span className="text-slate-700">Average Procedure / Treatment Value:</span>
-                  <span className="text-blue-600 font-bold">₹{avgFee.toLocaleString()}</span>
-                </div>
-                <input
-                  type="range"
-                  min="500"
-                  max="25000"
-                  step="500"
-                  value={avgFee}
-                  onChange={(e) => setAvgFee(Number(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
-                />
-              </div>
-
-              {/* Slider 2: Target New Patients */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span className="text-slate-700">Target New Patients / Month:</span>
-                  <span className="text-emerald-600 font-bold">{newPatients} Patients</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="30"
-                  step="1"
-                  value={newPatients}
-                  onChange={(e) => setNewPatients(Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer"
-                />
-              </div>
-
-              {/* Calculation Output Box */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2 text-center shadow-xs">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Projected Annual Revenue Increase</p>
-                <p className="text-4xl font-black text-emerald-600">+₹{annualRevenue.toLocaleString()} <span className="text-sm font-semibold text-slate-500">/ year</span></p>
-                <p className="text-[11px] text-slate-400">Based on organic Google Map Pack search conversions</p>
-              </div>
-            </div>
-
-            {/* Advantages Bullet List */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900">Why Clinic Owners Choose Gyrex</h3>
-                <p className="text-sm text-slate-600">Say goodbye to expensive digital marketing agency retainers.</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
-                    <Check className="w-4 h-4 stroke-[3]" />
+              {/* Sliders */}
+              <div className="space-y-5 pt-2">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-300">Average Consultation / Procedure Fee</span>
+                    <span className="text-amber-400 font-mono text-sm">₹{avgFee.toLocaleString("en-IN")}</span>
                   </div>
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900">No Marketing Agency Fees</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">Replaces ₹50,000/month digital agency fees with automated organic Google rank tracking.</p>
-                  </div>
+                  <input
+                    type="range"
+                    min="500"
+                    max="15000"
+                    step="500"
+                    value={avgFee}
+                    onChange={(e) => setAvgFee(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
-                    <Check className="w-4 h-4 stroke-[3]" />
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-300">Estimated New Patients Gained / Month</span>
+                    <span className="text-emerald-400 font-mono text-sm">+{newPatients} Patients / mo</span>
                   </div>
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900">Private Reputation Shield</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">Buffers negative feedback privately before it touches Google, protecting your clinic reputation.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
-                    <Check className="w-4 h-4 stroke-[3]" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900">80% Workload Reduction</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">Automates post-consultation review follow-ups, allowing receptionist staff to focus on patients.</p>
-                  </div>
+                  <input
+                    type="range"
+                    min="3"
+                    max="50"
+                    step="1"
+                    value={newPatients}
+                    onChange={(e) => setNewPatients(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
                 </div>
               </div>
             </div>
 
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── DOCTOR TESTIMONIALS — 4-CARD GRID ── */}
-      <section className="py-20 bg-slate-50">
-        <div ref={testimonialsRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
-          <div className="text-center space-y-2">
-            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Verified Clinic Results</span>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trusted by Doctors Across India</h2>
-            <p className="text-sm text-slate-500">Real clinics. Real ranks. Real patients.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {([
-              {
-                quote: "Increased our Google reviews from 45 to 78 in 30 days and hit Rank #1 on Google Maps within 5km. The WhatsApp pipeline is phenomenal.",
-                name: "Dr. Vinay Kumar Rai", role: "Pediatrician · South Delhi", badge: "Rank #1 Google Maps", delay: 0
-              },
-              {
-                quote: "The AI receptionist alone saved us 3 hours daily. Patients now get instant appointment confirmations in Hindi — our front desk can't believe it.",
-                name: "Dr. Priya Sharma", role: "Dermatologist · Vasant Kunj, Delhi", badge: "+42 Reviews / Month", delay: 0.08
-              },
-              {
-                quote: "We were invisible on Google Maps at Rank #9. After Gyrex optimized our GBP and started review automation, we reached Rank #2 in 6 weeks.",
-                name: "Dr. Arjun Mehta", role: "Dentist · Koramangala, Bangalore", badge: "Rank #2 in 6 Weeks", delay: 0.16
-              },
-              {
-                quote: "Review collection used to be awkward in person. Now Gyrex sends WhatsApp messages automatically — we get 8-10 new reviews every week without any effort.",
-                name: "Dr. Sneha Pillai", role: "Gynaecologist · Bandra, Mumbai", badge: "+8 Reviews / Week", delay: 0.24
-              }
-            ] as const).map((t, i) => (
-              <motion.div key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: t.delay }}
-                className="bg-white p-7 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm text-left space-y-5"
-              >
-                <div className="flex items-center gap-1 text-amber-400">
-                  {[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-amber-400" />)}
-                </div>
-                <p className="text-sm sm:text-base text-slate-700 italic leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">{t.name}</h4>
-                    <p className="text-xs text-slate-500">{t.role}</p>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shrink-0 ml-3">{t.badge}</span>
-                </div>
-              </motion.div>
-            ))}
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRICING SECTION — Live from Super Admin ── */}
-      <section id="pricing" className="py-20 bg-white border-t border-slate-200">
-        <div ref={pricingRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">Simple, Transparent Pricing</span>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Grow Your Clinic — Starting Today</h2>
-            <p className="text-sm text-slate-600">No hidden fees. No long-term contracts. Cancel anytime.</p>
-          </div>
-
-          {/* Loading skeleton */}
-          {packagesLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="rounded-3xl border border-slate-200 p-8 space-y-4 animate-pulse">
-                  <div className="h-3 bg-slate-200 rounded w-1/3" />
-                  <div className="h-10 bg-slate-200 rounded w-2/3" />
-                  <div className="space-y-2 pt-4">
-                    {[...Array(5)].map((_, j) => <div key={j} className="h-3 bg-slate-100 rounded" />)}
-                  </div>
-                  <div className="h-12 bg-slate-200 rounded-xl mt-4" />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Dynamic package cards */}
-          {!packagesLoading && packages.length > 0 && (
-            <div className={`grid grid-cols-1 gap-6 items-start ${packages.length === 3 ? "md:grid-cols-3" : packages.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-1 max-w-sm mx-auto"}`}>
-              {packages.map((pkg, i) => {
-                const isPopular = i === Math.floor(packages.length / 2); // middle card is featured
-                const price = pkg.priceMonthly;
-                const symbol = pkg.currency === "INR" ? "₹" : "$";
-                const features: string[] = pkg.features?.filter(Boolean) ?? [];
-                const isContactUs = price === 0;
-
-                return (
-                  <motion.div key={pkg.id}
-                    initial={{ opacity: 0, y: 24 }}
-                    animate={pricingInView ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                    className={`rounded-3xl p-8 space-y-6 relative ${
-                      isPopular
-                        ? "bg-blue-600 border border-blue-500 shadow-2xl shadow-blue-600/30 -mt-2 md:-mt-4"
-                        : "bg-slate-50 border border-slate-200"
-                    }`}
-                  >
-                    {isPopular && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                        <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-4 py-1.5 rounded-full shadow-md flex items-center gap-1">
-                          <Flame className="w-3 h-3" /> MOST POPULAR
-                        </span>
-                      </div>
-                    )}
-
-                    <div>
-                      <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isPopular ? "text-blue-200" : "text-slate-500"}`}>
-                        {pkg.name}
-                      </p>
-                      {isContactUs ? (
-                        <p className={`text-3xl font-black ${isPopular ? "text-white" : "text-slate-900"}`}>Custom</p>
-                      ) : (
-                        <p className={`text-4xl font-black ${isPopular ? "text-white" : "text-slate-900"}`}>
-                          {symbol}{price.toLocaleString("en-IN")}
-                          <span className={`text-sm font-medium ${isPopular ? "text-blue-300" : "text-slate-400"}`}>/mo</span>
-                        </p>
-                      )}
-                      {pkg.description && (
-                        <p className={`text-xs mt-1 ${isPopular ? "text-blue-200" : "text-slate-500"}`}>{pkg.description}</p>
-                      )}
-                    </div>
-
-                    {features.length > 0 && (
-                      <ul className="space-y-3">
-                        {features.map((f: string) => (
-                          <li key={f} className={`flex items-center gap-2.5 text-sm ${isPopular ? "text-white" : "text-slate-700"}`}>
-                            <CheckCircle2 className={`w-4 h-4 shrink-0 ${isPopular ? "text-blue-200" : "text-emerald-500"}`} />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {isContactUs ? (
-                      <Link href="/contact">
-                        <Button className={`w-full rounded-xl h-12 font-bold ${isPopular ? "bg-white hover:bg-slate-100 text-blue-700 shadow-lg" : "bg-slate-900 hover:bg-slate-800 text-white"}`}>
-                          Contact Sales
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Link href="/register">
-                        <Button className={`w-full rounded-xl h-12 font-bold ${isPopular ? "bg-white hover:bg-slate-100 text-blue-700 shadow-lg" : ""}`}
-                          variant={isPopular ? undefined : "outline"}>
-                          {isPopular ? "Start Free 14-Day Trial" : "Get Started"}
-                        </Button>
-                      </Link>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Fallback if no packages returned */}
-          {!packagesLoading && packages.length === 0 && (
-            <p className="text-center text-sm text-slate-400 py-8">Pricing plans coming soon. <Link href="/contact" className="text-blue-600 font-semibold hover:underline">Contact us</Link> for details.</p>
-          )}
-
-          <p className="text-center text-xs text-slate-400">All plans include 14-day free trial · No credit card required to start · Cancel anytime</p>
-        </div>
-      </section>
-
-
-      {/* ── FAQ SECTION ── */}
-      <section className="py-20 bg-slate-50 border-t border-slate-200">
-        <div ref={faqRef} className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-
-          <div className="text-center space-y-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">FAQ</span>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Common Questions</h2>
-          </div>
-
-          <div className="space-y-3">
-            {([
-              {
-                q: "Does my clinic need a Google Business Profile already?",
-                a: "Yes — Gyrex works with your existing GBP listing to boost your rank, reviews, and visibility. If you don't have one yet, our team will help you create it during onboarding."
-              },
-              {
-                q: "How does the AI Receptionist handle patient messages?",
-                a: "The AI Receptionist is connected to your clinic's WhatsApp Business number. It reads patient messages, books appointments in your calendar, answers common queries, and escalates complex cases to your staff — in Hindi, Bengali, Tamil, English, Spanish, and Arabic."
-              },
-              {
-                q: "Will this work for my type of clinic — dentist, dermatologist, gynecologist?",
-                a: "Yes. Gyrex is built for all medical specialties. Our system auto-detects your clinic's specialty and customizes the Google keyword targeting, competitor analysis, and patient communication accordingly."
-              },
-              {
-                q: "Is my patient data safe and HIPAA-compliant?",
-                a: "All patient data is encrypted at rest and in transit. We do not share any patient information with third parties. Your data stays within your clinic's account."
-              },
-              {
-                q: "Can I try it before paying?",
-                a: "Absolutely. Every plan comes with a 14-day free trial. No credit card required to start. You also get a free Google Profile Audit instantly — no signup needed."
-              },
-              {
-                q: "How long before I see results on Google Maps?",
-                a: "Most clinics see their Google Maps rank improve within 3–6 weeks of activating the review engine and GBP posts. Review count growth begins within the first 7 days."
-              }
-            ] as const).map((item, i) => (
-              <motion.div key={i}
-                initial={{ opacity: 0, y: 12 }}
-                animate={faqInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.35, delay: i * 0.06 }}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
-              >
-                <button
-                  className="w-full flex items-center justify-between p-5 text-left gap-4"
-                  onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)}
-                >
-                  <span className="text-sm font-bold text-slate-900">{item.q}</span>
-                  <span className="shrink-0 text-slate-400">
-                    {openFaqIndex === i ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </span>
-                </button>
-                <AnimatePresence>
-                  {openFaqIndex === i && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="overflow-hidden"
-                    >
-                      <p className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">{item.a}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-      {/* ── DOWNLOAD GYREX CLINIC APPS (WINDOWS & WEB/MOBILE) ── */}
-      <section id="download-apps" className="py-20 bg-slate-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.15),rgba(255,255,255,0))] pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
-          
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-400/20">
-              Multi-Device Workspace
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-              Download Gyrex Clinic Apps
-            </h2>
-            <p className="text-sm text-slate-400">
-              Access your practice dashboard directly from your Windows Desktop, Reception PC, or Smartphone without typing URLs.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            
-            {/* Windows Desktop App Card */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-8 space-y-6 hover:border-blue-500/50 transition-all shadow-xl flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                  <Laptop className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-white">Windows Desktop App</h3>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/30">
-                      Recommended
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Optimized for Reception PCs & Doctor Consultation Desks (Windows 10/11).
-                  </p>
-                </div>
-
-                <ul className="space-y-2.5 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Instant 1-click desktop launch icon</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Always logged in — zero session dropouts</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Faster local caching for appointment queues</span>
-                  </li>
-                </ul>
+            {/* Output Metric Card */}
+            <div className="lg:col-span-5 bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 text-center space-y-4 shadow-xl">
+              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Projected Annual Growth</p>
+              <div className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono">
+                ₹{annualRevenue.toLocaleString("en-IN")}
               </div>
-
-              <div className="pt-4 border-t border-slate-700/60">
-                <a
-                  href="/download/Gyrex-Clinic-Setup.bat"
-                  download="Gyrex-Clinic-Setup.bat"
-                  className="w-full inline-flex items-center justify-center h-12 px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition-all gap-2 text-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  Download for Windows (.exe / Setup)
-                </a>
-              </div>
-            </div>
-
-            {/* Mobile & Web App (PWA) Card */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-8 space-y-6 hover:border-emerald-500/50 transition-all shadow-xl flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Smartphone className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-white">Mobile & Tablet Web App</h3>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                      iOS & Android
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Progressive Web App that installs directly on your smartphone or iPad.
-                  </p>
-                </div>
-
-                <ul className="space-y-2.5 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Real-time WhatsApp & Appointment notifications</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Tap "Add to Home Screen" in your browser</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Ultra lightweight — takes zero phone storage</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="pt-4 border-t border-slate-700/60">
-                <Link
-                  href="/login"
-                  className="w-full inline-flex items-center justify-center h-12 px-6 rounded-xl font-semibold bg-slate-700 hover:bg-slate-600 text-white shadow-lg transition-all gap-2 text-sm"
-                >
-                  <Globe className="w-4 h-4" />
-                  Launch Web App in Browser
+              <p className="text-xs text-slate-300">
+                +₹{monthlyRevenue.toLocaleString("en-IN")} in additional monthly revenue
+              </p>
+              <div className="pt-4 border-t border-white/10">
+                <Link href="/local-seo/free-audit">
+                  <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs h-11 rounded-xl shadow-lg">
+                    Unlock This Growth for Your Practice 🚀
+                  </Button>
                 </Link>
               </div>
             </div>
 
           </div>
-
         </div>
       </section>
 
-      {/* ── BOTTOM CONVERSION CTA BANNER (SEPARATED FROM FOOTER WITH VIBRANT LIGHT GRADIENT) ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 my-20">
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white rounded-3xl p-10 sm:p-14 shadow-2xl border border-blue-400/30 text-center space-y-6">
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            Ready to Dominate Local Search in Your Neighborhood?
-          </h2>
-          <p className="text-base sm:text-lg text-blue-100 max-w-xl mx-auto leading-relaxed">
-            Join 500+ clinics getting more patients automatically. Claim your 14-day risk-free trial today.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <Link href="/register" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto bg-white hover:bg-slate-100 text-blue-700 font-bold rounded-xl px-8 h-14 text-base shadow-xl">
-                Start 14-Day Free Trial
-              </Button>
-            </Link>
-            <Link href="/local-seo/free-audit" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto border-2 border-white/80 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl px-8 h-14 text-base backdrop-blur-xs">
-                Free Google Profile Audit
-              </Button>
-            </Link>
+      {/* ── PRICING SECTION ── */}
+      <section id="pricing" ref={pricingRef} className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-blue-100">
+              <CreditCard className="w-3.5 h-3.5 text-blue-600" /> Transparent Pricing
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Invest in Predictable Practice Growth</h2>
+            <p className="text-sm text-slate-600">Choose the right plan to power your local search rankings, website, and WhatsApp automation.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {packagesLoading ? (
+              <div className="col-span-3 text-center py-12 text-slate-400 font-bold text-sm">Loading plans...</div>
+            ) : packages.length > 0 ? (
+              packages.map((pkg, idx) => (
+                <div key={pkg.id || idx} className={`p-8 rounded-3xl bg-white border transition-all space-y-6 flex flex-col justify-between ${
+                  pkg.isFeatured ? "border-blue-600 shadow-xl ring-2 ring-blue-600/20 relative" : "border-slate-200/80 shadow-xs hover:shadow-lg"
+                }`}>
+                  {pkg.isFeatured && (
+                    <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+                      Most Popular
+                    </span>
+                  )}
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-bold text-slate-900">{pkg.name}</h3>
+                    <p className="text-xs text-slate-500">{pkg.description || "Complete practice growth suite."}</p>
+                    <div className="pt-2">
+                      <span className="text-3xl font-black text-slate-900">₹{pkg.priceINR?.toLocaleString("en-IN") || pkg.price}</span>
+                      <span className="text-xs text-slate-400 font-semibold"> / month</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 pt-4 border-t border-slate-100 text-xs text-slate-700 font-medium">
+                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Specialty Clinic Website (20 Themes)</div>
+                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> WhatsApp AI Receptionist &amp; Booking</div>
+                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 5×5 Geo-Rank Heatmap Tracker</div>
+                    <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Automated 5-Star WhatsApp Review Engine</div>
+                  </div>
+
+                  <Link href="/register">
+                    <Button className={`w-full font-bold text-xs h-11 rounded-xl shadow-md ${
+                      pkg.isFeatured ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-900 hover:bg-black text-white"
+                    }`}>
+                      Get Started Now
+                    </Button>
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 text-slate-400">Plans available on registration.</div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* ── FAQ SECTION ── */}
+      <section id="faq" ref={faqRef} className="py-24 bg-white border-t border-slate-200/80">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-blue-100">
+              <HelpCircle className="w-3.5 h-3.5 text-blue-600" /> FAQs
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Frequently Asked Questions</h2>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              {
+                q: "Can I connect my own custom domain to my clinic website?",
+                a: "Yes! You can connect any custom domain (e.g. drvinaykumar.com or citydental.in) with 1 click. We provide automated free SSL certification and high-speed global CDN hosting.",
+              },
+              {
+                q: "How does the WhatsApp AI Receptionist work?",
+                a: "Our AI Receptionist connects to your WhatsApp Business number via QR code. It answers patient inquiries 24/7 in 6+ languages, explains your treatments, and books appointments directly into your clinic schedule.",
+              },
+              {
+                q: "How does the 5×5 Geo Heatmap improve my Google Maps ranking?",
+                a: "The heatmap simulates 25 search queries across a 5km radius to identify exactly where your practice ranks #1 vs where competitors are winning. It provides step-by-step guidance on review targets and local SEO signals to overtake Rank #1.",
+              },
+              {
+                q: "Is there any coding required to build or edit the website?",
+                a: "Zero coding required! You can select from 20 specialty presets (Pediatrics, Dermatology, Dental, Cardiology, etc.) and customize your headings, colors, photos, and consultation packages in seconds.",
+              },
+            ].map((faq, idx) => (
+              <div key={idx} className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+                <button
+                  onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between font-bold text-slate-900 text-sm hover:bg-slate-100/80 transition-colors"
+                >
+                  <span>{faq.q}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${openFaqIndex === idx ? "rotate-180" : ""}`} />
+                </button>
+                {openFaqIndex === idx && (
+                  <div className="px-6 pb-5 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-200/60 bg-white">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <Footer />
-
-      {/* ── STICKY MOBILE ACTION BAR (NATIVE APP FEEL) ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 p-3 sm:hidden flex items-center justify-between gap-3 shadow-2xl">
-        <Link href="/login" className="flex-1">
-          <Button variant="outline" className="w-full rounded-xl h-11 text-xs font-bold border-slate-300">
-            Sign In
-          </Button>
-        </Link>
-        <Link href="/local-seo/free-audit" className="flex-1">
-          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 text-xs font-bold shadow-md">
-            Free Audit
-          </Button>
-        </Link>
-      </div>
-
     </div>
   );
 }
