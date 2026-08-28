@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "cardiocare-executive"
+    ? [
+        { name: "Comprehensive 3D Color Doppler 2D Echo", description: "Detailed real-time assessment of heart chambers, ejection fraction, and cardiac valve function.", icon: "heart", duration: "30" },
+        { name: "Treadmill Stress Test (TMT) & 24-hr Holter", description: "Computerized exercise ECG and 24/48-hour continuous ambulatory rhythm monitoring.", icon: "activity", duration: "45" },
+        { name: "Coronary Angiography & Radial Stenting", description: "Painless wrist-access (transradial) coronary angiography and drug-eluting stent implantation.", icon: "shield", duration: "45" },
+        { name: "Pacemaker & Arrhythmia Management", description: "Advanced leadless pacemaker insertion, biventricular CRT, and arrhythmia management.", icon: "activity", duration: "45" },
+        { name: "Executive Preventive Cardiac Health Suite", description: "Lipid profile, HbA1c, high-sensitivity Troponin-I, CT coronary calcium score, and diet coaching.", icon: "sparkles", duration: "60" },
+        { name: "Hypertension & Heart Failure Management", description: "Tailored medication titration, fluid retention monitoring, and long-term cardiac rehabilitation.", icon: "heart", duration: "30" },
+      ]
     : themeId === "ayurveda-earth"
     ? [
         { name: "Authentic Panchakarma Detoxification", description: "Full 5-fold classical body cleansing including Vamana, Virechana, Basti, and Nasya.", icon: "leaf", duration: "60" },
@@ -199,6 +208,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "cardiocare-executive"
+    ? [
+        { question: "What are the critical early warning signs of a heart attack?", answer: "Pressure, tightness, or squeezing pain in the center of the chest spreading to the left arm, neck, or jaw, accompanied by shortness of breath, cold sweating, or unexplained dizziness. Seek emergency care immediately." },
+        { question: "How should I prepare for a Treadmill Stress Test (TMT)?", answer: "Wear comfortable walking shoes and light clothes. Avoid heavy meals or caffeine 3 hours before the test, and consult our cardiologist regarding taking regular blood pressure medications on the test day." },
+        { question: "Why is wrist (transradial) angiography preferred over groin access?", answer: "Transradial access through the wrist results in virtually zero bleeding complications, requires no prolonged bed rest, and allows same-day discharge." },
+        { question: "How do I schedule an executive heart checkup?", answer: "Click 'Book Appointment' or message our cardiology desk directly on WhatsApp." },
+      ]
     : themeId === "ayurveda-earth"
     ? [
         { question: "How many days does a complete Panchakarma detox take?", answer: "A full classical Panchakarma program typically ranges from 7, 14, to 21 days depending on your individual health condition and dosha constitution." },
@@ -754,10 +770,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth, Theme 8: CardioCare Executive & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "cardiocare-executive"
+            ? [
+                { value: "15,000+", label: "Angiographies & Stenting", icon: "heart" },
+                { value: "100%", label: "Cath-Lab Precision Standards", icon: "shield" },
+                { value: "<30 min", label: "Door-to-Balloon Rapid Care", icon: "clock" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "ayurveda-earth"
             ? [
                 { value: "100%", label: "Pure Classical Herbals", icon: "leaf" },
