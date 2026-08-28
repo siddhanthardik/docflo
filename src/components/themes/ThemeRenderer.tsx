@@ -1,7 +1,7 @@
-import { getThemePreset } from "@/components/themes/theme-presets";
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { getThemePreset } from "@/components/themes/theme-presets";
 import { ClinicWebsiteData, PageSection } from "./theme-types";
 import { motion } from "framer-motion";
 import {
