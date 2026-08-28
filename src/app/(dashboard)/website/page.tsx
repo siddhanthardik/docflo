@@ -93,6 +93,7 @@ const THEME_OPTIONS = [
   { id: "uropulse-advanced", name: "UroPulse Advanced", category: "Urology & Andrology", primary: "#1D4ED8", secondary: "#0F172A", accent: "#06B6D4" },
   { id: "oncohorizon-cancer", name: "OncoHorizon Cancer Care", category: "Oncology & Cancer Center", primary: "#7E22CE", secondary: "#0F172A", accent: "#EC4899" },
   { id: "gastrosurg-advanced", name: "GastroSurg Advanced", category: "General Surgery & GI Surgery", primary: "#0F766E", secondary: "#0F172A", accent: "#D97706" },
+  { id: "kinetic-physio", name: "KineticPhysio Pro", category: "Physiotherapy & Sports Rehab", primary: "#0284C7", secondary: "#0F172A", accent: "#EA580C" },
 ];
 
 const FONTS_HEADINGS = [

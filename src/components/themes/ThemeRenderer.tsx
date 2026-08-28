@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "kinetic-physio"
+    ? [
+        { question: "How many physiotherapy sessions are typically required for chronic back or neck pain?", answer: "Most acute to sub-acute conditions show substantial pain reduction within 3 to 6 sessions, while long-standing chronic postural issues benefit from a structured 10 to 12 session strengthening program." },
+        { question: "Does dry needling therapy hurt?", answer: "Most patients feel only a slight prick when the ultra-thin filament needle is inserted, followed by a brief 'twitch response' that signals the tight muscle knot is instantly releasing." },
+        { question: "What should I wear to my first physiotherapy evaluation?", answer: "Wear comfortable, loose-fitting athletic clothes (e.g. shorts, t-shirt, sweatpants) that allow full movement and easy evaluation of the affected joint or spine." },
+        { question: "How do I book a physiotherapy session?", answer: "Click 'Book Appointment' or message our physical therapy desk directly on WhatsApp." },
+      ]
     : themeId === "gastrosurg-advanced"
     ? [
         { question: "How much pain is involved in laparoscopic gallbladder removal?", answer: "Laparoscopic cholecystectomy uses 3 to 4 tiny keyhole incisions (5-10 mm). Pain is minimal and manageable with basic oral analgesics, allowing patients to walk comfortably within hours after surgery." },
@@ -517,7 +524,7 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "gastrosurg-advanced"
+        themeId === "kinetic-physio" || themeId === "gastrosurg-advanced"
           ? "bg-[#F0FDFA]"
           : themeId === "uropulse-advanced" || themeId === "acculab-diagnostics"
           ? "bg-[#F0F9FF]"
@@ -868,10 +875,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-18: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-19: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "kinetic-physio"
+            ? [
+                { value: "25,000+", label: "Rehab Sessions Delivered", icon: "activity" },
+                { value: "100%", label: "Hands-On Manual Therapy", icon: "shield" },
+                { value: "98.8%", label: "Pain Relief Success Rate", icon: "sparkles" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "gastrosurg-advanced"
             ? [
                 { value: "20,000+", label: "Laparoscopic & Laser Surgeries", icon: "shield" },
