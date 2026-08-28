@@ -43,82 +43,161 @@ import {
   Lock,
   Link2,
   Unlink,
+  Sparkles,
+  ArrowRight,
+  Brush,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
-const THEME_PRESETS = [
+export interface PrebuiltTheme {
+  id: string;
+  name: string;
+  category: string;
+  badge: string;
+  badgeColor: string;
+  description: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  fontHeading: string;
+  fontBody: string;
+  heroHeadline: string;
+  heroSubtitle: string;
+  heroImage: string;
+  sampleServices: Array<{ name: string; description: string; price?: number }>;
+  sampleReviews: Array<{ reviewerName: string; rating: number; comment: string; reviewDate: string }>;
+}
+
+export const PREBUILT_THEMES: PrebuiltTheme[] = [
   {
     id: "apex-clinical",
-    name: "Apex Clinical",
-    specialty: "Polyclinic & Hospitals",
-    primary: "#2563EB",
-    secondary: "#0F172A",
-    accent: "#10B981",
-    badge: "Enterprise Authority",
-    desc: "Engineered for comprehensive clinical practices, multi-specialty polyclinics, and high-trust medical centers.",
+    name: "Apex Multi-Specialty",
+    category: "Polyclinic, Hospitals & Consulting Physicians",
+    badge: "Most Popular",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+    description: "Authoritative royal blue and crisp clinical layout engineered for general physicians, consulting specialists, and multi-bed polyclinics.",
+    primaryColor: "#2563EB",
+    secondaryColor: "#0F172A",
+    accentColor: "#10B981",
+    fontHeading: "Plus Jakarta Sans",
+    fontBody: "Inter",
+    heroHeadline: "Leading Clinical Healthcare & Dedicated Patient Care",
+    heroSubtitle: "Delivering modern diagnostic precision, comprehensive outpatient consultations, and patient-first medical excellence.",
+    heroImage: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80",
+    sampleServices: [
+      { name: "Comprehensive Health Checkup", description: "Full physical examination, blood panel review, and lifestyle wellness plan.", price: 1500 },
+      { name: "Specialist Outpatient Consultation", description: "Detailed diagnostic evaluation and customized medication protocol.", price: 1000 },
+      { name: "Chronic Disease Management", description: "Ongoing management for hypertension, diabetes, and cardiovascular wellness.", price: 1200 },
+    ],
+    sampleReviews: [
+      { reviewerName: "Rajesh Sharma", rating: 5, comment: "Very thorough consultation. The doctor took the time to explain everything clearly.", reviewDate: "1 week ago" },
+      { reviewerName: "Anita Verma", rating: 5, comment: "Minimal wait time and very courteous staff. Highly recommended clinic.", reviewDate: "3 weeks ago" },
+    ],
   },
   {
     id: "serene-glow",
-    name: "Serene Aesthetics",
-    specialty: "Dermatology & Cosmetic",
-    primary: "#BE185D",
-    secondary: "#1E1B4B",
-    accent: "#F43F5E",
-    badge: "Luxury Aesthetics",
-    desc: "Luxury rose and pearl tones with elegant typography tailored for skin specialists, cosmetology, and aesthetic wellness.",
+    name: "Serene Glow Aesthetics",
+    category: "Dermatology, Cosmetology & Skin Clinics",
+    badge: "Luxury Editorial",
+    badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
+    description: "Luxury rose, pearl tones, and refined editorial typography tailored for skin specialists, laser cosmetology, and aesthetic wellness.",
+    primaryColor: "#BE185D",
+    secondaryColor: "#1E1B4B",
+    accentColor: "#F43F5E",
+    fontHeading: "Playfair Display",
+    fontBody: "Inter",
+    heroHeadline: "Advanced Clinical Dermatology & Radiant Skin Care",
+    heroSubtitle: "Evidence-based clinical skin treatments, anti-aging therapies, and personalized aesthetic procedures for natural rejuvenation.",
+    heroImage: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80",
+    sampleServices: [
+      { name: "Clinical Acne & Scar Laser Therapy", description: "Targeted laser resurfacing and dermatological peel protocols.", price: 3500 },
+      { name: "Hydra-Infusion Medi-Facial", description: "Deep dermal hydration, pore extraction, and peptide serum infusion.", price: 2800 },
+      { name: "Anti-Aging & Collagen Rejuvenation", description: "Non-invasive skin tightening and natural youth restoration treatment.", price: 5000 },
+    ],
+    sampleReviews: [
+      { reviewerName: "Sneha Kapoor", rating: 5, comment: "My skin cleared up within 4 weeks! Best dermatologist in the city.", reviewDate: "2 weeks ago" },
+      { reviewerName: "Pooja Malhotra", rating: 5, comment: "Luxurious clinic ambiance and genuine treatment advice without pushing unnecessary products.", reviewDate: "1 month ago" },
+    ],
   },
   {
     id: "minimal-luxe",
     name: "Minimal Luxe Dental",
-    specialty: "Dentistry & Smile Studios",
-    primary: "#0284C7",
-    secondary: "#0F172A",
-    accent: "#14B8A6",
+    category: "Dentistry, Orthodontics & Smile Studios",
     badge: "Modern Precision",
-    desc: "Precision obsidian and cyan palette designed for dental surgeons, orthodontists, and modern smile clinics.",
+    badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    description: "Precision cyan and obsidian palette crafted for dental surgeons, implantologists, clear aligner specialists, and smile studios.",
+    primaryColor: "#0284C7",
+    secondaryColor: "#0F172A",
+    accentColor: "#14B8A6",
+    fontHeading: "Plus Jakarta Sans",
+    fontBody: "Inter",
+    heroHeadline: "Modern Precision Dentistry & Beautiful Smiles",
+    heroSubtitle: "Painless root canals, digital smile designing, invisible aligners, and dental implants with state-of-the-art technology.",
+    heroImage: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80",
+    sampleServices: [
+      { name: "Laser Teeth Whitening", description: "1-hour instant shade lightening with gentle enamel protection.", price: 4000 },
+      { name: "Invisible Teeth Aligners Consultation", description: "3D digital intraoral scan and customized invisible aligner plan.", price: 1500 },
+      { name: "Single-Sitting Root Canal (RCT)", description: "Painless computerized rotary endodontics with precision crown fitting.", price: 4500 },
+    ],
+    sampleReviews: [
+      { reviewerName: "Karan Mehta", rating: 5, comment: "Completely painless RCT! Modern clinic with futuristic equipment.", reviewDate: "5 days ago" },
+      { reviewerName: "Ritu Singhania", rating: 5, comment: "Got my aligners here. Incredible transformation in just 6 months.", reviewDate: "3 weeks ago" },
+    ],
   },
   {
     id: "warm-pediatrics",
-    name: "Warm Pediatrics",
-    specialty: "Pediatrics & Child Care",
-    primary: "#059669",
-    secondary: "#1E293B",
-    accent: "#F59E0B",
-    badge: "Family Healthcare",
-    desc: "Approachable emerald and warm amber theme with welcoming layout and reassuring parent emergency quick-actions.",
+    name: "Warm Pediatrics & Family",
+    category: "Pediatrics, Child Care & Neonatology",
+    badge: "Approachable & Warm",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    description: "Comforting mint emerald and amber tones with welcoming cards, parent emergency quick-actions, and child vaccination guides.",
+    primaryColor: "#059669",
+    secondaryColor: "#1E293B",
+    accentColor: "#F59E0B",
+    fontHeading: "Plus Jakarta Sans",
+    fontBody: "Inter",
+    heroHeadline: "Gentle Pediatric Care for Your Child's Healthy Growth",
+    heroSubtitle: "Comprehensive infant wellness checks, childhood vaccination schedules, growth milestone tracking, and emergency pediatric guidance.",
+    heroImage: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80",
+    sampleServices: [
+      { name: "Newborn & Infant Wellness Check", description: "Milestone evaluation, nutrition guidance, and physical examination.", price: 1000 },
+      { name: "Childhood Vaccination Program", description: "IAP-recommended immunization schedules with gentle administration.", price: 800 },
+      { name: "Pediatric Allergy & Respiratory Care", description: "Specialized nebulization, wheezing management, and allergy assessment.", price: 1200 },
+    ],
+    sampleReviews: [
+      { reviewerName: "Neha & Rahul Gupta", rating: 5, comment: "The doctor is so patient with our 2-year-old. Best pediatrician in town!", reviewDate: "1 week ago" },
+      { reviewerName: "Meenakshi Das", rating: 5, comment: "Very reassuring doctor. Available on WhatsApp for urgent baby queries.", reviewDate: "2 weeks ago" },
+    ],
   },
   {
     id: "vitality-rehab",
     name: "Vitality Rehab & Ortho",
-    specialty: "Orthopedics & Physio",
-    primary: "#0D9488",
-    secondary: "#18181B",
-    accent: "#E11D48",
+    category: "Orthopedics, Physiotherapy & Sports Medicine",
     badge: "Active Dynamic",
-    desc: "High-energy teal and dark charcoal structure focused on movement recovery, rehabilitation, and injury management.",
+    badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+    description: "High-energy teal and slate structure focused on movement recovery, joint pain relief, posture correction, and sports rehabilitation.",
+    primaryColor: "#0D9488",
+    secondaryColor: "#18181B",
+    accentColor: "#E11D48",
+    fontHeading: "Plus Jakarta Sans",
+    fontBody: "Inter",
+    heroHeadline: "Restore Mobility, Relieve Pain & Move Freely",
+    heroSubtitle: "Advanced orthopedic physical therapy, spine rehabilitation, joint mobility restoration, and sports injury recovery programs.",
+    heroImage: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80",
+    sampleServices: [
+      { name: "Targeted Spine & Back Pain Rehab", description: "Electro-therapy, spinal decompression, and core stabilization routines.", price: 1200 },
+      { name: "Sports Injury Physiotherapy", description: "Ligament strain recovery, muscle conditioning, and movement therapy.", price: 1500 },
+      { name: "Post-Surgery Joint Mobility Program", description: "Customized physical rehabilitation for knee and shoulder replacements.", price: 1800 },
+    ],
+    sampleReviews: [
+      { reviewerName: "Vikram Chauhan", rating: 5, comment: "Recovered from severe shoulder pain in 6 sessions. Exceptional physio!", reviewDate: "3 days ago" },
+      { reviewerName: "Deepak Saini", rating: 5, comment: "Very professional therapist. Helped me resume running without knee pain.", reviewDate: "2 weeks ago" },
+    ],
   },
-];
-
-const COLOR_PRESETS = [
-  { name: "Clinical Royal Blue", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
-  { name: "Healing Emerald", primary: "#059669", secondary: "#064E3B", accent: "#F59E0B" },
-  { name: "Luxury Cosmetic Rose", primary: "#BE185D", secondary: "#1E1B4B", accent: "#F43F5E" },
-  { name: "Cyan Precision", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
-  { name: "Charcoal Athletic", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
-  { name: "Deep Indigo Elegance", primary: "#4F46E5", secondary: "#0F172A", accent: "#EC4899" },
-];
-
-const NAV_SECTIONS = [
-  { id: "url", label: "Website URL & Gyrex Link", icon: Globe, badge: "Free Subdomain" },
-  { id: "custom_domain", label: "Custom Branded Domain", icon: Link2, badge: "Your Own .com" },
-  { id: "theme", label: "Themes & Branding", icon: Palette, badge: "Identity" },
-  { id: "header", label: "Header & Hero Section", icon: Layout, badge: "First Impression" },
-  { id: "services", label: "Services & Treatments", icon: Stethoscope, badge: "Clinical" },
-  { id: "bio", label: "Doctor Bio & Credentials", icon: ShieldCheck, badge: "E-E-A-T" },
-  { id: "sections", label: "Page Section Manager", icon: Layers, badge: "Layout" },
 ];
 
 export default function WebsiteStudioPage() {
@@ -128,21 +207,25 @@ export default function WebsiteStudioPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncingGbp, setSyncingGbp] = useState(false);
-  const [activeSection, setActiveSection] = useState("url");
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [mainView, setMainView] = useState<"store" | "customizer" | "domain">("store");
+  const [customizerTab, setCustomizerTab] = useState<"branding" | "hero" | "services" | "bio" | "sections">("branding");
+
+  // Live Demo Preview Modal State
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<PrebuiltTheme | null>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [copiedUrl, setCopiedUrl] = useState(false);
-
-  // Free URL validation state
-  const [urlInput, setUrlInput] = useState("");
-  const [urlStatus, setUrlStatus] = useState<{ available?: boolean; checking?: boolean; reason?: string }>({});
 
   // Custom Domain state
   const [customDomainInput, setCustomDomainInput] = useState("");
   const [connectingDomain, setConnectingDomain] = useState(false);
   const [customDomainStatus, setCustomDomainStatus] = useState<{ connectedDomain?: string | null; dnsConfigured?: boolean }>({});
 
-  // Website State
+  // Free URL validation state
+  const [urlInput, setUrlInput] = useState("");
+  const [urlStatus, setUrlStatus] = useState<{ available?: boolean; checking?: boolean; reason?: string }>({});
+
+  // Active Website State
   const [siteData, setSiteData] = useState<ClinicWebsiteData>({
     subdomain: "clinic",
     themeId: "apex-clinical",
@@ -197,7 +280,6 @@ export default function WebsiteStudioPage() {
         }
       }
 
-      // Also fetch custom domain health
       fetchCustomDomainStatus();
     } catch (err: any) {
       toast({ title: "Failed to load website configuration", description: err.message, variant: "destructive" });
@@ -223,6 +305,34 @@ export default function WebsiteStudioPage() {
   useEffect(() => {
     fetchWebsiteData();
   }, []);
+
+  // Apply a Prebuilt Theme from the Store
+  const handleApplyTheme = (theme: PrebuiltTheme) => {
+    setSiteData((prev) => ({
+      ...prev,
+      themeId: theme.id,
+      primaryColor: theme.primaryColor,
+      secondaryColor: theme.secondaryColor,
+      accentColor: theme.accentColor,
+      fontHeading: theme.fontHeading,
+      fontBody: theme.fontBody,
+      heroHeading: prev.heroHeading || theme.heroHeadline,
+      heroSubheading: prev.heroSubheading || theme.heroSubtitle,
+      customServices: (prev.customServices && prev.customServices.length > 0) ? prev.customServices : theme.sampleServices,
+    }));
+
+    setMainView("customizer");
+    toast({
+      title: `"${theme.name}" Theme Selected! 🎨`,
+      description: "Now customizing with your clinic information.",
+    });
+  };
+
+  // Launch Interactive Theme Live Demo
+  const handleLaunchDemo = (theme: PrebuiltTheme) => {
+    setPreviewTheme(theme);
+    setPreviewModalOpen(true);
+  };
 
   // Free URL Availability Check
   const checkUrlAvailability = async (slug: string) => {
@@ -352,17 +462,68 @@ export default function WebsiteStudioPage() {
     toast({ title: "Website Link Copied! 📋", description: "Link copied to clipboard." });
   };
 
+  // Prepare Live Demo Preview Data
+  const getDemoData = (): ClinicWebsiteData => {
+    if (previewTheme) {
+      return {
+        subdomain: siteData.subdomain,
+        themeId: previewTheme.id,
+        primaryColor: previewTheme.primaryColor,
+        secondaryColor: previewTheme.secondaryColor,
+        accentColor: previewTheme.accentColor,
+        fontHeading: previewTheme.fontHeading,
+        fontBody: previewTheme.fontBody,
+        siteTitle: siteData.siteTitle !== "Clinic" ? siteData.siteTitle : `Dr. ${siteData.doctor?.name || "Vinay Kumar"} Clinic`,
+        tagline: previewTheme.category,
+        heroHeading: previewTheme.heroHeadline,
+        heroSubheading: previewTheme.heroSubtitle,
+        heroImage: siteData.heroImage || previewTheme.heroImage,
+        heroStyle: "IMAGE_ONLY",
+        showHeroBookingForm: siteData.showHeroBookingForm,
+        announcementBar: "Now open for online consultations and clinic visits.",
+        ctaButtonText: "Book Appointment",
+        ctaButtonAction: "BOOKING_MODAL",
+        whatsappNumber: siteData.whatsappNumber || "9876543210",
+        contactPhone: siteData.contactPhone || "+91 98765 43210",
+        showServices: true,
+        showReviews: true,
+        showDoctorBio: true,
+        showFaq: true,
+        showMap: true,
+        showStickyBar: true,
+        customServices: previewTheme.sampleServices,
+        customFaqs: [
+          { question: "How do I book an appointment?", answer: "Click 'Book Appointment' or chat directly with our front desk on WhatsApp." },
+          { question: "What are your clinic hours?", answer: "Mon-Sat from 09:00 AM to 08:00 PM. Emergency on-call available." },
+        ],
+        customBio: `Our clinic combines clinical expertise with compassionate care to ensure the best health outcomes for every patient.`,
+        doctor: siteData.doctor || {
+          name: "Dr. Vinay Kumar Rai",
+          clinicName: "Premier Clinic",
+          specialty: previewTheme.category,
+          phone: "+91 98765 43210",
+          address: "Main Medical Center, New Delhi",
+          city: "New Delhi",
+          workingHoursStart: "09:00 AM",
+          workingHoursEnd: "08:00 PM",
+        },
+        reviews: previewTheme.sampleReviews,
+      };
+    }
+    return siteData;
+  };
+
   return (
     <div className="p-4 sm:p-8 max-w-[1500px] mx-auto space-y-8 pb-28 font-sans">
-      {/* ── TOP CORPORATE COMMAND BAR ── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+      {/* ── TOP EXECUTIVE COMMAND BAR ── */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/80">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Active &amp; Indexed
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live &amp; Google Indexed
             </span>
             <span className="text-xs font-medium text-slate-400">
-              Medical Theme: <strong className="text-slate-800 capitalize">{siteData.themeId.replace("-", " ")}</strong>
+              Active Theme: <strong className="text-slate-800 capitalize">{siteData.themeId.replace("-", " ")}</strong>
             </span>
             <span className="text-xs font-medium text-slate-400">•</span>
             <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-medium">
@@ -375,7 +536,7 @@ export default function WebsiteStudioPage() {
           </h1>
 
           <div className="flex items-center gap-2 pt-0.5">
-            <span className="text-xs text-slate-400 font-medium">Public Portal:</span>
+            <span className="text-xs text-slate-400 font-medium">Live Website:</span>
             {customDomainStatus.connectedDomain ? (
               <a
                 href={`https://${customDomainStatus.connectedDomain}`}
@@ -390,7 +551,7 @@ export default function WebsiteStudioPage() {
                 href={`https://${siteData.subdomain}.gyrex.in`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 font-mono inline-flex items-center gap-1 bg-blue-50/70 hover:bg-blue-50 px-3 py-1 rounded-xl border border-blue-100 transition-colors"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 font-mono inline-flex items-center gap-1 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100 transition-colors"
               >
                 https://{siteData.subdomain}.gyrex.in <ArrowUpRight className="w-3.5 h-3.5" />
               </a>
@@ -405,14 +566,14 @@ export default function WebsiteStudioPage() {
           </div>
         </div>
 
-        {/* Corporate Header Action Hub */}
+        {/* Action Hub */}
         <div className="flex items-center gap-3 flex-wrap">
           <Button
             type="button"
             variant="outline"
             disabled={syncingGbp}
             onClick={() => fetchWebsiteData(true)}
-            className="h-11 px-4 rounded-2xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs flex items-center gap-2"
+            className="h-11 px-4 rounded-2xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 text-slate-500 ${syncingGbp ? "animate-spin text-blue-600" : ""}`} />
             <span>{syncingGbp ? "Syncing Profile..." : "Sync from Google Profile"}</span>
@@ -421,17 +582,20 @@ export default function WebsiteStudioPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setShowPreviewModal(true)}
-            className="h-11 px-5 rounded-2xl border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-2xs flex items-center gap-2"
+            onClick={() => {
+              setPreviewTheme(PREBUILT_THEMES.find((t) => t.id === siteData.themeId) || PREBUILT_THEMES[0]);
+              setPreviewModalOpen(true);
+            }}
+            className="h-11 px-5 rounded-2xl border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2"
           >
             <Eye className="w-4 h-4 text-blue-600" />
-            <span>Preview Website</span>
+            <span>Preview My Website</span>
           </Button>
 
           <Button
             onClick={() => handleSaveWebsite()}
             disabled={saving}
-            className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all"
+            className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? "Publishing..." : "Publish Website Live"}</span>
@@ -439,353 +603,233 @@ export default function WebsiteStudioPage() {
         </div>
       </div>
 
-      {/* ── 2-COLUMN ENTERPRISE WORKSPACE LAYOUT ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LEFT COLUMN: SLEEK CORPORATE NAVIGATION RAIL (3.5 Columns) */}
-        <div className="lg:col-span-4 space-y-3 sticky top-24">
-          <div className="bg-white rounded-3xl p-3 border border-slate-200/80 shadow-xs space-y-1">
-            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Configuration Modules
-            </div>
+      {/* ── 3 MAIN STORE VIEWS NAVIGATION (Shopify Style) ── */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          onClick={() => setMainView("store")}
+          className={`px-5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all ${
+            mainView === "store"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Palette className="w-4 h-4 text-indigo-400" />
+          <span>Prebuilt Themes Store (5 Themes)</span>
+        </button>
 
-            {NAV_SECTIONS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
+        <button
+          onClick={() => setMainView("customizer")}
+          className={`px-5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all ${
+            mainView === "customizer"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Brush className="w-4 h-4 text-blue-400" />
+          <span>Visual Website Customizer</span>
+        </button>
+
+        <button
+          onClick={() => setMainView("domain")}
+          className={`px-5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all ${
+            mainView === "domain"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Globe className="w-4 h-4 text-emerald-400" />
+          <span>Domain &amp; URL Settings</span>
+        </button>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* VIEW 1: PREBUILT THEMES STORE (Shopify Style Marketplace)   */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {mainView === "store" && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-6 sm:p-8 rounded-3xl border border-blue-100">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/80 px-2.5 py-1 rounded-md">
+                Prebuilt Medical Themes
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Choose a Prebuilt Theme for Your Clinic
+              </h2>
+              <p className="text-xs text-slate-600 max-w-2xl">
+                Every theme is engineered for specific medical disciplines with high patient conversion rates. You can test live demos before applying.
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-xs font-bold text-slate-500">New themes added bi-weekly</span>
+            </div>
+          </div>
+
+          {/* Theme Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {PREBUILT_THEMES.map((theme) => {
+              const isSelected = siteData.themeId === theme.id;
               return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`w-full p-3.5 rounded-2xl text-left transition-all flex items-center justify-between gap-3 ${
-                    isActive
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                <div
+                  key={theme.id}
+                  className={`bg-white rounded-3xl border-2 overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between ${
+                    isSelected ? "border-blue-600 ring-4 ring-blue-600/10" : "border-slate-200"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isActive ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>
-                      <Icon className="w-4 h-4" />
+                  <div>
+                    {/* Visual Card Mockup Frame */}
+                    <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 group">
+                      <img
+                        src={theme.heroImage}
+                        alt={theme.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-5 text-white">
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md border w-fit ${theme.badgeColor}`}>
+                          {theme.badge}
+                        </span>
+                        <h3 className="text-lg font-black mt-1 leading-tight">{theme.name}</h3>
+                        <p className="text-xs text-slate-200 line-clamp-1">{theme.category}</p>
+                      </div>
+
+                      {/* Palette Dots */}
+                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-1.5 rounded-xl shadow-md flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 rounded-full shadow-xs" style={{ backgroundColor: theme.primaryColor }} />
+                        <div className="w-3.5 h-3.5 rounded-full shadow-xs" style={{ backgroundColor: theme.secondaryColor }} />
+                        <div className="w-3.5 h-3.5 rounded-full shadow-xs" style={{ backgroundColor: theme.accentColor }} />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold leading-tight">{item.label}</p>
-                      <p className={`text-[10px] font-medium ${isActive ? "text-slate-400" : "text-slate-400"}`}>{item.badge}</p>
+
+                    {/* Body Info */}
+                    <div className="p-6 space-y-4">
+                      <p className="text-xs text-slate-600 leading-relaxed min-h-[48px]">
+                        {theme.description}
+                      </p>
+
+                      <div className="pt-3 border-t border-slate-100 space-y-2">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Included Features</p>
+                        <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-700">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-md">✓ WhatsApp Appointment</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-md">✓ Google Reviews</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-md">✓ Procedure Pricing</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <ChevronRight className={`w-4 h-4 ${isActive ? "text-slate-400" : "text-slate-300"}`} />
-                </button>
+
+                  {/* Actions Footer */}
+                  <div className="p-6 pt-0 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleLaunchDemo(theme)}
+                      className="flex-1 h-11 text-xs font-bold rounded-2xl border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Live Preview</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => handleApplyTheme(theme)}
+                      className={`flex-1 h-11 text-xs font-bold rounded-2xl text-white shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                        isSelected ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-900 hover:bg-black"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="w-4 h-4" /> Selected
+                        </>
+                      ) : (
+                        <>
+                          <span>Use Theme</span> <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               );
             })}
           </div>
-
-          {/* Quick Info Box */}
-          <div className="p-5 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 text-white shadow-md space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Enterprise Healthcare Engine
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Websites are powered by high-speed Server-Side Rendering (SSR), structured Google medical schemas, and 1-click WhatsApp patient appointment dispatch.
-            </p>
-          </div>
         </div>
+      )}
 
-        {/* RIGHT COLUMN: MODULE CONFIGURATION CANVAS (8.5 Columns) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 1: WEBSITE URL & SUBDOMAIN */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "url" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
-                  Domain Infrastructure
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">Free Clinic Website URL</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Your patients will access your clinic portal at this address. You can customize the name or connect your own domain in the Custom Domain tab.
-                </p>
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* VIEW 2: VISUAL WEBSITE CUSTOMIZER                           */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {mainView === "customizer" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-150">
+          {/* Left Customizer Navigation Rail (3.5 Cols) */}
+          <div className="lg:col-span-4 space-y-3 sticky top-24">
+            <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-xs space-y-1">
+              <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Customizer Sections
               </div>
 
-              <div className="max-w-xl space-y-3 pt-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Website URL Name
-                </label>
-                <div className="flex items-center gap-2.5">
-                  <div className="relative flex-1">
-                    <Input
-                      value={urlInput}
-                      onChange={(e) => setUrlInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                      placeholder="e.g. dr-vinay-kumar-rai"
-                      className="h-12 pl-4 pr-24 rounded-2xl text-sm font-mono font-bold border-slate-300 focus:ring-slate-900"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
-                      .gyrex.in
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => checkUrlAvailability(urlInput)}
-                    className="h-12 px-6 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-all"
+              {[
+                { id: "branding", label: "Colors & Typography", icon: Palette, badge: "Brand Identity" },
+                { id: "hero", label: "Header & Hero Banner", icon: Layout, badge: "First Impression" },
+                { id: "services", label: "Treatments & Procedures", icon: Stethoscope, badge: "Clinical" },
+                { id: "bio", label: "Doctor Bio & Experience", icon: ShieldCheck, badge: "E-E-A-T" },
+                { id: "sections", label: "Section Visibility", icon: Layers, badge: "Layout" },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = customizerTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCustomizerTab(item.id as any)}
+                    className={`w-full p-3.5 rounded-2xl text-left transition-all flex items-center justify-between gap-3 ${
+                      isActive
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
                   >
-                    Verify Name
-                  </Button>
-                </div>
-
-                {urlStatus.available === true && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>URL Available: <strong>https://{urlInput}.gyrex.in</strong></span>
-                  </div>
-                )}
-
-                {urlStatus.available === false && (
-                  <div className="flex items-center gap-2 text-xs text-rose-800 font-bold bg-rose-50 p-3.5 rounded-2xl border border-rose-200">
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>{urlStatus.reason}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Infrastructure Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-slate-100">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" /> Free SSL Security
-                  </div>
-                  <p className="text-[11px] text-slate-500">256-bit encryption active on all patient consultations.</p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                  <div className="flex items-center gap-2 text-blue-800 font-bold text-xs">
-                    <Globe className="w-4 h-4 text-blue-600" /> Google Search Ready
-                  </div>
-                  <p className="text-[11px] text-slate-500">Structured MedicalBusiness schema for local search.</p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                  <div className="flex items-center gap-2 text-indigo-800 font-bold text-xs">
-                    <Link2 className="w-4 h-4 text-indigo-600" /> Custom Domain Ready
-                  </div>
-                  <p className="text-[11px] text-slate-500">Connect your own .com or .in domain in next tab.</p>
-                </div>
-              </div>
-
-              {/* Section Footer Save Action */}
-              <div className="flex items-center justify-end pt-6 border-t border-slate-100">
-                <Button
-                  onClick={() => handleSaveWebsite("Website URL")}
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving..." : "Save URL Settings"}</span>
-                </Button>
-              </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isActive ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold leading-tight">{item.label}</p>
+                        <p className={`text-[10px] font-medium ${isActive ? "text-slate-400" : "text-slate-400"}`}>{item.badge}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${isActive ? "text-slate-400" : "text-slate-300"}`} />
+                  </button>
+                );
+              })}
             </div>
-          )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 2: CUSTOM BRANDED DOMAIN */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "custom_domain" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100">
-                  Custom Domain Setup
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">Connect Your Own Branded Domain</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Use your own domain (e.g. <strong>www.drvinaykumar.com</strong> or <strong>delhiskinclinic.in</strong>) with automated SSL security.
-                </p>
-              </div>
-
-              {/* Connected Domain Status Card */}
-              {customDomainStatus.connectedDomain && (
-                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Custom Domain Connected</span>
-                    </div>
-                    <a
-                      href={`https://${customDomainStatus.connectedDomain}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-base font-bold text-slate-900 hover:underline font-mono inline-flex items-center gap-1"
-                    >
-                      https://{customDomainStatus.connectedDomain} <ArrowUpRight className="w-4 h-4 text-emerald-600" />
-                    </a>
-                    <p className="text-[11px] text-emerald-700 font-medium">Automatic Let&apos;s Encrypt SSL active.</p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDisconnectDomain}
-                    disabled={connectingDomain}
-                    className="h-10 px-4 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold flex items-center gap-1.5 shrink-0"
-                  >
-                    <Unlink className="w-4 h-4" />
-                    <span>Disconnect Domain</span>
-                  </Button>
-                </div>
-              )}
-
-              {/* Input Form */}
-              <div className="max-w-xl space-y-3 pt-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Enter Your Domain
-                </label>
-                <div className="flex items-center gap-2.5">
-                  <Input
-                    value={customDomainInput}
-                    onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
-                    placeholder="e.g. www.drvinaykumar.com"
-                    className="h-12 px-4 rounded-2xl text-sm font-mono font-bold border-slate-300 focus:ring-slate-900"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleConnectCustomDomain}
-                    disabled={connectingDomain}
-                    className="h-12 px-6 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-all shrink-0"
-                  >
-                    {connectingDomain ? "Verifying..." : "Connect Domain"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* 3-Step DNS Instructions */}
-              <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  <Settings className="w-4 h-4 text-blue-600" /> DNS Setup Instructions (GoDaddy / Hostinger / Namecheap)
-                </div>
-
-                <div className="space-y-3 text-xs text-slate-700">
-                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
-                    <p className="font-bold text-slate-900">Step 1: Add CNAME Record (Recommended for www subdomains)</p>
-                    <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
-                      <div><span className="text-slate-400">Type:</span> <strong>CNAME</strong></div>
-                      <div><span className="text-slate-400">Host / Name:</span> <strong>www</strong></div>
-                      <div><span className="text-slate-400">Points To:</span> <strong>domains.gyrex.in</strong></div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
-                    <p className="font-bold text-slate-900">Step 2: Add A-Record (For root domain e.g. drvinaykumar.com)</p>
-                    <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
-                      <div><span className="text-slate-400">Type:</span> <strong>A</strong></div>
-                      <div><span className="text-slate-400">Host / Name:</span> <strong>@</strong></div>
-                      <div><span className="text-slate-400">Points To:</span> <strong>103.189.88.35</strong></div>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 pt-1">
-                    Once DNS records are saved at your registrar, click <strong>&quot;Connect Domain&quot;</strong> above. Automated SSL will be provisioned on the first patient visit.
-                  </p>
-                </div>
-              </div>
+            {/* Change Theme Quick Trigger */}
+            <div className="p-5 rounded-3xl bg-blue-50 border border-blue-200 text-blue-900 space-y-2">
+              <p className="text-xs font-bold">Want to try a different look?</p>
+              <p className="text-[11px] text-blue-700">You can switch prebuilt themes anytime with 1 click.</p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setMainView("store")}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl w-full mt-2"
+              >
+                Browse Theme Store
+              </Button>
             </div>
-          )}
+          </div>
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 3: THEMES & BRANDING */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "theme" && (
-            <div className="space-y-6 animate-in fade-in duration-150">
-              {/* Theme Selector */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+          {/* Right Customizer Panel (8.5 Cols) */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* 1. BRANDING & COLORS */}
+            {customizerTab === "branding" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-150">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
-                    Visual Identity
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
+                    Visual Brand
                   </span>
-                  <h3 className="text-xl font-bold text-slate-900">Select Medical Theme</h3>
-                  <p className="text-xs text-slate-500">
-                    Each theme has been designed for specific medical categories and patient demographics.
-                  </p>
+                  <h3 className="text-xl font-bold text-slate-900">Brand Colors &amp; Styling</h3>
+                  <p className="text-xs text-slate-500">Fine-tune the palette of your selected theme.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {THEME_PRESETS.map((th) => (
-                    <div
-                      key={th.id}
-                      onClick={() =>
-                        setSiteData({
-                          ...siteData,
-                          themeId: th.id,
-                          primaryColor: th.primary,
-                          secondaryColor: th.secondary,
-                          accentColor: th.accent,
-                        })
-                      }
-                      className={`p-5 rounded-3xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-4 relative overflow-hidden ${
-                        siteData.themeId === th.id
-                          ? "border-slate-900 bg-slate-50 shadow-md ring-2 ring-slate-900/10"
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-full">
-                            {th.badge}
-                          </span>
-                          {siteData.themeId === th.id && (
-                            <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
-                              ✓
-                            </span>
-                          )}
-                        </div>
-
-                        <h4 className="text-base font-bold text-slate-900">{th.name}</h4>
-                        <p className="text-[11px] font-semibold text-blue-600">{th.specialty}</p>
-                        <p className="text-xs text-slate-600 leading-relaxed">{th.desc}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-200/80">
-                        <span className="text-[11px] font-bold text-slate-400">Palette Preview</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-full shadow-xs" style={{ backgroundColor: th.primary }} />
-                          <div className="w-5 h-5 rounded-full shadow-xs" style={{ backgroundColor: th.secondary }} />
-                          <div className="w-5 h-5 rounded-full shadow-xs" style={{ backgroundColor: th.accent }} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Brand Colors */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-slate-900">Custom Brand Palette</h3>
-                  <p className="text-xs text-slate-500">Pick a pre-designed harmony or fine-tune exact hex color codes.</p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {COLOR_PRESETS.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() =>
-                        setSiteData({
-                          ...siteData,
-                          primaryColor: preset.primary,
-                          secondaryColor: preset.secondary,
-                          accentColor: preset.accent,
-                        })
-                      }
-                      className="p-3 rounded-2xl border border-slate-200 text-left space-y-2 hover:border-slate-400 bg-slate-50 transition-all"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.primary }} />
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.secondary }} />
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.accent }} />
-                      </div>
-                      <p className="text-[11px] font-bold text-slate-800 truncate">{preset.name}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Primary Accent</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Primary Theme Color</label>
                     <div className="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50">
                       <input
                         type="color"
@@ -798,7 +842,7 @@ export default function WebsiteStudioPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Dark Contrast</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Dark Contrast Color</label>
                     <div className="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50">
                       <input
                         type="color"
@@ -811,7 +855,7 @@ export default function WebsiteStudioPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Button Highlight</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Accent Action Color</label>
                     <div className="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50">
                       <input
                         type="color"
@@ -826,413 +870,520 @@ export default function WebsiteStudioPage() {
 
                 <div className="flex items-center justify-end pt-6 border-t border-slate-100">
                   <Button
-                    onClick={() => handleSaveWebsite("Themes & Colors")}
+                    onClick={() => handleSaveWebsite("Branding & Colors")}
                     disabled={saving}
                     className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? "Saving..." : "Save Theme & Colors"}</span>
+                    <span>{saving ? "Saving..." : "Save Colors"}</span>
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 4: HEADER & HERO */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "header" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
-                  First Impression
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">Header &amp; Hero Headline</h3>
-                <p className="text-xs text-slate-500">Configure what patients see immediately when landing on your clinic portal.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Clinic Display Name</label>
-                  <Input
-                    value={siteData.siteTitle}
-                    onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
-                    className="h-11 text-xs rounded-xl font-semibold"
-                  />
+            {/* 2. HERO & HEADER */}
+            {customizerTab === "hero" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                    Homepage Hero
+                  </span>
+                  <h3 className="text-xl font-bold text-slate-900">Header &amp; Welcome Banner</h3>
+                  <p className="text-xs text-slate-500">Edit the primary headline and clinic photo patients see first.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Specialty Sub-Tagline</label>
-                  <Input
-                    value={siteData.tagline || ""}
-                    onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
-                    placeholder="e.g. Leading Pediatrics &amp; Child Care Clinic"
-                    className="h-11 text-xs rounded-xl"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Clinic Name</label>
+                    <Input
+                      value={siteData.siteTitle}
+                      onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
+                      className="h-11 text-xs rounded-xl font-semibold"
+                    />
+                  </div>
 
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Hero Headline (Main Statement)</label>
-                <Input
-                  value={siteData.heroHeading}
-                  onChange={(e) => setSiteData({ ...siteData, heroHeading: e.target.value })}
-                  className="h-12 text-sm font-bold rounded-2xl"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Hero Subtitle / Description</label>
-                <Textarea
-                  value={siteData.heroSubheading || ""}
-                  onChange={(e) => setSiteData({ ...siteData, heroSubheading: e.target.value })}
-                  rows={3}
-                  className="text-xs rounded-2xl leading-relaxed"
-                />
-              </div>
-
-              {/* Photo Selector */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Hero Image / Clinic Photo
-                </label>
-                <div className="flex items-center gap-4">
-                  {siteData.heroImage ? (
-                    <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                      <img src={siteData.heroImage} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs text-center p-2">
-                      No Photo
-                    </div>
-                  )}
-                  <div className="space-y-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-10 text-xs font-bold rounded-xl"
-                    >
-                      <Upload className="w-4 h-4 mr-1.5 text-blue-600" /> Select Image from Local Computer
-                    </Button>
-                    <p className="text-[11px] text-slate-500">Selected photo will be displayed prominently in the hero section placeholder.</p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="hidden"
-                      onChange={handleHeroImageSelect}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Specialty Tagline</label>
+                    <Input
+                      value={siteData.tagline || ""}
+                      onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
+                      placeholder="e.g. Leading Dermatology &amp; Skin Clinic"
+                      className="h-11 text-xs rounded-xl"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Header Booking Form Option */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-slate-900">Show Instant Booking Form inside Hero Section</span>
-                  <p className="text-[11px] text-slate-500">If disabled, the hero displays your large clinic photo with direct CTA buttons instead.</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={siteData.showHeroBookingForm || false}
-                  onChange={(e) => setSiteData({ ...siteData, showHeroBookingForm: e.target.checked })}
-                  className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-              </div>
-
-              {/* CTA & Announcement */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">CTA Button Text</label>
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Hero Headline (Main Statement)</label>
                   <Input
-                    value={siteData.ctaButtonText}
-                    onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
-                    className="h-11 text-xs rounded-xl"
+                    value={siteData.heroHeading}
+                    onChange={(e) => setSiteData({ ...siteData, heroHeading: e.target.value })}
+                    className="h-12 text-sm font-bold rounded-2xl"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">CTA Action Target</label>
-                  <select
-                    value={siteData.ctaButtonAction}
-                    onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-white"
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Hero Subtitle / Description</label>
+                  <Textarea
+                    value={siteData.heroSubheading || ""}
+                    onChange={(e) => setSiteData({ ...siteData, heroSubheading: e.target.value })}
+                    rows={3}
+                    className="text-xs rounded-2xl leading-relaxed"
+                  />
+                </div>
+
+                {/* Photo Selector */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Hero Section Image / Clinic Photo
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {siteData.heroImage ? (
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                        <img src={siteData.heroImage} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-24 h-24 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs text-center p-2">
+                        No Photo
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-10 text-xs font-bold rounded-xl"
+                      >
+                        <Upload className="w-4 h-4 mr-1.5 text-blue-600" /> Select Image from Local Computer
+                      </Button>
+                      <p className="text-[11px] text-slate-500">Selected photo will be displayed in the hero section.</p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleHeroImageSelect}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Header Booking Form Option */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-slate-900">Show Instant Booking Form inside Hero Section</span>
+                    <p className="text-[11px] text-slate-500">If disabled, the hero displays your large clinic photo with CTA buttons instead.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={siteData.showHeroBookingForm || false}
+                    onChange={(e) => setSiteData({ ...siteData, showHeroBookingForm: e.target.checked })}
+                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+                  <Button
+                    onClick={() => handleSaveWebsite("Header & Hero")}
+                    disabled={saving}
+                    className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
                   >
-                    <option value="BOOKING_MODAL">Instant Booking Form (Direct to CRM)</option>
-                    <option value="WHATSAPP">WhatsApp Direct Chat</option>
-                    <option value="PHONE">Direct Telephone Call</option>
-                  </select>
+                    <Save className="w-4 h-4" />
+                    <span>{saving ? "Saving..." : "Save Header & Hero"}</span>
+                  </Button>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Top Announcement Marquee Banner
-                </label>
-                <Input
-                  value={siteData.announcementBar || ""}
-                  onChange={(e) => setSiteData({ ...siteData, announcementBar: e.target.value })}
-                  placeholder="e.g. Dr. Vinay Kumar Rai is available for evening consultations this week."
-                  className="h-11 text-xs rounded-xl"
-                />
+            {/* 3. SERVICES & TREATMENTS */}
+            {customizerTab === "services" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100">
+                      Clinical Procedures
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900">Services &amp; Clinical Treatments</h3>
+                    <p className="text-xs text-slate-500">Add or edit procedures offered at your clinic.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const current = siteData.customServices || [];
+                      setSiteData({
+                        ...siteData,
+                        customServices: [...current, { name: "New Clinical Treatment", description: "Treatment description and procedure details." }],
+                      });
+                    }}
+                    className="h-9 text-xs font-bold rounded-xl"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Service
+                  </Button>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  {(siteData.customServices || []).map((svc, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <Input
+                          value={svc.name}
+                          onChange={(e) => {
+                            const updated = [...(siteData.customServices || [])];
+                            updated[idx].name = e.target.value;
+                            setSiteData({ ...siteData, customServices: updated });
+                          }}
+                          placeholder="Service / Treatment Name"
+                          className="h-10 text-xs font-bold rounded-xl bg-white"
+                        />
+                        <Input
+                          type="number"
+                          value={svc.price || ""}
+                          onChange={(e) => {
+                            const updated = [...(siteData.customServices || [])];
+                            updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
+                            setSiteData({ ...siteData, customServices: updated });
+                          }}
+                          placeholder="Price (₹)"
+                          className="h-10 text-xs w-32 rounded-xl bg-white shrink-0 font-semibold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
+                            setSiteData({ ...siteData, customServices: updated });
+                          }}
+                          className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <Textarea
+                        value={svc.description}
+                        onChange={(e) => {
+                          const updated = [...(siteData.customServices || [])];
+                          updated[idx].description = e.target.value;
+                          setSiteData({ ...siteData, customServices: updated });
+                        }}
+                        placeholder="Short description of procedure and expected recovery..."
+                        rows={2}
+                        className="text-xs rounded-xl bg-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+                  <Button
+                    onClick={() => handleSaveWebsite("Services")}
+                    disabled={saving}
+                    className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{saving ? "Saving..." : "Save Services"}</span>
+                  </Button>
+                </div>
               </div>
+            )}
 
-              <div className="flex items-center justify-end pt-6 border-t border-slate-100">
-                <Button
-                  onClick={() => handleSaveWebsite("Header & Hero")}
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving..." : "Save Header & Hero"}</span>
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 5: SERVICES & TREATMENTS */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "services" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between">
+            {/* 4. DOCTOR BIO */}
+            {customizerTab === "bio" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-150">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100">
-                    Clinical Procedures
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                    Doctor Profile
                   </span>
-                  <h3 className="text-xl font-bold text-slate-900">Services &amp; Clinical Treatments</h3>
-                  <p className="text-xs text-slate-500">Manage procedures, consultation durations, and fee details.</p>
+                  <h3 className="text-xl font-bold text-slate-900">Doctor Bio &amp; Medical Background</h3>
+                  <p className="text-xs text-slate-500">Provide medical certifications, qualifications, and patient care philosophy.</p>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Clinical Philosophy &amp; Background</label>
+                  <Textarea
+                    value={siteData.customBio || ""}
+                    onChange={(e) => setSiteData({ ...siteData, customBio: e.target.value })}
+                    placeholder="Detailed doctor background, clinical philosophy, and patient care commitment..."
+                    rows={6}
+                    className="text-xs rounded-2xl leading-relaxed"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+                  <Button
+                    onClick={() => handleSaveWebsite("Doctor Bio")}
+                    disabled={saving}
+                    className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{saving ? "Saving..." : "Save Doctor Bio"}</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 5. SECTIONS */}
+            {customizerTab === "sections" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
+                    Layout Controls
+                  </span>
+                  <h3 className="text-xl font-bold text-slate-900">Page Section Visibility</h3>
+                  <p className="text-xs text-slate-500">Toggle sections on or off to match your desired layout.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {[
+                    {
+                      key: "showServices",
+                      icon: Stethoscope,
+                      title: "Services & Treatments Grid",
+                      desc: "Displays clinical procedures with pricing and instant book triggers.",
+                    },
+                    {
+                      key: "showReviews",
+                      icon: Star,
+                      title: "Google Reviews & 5-Star Rating",
+                      desc: "Live patient feedback and Google Maps rating trust badge.",
+                    },
+                    {
+                      key: "showDoctorBio",
+                      icon: ShieldCheck,
+                      title: "Doctor Bio & Credentials Card",
+                      desc: "Doctor credentials, verified medical badge, and experience.",
+                    },
+                    {
+                      key: "showFaq",
+                      icon: HelpCircle,
+                      title: "Interactive FAQ Accordion",
+                      desc: "Expandable patient questions & answers with Google FAQ schema.",
+                    },
+                    {
+                      key: "showMap",
+                      icon: MapPin,
+                      title: "Map Embed & Operating Hours",
+                      desc: "Interactive clinic map, address, and consultation schedule.",
+                    },
+                    {
+                      key: "showStickyBar",
+                      icon: Smartphone,
+                      title: "Mobile Sticky Action Bar",
+                      desc: "Fixed bottom bar on mobile with Call Now, WhatsApp, and Book.",
+                    },
+                  ].map((sec) => {
+                    const Icon = sec.icon;
+                    const isChecked = (siteData as any)[sec.key];
+                    return (
+                      <div
+                        key={sec.key}
+                        onClick={() => setSiteData({ ...siteData, [sec.key]: !isChecked })}
+                        className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start justify-between gap-4 ${
+                          isChecked ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-slate-50/40 opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3.5">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isChecked ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-600"}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-bold text-slate-900">{sec.title}</h4>
+                            <p className="text-[11px] text-slate-500 leading-relaxed">{sec.desc}</p>
+                          </div>
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 cursor-pointer shrink-0 mt-0.5"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+                  <Button
+                    onClick={() => handleSaveWebsite("Section Settings")}
+                    disabled={saving}
+                    className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{saving ? "Saving..." : "Save Section Settings"}</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* VIEW 3: DOMAIN & URL SETTINGS                                */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {mainView === "domain" && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          {/* Free URL Box */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                Free Included URL
+              </span>
+              <h3 className="text-xl font-bold text-slate-900">Your Free Gyrex Clinic URL</h3>
+              <p className="text-xs text-slate-500">
+                Your patients can access your clinic portal immediately at this address with free SSL encryption.
+              </p>
+            </div>
+
+            <div className="max-w-xl space-y-3 pt-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Website URL Name</label>
+              <div className="flex items-center gap-2.5">
+                <div className="relative flex-1">
+                  <Input
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="e.g. dr-vinay-kumar-rai"
+                    className="h-12 pl-4 pr-24 rounded-2xl text-sm font-mono font-bold border-slate-300"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
+                    .gyrex.in
+                  </span>
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const current = siteData.customServices || [];
-                    setSiteData({
-                      ...siteData,
-                      customServices: [...current, { name: "New Clinical Treatment", description: "Treatment description and procedure details." }],
-                    });
-                  }}
-                  className="h-9 text-xs font-bold rounded-xl"
+                  onClick={() => checkUrlAvailability(urlInput)}
+                  className="h-12 px-6 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-all"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Service
+                  Verify Name
                 </Button>
               </div>
 
-              <div className="space-y-4 pt-2">
-                {(siteData.customServices || []).map((svc, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <Input
-                        value={svc.name}
-                        onChange={(e) => {
-                          const updated = [...(siteData.customServices || [])];
-                          updated[idx].name = e.target.value;
-                          setSiteData({ ...siteData, customServices: updated });
-                        }}
-                        placeholder="Service / Treatment Name"
-                        className="h-10 text-xs font-bold rounded-xl bg-white"
-                      />
-                      <Input
-                        type="number"
-                        value={svc.price || ""}
-                        onChange={(e) => {
-                          const updated = [...(siteData.customServices || [])];
-                          updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
-                          setSiteData({ ...siteData, customServices: updated });
-                        }}
-                        placeholder="Price (₹)"
-                        className="h-10 text-xs w-32 rounded-xl bg-white shrink-0 font-semibold"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
-                          setSiteData({ ...siteData, customServices: updated });
-                        }}
-                        className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <Textarea
-                      value={svc.description}
-                      onChange={(e) => {
-                        const updated = [...(siteData.customServices || [])];
-                        updated[idx].description = e.target.value;
-                        setSiteData({ ...siteData, customServices: updated });
-                      }}
-                      placeholder="Short description of procedure and expected recovery..."
-                      rows={2}
-                      className="text-xs rounded-xl bg-white"
-                    />
+              {urlStatus.available === true && (
+                <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>URL Available: <strong>https://{urlInput}.gyrex.in</strong></span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end pt-4 border-t border-slate-100">
+              <Button
+                onClick={() => handleSaveWebsite("Website URL")}
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Saving..." : "Save URL Settings"}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Custom Branded Domain Box */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100">
+                Custom Domain
+              </span>
+              <h3 className="text-xl font-bold text-slate-900">Connect Your Own Branded Domain</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Connect your domain (e.g. <strong>www.drvinaykumar.com</strong>) with automated On-Demand SSL certificates.
+              </p>
+            </div>
+
+            {customDomainStatus.connectedDomain && (
+              <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Custom Domain Connected</span>
                   </div>
-                ))}
-              </div>
+                  <a
+                    href={`https://${customDomainStatus.connectedDomain}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-base font-bold text-slate-900 hover:underline font-mono inline-flex items-center gap-1"
+                  >
+                    https://{customDomainStatus.connectedDomain} <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+                  </a>
+                  <p className="text-[11px] text-emerald-700 font-medium">Automatic Let&apos;s Encrypt SSL active.</p>
+                </div>
 
-              <div className="flex items-center justify-end pt-6 border-t border-slate-100">
                 <Button
-                  onClick={() => handleSaveWebsite("Services")}
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+                  type="button"
+                  variant="outline"
+                  onClick={handleDisconnectDomain}
+                  disabled={connectingDomain}
+                  className="h-10 px-4 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold flex items-center gap-1.5 shrink-0"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving..." : "Save Services"}</span>
+                  <Unlink className="w-4 h-4" />
+                  <span>Disconnect Domain</span>
                 </Button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 6: DOCTOR BIO & CREDENTIALS */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "bio" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                  Doctor Profile
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">Doctor Bio &amp; Medical Qualifications</h3>
-                <p className="text-xs text-slate-500">Provide medical certifications, clinical experience, and patient care philosophy.</p>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Clinical Philosophy &amp; Background</label>
-                <Textarea
-                  value={siteData.customBio || ""}
-                  onChange={(e) => setSiteData({ ...siteData, customBio: e.target.value })}
-                  placeholder="Detailed doctor background, clinical philosophy, and patient care commitment..."
-                  rows={6}
-                  className="text-xs rounded-2xl leading-relaxed"
+            <div className="max-w-xl space-y-3 pt-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Enter Your Domain</label>
+              <div className="flex items-center gap-2.5">
+                <Input
+                  value={customDomainInput}
+                  onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
+                  placeholder="e.g. www.drvinaykumar.com"
+                  className="h-12 px-4 rounded-2xl text-sm font-mono font-bold border-slate-300"
                 />
-              </div>
-
-              <div className="flex items-center justify-end pt-6 border-t border-slate-100">
                 <Button
-                  onClick={() => handleSaveWebsite("Doctor Bio")}
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
+                  type="button"
+                  onClick={handleConnectCustomDomain}
+                  disabled={connectingDomain}
+                  className="h-12 px-6 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-all shrink-0"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving..." : "Save Doctor Bio"}</span>
+                  {connectingDomain ? "Verifying..." : "Connect Domain"}
                 </Button>
               </div>
             </div>
-          )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 7: SECTION MANAGER */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {activeSection === "sections" && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
-                  Layout Controls
-                </span>
-                <h3 className="text-xl font-bold text-slate-900">Page Section Manager</h3>
-                <p className="text-xs text-slate-500">Enable or disable homepage modules to customize your clinic layout.</p>
+            {/* DNS Instructions */}
+            <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <Settings className="w-4 h-4 text-blue-600" /> DNS Setup Instructions (GoDaddy / Hostinger / Namecheap)
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                {[
-                  {
-                    key: "showServices",
-                    icon: Stethoscope,
-                    title: "Services & Treatments Grid",
-                    desc: "Displays clinical procedures with pricing and instant book triggers.",
-                  },
-                  {
-                    key: "showReviews",
-                    icon: Star,
-                    title: "Google Reviews & 5-Star Rating",
-                    desc: "Live patient feedback and Google Maps rating trust badge.",
-                  },
-                  {
-                    key: "showDoctorBio",
-                    icon: ShieldCheck,
-                    title: "Doctor Bio & Credentials Card",
-                    desc: "Doctor credentials, verified medical badge, and experience.",
-                  },
-                  {
-                    key: "showFaq",
-                    icon: HelpCircle,
-                    title: "Interactive FAQ Accordion",
-                    desc: "Expandable patient questions & answers with Google FAQ schema.",
-                  },
-                  {
-                    key: "showMap",
-                    icon: MapPin,
-                    title: "Map Embed & Operating Hours",
-                    desc: "Interactive clinic map, address, and consultation schedule.",
-                  },
-                  {
-                    key: "showStickyBar",
-                    icon: Smartphone,
-                    title: "Mobile Sticky Action Bar",
-                    desc: "Fixed bottom bar on mobile with Call Now, WhatsApp, and Book.",
-                  },
-                ].map((sec) => {
-                  const Icon = sec.icon;
-                  const isChecked = (siteData as any)[sec.key];
-                  return (
-                    <div
-                      key={sec.key}
-                      onClick={() => setSiteData({ ...siteData, [sec.key]: !isChecked })}
-                      className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start justify-between gap-4 ${
-                        isChecked ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-slate-50/40 opacity-60"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3.5">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isChecked ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-600"}`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-xs font-bold text-slate-900">{sec.title}</h4>
-                          <p className="text-[11px] text-slate-500 leading-relaxed">{sec.desc}</p>
-                        </div>
-                      </div>
+              <div className="space-y-3 text-xs text-slate-700">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <p className="font-bold text-slate-900">Step 1: Add CNAME Record (Recommended for www subdomains)</p>
+                  <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
+                    <div><span className="text-slate-400">Type:</span> <strong>CNAME</strong></div>
+                    <div><span className="text-slate-400">Host / Name:</span> <strong>www</strong></div>
+                    <div><span className="text-slate-400">Points To:</span> <strong>domains.gyrex.in</strong></div>
+                  </div>
+                </div>
 
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 cursor-pointer shrink-0 mt-0.5"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-end pt-6 border-t border-slate-100">
-                <Button
-                  onClick={() => handleSaveWebsite("Section Settings")}
-                  disabled={saving}
-                  className="h-11 px-6 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Saving..." : "Save Section Settings"}</span>
-                </Button>
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <p className="font-bold text-slate-900">Step 2: Add A-Record (For root domain e.g. drvinaykumar.com)</p>
+                  <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
+                    <div><span className="text-slate-400">Type:</span> <strong>A</strong></div>
+                    <div><span className="text-slate-400">Host / Name:</span> <strong>@</strong></div>
+                    <div><span className="text-slate-400">Points To:</span> <strong>72.60.201.41</strong></div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── HIGH-FIDELITY APPLE-STYLE PREVIEW MODAL ── */}
-      {showPreviewModal && (
+      {/* ── HIGH-FIDELITY LIVE THEME PREVIEW MODAL ── */}
+      {previewModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-slate-900 text-white p-4 rounded-t-3xl flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-400">Live Device Preview:</span>
+              <span className="text-xs font-bold text-slate-400">Live Interactive Theme Demo:</span>
               <span className="text-xs font-bold font-mono text-emerald-400">
-                {customDomainStatus.connectedDomain
-                  ? `https://${customDomainStatus.connectedDomain}`
-                  : `https://${siteData.subdomain}.gyrex.in`}
+                {previewTheme?.name} ({previewTheme?.category})
               </span>
             </div>
 
+            {/* Device Switchers */}
             <div className="bg-slate-800 p-1 rounded-xl flex items-center gap-1">
               <button
                 onClick={() => setPreviewDevice("desktop")}
@@ -1255,19 +1406,21 @@ export default function WebsiteStudioPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => {
-                  setShowPreviewModal(false);
-                  handleSaveWebsite();
-                }}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl"
-              >
-                <Save className="w-3.5 h-3.5 mr-1" /> Publish Live
-              </Button>
+              {previewTheme && (
+                <Button
+                  onClick={() => {
+                    handleApplyTheme(previewTheme);
+                    setPreviewModalOpen(false);
+                  }}
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" /> Use This Theme
+                </Button>
+              )}
 
               <button
-                onClick={() => setShowPreviewModal(false)}
+                onClick={() => setPreviewModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm font-bold"
               >
                 ✕
@@ -1285,7 +1438,7 @@ export default function WebsiteStudioPage() {
                   : "w-[390px] h-full max-h-[85vh]"
               }`}
             >
-              <ThemeRenderer data={siteData} previewMode={true} />
+              <ThemeRenderer data={getDemoData()} previewMode={true} />
             </div>
           </div>
         </div>
