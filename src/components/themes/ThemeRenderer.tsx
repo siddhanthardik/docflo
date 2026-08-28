@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "minimal-luxe"
+    ? [
+        { name: "Clear Invisible Aligners & Orthodontics", description: "Discreet teeth straightening with 3D digital simulation and custom clear aligners.", icon: "smile", duration: "30" },
+        { name: "Painless Single-Sitting Root Canal (RCT)", description: "Microscopic rotary endodontics with precision digital apex locator and ceramic crown.", icon: "shield", duration: "45" },
+        { name: "Computer-Guided Dental Implants", description: "Permanent titanium & zirconia implants with 3D CBCT guided precision placement.", icon: "activity", duration: "45" },
+        { name: "Laser Teeth Whitening & Smile Makeover", description: "Instant 8-shade brighter smile with gentle enamel-safe cold laser technology.", icon: "sparkles", duration: "30" },
+        { name: "Zirconia Crowns & Ceramic Veneers", description: "Ultra-durable, natural aesthetic metal-free crowns crafted with CAD/CAM technology.", icon: "smile", duration: "30" },
+        { name: "Pediatric Dentistry & Preventive Fluoride", description: "Gentle child cavity prevention, pit & fissure sealants, and early habit correction.", icon: "baby", duration: "25" },
+      ]
     : themeId === "serene-glow"
     ? [
         { name: "HydraFacial MD & Deep Pore Infusion", description: "Medical-grade hydra-dermabrasion, lymphatic drainage, and antioxidant serum infusion.", icon: "sparkles", duration: "45" },
@@ -163,6 +172,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "minimal-luxe"
+    ? [
+        { question: "Is a Root Canal Treatment (RCT) painful?", answer: "Not at all. With modern local anesthesia, rotary endodontics, and digital apex locators, a root canal is completely painless and often completed in a single 45-minute visit." },
+        { question: "How many hours a day do I need to wear Clear Aligners?", answer: "Clear aligners should be worn 20 to 22 hours daily, removing them only while eating, drinking hot beverages, and brushing." },
+        { question: "How long do Dental Implants last?", answer: "With good oral hygiene and regular dental checkups, dental implants are permanent and can last a lifetime." },
+        { question: "How do I schedule a dental checkup?", answer: "Click 'Book Appointment' or chat directly with our dental reception on WhatsApp." },
+      ]
     : themeId === "serene-glow"
     ? [
         { question: "Is there any downtime after Laser Hair Reduction?", answer: "No downtime. You may experience slight transient redness for 30 minutes, after which you can immediately resume normal activities." },
@@ -690,10 +706,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "minimal-luxe"
+            ? [
+                { value: "15,000+", label: "Smiles Restored", icon: "smile" },
+                { value: "100%", label: "Painless Single-Sitting RCT", icon: "shield" },
+                { value: "3D", label: "Digital Intraoral Scanning", icon: "activity" },
+                { value: "4.9 ★", label: "Google Rated", icon: "star" },
+              ]
             : themeId === "serene-glow"
             ? [
                 { value: "12,000+", label: "Skin & Laser Procedures", icon: "sparkles" },
