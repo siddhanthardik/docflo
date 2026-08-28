@@ -559,18 +559,18 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     "name": "Warm Family & Kids",
     "category": "Pediatrics & Child Care",
     "primaryColor": "#059669",
-    "secondaryColor": "#1E293B",
+    "secondaryColor": "#0F172A",
     "accentColor": "#F59E0B",
     "fontHeading": "Plus Jakarta Sans",
     "fontBody": "Inter",
     "buttonRadius": "full",
-    "badgeText": "Gentle Child Health, Immunization & Neonatal Care",
-    "heroHeading": "Caring for Your Child’s Health, Growth & Happy Smiles",
-    "heroSubheading": "Providing comprehensive pediatric consultations, WHO-certified vaccinations, and developmental tracking in a kid-friendly clinic.",
-    "tagline": "Dedicated Pediatric Care",
+    "badgeText": "🧸 Kid-Friendly Stress-Free Clinic • WHO & IAP Vaccinations • Newborn & Child Care",
+    "heroHeading": "Gentle, Loving Healthcare for Happy, Healthy & Thriving Kids",
+    "heroSubheading": "Expert pediatric consultations, pain-minimized vaccinations, growth milestone tracking, and 24/7 fever care in a warm, stress-free, kid-friendly clinic.",
+    "tagline": "Gentle Care for Little Smiles",
     "specialty": "Consultant Pediatrician & Neonatologist",
-    "degrees": "MBBS, MD Pediatrics, DNB, Fellow Neonatal Intensive Care",
-    "designation": "Head of Pediatric Medicine",
+    "degrees": "MBBS, MD Pediatrics, DNB (Peds), Fellow Neonatal Medicine (IAP)",
+    "designation": "Head of Pediatric & Neonatal Medicine",
     "stats": [
       {
         "value": "20,000+",
@@ -579,74 +579,74 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       },
       {
         "value": "100%",
-        "label": "WHO & IAP Immunization",
+        "label": "Pain-Minimizing Vaccines",
         "icon": "shield"
       },
       {
-        "value": "0-18 yrs",
-        "label": "Complete Child Care",
-        "icon": "user"
+        "value": "0 - 18 Yrs",
+        "label": "Newborn to Teen Health",
+        "icon": "activity"
       },
       {
         "value": "4.9 ★",
-        "label": "Parent Trust Rating",
+        "label": "Parent & Family Trust",
         "icon": "star"
       }
     ],
     "services": [
       {
-        "name": "Newborn Screening & Neonatal Care",
-        "description": "Comprehensive health checks, neonatal jaundice monitoring, and lactation guidance for new mothers.",
+        "name": "Newborn & Neonatal Care (0-12 Months)",
+        "description": "Gentle health assessments, newborn jaundice monitoring, feeding/lactation support, and neonatal screening.",
         "icon": "baby",
         "duration": "30"
       },
       {
-        "name": "Complete IAP Vaccination & Immunization",
-        "description": "All government and IAP-recommended vaccines with strict cold-chain preservation and digital vaccine tracker.",
+        "name": "Painless IAP & WHO Vaccination Suite",
+        "description": "100% cold-chain preserved vaccines with pain-minimizing fine needles, distraction toys, and digital vaccine tracker.",
         "icon": "shield",
         "duration": "20"
       },
       {
-        "name": "Growth & Developmental Milestone Tracking",
-        "description": "Monitoring height, weight, BMI, motor skills, and speech development with personalized nutrition advice.",
+        "name": "Growth, Nutrition & Milestone Tracking",
+        "description": "Detailed tracking of height, weight, speech, and motor milestones with personalized pediatric diet plans for picky eaters.",
         "icon": "activity",
         "duration": "30"
       },
       {
         "name": "Pediatric Allergy, Asthma & Nebulization",
-        "description": "Targeted diagnosis and inhalation therapy for recurrent cough, wheezing, bronchitis, and childhood allergies.",
+        "description": "Child-friendly diagnostic care and low-stress inhalation therapy for recurrent cough, wheezing, and seasonal allergies.",
         "icon": "heart",
         "duration": "30"
       },
       {
-        "name": "Childhood Infections & Acute Fever Care",
-        "description": "Rapid diagnostic evaluation for viral fevers, flu, tummy infections, and ear/throat pain.",
+        "name": "Childhood Infections & Fast-Track Fever Clinic",
+        "description": "Same-day rapid diagnosis and gentle treatment for acute fevers, flu, stomach bugs, ear pain, and throat infections.",
         "icon": "bandage",
         "duration": "20"
       },
       {
-        "name": "Behavioral & Adolescent Health Guidance",
-        "description": "Gentle counseling for school stress, ADHD evaluation, adolescent nutrition, and lifestyle habits.",
+        "name": "Adolescent Health & Behavioral Guidance",
+        "description": "Empathetic guidance for school stress, puberty development, ADHD evaluation, and teen lifestyle wellness.",
         "icon": "sparkles",
         "duration": "35"
       }
     ],
     "faqs": [
       {
-        "question": "What should I do if my child develops a sudden high fever?",
-        "answer": "Keep your child hydrated, apply lukewarm water sponge over forehead and neck, dress in light cotton clothing, and consult our pediatrician for age-appropriate paracetamol dosage."
+        "question": "How does the clinic ensure a stress-free and pain-minimized vaccination experience?",
+        "answer": "We use ultra-fine needles, specialized skin-numbing techniques, child distraction toys, and a warm, cheerful play area so your child feels safe and happy rather than fearful."
       },
       {
-        "question": "Can I give missed vaccines later?",
-        "answer": "Yes! Most missed vaccines can be safely given through a 'catch-up' immunization schedule."
+        "question": "What should I do immediately if my baby runs a high fever at night?",
+        "answer": "Keep your baby calm and hydrated in light cotton clothes, gently sponge forehead and limbs with lukewarm water (never cold water), and consult our pediatrician via WhatsApp for age-exact paracetamol dosage."
       },
       {
-        "question": "When should I introduce solid foods to my baby?",
-        "answer": "Exclusive breastfeeding is recommended for the first 6 months, after which soft, nutritious solid foods can be introduced gradually."
+        "question": "What if my child missed a scheduled vaccination date?",
+        "answer": "Don't worry! Most missed vaccines can be safely administered via a personalized IAP 'catch-up' immunization schedule without restarting the series."
       },
       {
-        "question": "How do I book an appointment with the pediatrician?",
-        "answer": "Click 'Book Appointment' or message our child care desk directly on WhatsApp."
+        "question": "When should I schedule developmental milestone checks?",
+        "answer": "Key milestone evaluations are recommended at 6 weeks, 3 months, 6 months, 9 months, 12 months, 18 months, and annually thereafter."
       }
     ],
     "sections": [

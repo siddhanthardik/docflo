@@ -517,7 +517,7 @@ export function ThemeRenderer({
                     : themeId === "ayurveda-earth"
                     ? "bg-[#FDFBF7]"
                     : themeId === "warm-pediatrics"
-                    ? "bg-emerald-50/40"
+                    ? "bg-gradient-to-b from-emerald-50/80 via-amber-50/40 to-sky-50/30"
                     : themeId === "minimal-luxe"
                     ? "bg-cyan-50/30"
                     : themeId === "cardiocare-executive"
@@ -533,7 +533,11 @@ export function ThemeRenderer({
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                     {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
                     {section.badgeText && section.badgeText.trim().length > 0 ? (
-                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-2xs">
+                      <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold shadow-xs ${
+                        themeId === "warm-pediatrics"
+                          ? "bg-emerald-100/90 text-emerald-900 border border-emerald-300 ring-2 ring-emerald-200/50"
+                          : "bg-white border border-slate-200 text-slate-800"
+                      }`}>
                         <span>{section.badgeText}</span>
                       </div>
                     ) : null}
@@ -550,6 +554,22 @@ export function ThemeRenderer({
                       </p>
                     )}
 
+                    {themeId === "warm-pediatrics" && (
+                      <div className="grid grid-cols-3 gap-2 pt-1 pb-1">
+                        <div className="bg-white/90 backdrop-blur-xs border border-amber-200 rounded-2xl p-2.5 text-center shadow-2xs">
+                          <span className="text-base">🧸</span>
+                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">Stress-Free Play Zone</p>
+                        </div>
+                        <div className="bg-white/90 backdrop-blur-xs border border-emerald-200 rounded-2xl p-2.5 text-center shadow-2xs">
+                          <span className="text-base">💉</span>
+                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">Pain-Free Vaccines</p>
+                        </div>
+                        <div className="bg-white/90 backdrop-blur-xs border border-sky-200 rounded-2xl p-2.5 text-center shadow-2xs">
+                          <span className="text-base">🌡️</span>
+                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">24/7 Fever Support</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                       <button
                         onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
