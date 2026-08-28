@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "vitality-rehab"
+    ? [
+        { name: "Robotic Total Knee & Hip Replacement", description: "Sub-millimeter robotic precision for faster recovery, minimal blood loss, and natural joint feeling.", icon: "activity", duration: "45" },
+        { name: "Arthroscopic Keyhole Surgery (ACL & Meniscus)", description: "Minimally invasive ligament repair and rotator cuff reconstruction with same-day discharge.", icon: "shield", duration: "45" },
+        { name: "Comprehensive Spine Care & Slipped Disc", description: "Non-surgical decompression and targeted spinal physical rehabilitation.", icon: "heart", duration: "30" },
+        { name: "Sports Injury Rehab & Gait Analysis", description: "Customized athletic recovery protocols, biomechanical gait analysis, and strength conditioning.", icon: "activity", duration: "45" },
+        { name: "Advanced Electrotherapy & Dry Needling", description: "Targeted pain relief using class-IV laser therapy, ultrasonic therapy, and trigger point release.", icon: "sparkles", duration: "30" },
+        { name: "Fracture & Trauma Management", description: "Rigid anatomic fixation, plaster casting, and post-fracture joint mobilization.", icon: "bandage", duration: "30" },
+      ]
     : themeId === "warm-pediatrics"
     ? [
         { name: "Newborn Screening & Neonatal Care", description: "Comprehensive birth weight monitoring, jaundice evaluation, and lactation counseling.", icon: "baby", duration: "30" },
@@ -181,6 +190,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "vitality-rehab"
+    ? [
+        { question: "How soon can I walk after Robotic Knee Replacement?", answer: "Most patients are able to stand and walk with support within 4 to 6 hours after robotic surgery and climb stairs within 48 hours." },
+        { question: "Can knee arthritis be treated without surgery?", answer: "Yes, early to moderate knee osteoarthritis can be effectively managed with viscosupplementation injections, PRP therapy, weight management, and targeted physiotherapy." },
+        { question: "What is the typical recovery period after ACL reconstruction?", answer: "Full athletic return typically takes 6 to 9 months of structured sports rehabilitation, while daily desk work can be resumed within 2 to 3 weeks." },
+        { question: "How do I schedule an orthopedic consultation?", answer: "Click 'Book Appointment' or message our joint care reception directly on WhatsApp." },
+      ]
     : themeId === "warm-pediatrics"
     ? [
         { question: "What should I do immediately if my child has a high fever?", answer: "Keep the child lightly dressed in a well-ventilated room, administer prescribed antipyretic syrup as per doctor's exact dosage, do lukewarm sponging if needed, and contact the clinic." },
@@ -722,10 +738,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "vitality-rehab"
+            ? [
+                { value: "10,000+", label: "Joint Surgeries & Rehabs", icon: "activity" },
+                { value: "100%", label: "Robotic & Keyhole Tech", icon: "shield" },
+                { value: "98.6%", label: "Mobility Restoration Rate", icon: "sparkles" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "warm-pediatrics"
             ? [
                 { value: "20,000+", label: "Happy Kids Treated", icon: "baby" },
