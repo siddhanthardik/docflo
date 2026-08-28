@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ClinicWebsiteData, PageSection } from "./theme-types";
+import { motion } from "framer-motion";
 import {
   Phone,
   MessageSquare,
@@ -33,7 +34,6 @@ import {
   Baby,
   Eye,
   Pill,
-  Sparkle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,7 @@ export function ThemeRenderer({
   // Hero Slider State
   const [activeSlide, setActiveSlide] = useState(0);
 
+  const themeId = data.themeId || "apex-clinical";
   const primaryColor = data.primaryColor || "#2563EB";
   const secondaryColor = data.secondaryColor || "#0F172A";
   const accentColor = data.accentColor || "#10B981";
@@ -152,7 +153,7 @@ export function ThemeRenderer({
     setBookingSuccess(true);
   };
 
-  // Section Wrapper with Elementor Hover Controls
+  // Section Container Wrapper with Elementor Controls
   const renderSectionContainer = (section: PageSection, children: React.ReactNode, index: number) => {
     if (!composerMode) return <React.Fragment key={section.id}>{children}</React.Fragment>;
 
@@ -239,14 +240,13 @@ export function ThemeRenderer({
 
   return (
     <div
-      className="min-h-screen flex flex-col font-sans selection:bg-blue-500 selection:text-white"
-      style={{
-        backgroundColor: "#FFFFFF",
-        color: secondaryColor,
-      }}
+      className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
+        themeId === "serene-glow" ? "font-serif bg-[#FAF8F5]" : "font-sans bg-white"
+      }`}
+      style={{ color: secondaryColor }}
     >
-      {/* Dynamic Announcement Bar (Only shows if configured and enabled) */}
-      {data.showAnnouncementBar !== false && data.announcementBar && (
+      {/* ── TOP ANNOUNCEMENT BAR (Strictly Conditional) ── */}
+      {data.showAnnouncementBar !== false && data.announcementBar && data.announcementBar.trim().length > 0 ? (
         <div
           className="text-xs font-bold text-center py-2.5 px-4 flex items-center justify-center gap-2 text-white shadow-2xs"
           style={{ backgroundColor: secondaryColor }}
@@ -254,23 +254,23 @@ export function ThemeRenderer({
           <Building2 className="w-3.5 h-3.5 text-blue-300" />
           <span>{data.announcementBar}</span>
         </div>
-      )}
+      ) : null}
 
       {/* ── CLINIC NAVIGATION HEADER ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md"
+              className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md shrink-0"
               style={{ backgroundColor: primaryColor }}
             >
-              {data.siteTitle.charAt(0)}
+              {data.siteTitle?.charAt(0) || "C"}
             </div>
             <div>
               <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-slate-900">
                 {data.siteTitle}
               </h1>
-              {data.tagline && (
+              {data.tagline && data.tagline.trim().length > 0 && (
                 <p className="text-[11px] text-slate-500 font-medium mt-0.5 max-w-xs truncate">
                   {data.tagline}
                 </p>
@@ -309,30 +309,110 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* ── DYNAMIC SECTIONS RENDERER ── */}
+      {/* ── DYNAMIC SECTIONS RENDERER WITH 5 DISTINCT LAYOUTS ── */}
       {activeSections.map((section, index) => {
         // 1. HERO SECTION
         if (section.type === "HERO") {
+          const heroHeadline = section.title !== undefined ? section.title : data.heroHeading;
+          const heroSub = section.subtitle !== undefined ? section.subtitle : data.heroSubheading;
+
+          // THEME ARCHITECTURE 1: APEX (FULL-WIDTH AMBIENT HERO SLIDER)
+          if (themeId === "apex-clinical") {
+            return renderSectionContainer(
+              section,
+              <section className="relative min-h-[560px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-950 py-20 px-4">
+                {/* Background Slider Carousel */}
+                <div className="absolute inset-0 z-0">
+                  {sliderImages.map((imgUrl, i) => (
+                    <div
+                      key={i}
+                      className={`absolute inset-0 transition-opacity duration-1000 ${
+                        activeSlide === i ? "opacity-40 scale-100" : "opacity-0 scale-105"
+                      }`}
+                    >
+                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+                </div>
+
+                <div className="relative z-10 max-w-4xl mx-auto space-y-6">
+                  {section.badgeText && (
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white">
+                      <span>{section.badgeText}</span>
+                    </div>
+                  )}
+
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+                    {heroHeadline}
+                  </h2>
+
+                  {heroSub && heroSub.trim().length > 0 && (
+                    <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                      {heroSub}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                    <button
+                      onClick={() => setOpenBookingModal(true)}
+                      className="w-full sm:w-auto text-white text-sm font-bold h-12 px-8 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                    </button>
+
+                    {cleanWaNumber && (
+                      <a
+                        href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent("Hello, I would like to book a consultation.")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>WhatsApp Chat</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // THEME ARCHITECTURES 2, 3, 4, 5 (SPLIT LUXURY MULTI-PHOTO CAROUSEL)
           return renderSectionContainer(
             section,
-            <section className="relative overflow-hidden pt-12 pb-20 bg-gradient-to-b from-slate-50 via-white to-slate-50 border-b border-slate-100">
+            <section className={`relative overflow-hidden pt-12 pb-20 border-b border-slate-100 ${
+              themeId === "serene-glow"
+                ? "bg-[#FAF8F5]"
+                : themeId === "warm-pediatrics"
+                ? "bg-emerald-50/40"
+                : themeId === "minimal-luxe"
+                ? "bg-cyan-50/30"
+                : "bg-slate-50/60"
+            }`}>
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                    {/* Badge is fully dynamic or omitted */}
                     {section.badgeText && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-2xs">
                         <span>{section.badgeText}</span>
                       </div>
                     )}
 
-                    <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-slate-900">
-                      {section.title || data.heroHeading}
+                    <h2 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight text-slate-900 ${
+                      themeId === "serene-glow" ? "font-serif italic" : ""
+                    }`}>
+                      {heroHeadline}
                     </h2>
 
-                    <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                      {section.subtitle || data.heroSubheading || "Providing modern healthcare excellence with compassionate patient care and tailored clinical treatments."}
-                    </p>
+                    {heroSub && heroSub.trim().length > 0 && (
+                      <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                        {heroSub}
+                      </p>
+                    )}
 
                     <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                       <button
@@ -358,7 +438,7 @@ export function ThemeRenderer({
                     </div>
                   </div>
 
-                  {/* Right Column: Multi-Image Slider Frame or Booking Form */}
+                  {/* Right Column: Multi-Image Slider Frame (Unobstructed, zero overlay badges) */}
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
                       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5">
@@ -407,7 +487,7 @@ export function ThemeRenderer({
                         </form>
                       </div>
                     ) : (
-                      /* Luxury Multi-Photo Slider */
+                      /* Luxury Multi-Photo Slider (100% Unobstructed) */
                       <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group">
                         {sliderImages.map((imgUrl, i) => (
                           <div
@@ -448,7 +528,7 @@ export function ThemeRenderer({
 
                         {/* Slider Dots */}
                         {sliderImages.length > 1 && (
-                          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
                             {sliderImages.map((_, i) => (
                               <button
                                 key={i}
@@ -462,21 +542,6 @@ export function ThemeRenderer({
                             ))}
                           </div>
                         )}
-
-                        {/* Bottom Clinic Badge */}
-                        <div className="absolute bottom-4 left-4 right-4 z-20 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-md border border-white/50 flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-bold text-slate-900">{data.doctor?.name || data.siteTitle}</p>
-                            <p className="text-[11px] text-slate-500">{data.doctor?.specialty || "Senior Specialist"}</p>
-                          </div>
-                          <button
-                            onClick={() => setOpenBookingModal(true)}
-                            className="text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-xs"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            Consult
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -494,15 +559,14 @@ export function ThemeRenderer({
             <section id="services" className="py-20 bg-white border-b border-slate-100">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                    Clinical Care
-                  </span>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                    themeId === "serene-glow" ? "font-serif italic" : ""
+                  }`}>
                     {section.title || "Clinical Services & Procedures"}
                   </h3>
-                  <p className="text-sm text-slate-500">
-                    {section.subtitle || "Comprehensive, evidence-based care tailored to your health."}
-                  </p>
+                  {section.subtitle && section.subtitle.trim().length > 0 && (
+                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -571,15 +635,14 @@ export function ThemeRenderer({
             <section id="reviews" className="py-20 bg-slate-50 border-b border-slate-100">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                    Patient Feedback
-                  </span>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                    themeId === "serene-glow" ? "font-serif italic" : ""
+                  }`}>
                     {section.title || "Verified Patient Feedback"}
                   </h3>
-                  <p className="text-sm text-slate-500">
-                    {section.subtitle || "Real feedback from patients treated at our clinic."}
-                  </p>
+                  {section.subtitle && section.subtitle.trim().length > 0 && (
+                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -666,9 +729,11 @@ export function ThemeRenderer({
                 <h3 className="text-2xl sm:text-4xl font-black tracking-tight">
                   {section.title || "Ready to Book Your Consultation?"}
                 </h3>
-                <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed">
-                  {section.subtitle || "Schedule your appointment in seconds. Receive instant confirmation."}
-                </p>
+                {section.subtitle && section.subtitle.trim().length > 0 && (
+                  <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed">
+                    {section.subtitle}
+                  </p>
+                )}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
                     onClick={() => setOpenBookingModal(true)}
@@ -710,15 +775,14 @@ export function ThemeRenderer({
             <section className="py-20 bg-white border-b border-slate-100">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <span className="text-xs font-black uppercase tracking-wider text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
-                    Clinic Showcase
-                  </span>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                    themeId === "serene-glow" ? "font-serif italic" : ""
+                  }`}>
                     {section.title || "Our Modern Clinical Facilities"}
                   </h3>
-                  <p className="text-sm text-slate-500">
-                    {section.subtitle || "A comfortable, sterile, and patient-first medical environment."}
-                  </p>
+                  {section.subtitle && section.subtitle.trim().length > 0 && (
+                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -746,10 +810,9 @@ export function ThemeRenderer({
             <section id="faq" className="py-20 bg-slate-50 border-b border-slate-100">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
                 <div className="text-center space-y-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-700 bg-slate-200/80 px-3 py-1 rounded-full">
-                    FAQs
-                  </span>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                    themeId === "serene-glow" ? "font-serif italic" : ""
+                  }`}>
                     {section.title || "Frequently Asked Questions"}
                   </h3>
                 </div>
@@ -792,10 +855,9 @@ export function ThemeRenderer({
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                   <div className="lg:col-span-5 space-y-6">
                     <div className="space-y-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        Visit Our Clinic
-                      </span>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                      <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                        themeId === "serene-glow" ? "font-serif italic" : ""
+                      }`}>
                         {section.title || "Clinic Location & Hours"}
                       </h3>
                     </div>
@@ -856,7 +918,9 @@ export function ThemeRenderer({
             <section className="py-16 bg-slate-50 border-b border-slate-100">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-center">
                 <h3 className="text-2xl font-bold text-slate-900">{section.title || "Custom Story & Information"}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">{section.content || "Add your customized patient notices, awards, or medical background here."}</p>
+                {section.content && section.content.trim().length > 0 && (
+                  <p className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">{section.content}</p>
+                )}
               </div>
             </section>,
             index
@@ -871,7 +935,7 @@ export function ThemeRenderer({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-              {data.siteTitle.charAt(0)}
+              {data.siteTitle?.charAt(0) || "C"}
             </div>
             <span className="font-bold text-white">{data.siteTitle}</span>
           </div>

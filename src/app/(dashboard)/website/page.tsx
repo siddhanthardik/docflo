@@ -58,10 +58,7 @@ import {
   SlidersHorizontal,
   DollarSign,
   HeartPulse,
-  Activity,
-  Smile,
-  Baby,
-  Pill,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,11 +66,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
 const THEME_OPTIONS = [
-  { id: "apex-clinical", name: "Apex Multi-Specialty", category: "Polyclinic & Hospitals", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
-  { id: "serene-glow", name: "Serene Aesthetics", category: "Dermatology & Skin", primary: "#BE185D", secondary: "#1E1B4B", accent: "#F43F5E" },
-  { id: "minimal-luxe", name: "Minimal Luxe Dental", category: "Dentistry & Smile", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
-  { id: "warm-pediatrics", name: "Warm Pediatrics", category: "Pediatrics & Kids", primary: "#059669", secondary: "#1E293B", accent: "#F59E0B" },
-  { id: "vitality-rehab", name: "Vitality Rehab", category: "Ortho & Physio", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
+  { id: "apex-clinical", name: "Apex Multi-Specialty", category: "Polyclinic & Hospitals (Full-Width Slider)", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
+  { id: "serene-glow", name: "Serene Aesthetics", category: "Dermatology & Skin (Luxury Editorial)", primary: "#BE185D", secondary: "#1E1B4B", accent: "#F43F5E" },
+  { id: "minimal-luxe", name: "Minimal Luxe Dental", category: "Dentistry & Smile (Cyan Modern)", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
+  { id: "warm-pediatrics", name: "Warm Pediatrics", category: "Pediatrics & Kids (Comfort Mint)", primary: "#059669", secondary: "#1E293B", accent: "#F59E0B" },
+  { id: "vitality-rehab", name: "Vitality Rehab", category: "Ortho & Physio (Active Performance)", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
 ];
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
@@ -95,7 +92,6 @@ export default function ElementorComposerPage() {
   const heroUploadRef = useRef<HTMLInputElement>(null);
   const galleryUploadRef = useRef<HTMLInputElement>(null);
   const doctorPhotoRef = useRef<HTMLInputElement>(null);
-  const serviceImageRef = useRef<{ [idx: number]: HTMLInputElement | null }>({});
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -126,14 +122,14 @@ export default function ElementorComposerPage() {
     siteTitle: "Clinic",
     tagline: "Comprehensive Healthcare",
     heroHeading: "Advanced Healthcare & Dedicated Patient Care",
-    heroSubheading: "Delivering compassionate clinical consultations, evidence-based treatments, and high patient satisfaction.",
+    heroSubheading: "",
     heroImage: null,
     heroSliderImages: [],
     heroStyle: "IMAGE_ONLY",
     showHeroBookingForm: false,
     showPrices: true,
-    announcementBar: "Now accepting new patient appointments online.",
-    showAnnouncementBar: true,
+    announcementBar: "",
+    showAnnouncementBar: false,
     ctaButtonText: "Book Appointment",
     ctaButtonAction: "BOOKING_MODAL",
     whatsappNumber: "",
@@ -149,7 +145,7 @@ export default function ElementorComposerPage() {
     customFaqs: [],
     galleryImages: [],
     sections: [
-      { id: "sec_hero", type: "HERO" },
+      { id: "sec_hero", type: "HERO", subtitle: "" },
       { id: "sec_services", type: "SERVICES" },
       { id: "sec_reviews", type: "REVIEWS" },
       { id: "sec_bio", type: "DOCTOR_BIO" },
@@ -210,6 +206,35 @@ export default function ElementorComposerPage() {
   useEffect(() => {
     fetchWebsiteData();
   }, []);
+
+  // 1-Click AI Copy Generator Helper
+  const generateAiCopy = (field: "hero" | "bio" | "service") => {
+    const specialty = siteData.doctor?.specialty || siteData.tagline || "Healthcare & Clinical Care";
+    const doctorName = siteData.doctor?.name || siteData.siteTitle || "Lead Consultant Doctor";
+
+    if (field === "hero") {
+      const headlines = [
+        `Leading ${specialty} & Dedicated Clinical Excellence`,
+        `Evidence-Based ${specialty} for Complete Health & Wellness`,
+        `Compassionate Care, Modern Diagnostics & ${specialty}`,
+      ];
+      const subtitles = [
+        `Personalized outpatient consultations, modern treatments, and comprehensive care led by ${doctorName}.`,
+        `Combining clinical expertise with dedicated patient-first medical treatments in a compassionate environment.`,
+      ];
+      const pickedHeadline = headlines[Math.floor(Math.random() * headlines.length)];
+      const pickedSubtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
+
+      setSiteData((prev) => ({ ...prev, heroHeading: pickedHeadline, heroSubheading: pickedSubtitle }));
+      updateSelectedSection({ title: pickedHeadline, subtitle: pickedSubtitle });
+      toast({ title: "✨ AI Headline & Subtitle Generated!" });
+    } else if (field === "bio") {
+      const bioText = `${doctorName} is a distinguished specialist in ${specialty} dedicated to providing compassionate, evidence-based clinical treatments. Combining extensive clinical diagnostic experience with modern medical protocols, ${doctorName} ensures every patient receives customized, high-quality care with the highest safety standards.`;
+      setSiteData((prev) => ({ ...prev, customBio: bioText }));
+      updateSelectedSection({ content: bioText });
+      toast({ title: "✨ AI Medical Bio Generated!" });
+    }
+  };
 
   // Element Tray Click Handling
   const handleElementCardClick = (type: SectionType) => {
@@ -390,12 +415,12 @@ export default function ElementorComposerPage() {
             </span>
             <div>
               <p className="text-xs font-black text-slate-900 leading-none">Visual Composer</p>
-              <p className="text-[10px] text-slate-500 font-medium">Elementor-Grade Studio</p>
+              <p className="text-[10px] text-slate-500 font-medium">Award-Winning Studio</p>
             </div>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-slate-200">
-            <span className="text-[11px] font-bold text-slate-400">Theme:</span>
+            <span className="text-[11px] font-bold text-slate-400">Layout Theme:</span>
             <select
               value={siteData.themeId}
               onChange={(e) => {
@@ -408,7 +433,7 @@ export default function ElementorComposerPage() {
                     secondaryColor: found.secondary,
                     accentColor: found.accent,
                   });
-                  toast({ title: `Applied ${found.name} Theme! 🎨` });
+                  toast({ title: `Applied ${found.name} Layout Theme! 🎨` });
                 }
               }}
               className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50"
@@ -520,6 +545,19 @@ export default function ElementorComposerPage() {
                 {/* 1. HERO SECTION INSPECTOR */}
                 {selectedSection.type === "HERO" && (
                   <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Hero Section Content</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateAiCopy("hero")}
+                        className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
+                      >
+                        <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Magic Copy
+                      </Button>
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Clinic Name</label>
                       <Input
@@ -542,7 +580,7 @@ export default function ElementorComposerPage() {
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Hero Main Headline</label>
                       <Input
-                        value={selectedSection.title || siteData.heroHeading}
+                        value={selectedSection.title !== undefined ? selectedSection.title : siteData.heroHeading}
                         onChange={(e) => {
                           updateSelectedSection({ title: e.target.value });
                           setSiteData({ ...siteData, heroHeading: e.target.value });
@@ -552,13 +590,14 @@ export default function ElementorComposerPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Hero Subtitle / Description</label>
+                      <label className="font-bold text-slate-700">Hero Subtitle / Description (Leave blank to remove)</label>
                       <Textarea
-                        value={selectedSection.subtitle || siteData.heroSubheading || ""}
+                        value={selectedSection.subtitle !== undefined ? selectedSection.subtitle : (siteData.heroSubheading || "")}
                         onChange={(e) => {
                           updateSelectedSection({ subtitle: e.target.value });
                           setSiteData({ ...siteData, heroSubheading: e.target.value });
                         }}
+                        placeholder="Leave blank to completely hide description..."
                         rows={3}
                         className="text-xs rounded-xl leading-relaxed"
                       />
@@ -570,12 +609,12 @@ export default function ElementorComposerPage() {
                         <span className="font-bold text-slate-800">Top Announcement Bar</span>
                         <input
                           type="checkbox"
-                          checked={siteData.showAnnouncementBar !== false}
+                          checked={siteData.showAnnouncementBar === true}
                           onChange={(e) => setSiteData({ ...siteData, showAnnouncementBar: e.target.checked })}
                           className="w-4 h-4 rounded text-blue-600 cursor-pointer"
                         />
                       </div>
-                      {siteData.showAnnouncementBar !== false && (
+                      {siteData.showAnnouncementBar === true && (
                         <Input
                           value={siteData.announcementBar || ""}
                           onChange={(e) => setSiteData({ ...siteData, announcementBar: e.target.value })}
@@ -629,7 +668,7 @@ export default function ElementorComposerPage() {
                     {/* Booking Form in Hero Toggle */}
                     <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800">Show Quick Booking Form</span>
+                        <span className="font-bold text-slate-800">Show Quick Booking Form in Hero</span>
                         <input
                           type="checkbox"
                           checked={siteData.showHeroBookingForm || false}
@@ -637,7 +676,6 @@ export default function ElementorComposerPage() {
                           className="w-4 h-4 rounded text-blue-600 cursor-pointer"
                         />
                       </div>
-                      <p className="text-[10px] text-slate-500">If disabled, the hero displays your multi-photo slider with CTA buttons.</p>
                     </div>
                   </div>
                 )}
@@ -769,6 +807,19 @@ export default function ElementorComposerPage() {
                 {/* 3. DOCTOR BIO INSPECTOR */}
                 {selectedSection.type === "DOCTOR_BIO" && (
                   <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Doctor Credentials &amp; Bio</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateAiCopy("bio")}
+                        className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
+                      >
+                        <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Bio Generator
+                      </Button>
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Doctor Name</label>
                       <Input
@@ -831,7 +882,7 @@ export default function ElementorComposerPage() {
                     <div className="space-y-1.5 pt-2">
                       <label className="font-bold text-slate-700">Clinical Philosophy &amp; Background</label>
                       <Textarea
-                        value={selectedSection.content || siteData.customBio || ""}
+                        value={selectedSection.content !== undefined ? selectedSection.content : (siteData.customBio || "")}
                         onChange={(e) => {
                           updateSelectedSection({ content: e.target.value });
                           setSiteData({ ...siteData, customBio: e.target.value });
