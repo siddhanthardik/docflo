@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "blossom-gynae"
+    ? [
+        { question: "How do I prepare for a painless normal delivery?", answer: "Our maternity care includes prenatal pelvic floor conditioning, breathing exercises, birth plan consultations, and 24/7 labor suite monitoring with optional epidural analgesia." },
+        { question: "Can PCOS and irregular cycles be treated naturally?", answer: "Yes, with customized nutritional lifestyle plans, insulin-sensitization therapy, and hormonal balancing, PCOS symptoms can be effectively managed and fertility restored." },
+        { question: "When should I schedule my first pregnancy ultrasound scan?", answer: "The first dating and viability ultrasound is typically scheduled between 6 to 8 weeks of pregnancy to confirm gestational sac, embryo heartbeat, and accurate due date." },
+        { question: "How do I schedule an appointment with the gynecologist?", answer: "Click 'Book Appointment' or message our women's health reception directly on WhatsApp." },
+      ]
     : themeId === "executive-private"
     ? [
         { question: "How does the VIP Medical Concierge model work?", answer: "Our practice limits total client enrollment to ensure immediate, unhurried, same-day access with direct 24/7 personal communication with your senior physician." },
@@ -461,7 +468,9 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "serene-glow"
+        themeId === "blossom-gynae"
+          ? "bg-[#FFF5F7]"
+          : themeId === "serene-glow"
           ? "bg-[#FAF8F5]"
           : themeId === "ayurveda-earth"
           ? "bg-[#FDFBF7]"
@@ -802,10 +811,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-10: All 10 Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-11: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "blossom-gynae"
+            ? [
+                { value: "12,000+", label: "Healthy Deliveries & Babies", icon: "baby" },
+                { value: "100%", label: "Advanced 3D/4D Fetal Scans", icon: "activity" },
+                { value: "98%", label: "Normal Delivery Preference", icon: "heart" },
+                { value: "4.9 ★", label: "Mother Trust Rating", icon: "star" },
+              ]
             : themeId === "executive-private"
             ? [
                 { value: "Zero", label: "Waiting Time Guaranteed", icon: "crown" },

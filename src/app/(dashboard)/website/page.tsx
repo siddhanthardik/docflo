@@ -85,6 +85,7 @@ const THEME_OPTIONS = [
   { id: "cardiocare-executive", name: "CardioCare Executive", category: "Cardiology & Vascular", primary: "#DC2626", secondary: "#0F172A", accent: "#E11D48" },
   { id: "neuropsych-horizon", name: "NeuroPsych Horizon", category: "Mental & Neurology", primary: "#7C3AED", secondary: "#1E1B4B", accent: "#A855F7" },
   { id: "executive-private", name: "Executive Private Practice", category: "VIP Concierge Suites", primary: "#CA8A04", secondary: "#0A0A0A", accent: "#EAB308" },
+  { id: "blossom-gynae", name: "Blossom Gynae & Maternity", category: "Gynecology & Fertility", primary: "#E11D48", secondary: "#1E1B4B", accent: "#FB7185" },
 ];
 
 const FONTS_HEADINGS = [
