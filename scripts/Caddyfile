@@ -15,7 +15,7 @@ gyrex.in, www.gyrex.in {
 }
 
 # 2. Automated On-Demand TLS for ALL Subdomains (*.gyrex.in) & Custom Domains
-https:// {
+:443 {
     tls {
         on_demand
     }

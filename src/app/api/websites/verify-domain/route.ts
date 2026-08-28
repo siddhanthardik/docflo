@@ -12,27 +12,17 @@ export async function GET(req: NextRequest) {
 
     const domain = rawDomain.toLowerCase().trim();
 
-    // 1. Allow root platform domain, www, and domains
-    if (domain === "gyrex.in" || domain === "www.gyrex.in" || domain === "domains.gyrex.in") {
-      return new NextResponse("AUTHORIZED_PLATFORM", { status: 200 });
+    // 1. Always authorize root platform domain and all *.gyrex.in clinic subdomains
+    if (
+      domain === "gyrex.in" ||
+      domain === "www.gyrex.in" ||
+      domain === "domains.gyrex.in" ||
+      domain.endsWith(".gyrex.in")
+    ) {
+      return new NextResponse("AUTHORIZED_GYREX_DOMAIN", { status: 200 });
     }
 
-    // 2. Handle *.gyrex.in clinic subdomains (e.g. dr-vinay-kumar-rai.gyrex.in)
-    if (domain.endsWith(".gyrex.in")) {
-      const sub = domain.replace(/\.gyrex\.in$/, "").trim();
-      const website = await prisma.clinicWebsite.findFirst({
-        where: {
-          subdomain: sub,
-          isPublished: true,
-        },
-      });
-
-      if (website) {
-        return new NextResponse("AUTHORIZED_SUBDOMAIN", { status: 200 });
-      }
-    }
-
-    // 3. Handle external custom branded domains (e.g. www.drvinaykumar.com)
+    // 2. Handle external custom branded domains (e.g. www.drvinaykumar.com)
     const customWebsite = await prisma.clinicWebsite.findFirst({
       where: {
         OR: [
