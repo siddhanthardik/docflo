@@ -9,6 +9,12 @@ export type SectionType =
   | "MAP_HOURS"
   | "CUSTOM_TEXT";
 
+export interface NavLinkItem {
+  label: string;
+  href: string;
+  isExternal?: boolean;
+}
+
 export interface PageSection {
   id: string;
   type: SectionType;
@@ -39,6 +45,7 @@ export interface ClinicWebsiteData {
   accentColor: string;
   fontHeading: string;
   fontBody: string;
+  buttonRadius?: string | null;
   siteTitle: string;
   tagline?: string | null;
   logoUrl?: string | null;
@@ -67,8 +74,10 @@ export interface ClinicWebsiteData {
   showStickyBar: boolean;
   showPrices?: boolean;
   showServiceButtons?: boolean;
+  showAppointmentPage?: boolean;
   clinicAddress?: string | null;
   mapEmbedUrl?: string | null;
+  navLinks?: NavLinkItem[];
   customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string; image?: string }>;
   customFaqs?: Array<{ question: string; answer: string }>;
   customBio?: string | null;

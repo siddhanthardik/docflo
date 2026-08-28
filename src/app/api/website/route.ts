@@ -32,11 +32,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Doctor profile not found" }, { status: 404 });
     }
 
-    // Extract detailed GBP address if available
+    // Extract detailed GBP address & business name
     const gbpAccount = doctor.gbpAccounts[0];
     const gbpSnapshot = gbpAccount?.profileSnapshots?.[0];
     const snapshotJson = (gbpSnapshot?.json as any) || {};
+    const businessName = snapshotJson.businessName || doctor.clinicName || doctor.name || "Clinic";
     const gbpAddress = snapshotJson.formattedAddress || snapshotJson.address || (snapshotJson.storefrontAddress?.addressLines?.join(", ")) || doctor.address || "";
+    
+    // Auto-generate accurate Google Map pin URL
+    const fullPinQuery = `${businessName} ${gbpAddress}`.trim();
+    const autoMapEmbedUrl = fullPinQuery ? `https://maps.google.com/maps?q=${encodeURIComponent(fullPinQuery)}&t=&z=16&ie=UTF8&iwloc=&output=embed` : null;
 
     let existingWebsite = await prisma.clinicWebsite.findUnique({
       where: { doctorId },
@@ -55,6 +60,7 @@ export async function GET(req: NextRequest) {
           accentColor: synth.accentColor,
           fontHeading: synth.fontHeading,
           fontBody: synth.fontBody,
+          buttonRadius: "2xl",
           siteTitle: synth.siteTitle,
           tagline: synth.tagline,
           heroHeading: synth.heroHeading,
@@ -77,7 +83,9 @@ export async function GET(req: NextRequest) {
           showStickyBar: synth.showStickyBar,
           showPrices: true,
           showServiceButtons: false,
+          showAppointmentPage: true,
           clinicAddress: gbpAddress || doctor.address || "",
+          mapEmbedUrl: autoMapEmbedUrl,
           customServices: synth.customServices,
           customFaqs: synth.customFaqs,
           customBio: synth.customBio,
@@ -93,6 +101,7 @@ export async function GET(req: NextRequest) {
           contactPhone: synth.contactPhone,
           contactEmail: synth.contactEmail,
           clinicAddress: gbpAddress || doctor.address || undefined,
+          mapEmbedUrl: autoMapEmbedUrl || undefined,
           customServices: synth.customServices,
           customFaqs: synth.customFaqs,
           customBio: synth.customBio,
@@ -143,6 +152,7 @@ export async function POST(req: NextRequest) {
       accentColor = "#10B981",
       fontHeading = "Plus Jakarta Sans",
       fontBody = "Inter",
+      buttonRadius = "2xl",
       siteTitle,
       tagline,
       logoUrl,
@@ -171,8 +181,10 @@ export async function POST(req: NextRequest) {
       showStickyBar = true,
       showPrices = true,
       showServiceButtons = false,
+      showAppointmentPage = true,
       clinicAddress,
       mapEmbedUrl,
+      navLinks,
       customServices,
       customFaqs,
       customBio,
@@ -193,6 +205,7 @@ export async function POST(req: NextRequest) {
         accentColor,
         fontHeading,
         fontBody,
+        buttonRadius,
         siteTitle: siteTitle || "Clinic",
         tagline,
         logoUrl,
@@ -221,8 +234,10 @@ export async function POST(req: NextRequest) {
         showStickyBar,
         showPrices,
         showServiceButtons,
+        showAppointmentPage,
         clinicAddress,
         mapEmbedUrl,
+        navLinks: navLinks || [],
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,
@@ -239,6 +254,7 @@ export async function POST(req: NextRequest) {
         accentColor,
         fontHeading,
         fontBody,
+        buttonRadius,
         siteTitle: siteTitle || "Clinic",
         tagline,
         logoUrl,
@@ -267,8 +283,10 @@ export async function POST(req: NextRequest) {
         showStickyBar,
         showPrices,
         showServiceButtons,
+        showAppointmentPage,
         clinicAddress,
         mapEmbedUrl,
+        navLinks: navLinks || [],
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,

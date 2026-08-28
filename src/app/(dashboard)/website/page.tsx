@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ThemeRenderer, ICON_MAP } from "@/components/themes/ThemeRenderer";
-import { ClinicWebsiteData, PageSection, SectionType } from "@/components/themes/theme-types";
+import { ClinicWebsiteData, PageSection, SectionType, NavLinkItem } from "@/components/themes/theme-types";
 import {
   Globe,
   Palette,
@@ -59,6 +59,10 @@ import {
   DollarSign,
   HeartPulse,
   Wand2,
+  Navigation,
+  Key,
+  Server,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +75,33 @@ const THEME_OPTIONS = [
   { id: "minimal-luxe", name: "Minimal Luxe Dental", category: "Dentistry & Smile (Cyan Modern)", primary: "#0284C7", secondary: "#0F172A", accent: "#14B8A6" },
   { id: "warm-pediatrics", name: "Warm Pediatrics", category: "Pediatrics & Kids (Comfort Mint)", primary: "#059669", secondary: "#1E293B", accent: "#F59E0B" },
   { id: "vitality-rehab", name: "Vitality Rehab", category: "Ortho & Physio (Active Performance)", primary: "#0D9488", secondary: "#18181B", accent: "#E11D48" },
+];
+
+const FONTS_HEADINGS = [
+  "Plus Jakarta Sans",
+  "Playfair Display",
+  "Inter",
+  "Poppins",
+  "Outfit",
+  "Montserrat",
+  "Lora",
+  "Cinzel",
+];
+
+const FONTS_BODY = [
+  "Inter",
+  "Plus Jakarta Sans",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+];
+
+const BUTTON_RADII = [
+  { id: "full", label: "Pill (Rounded Full)" },
+  { id: "2xl", label: "Modern (Rounded 2XL)" },
+  { id: "xl", label: "Classic (Rounded XL)" },
+  { id: "lg", label: "Subtle (Rounded LG)" },
+  { id: "none", label: "Sharp Square" },
 ];
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
@@ -99,7 +130,7 @@ export default function ElementorComposerPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncingGbp, setSyncingGbp] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"elements" | "structure" | "style" | "domain">("elements");
+  const [sidebarTab, setSidebarTab] = useState<"elements" | "structure" | "style" | "navbar" | "domain">("elements");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec_hero");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -121,6 +152,7 @@ export default function ElementorComposerPage() {
     accentColor: "#10B981",
     fontHeading: "Plus Jakarta Sans",
     fontBody: "Inter",
+    buttonRadius: "2xl",
     siteTitle: "Clinic",
     tagline: "Comprehensive Healthcare",
     logoUrl: null,
@@ -132,6 +164,7 @@ export default function ElementorComposerPage() {
     showHeroBookingForm: false,
     showPrices: true,
     showServiceButtons: false,
+    showAppointmentPage: true,
     clinicAddress: "",
     mapEmbedUrl: "",
     announcementBar: "",
@@ -151,6 +184,7 @@ export default function ElementorComposerPage() {
     showFaq: true,
     showMap: true,
     showStickyBar: true,
+    navLinks: [],
     customServices: [],
     customFaqs: [],
     galleryImages: [],
@@ -457,6 +491,11 @@ export default function ElementorComposerPage() {
       ...prev,
       sections: (prev.sections || []).map((s) => (s.id === selectedSectionId ? { ...s, ...patch } : s)),
     }));
+  };
+
+  // Clean domain input helper
+  const cleanDomainString = (val: string) => {
+    return val.replace(/^https?:\/\//i, "").replace(/\/.*$/, "").trim().toLowerCase();
   };
 
   return (
@@ -827,7 +866,7 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 2. SERVICES SECTION INSPECTOR (WordPress Style Icon Library & Photo Upload) */}
+                {/* 2. SERVICES SECTION INSPECTOR */}
                 {selectedSection.type === "SERVICES" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -881,122 +920,119 @@ export default function ElementorComposerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        {(siteData.customServices || []).map((s, idx) => {
-                          const IconComp = (s.icon && ICON_MAP[s.icon.toLowerCase()]) || Stethoscope;
-                          return (
-                            <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-                              <div className="flex items-center gap-2">
+                        {(siteData.customServices || []).map((s, idx) => (
+                          <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={s.name}
+                                onChange={(e) => {
+                                  const updated = [...(siteData.customServices || [])];
+                                  updated[idx].name = e.target.value;
+                                  setSiteData({ ...siteData, customServices: updated });
+                                }}
+                                placeholder="Service Name"
+                                className="h-8 text-xs font-bold bg-white"
+                              />
+                              {siteData.showPrices !== false && (
                                 <Input
-                                  value={s.name}
+                                  type="number"
+                                  value={s.price || ""}
                                   onChange={(e) => {
                                     const updated = [...(siteData.customServices || [])];
-                                    updated[idx].name = e.target.value;
+                                    updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
                                     setSiteData({ ...siteData, customServices: updated });
                                   }}
-                                  placeholder="Service Name"
-                                  className="h-8 text-xs font-bold bg-white"
+                                  placeholder="Price (₹)"
+                                  className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
                                 />
-                                {siteData.showPrices !== false && (
-                                  <Input
-                                    type="number"
-                                    value={s.price || ""}
-                                    onChange={(e) => {
-                                      const updated = [...(siteData.customServices || [])];
-                                      updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
-                                      setSiteData({ ...siteData, customServices: updated });
-                                    }}
-                                    placeholder="Price (₹)"
-                                    className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
-                                  />
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
-                                    setSiteData({ ...siteData, customServices: updated });
-                                  }}
-                                  className="text-slate-400 hover:text-rose-600 p-1"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
+                                  setSiteData({ ...siteData, customServices: updated });
+                                }}
+                                className="text-slate-400 hover:text-rose-600 p-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Service Photo or Icon Library Picker */}
+                            <div className="space-y-1.5 p-2 bg-white rounded-xl border border-slate-200">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-600">Visual Badge:</span>
+                                <div className="flex items-center gap-2">
+                                  {s.image ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = [...(siteData.customServices || [])];
+                                        updated[idx].image = undefined;
+                                        setSiteData({ ...siteData, customServices: updated });
+                                      }}
+                                      className="text-[10px] text-rose-600 font-bold hover:underline"
+                                    >
+                                      Use Icon Instead
+                                    </button>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setActiveServiceUploadIdx(idx);
+                                        servicePhotoRef.current?.click();
+                                      }}
+                                      className="h-5 px-1.5 text-[9px] font-bold rounded"
+                                    >
+                                      <Upload className="w-2.5 h-2.5 mr-1 text-blue-600" /> Upload Image
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
 
-                              {/* Service Photo or Icon Library Picker */}
-                              <div className="space-y-1.5 p-2 bg-white rounded-xl border border-slate-200">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-bold text-slate-600">Visual Badge:</span>
-                                  <div className="flex items-center gap-2">
-                                    {s.image ? (
+                              {!s.image && (
+                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-20 flex-wrap">
+                                  {ALL_ICON_KEYS.map((ic) => {
+                                    const IComp = ICON_MAP[ic];
+                                    return (
                                       <button
+                                        key={ic}
                                         type="button"
                                         onClick={() => {
                                           const updated = [...(siteData.customServices || [])];
-                                          updated[idx].image = undefined;
+                                          updated[idx].icon = ic;
                                           setSiteData({ ...siteData, customServices: updated });
                                         }}
-                                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                                          (s.icon || "stethoscope") === ic
+                                            ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                        }`}
+                                        title={ic}
                                       >
-                                        Use Icon Instead
+                                        <IComp className="w-3.5 h-3.5" />
                                       </button>
-                                    ) : (
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setActiveServiceUploadIdx(idx);
-                                          servicePhotoRef.current?.click();
-                                        }}
-                                        className="h-5 px-1.5 text-[9px] font-bold rounded"
-                                      >
-                                        <Upload className="w-2.5 h-2.5 mr-1 text-blue-600" /> Upload Image
-                                      </Button>
-                                    )}
-                                  </div>
+                                    );
+                                  })}
                                 </div>
-
-                                {!s.image && (
-                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-20 flex-wrap">
-                                    {ALL_ICON_KEYS.map((ic) => {
-                                      const IComp = ICON_MAP[ic];
-                                      return (
-                                        <button
-                                          key={ic}
-                                          type="button"
-                                          onClick={() => {
-                                            const updated = [...(siteData.customServices || [])];
-                                            updated[idx].icon = ic;
-                                            setSiteData({ ...siteData, customServices: updated });
-                                          }}
-                                          className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                                            (s.icon || "stethoscope") === ic
-                                              ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
-                                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                                          }`}
-                                          title={ic}
-                                        >
-                                          <IComp className="w-3.5 h-3.5" />
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-
-                              <Textarea
-                                value={s.description}
-                                onChange={(e) => {
-                                  const updated = [...(siteData.customServices || [])];
-                                  updated[idx].description = e.target.value;
-                                  setSiteData({ ...siteData, customServices: updated });
-                                }}
-                                placeholder="Describe clinical procedure and benefits..."
-                                rows={2}
-                                className="text-[11px] bg-white rounded-xl"
-                              />
+                              )}
                             </div>
-                          );
-                        })}
+
+                            <Textarea
+                              value={s.description}
+                              onChange={(e) => {
+                                const updated = [...(siteData.customServices || [])];
+                                updated[idx].description = e.target.value;
+                                setSiteData({ ...siteData, customServices: updated });
+                              }}
+                              placeholder="Describe clinical procedure and benefits..."
+                              rows={2}
+                              className="text-[11px] bg-white rounded-xl"
+                            />
+                          </div>
+                        ))}
                       </div>
 
                       <input
@@ -1188,7 +1224,7 @@ export default function ElementorComposerPage() {
                         rows={3}
                         className="text-xs rounded-xl"
                       />
-                      <p className="text-[10px] text-slate-500">Google Map automatically pins to this exact clinic address.</p>
+                      <p className="text-[10px] text-slate-500">Google Map automatically pins to this exact clinic building.</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -1365,30 +1401,36 @@ export default function ElementorComposerPage() {
           ) : (
             /* Main Elementor Drawer Tabs */
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="grid grid-cols-4 p-2 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
+              <div className="grid grid-cols-5 p-1.5 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-600">
                 <button
                   onClick={() => setSidebarTab("elements")}
                   className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "elements" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
                 >
-                  <Plus className="w-4 h-4" /> <span>Elements</span>
+                  <Plus className="w-3.5 h-3.5" /> <span>Elements</span>
                 </button>
                 <button
                   onClick={() => setSidebarTab("structure")}
                   className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "structure" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
                 >
-                  <Layers className="w-4 h-4" /> <span>Navigator</span>
+                  <Layers className="w-3.5 h-3.5" /> <span>Structure</span>
+                </button>
+                <button
+                  onClick={() => setSidebarTab("navbar")}
+                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "navbar" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
+                >
+                  <Navigation className="w-3.5 h-3.5" /> <span>Navbar</span>
                 </button>
                 <button
                   onClick={() => setSidebarTab("style")}
                   className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "style" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
                 >
-                  <Palette className="w-4 h-4" /> <span>Styling</span>
+                  <Palette className="w-3.5 h-3.5" /> <span>Styling</span>
                 </button>
                 <button
                   onClick={() => setSidebarTab("domain")}
                   className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "domain" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
                 >
-                  <Globe className="w-4 h-4" /> <span>Domain</span>
+                  <Globe className="w-3.5 h-3.5" /> <span>Domain</span>
                 </button>
               </div>
 
@@ -1515,16 +1557,191 @@ export default function ElementorComposerPage() {
                 </div>
               )}
 
-              {/* TAB 3: GLOBAL STYLING */}
+              {/* TAB 3: NAVBAR CUSTOMIZATION */}
+              {sidebarTab === "navbar" && (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Clinic Header Navigation</h3>
+                    <p className="text-[11px] text-slate-500">Toggle navbar menu items and add custom page links.</p>
+                  </div>
+
+                  <div className="space-y-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <p className="font-bold text-slate-800">Default Section Links</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span>Services &amp; Procedures</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showServices !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showServices: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Patient Reviews</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showReviews !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showReviews: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Doctor Bio</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showDoctorBio !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showDoctorBio: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>FAQ Accordion</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showFaq !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showFaq: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Location &amp; Timings</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showMap !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showMap: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Custom Navigation Links */}
+                  <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-slate-700">Custom Nav Links &amp; Pages</label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const list = siteData.navLinks || [];
+                          setSiteData({
+                            ...siteData,
+                            navLinks: [...list, { label: "Patient Portal", href: "https://", isExternal: true }],
+                          });
+                        }}
+                        className="h-6 text-[10px] font-bold rounded-lg"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Link
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(siteData.navLinks || []).map((nl, idx) => (
+                        <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <Input
+                              value={nl.label}
+                              onChange={(e) => {
+                                const updated = [...(siteData.navLinks || [])];
+                                updated[idx].label = e.target.value;
+                                setSiteData({ ...siteData, navLinks: updated });
+                              }}
+                              placeholder="Link Label"
+                              className="h-7 text-xs font-bold bg-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (siteData.navLinks || []).filter((_, i) => i !== idx);
+                                setSiteData({ ...siteData, navLinks: updated });
+                              }}
+                              className="text-slate-400 hover:text-rose-600 p-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <Input
+                            value={nl.href}
+                            onChange={(e) => {
+                              const updated = [...(siteData.navLinks || [])];
+                              updated[idx].href = e.target.value;
+                              setSiteData({ ...siteData, navLinks: updated });
+                            }}
+                            placeholder="URL (e.g. https://... or #contact)"
+                            className="h-7 text-[11px] bg-white font-mono"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <Button
+                      onClick={() => handleSaveWebsite("Navbar Settings")}
+                      disabled={saving}
+                      className="w-full h-10 rounded-xl bg-slate-900 text-white font-bold text-xs"
+                    >
+                      Save Navbar Settings
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: TYPOGRAPHY & GLOBAL STYLING */}
               {sidebarTab === "style" && (
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                   <div className="space-y-1">
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Brand Palette &amp; Colors</h3>
-                    <p className="text-[11px] text-slate-500">Pick custom hex colors for your live site.</p>
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Typography &amp; Aesthetics</h3>
+                    <p className="text-[11px] text-slate-500">Customize fonts, button corner styling, and colors.</p>
                   </div>
 
                   <div className="space-y-3 pt-2">
+                    {/* Heading Font */}
                     <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Headline Font Family</label>
+                      <select
+                        value={siteData.fontHeading}
+                        onChange={(e) => setSiteData({ ...siteData, fontHeading: e.target.value })}
+                        className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50"
+                      >
+                        {FONTS_HEADINGS.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Body Font */}
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Body Text Font Family</label>
+                      <select
+                        value={siteData.fontBody}
+                        onChange={(e) => setSiteData({ ...siteData, fontBody: e.target.value })}
+                        className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50"
+                      >
+                        {FONTS_BODY.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Button Corner Styling */}
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Button Corner Radius</label>
+                      <select
+                        value={siteData.buttonRadius || "2xl"}
+                        onChange={(e) => setSiteData({ ...siteData, buttonRadius: e.target.value })}
+                        className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50"
+                      >
+                        {BUTTON_RADII.map((r) => (
+                          <option key={r.id} value={r.id}>{r.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Brand Palette */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
                       <label className="font-bold text-slate-700">Primary Brand Color</label>
                       <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
                         <input
@@ -1570,22 +1787,23 @@ export default function ElementorComposerPage() {
                       disabled={saving}
                       className="w-full h-10 rounded-xl bg-slate-900 text-white font-bold text-xs"
                     >
-                      Save Global Styling
+                      Save Styling &amp; Typography
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* TAB 4: DOMAIN SETTINGS */}
+              {/* TAB 5: COMPREHENSIVE CUSTOM DOMAIN GUIDE & DNS TABLE */}
               {sidebarTab === "domain" && (
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                   <div className="space-y-1">
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Free URL &amp; Custom Domain</h3>
-                    <p className="text-[11px] text-slate-500">Configure your website address.</p>
+                    <p className="text-[11px] text-slate-500">Point your branded domain (e.g. drvinayrai.com).</p>
                   </div>
 
+                  {/* Free URL */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                    <label className="font-bold text-slate-700">Free Website URL</label>
+                    <label className="font-bold text-slate-700">Free Instant Subdomain</label>
                     <div className="flex items-center gap-1.5">
                       <Input
                         value={urlInput}
@@ -1603,44 +1821,119 @@ export default function ElementorComposerPage() {
                       }}
                       className="w-full h-8 text-[11px] font-bold rounded-xl"
                     >
-                      Update URL
+                      Update Subdomain
                     </Button>
                   </div>
 
-                  <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-100 space-y-2">
-                    <label className="font-bold text-purple-950">Custom Branded Domain</label>
-                    <Input
-                      value={customDomainInput}
-                      onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
-                      placeholder="e.g. www.drvinaykumar.com"
-                      className="h-9 text-xs font-mono font-bold bg-white"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={async () => {
-                        if (!customDomainInput) return;
-                        setConnectingDomain(true);
-                        try {
-                          const res = await fetch("/api/websites/custom-domain", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ domain: customDomainInput }),
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || "Failed");
-                          setCustomDomainStatus({ connectedDomain: data.customDomain, dnsConfigured: data.dnsConfigured });
-                          toast({ title: "Domain Connected!", description: data.message });
-                        } catch (e: any) {
-                          toast({ title: "Error", description: e.message, variant: "destructive" });
-                        } finally {
-                          setConnectingDomain(false);
-                        }
-                      }}
-                      className="w-full h-8 text-[11px] font-bold rounded-xl bg-purple-700 hover:bg-purple-800 text-white"
-                    >
-                      {connectingDomain ? "Connecting..." : "Connect Domain"}
-                    </Button>
+                  {/* Branded Domain Manager with Step-by-Step DNS Guide */}
+                  <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl border border-purple-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-purple-950 flex items-center gap-1.5">
+                        <Globe className="w-4 h-4 text-purple-700" /> Connect Your Own Domain
+                      </label>
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                        <Shield className="w-2.5 h-2.5 text-emerald-600" /> Free SSL
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Input
+                        value={customDomainInput}
+                        onChange={(e) => setCustomDomainInput(cleanDomainString(e.target.value))}
+                        placeholder="e.g. drvinayrai.com"
+                        className="h-9 text-xs font-mono font-bold bg-white"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={async () => {
+                          const clean = cleanDomainString(customDomainInput);
+                          if (!clean) return;
+                          setConnectingDomain(true);
+                          try {
+                            const res = await fetch("/api/websites/custom-domain", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ domain: clean }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || "Failed");
+                            setCustomDomainStatus({ connectedDomain: data.customDomain, dnsConfigured: data.dnsConfigured });
+                            toast({ title: "Domain Linked Successfully! 🌐", description: "Follow the DNS instructions below." });
+                          } catch (e: any) {
+                            toast({ title: "Error", description: e.message, variant: "destructive" });
+                          } finally {
+                            setConnectingDomain(false);
+                          }
+                        }}
+                        className="w-full h-8 text-[11px] font-bold rounded-xl bg-purple-700 hover:bg-purple-800 text-white"
+                      >
+                        {connectingDomain ? "Connecting..." : "Save Custom Domain"}
+                      </Button>
+                    </div>
+
+                    {/* Step-by-Step DNS Instructions Table */}
+                    <div className="pt-2 border-t border-purple-200/80 space-y-2.5">
+                      <p className="text-[11px] font-bold text-purple-900">
+                        DNS Configuration Steps (GoDaddy, Namecheap, Hostinger, Cloudflare):
+                      </p>
+                      <p className="text-[10px] text-slate-600 leading-normal">
+                        Open your domain DNS Manager and add these 2 records:
+                      </p>
+
+                      <div className="bg-white rounded-xl border border-purple-100 overflow-hidden shadow-2xs">
+                        <table className="w-full text-left text-[10px]">
+                          <thead className="bg-purple-100/60 font-bold text-purple-900">
+                            <tr>
+                              <th className="p-1.5">Type</th>
+                              <th className="p-1.5">Name/Host</th>
+                              <th className="p-1.5">Points To (Value)</th>
+                              <th className="p-1.5"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono">
+                            <tr>
+                              <td className="p-1.5 font-bold text-blue-700">A</td>
+                              <td className="p-1.5">@</td>
+                              <td className="p-1.5 text-slate-800 font-bold">72.60.201.41</td>
+                              <td className="p-1.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText("72.60.201.41");
+                                    toast({ title: "Copied A Record IP: 72.60.201.41" });
+                                  }}
+                                  className="text-purple-700 hover:underline font-bold"
+                                >
+                                  Copy
+                                </button>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="p-1.5 font-bold text-purple-700">CNAME</td>
+                              <td className="p-1.5">www</td>
+                              <td className="p-1.5 text-slate-800 font-bold">domains.gyrex.in</td>
+                              <td className="p-1.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText("domains.gyrex.in");
+                                    toast({ title: "Copied CNAME: domains.gyrex.in" });
+                                  }}
+                                  className="text-purple-700 hover:underline font-bold"
+                                >
+                                  Copy
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 text-[10px] text-emerald-800 leading-tight">
+                        🔒 <strong>Automatic HTTPS SSL</strong>: Once DNS records propagate, your SSL certificate will be issued automatically within minutes.
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

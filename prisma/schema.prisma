@@ -1480,8 +1480,11 @@ model ClinicWebsite {
   showHeroBookingForm Boolean      @default(false)
   showPrices       Boolean         @default(true)
   showServiceButtons Boolean       @default(false)
+  buttonRadius     String?         @default("2xl")
   clinicAddress    String?
   mapEmbedUrl      String?
+  navLinks         Json?           // Array of { label, href, isExternal }
+  showAppointmentPage Boolean      @default(true)
   
   // Custom Content Overrides (JSON)
   customServices   Json?           // Array of { name, description, duration, price, icon }
