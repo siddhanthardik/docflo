@@ -1,38 +1,23 @@
 # ==============================================================================
-# Gyrex Production Caddyfile with On-Demand Automated TLS
+# Gyrex Production Caddyfile (Caddy 2.11+ Compatible)
 # Location on VPS: /etc/caddy/Caddyfile
 # ==============================================================================
 
 {
-    # Security Ask Endpoint: Queries Gyrex to check if a subdomain or custom domain
-    # is registered before issuing Let's Encrypt SSL certificates
     on_demand_tls {
         ask http://127.0.0.1:3000/api/websites/verify-domain
-        interval 2m
-        burst 10
     }
 }
 
 # 1. Main Platform Domain & www
 gyrex.in, www.gyrex.in {
-    reverse_proxy 127.0.0.1:3000 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
+    reverse_proxy 127.0.0.1:3000
 }
 
 # 2. Automated On-Demand TLS for ALL Subdomains (*.gyrex.in) & Custom Domains
-:443 {
+https:// {
     tls {
         on_demand
     }
-
-    reverse_proxy 127.0.0.1:3000 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
+    reverse_proxy 127.0.0.1:3000
 }
