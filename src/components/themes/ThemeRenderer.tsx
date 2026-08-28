@@ -429,23 +429,31 @@ export function ThemeRenderer({
 
           // HERO VARIANT 1: FULL-WIDTH LUXURY AMBIENT SLIDER
           if (isFullWidthTheme) {
+            const rawOpacity = d.imageOpacity !== undefined ? d.imageOpacity : 85;
+            const heroOpacity = Math.max(0.1, Math.min(1, rawOpacity / 100));
+            const heroPos = d.imagePosition || "center";
+            const posClass = heroPos === "top" ? "object-top" : heroPos === "bottom" ? "object-bottom" : heroPos === "left" ? "object-left" : heroPos === "right" ? "object-right" : "object-center";
+            const heroHeightClass = d.heroHeight === "compact" ? "min-h-[440px]" : d.heroHeight === "tall" ? "min-h-[700px]" : d.heroHeight === "fullscreen" ? "min-h-screen" : "min-h-[580px]";
+            const overlayClass = d.overlayDarkness === "none" ? "bg-black/10" : d.overlayDarkness === "subtle" ? "bg-black/30" : d.overlayDarkness === "dark" ? "bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" : "bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent";
+
             return renderSectionContainer(
               section,
-              <section className={`relative min-h-[580px] flex items-center justify-center text-center text-white overflow-hidden ${
+              <section className={`relative ${heroHeightClass} flex items-center justify-center text-center text-white overflow-hidden ${
                 themeId === "ophthalmology-vision" ? "bg-sky-950" : "bg-slate-950"
               } ${paddingClass} px-4`}>
                 <div className="absolute inset-0 z-0">
                   {sliderImages.map((imgUrl, i) => (
                     <div
                       key={i}
+                      style={{ opacity: activeSlide === i ? heroOpacity : 0 }}
                       className={`absolute inset-0 transition-opacity duration-1000 ${
-                        activeSlide === i ? "opacity-40 scale-100" : "opacity-0 scale-105"
+                        activeSlide === i ? "scale-100" : "scale-105"
                       }`}
                     >
-                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={imgUrl} alt="" className={`w-full h-full object-cover ${posClass}`} />
                     </div>
                   ))}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+                  <div className={`absolute inset-0 ${overlayClass}`} />
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto space-y-6">
@@ -456,7 +464,7 @@ export function ThemeRenderer({
                     </div>
                   ) : null}
 
-                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
                     {heroHeadline}
                   </h2>
 

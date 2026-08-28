@@ -1132,6 +1132,128 @@ export default function ElementorComposerPage() {
                         )}
                       </div>
 
+                      {/* Hero Slider Image Adjustments & Opacity Controls */}
+                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3.5">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" /> Hero Image Adjustments
+                          </label>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                            Opacity: {selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}%
+                          </span>
+                        </div>
+
+                        {/* Opacity Range Slider */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                            <span>Image Opacity / Brightness</span>
+                            <span className="text-blue-600">{selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={20}
+                            max={100}
+                            step={5}
+                            value={selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}
+                            onChange={(e) => {
+                              updateSelectedSectionDesign({ imageOpacity: Number(e.target.value) });
+                            }}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                          />
+                          <div className="flex justify-between text-[9px] text-slate-400 font-bold px-1">
+                            <span>20% (Dark)</span>
+                            <span>50%</span>
+                            <span>85% (Optimal)</span>
+                            <span>100% (Full Bright)</span>
+                          </div>
+                        </div>
+
+                        {/* Image Alignment / Focal Point */}
+                        <div className="space-y-1.5 pt-1">
+                          <label className="text-[11px] font-bold text-slate-700">Image Alignment / Focal Point</label>
+                          <div className="grid grid-cols-5 gap-1 text-[10px] font-bold">
+                            {[
+                              { id: "top", label: "Top" },
+                              { id: "center", label: "Center" },
+                              { id: "bottom", label: "Bottom" },
+                              { id: "left", label: "Left" },
+                              { id: "right", label: "Right" },
+                            ].map((pos) => (
+                              <button
+                                key={pos.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSectionDesign({ imagePosition: pos.id as any });
+                                }}
+                                className={`py-1.5 rounded-lg border transition-all ${
+                                  (selectedSection.design?.imagePosition || "center") === pos.id
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                {pos.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Overlay Darkness */}
+                        <div className="space-y-1.5 pt-1">
+                          <label className="text-[11px] font-bold text-slate-700">Dark Gradient Overlay</label>
+                          <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
+                            {[
+                              { id: "none", label: "None" },
+                              { id: "subtle", label: "Subtle" },
+                              { id: "medium", label: "Balanced" },
+                              { id: "dark", label: "Deep" },
+                            ].map((ov) => (
+                              <button
+                                key={ov.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSectionDesign({ overlayDarkness: ov.id as any });
+                                }}
+                                className={`py-1.5 rounded-lg border transition-all ${
+                                  (selectedSection.design?.overlayDarkness || "medium") === ov.id
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                {ov.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Hero Height */}
+                        <div className="space-y-1.5 pt-1">
+                          <label className="text-[11px] font-bold text-slate-700">Hero Section Height</label>
+                          <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
+                            {[
+                              { id: "compact", label: "440px" },
+                              { id: "normal", label: "580px" },
+                              { id: "tall", label: "700px" },
+                              { id: "fullscreen", label: "Full Screen" },
+                            ].map((ht) => (
+                              <button
+                                key={ht.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSectionDesign({ heroHeight: ht.id as any });
+                                }}
+                                className={`py-1.5 rounded-lg border transition-all ${
+                                  (selectedSection.design?.heroHeight || "normal") === ht.id
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                {ht.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Multi-Photo Carousel Slider Manager */}
                       <div className="space-y-2.5 pt-3 border-t border-slate-100">
                         <div className="flex items-center justify-between">

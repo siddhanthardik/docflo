@@ -23,6 +23,10 @@ export interface SectionDesignConfig {
   cardBg?: string;
   cardBorder?: string;
   paddingSize?: "compact" | "normal" | "spacious";
+  imageOpacity?: number; // 10 to 100
+  imagePosition?: "center" | "top" | "bottom" | "left" | "right";
+  overlayDarkness?: "none" | "subtle" | "medium" | "dark";
+  heroHeight?: "compact" | "normal" | "tall" | "fullscreen";
 }
 
 export interface PageSection {
