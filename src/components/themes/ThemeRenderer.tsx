@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "acculab-diagnostics"
+    ? [
+        { question: "Which blood tests require 10 to 12 hours of fasting?", answer: "Tests such as Fasting Blood Sugar, Lipid Profile (Cholesterol), and Comprehensive Full Body Checkups require 10 to 12 hours of overnight fasting. You may drink plain water." },
+        { question: "How and when will I receive my diagnostic reports?", answer: "Digital smart reports with QR-code verification are sent directly to your WhatsApp and registered email within 6 to 12 hours of sample processing." },
+        { question: "How does Doorstep Home Blood Sample Collection work?", answer: "A certified, vaccinated phlebotomist visits your home at your selected time slot, collects samples using single-use sterile vacutainers, and transports them under temperature-controlled cold chain." },
+        { question: "How do I book a health package or blood test?", answer: "Click 'Book Appointment' or message our diagnostic support team directly on WhatsApp." },
+      ]
     : themeId === "nutrilife-dietetics"
     ? [
         { question: "Do I have to give up rice, carbs, or my favorite foods?", answer: "Never. Our philosophy is built on sustainable, non-restrictive nutrition. We incorporate your cultural staple foods, portion control, and smart food pairing so you can enjoy meals while achieving your health goals." },
@@ -489,7 +496,9 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "nutrilife-dietetics"
+        themeId === "acculab-diagnostics"
+          ? "bg-[#F0F9FF]"
+          : themeId === "nutrilife-dietetics"
           ? "bg-[#F0FDF4]"
           : themeId === "sculpt-aesthetics"
           ? "bg-[#FAFAFA]"
@@ -836,10 +845,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-14: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-15: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "acculab-diagnostics"
+            ? [
+                { value: "99.9%", label: "Diagnostic Accuracy Rate", icon: "microscope" },
+                { value: "100%", label: "NABL & ICMR Accredited", icon: "shield" },
+                { value: "6-12 hrs", label: "Same-Day Digital Reports", icon: "clock" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "nutrilife-dietetics"
             ? [
                 { value: "10,000+", label: "Lbs Lost & Sustained", icon: "activity" },
@@ -969,6 +985,159 @@ export function ThemeRenderer({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            </section>,
+            index
+          );
+        }
+
+        // 1.8. HEALTH PACKAGES & PRICING WIDGET (AccuLab & Global)
+        if (section.type === "PACKAGES") {
+          const pkgList = section.packages && section.packages.length > 0
+            ? section.packages
+            : [
+                {
+                  name: "Executive Full Body Wellness",
+                  parameterCount: "85+ Tests Included",
+                  originalPrice: 3999,
+                  price: 1499,
+                  discount: "62% OFF",
+                  fasting: "10-12 Hrs Fasting",
+                  reportTime: "Same-Day in 6-12 Hrs",
+                  popular: true,
+                  features: ["Complete Hemogram (CBC 24 Params)", "Lipid Profile & Heart Risk (Total, HDL, LDL, Triglycerides)", "Liver Function Test (LFT 11 Params)", "Kidney Function Test (KFT with eGFR)", "Thyroid Profile (TSH)", "HbA1c & Fasting Blood Glucose", "Vitamin D3 & Vitamin B12"],
+                },
+                {
+                  name: "Heart & Diabetes Advanced Care",
+                  parameterCount: "62+ Tests Included",
+                  originalPrice: 2999,
+                  price: 1199,
+                  discount: "60% OFF",
+                  fasting: "10-12 Hrs Fasting",
+                  reportTime: "Digital Report in 8 Hrs",
+                  popular: false,
+                  features: ["Fasting Blood Sugar & HbA1c Average", "High-Sensitivity CRP (hs-CRP)", "Complete Lipid Profile (HDL/LDL/VLDL)", "Serum Creatinine & Urea", "Urine Microalbuminuria Screen"],
+                },
+                {
+                  name: "Senior Citizen Comprehensive Care",
+                  parameterCount: "92+ Tests Included",
+                  originalPrice: 4999,
+                  price: 1999,
+                  discount: "60% OFF",
+                  fasting: "10-12 Hrs Fasting",
+                  reportTime: "Same-Day in 12 Hrs",
+                  popular: false,
+                  features: ["Full Organ Profile (Liver, Kidney, Heart)", "Bone Mineral Profile (Calcium & Phosphorus)", "Arthritis Screen (Uric Acid & RA Factor)", "Electrolyte Panel (Sodium & Potassium)", "Complete Urine Routine & Microscopy"],
+                },
+              ];
+
+          return renderSectionContainer(
+            section,
+            <section
+              id="packages"
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-slate-50/70" : ""}`}
+            >
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                <div className="text-center space-y-2 max-w-2xl mx-auto">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                    NABL Accredited Preventive Profiles
+                  </span>
+                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
+                    data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
+                  }`}>
+                    {section.title || "Health Packages & Diagnostic Profiles"}
+                  </h3>
+                  {section.subtitle && (
+                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                  {pkgList.map((pkg, idx) => (
+                    <div
+                      key={idx}
+                      className={`${buttonRadiusClass} p-7 flex flex-col justify-between transition-all duration-200 relative ${
+                        pkg.popular
+                          ? "bg-white border-2 border-indigo-600 shadow-xl ring-4 ring-indigo-500/10 scale-102"
+                          : "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+                      }`}
+                    >
+                      {pkg.popular && (
+                        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full shadow-md">
+                          Most Popular / Best Value
+                        </div>
+                      )}
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                            {pkg.parameterCount || "Comprehensive Profile"}
+                          </span>
+                          {pkg.discount && (
+                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              {pkg.discount}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="text-lg font-black text-slate-900 leading-snug">{pkg.name}</h4>
+                          <div className="flex items-baseline gap-2 mt-2">
+                            <span className="text-3xl font-black text-slate-900">₹{pkg.price || 1499}</span>
+                            {pkg.originalPrice && (
+                              <span className="text-sm text-slate-400 line-through font-semibold">₹{pkg.originalPrice}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 py-2 border-y border-slate-100">
+                          {pkg.fasting && (
+                            <div className="flex items-center gap-1 font-medium">
+                              <Clock className="w-3 h-3 text-indigo-600" />
+                              <span>{pkg.fasting}</span>
+                            </div>
+                          )}
+                          {pkg.reportTime && (
+                            <div className="flex items-center gap-1 font-medium">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>{pkg.reportTime}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 pt-1">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Key Tests Included:</p>
+                          <ul className="space-y-1.5 text-xs text-slate-700">
+                            {(pkg.features && pkg.features.length > 0 ? pkg.features : ["Complete Blood Count (CBC)", "Lipid Profile", "Liver Function Test", "Kidney Function Test", "Blood Sugar"]).map((f, fIdx) => (
+                              <li key={fIdx} className="flex items-start gap-2">
+                                <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                                <span className="text-xs">{f}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="pt-6 border-t border-slate-100 mt-6">
+                        <button
+                          onClick={() => {
+                            setSelectedService(pkg.name);
+                            setOpenBookingModal(true);
+                          }}
+                          className={`w-full font-bold text-xs h-11 ${buttonRadiusClass} shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                            pkg.popular
+                              ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                              : "bg-slate-900 hover:bg-black text-white"
+                          }`}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>Book Home Collection</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>,

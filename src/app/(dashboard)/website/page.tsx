@@ -89,6 +89,7 @@ const THEME_OPTIONS = [
   { id: "sculpt-aesthetics", name: "Sculpt Luxe Aesthetics", category: "Plastic & Cosmetic Surgery", primary: "#9D174D", secondary: "#09090B", accent: "#D97706" },
   { id: "zenith-internal-medicine", name: "Zenith Internal Medicine", category: "General Physician & Internal Medicine", primary: "#1E3A8A", secondary: "#0F172A", accent: "#10B981" },
   { id: "nutrilife-dietetics", name: "NutriLife Dietetics", category: "Dietitian & Clinical Nutrition", primary: "#16A34A", secondary: "#1C1917", accent: "#D97706" },
+  { id: "acculab-diagnostics", name: "AccuLab Diagnostics", category: "Pathology & Diagnostic Center", primary: "#4338CA", secondary: "#0F172A", accent: "#0891B2" },
 ];
 
 const FONTS_HEADINGS = [
@@ -129,6 +130,7 @@ const BG_PRESETS = [
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
   { type: "HERO", label: "Hero Banner & Welcome", icon: Layout, description: "Headline, multi-photo slider, logo, and customizable CTA buttons." },
+  { type: "PACKAGES", label: "Health Packages & Pricing", icon: DollarSign, description: "Full-body checkup packages, test parameter counts, and offer pricing." },
   { type: "STATS_RIBBON", label: "Trust Metrics & Stats Bar", icon: ShieldCheck, description: "Highlight clinical experience, patient counts, and Google ratings." },
   { type: "SERVICES", label: "Services & Treatments Grid", icon: Stethoscope, description: "Clinical procedures, custom icons/images, duration, and optional pricing." },
   { type: "DOCTOR_BIO", label: "Doctor Bio & Experience", icon: ShieldCheck, description: "Doctor credentials, medical degrees, portrait, and philosophy." },
@@ -1392,6 +1394,216 @@ export default function ElementorComposerPage() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PACKAGES & PRICING INSPECTOR */}
+                  {selectedSection.type === "PACKAGES" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Heading</label>
+                        <Input
+                          value={selectedSection.title || "Health Packages & Diagnostic Profiles"}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Section Subtitle</label>
+                        <Input
+                          value={selectedSection.subtitle || "NABL accredited health checkup packages with free home sample collection."}
+                          onChange={(e) => updateSelectedSection({ subtitle: e.target.value })}
+                          className="h-9 text-xs rounded-xl"
+                        />
+                      </div>
+
+                      <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-700">Checkup Packages</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const list = selectedSection.packages || [];
+                              const nextPackages = [
+                                ...list,
+                                {
+                                  name: "New Health Checkup Package",
+                                  parameterCount: "50+ Tests",
+                                  originalPrice: 2499,
+                                  price: 999,
+                                  discount: "60% OFF",
+                                  fasting: "10-12 Hrs Fasting",
+                                  reportTime: "Digital Report in 12 Hrs",
+                                  popular: false,
+                                  features: ["Complete Blood Count (CBC)", "Lipid Profile", "Liver Function (LFT)", "Kidney Function (KFT)", "Fasting Blood Sugar"],
+                                },
+                              ];
+                              updateSelectedSection({ packages: nextPackages });
+                            }}
+                            className="h-7 text-[11px] font-bold rounded-lg"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add Package
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {((selectedSection.packages && selectedSection.packages.length > 0)
+                            ? selectedSection.packages
+                            : [
+                                {
+                                  name: "Executive Full Body Wellness",
+                                  parameterCount: "85+ Tests",
+                                  originalPrice: 3999,
+                                  price: 1499,
+                                  discount: "62% OFF",
+                                  fasting: "10-12 Hrs Fasting",
+                                  reportTime: "Same-Day Report in 6-12 Hrs",
+                                  popular: true,
+                                  features: ["Complete Hemogram (CBC 24 Params)", "Lipid Profile & Heart Risk", "Liver Function Test (LFT 11 Params)", "Kidney Function Test (KFT)", "Thyroid Profile (TSH)", "HbA1c & Fasting Glucose", "Vitamin D3 & Vitamin B12"],
+                                },
+                                {
+                                  name: "Heart & Diabetes Advanced Care",
+                                  parameterCount: "62+ Tests",
+                                  originalPrice: 2999,
+                                  price: 1199,
+                                  discount: "60% OFF",
+                                  fasting: "10-12 Hrs Fasting",
+                                  reportTime: "Digital Report in 8 Hrs",
+                                  popular: false,
+                                  features: ["Fasting Blood Sugar & HbA1c", "High-Sensitivity CRP (hs-CRP)", "Complete Lipid Profile (HDL/LDL/VLDL)", "Serum Creatinine & eGFR", "Urine Microalbuminuria"],
+                                },
+                                {
+                                  name: "Senior Citizen Comprehensive Package",
+                                  parameterCount: "92+ Tests",
+                                  originalPrice: 4999,
+                                  price: 1999,
+                                  discount: "60% OFF",
+                                  fasting: "10-12 Hrs Fasting",
+                                  reportTime: "Same-Day Report in 12 Hrs",
+                                  popular: false,
+                                  features: ["Full Organ Profile (Liver/Kidney/Heart)", "Bone Mineral Profile (Calcium/Phosphorus)", "Arthritis Screen (Uric Acid & RA Factor)", "Electrolytes (Sodium/Potassium/Chloride)", "Urine Routine & Microscopy"],
+                                },
+                              ]).map((pkg, pIdx) => (
+                            <div key={pIdx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <Input
+                                  value={pkg.name}
+                                  onChange={(e) => {
+                                    const list = [...((selectedSection.packages && selectedSection.packages.length > 0) ? selectedSection.packages : [
+                                      { name: "Executive Full Body Wellness", parameterCount: "85+ Tests", originalPrice: 3999, price: 1499, discount: "62% OFF", fasting: "10-12 Hrs Fasting", reportTime: "Same-Day in 6-12 Hrs", popular: true, features: ["CBC", "Lipid", "LFT", "KFT", "TSH", "HbA1c", "Vit D3 & B12"] },
+                                      { name: "Heart & Diabetes Care", parameterCount: "62+ Tests", originalPrice: 2999, price: 1199, discount: "60% OFF", fasting: "10-12 Hrs Fasting", reportTime: "In 8 Hrs", popular: false, features: ["Sugar", "HbA1c", "hs-CRP", "Lipid", "KFT"] },
+                                      { name: "Senior Citizen Package", parameterCount: "92+ Tests", originalPrice: 4999, price: 1999, discount: "60% OFF", fasting: "10-12 Hrs Fasting", reportTime: "In 12 Hrs", popular: false, features: ["Organ Profile", "Bone Profile", "Uric Acid", "Electrolytes"] },
+                                    ])];
+                                    list[pIdx].name = e.target.value;
+                                    updateSelectedSection({ packages: list });
+                                  }}
+                                  placeholder="Package Name"
+                                  className="h-8 text-xs font-bold bg-white"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const list = (selectedSection.packages || []).filter((_, idx) => idx !== pIdx);
+                                    updateSelectedSection({ packages: list });
+                                  }}
+                                  className="text-slate-400 hover:text-rose-600 p-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500">Offer Price (₹)</label>
+                                  <Input
+                                    type="number"
+                                    value={pkg.price || ""}
+                                    onChange={(e) => {
+                                      const list = [...(selectedSection.packages || [])];
+                                      list[pIdx].price = e.target.value ? Number(e.target.value) : undefined;
+                                      updateSelectedSection({ packages: list });
+                                    }}
+                                    placeholder="1499"
+                                    className="h-7 text-xs font-bold bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500">Original MRP (₹)</label>
+                                  <Input
+                                    type="number"
+                                    value={pkg.originalPrice || ""}
+                                    onChange={(e) => {
+                                      const list = [...(selectedSection.packages || [])];
+                                      list[pIdx].originalPrice = e.target.value ? Number(e.target.value) : undefined;
+                                      updateSelectedSection({ packages: list });
+                                    }}
+                                    placeholder="3999"
+                                    className="h-7 text-xs bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500">Discount Tag</label>
+                                  <Input
+                                    value={pkg.discount || ""}
+                                    onChange={(e) => {
+                                      const list = [...(selectedSection.packages || [])];
+                                      list[pIdx].discount = e.target.value;
+                                      updateSelectedSection({ packages: list });
+                                    }}
+                                    placeholder="60% OFF"
+                                    className="h-7 text-[10px] font-bold text-emerald-700 bg-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500">Parameter Count</label>
+                                  <Input
+                                    value={pkg.parameterCount || ""}
+                                    onChange={(e) => {
+                                      const list = [...(selectedSection.packages || [])];
+                                      list[pIdx].parameterCount = e.target.value;
+                                      updateSelectedSection({ packages: list });
+                                    }}
+                                    placeholder="85+ Tests"
+                                    className="h-7 text-[10px] bg-white font-bold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500">Fasting Requirement</label>
+                                  <Input
+                                    value={pkg.fasting || ""}
+                                    onChange={(e) => {
+                                      const list = [...(selectedSection.packages || [])];
+                                      list[pIdx].fasting = e.target.value;
+                                      updateSelectedSection({ packages: list });
+                                    }}
+                                    placeholder="10-12 Hrs Fasting"
+                                    className="h-7 text-[10px] bg-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-[10px] font-bold text-slate-700">Highlight as Best Value / Popular:</span>
+                                <input
+                                  type="checkbox"
+                                  checked={pkg.popular === true}
+                                  onChange={(e) => {
+                                    const list = [...(selectedSection.packages || [])];
+                                    list[pIdx].popular = e.target.checked;
+                                    updateSelectedSection({ packages: list });
+                                  }}
+                                  className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}

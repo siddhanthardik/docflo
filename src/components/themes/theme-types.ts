@@ -1,6 +1,8 @@
 export type SectionType =
   | "HERO"
   | "STATS_RIBBON"
+  | "PACKAGES"
+  | "STATS_RIBBON"
   | "SERVICES"
   | "DOCTOR_BIO"
   | "REVIEWS"
@@ -31,6 +33,18 @@ export interface SectionDesignConfig {
 }
 
 export interface PageSection {
+  packages?: Array<{
+    name: string;
+    tag?: string;
+    parameterCount?: string;
+    originalPrice?: number;
+    price?: number;
+    discount?: string;
+    fasting?: string;
+    reportTime?: string;
+    popular?: boolean;
+    features?: string[];
+  }>;
   stats?: Array<{ value: string; label: string; icon?: string }>;
   id: string;
   type: SectionType;
