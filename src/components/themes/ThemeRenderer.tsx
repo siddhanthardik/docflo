@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "gastrosurg-advanced"
+    ? [
+        { question: "How much pain is involved in laparoscopic gallbladder removal?", answer: "Laparoscopic cholecystectomy uses 3 to 4 tiny keyhole incisions (5-10 mm). Pain is minimal and manageable with basic oral analgesics, allowing patients to walk comfortably within hours after surgery." },
+        { question: "Why is laser piles and fistula treatment better than open surgery?", answer: "Laser proctology causes no surgical wounds or sphincter damage, requires no painful daily dressings, has virtually zero bleeding, and allows same-day discharge with return to work within 48 hours." },
+        { question: "Can a hernia heal on its own without surgery?", answer: "No, a hernia is an anatomical defect in the abdominal muscle wall that does not heal with medicines or exercise. Laparoscopic mesh repair is recommended to prevent serious complications like strangulation." },
+        { question: "How do I book a consultation with the GI & General Surgeon?", answer: "Click 'Book Appointment' or message our surgical care reception directly on WhatsApp." },
+      ]
     : themeId === "oncohorizon-cancer"
     ? [
         { question: "How does a Multidisciplinary Tumor Board improve cancer treatment?", answer: "Our Tumor Board brings together Medical Oncologists, Surgical Oncologists, Radiation Oncologists, Pathologists, and Radiologists to collectively review your case and create a consensus, personalized treatment roadmap." },
@@ -510,7 +517,9 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "uropulse-advanced" || themeId === "acculab-diagnostics"
+        themeId === "gastrosurg-advanced"
+          ? "bg-[#F0FDFA]"
+          : themeId === "uropulse-advanced" || themeId === "acculab-diagnostics"
           ? "bg-[#F0F9FF]"
           : themeId === "nutrilife-dietetics"
           ? "bg-[#F0FDF4]"
@@ -859,10 +868,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-17: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-18: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "gastrosurg-advanced"
+            ? [
+                { value: "20,000+", label: "Laparoscopic & Laser Surgeries", icon: "shield" },
+                { value: "100%", label: "Minimally Invasive 4K Tech", icon: "activity" },
+                { value: "24 Hrs", label: "Rapid Post-Op Discharge", icon: "clock" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "oncohorizon-cancer"
             ? [
                 { value: "15,000+", label: "Cancer Patients Supported", icon: "heart" },
