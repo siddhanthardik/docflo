@@ -130,6 +130,7 @@ export function ThemeRenderer({
   const secondaryColor = data.secondaryColor || "#0F172A";
   const accentColor = data.accentColor || "#10B981";
   const buttonRadiusClass = RADIUS_CLASSES[data.buttonRadius || "2xl"] || "rounded-2xl";
+  const cardRadiusClass = data.buttonRadius === "none" ? "rounded-none" : "rounded-2xl sm:rounded-3xl";
 
   const phone = data.contactPhone || data.doctor?.phone || "";
   const waPhone = (data.whatsappNumber || data.contactPhone || data.doctor?.phone || "").replace(/\D/g, "");
@@ -592,7 +593,7 @@ export function ThemeRenderer({
 
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
-                      <div className={`bg-white ${buttonRadiusClass} p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5`}>
+                      <div className={`bg-white ${cardRadiusClass} p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5`}>
                         <div className="space-y-1">
                           <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
                             Instant Booking
@@ -638,7 +639,7 @@ export function ThemeRenderer({
                         </form>
                       </div>
                     ) : (
-                      <div className={`${buttonRadiusClass} overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group`}>
+                      <div className={`${cardRadiusClass} overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group`}>
                         {sliderImages.map((imgUrl, i) => (
                           <div
                             key={i}
@@ -794,7 +795,7 @@ export function ThemeRenderer({
                   {pkgList.map((pkg, idx) => (
                     <div
                       key={idx}
-                      className={`${buttonRadiusClass} p-7 flex flex-col justify-between transition-all duration-200 relative ${
+                      className={`${cardRadiusClass} p-7 flex flex-col justify-between transition-all duration-200 relative ${
                         pkg.popular
                           ? "bg-white border-2 border-indigo-600 shadow-xl ring-4 ring-indigo-500/10 scale-102"
                           : "bg-white border border-slate-200 shadow-sm hover:shadow-md"
@@ -917,7 +918,7 @@ export function ThemeRenderer({
                       <div
                         key={idx}
                         style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
-                        className={`p-6 ${buttonRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
+                        className={`p-6 ${cardRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
                           themeId === "executive-private"
                             ? "bg-neutral-900 border-amber-900/40 text-slate-200"
                             : !d.cardBg
@@ -928,12 +929,12 @@ export function ThemeRenderer({
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
                             {svc.image ? (
-                              <div className={`w-12 h-12 ${buttonRadiusClass} overflow-hidden bg-slate-100 border border-slate-200 shrink-0`}>
+                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                                 <img src={svc.image} alt="" className="w-full h-full object-cover" />
                               </div>
                             ) : (
                               <div
-                                className={`w-11 h-11 ${buttonRadiusClass} flex items-center justify-center text-white font-bold shadow-xs shrink-0`}
+                                className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
                                 style={{ backgroundColor: primaryColor }}
                               >
                                 <IconComponent className="w-5 h-5" />
@@ -1003,7 +1004,7 @@ export function ThemeRenderer({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {reviews.map((rev, idx) => (
-                    <div key={idx} className={`p-6 ${buttonRadiusClass} bg-white border border-slate-200 shadow-2xs space-y-4`}>
+                    <div key={idx} className={`p-6 sm:p-7 ${cardRadiusClass} bg-white border border-slate-200 shadow-2xs hover:shadow-md transition-shadow space-y-4`}>
                       <div className="flex items-center justify-between">
                         <span className="text-amber-400 font-bold tracking-wider">
                           {"★".repeat(rev.rating || 5)}
@@ -1060,10 +1061,10 @@ export function ThemeRenderer({
               <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
                   style={d.cardBg && d.cardBg !== "primary" && !d.cardBg.startsWith("#") ? undefined : d.cardBg === "primary" ? { backgroundColor: primaryColor } : undefined}
-                  className={`${cardBgStyle} ${buttonRadiusClass} p-8 sm:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}
+                  className={`${cardBgStyle} ${cardRadiusClass} p-8 sm:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}
                 >
                   <div className="md:col-span-4 text-center">
-                    <div className={`w-32 h-32 ${buttonRadiusClass} mx-auto overflow-hidden flex items-center justify-center shadow-lg ${
+                    <div className={`w-32 h-32 rounded-2xl mx-auto overflow-hidden flex items-center justify-center shadow-lg ${
                       isLightCard ? "bg-slate-100 border-2 border-slate-200" : "bg-slate-800 border-2 border-slate-700"
                     }`}>
                       {data.doctor?.image ? (
@@ -1168,7 +1169,7 @@ export function ThemeRenderer({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {galleryList.map((item, i) => (
-                    <div key={i} className={`${buttonRadiusClass} overflow-hidden border border-slate-200 shadow-sm aspect-[4/3] bg-slate-100 relative group`}>
+                    <div key={i} className={`${cardRadiusClass} overflow-hidden border border-slate-200 shadow-sm aspect-[4/3] bg-slate-100 relative group`}>
                       <img src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       {item.caption && (
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white text-xs font-bold">
@@ -1206,7 +1207,7 @@ export function ThemeRenderer({
                   {faqs.map((faq, idx) => (
                     <div
                       key={idx}
-                      className={`bg-white ${buttonRadiusClass} border border-slate-200 shadow-2xs overflow-hidden`}
+                      className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden"
                     >
                       <button
                         onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
@@ -1255,7 +1256,7 @@ export function ThemeRenderer({
                     </div>
 
                     <div className="space-y-4 text-xs text-slate-700">
-                      <div className={`flex items-start gap-3 p-4 ${buttonRadiusClass} bg-slate-50 border border-slate-200`}>
+                      <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                         <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-bold text-slate-900">Clinic Address</p>
@@ -1263,7 +1264,7 @@ export function ThemeRenderer({
                         </div>
                       </div>
 
-                      <div className={`flex items-start gap-3 p-4 ${buttonRadiusClass} bg-slate-50 border border-slate-200`}>
+                      <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                         <Clock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-bold text-slate-900">Consultation Timings</p>
@@ -1275,7 +1276,7 @@ export function ThemeRenderer({
                       </div>
 
                       {phone && (
-                        <div className={`flex items-start gap-3 p-4 ${buttonRadiusClass} bg-slate-50 border border-slate-200`}>
+                        <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                           <Phone className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                           <div>
                             <p className="font-bold text-slate-900">Direct Telephone</p>
@@ -1287,7 +1288,7 @@ export function ThemeRenderer({
                   </div>
 
                   <div className="lg:col-span-7">
-                    <div className={`${buttonRadiusClass} overflow-hidden border border-slate-200 shadow-xl aspect-[16/10] bg-slate-100 relative`}>
+                    <div className={`${cardRadiusClass} overflow-hidden border border-slate-200 shadow-xl aspect-[16/10] bg-slate-100 relative`}>
                       <iframe
                         title="Clinic Map"
                         src={mapSrc}
@@ -1412,7 +1413,7 @@ export function ThemeRenderer({
       {/* ── INSTANT APPOINTMENT BOOKING MODAL ── */}
       {openBookingModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className={`bg-white ${buttonRadiusClass} max-w-md w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-5 relative`}>
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-5 relative">
             <button
               onClick={() => setOpenBookingModal(false)}
               className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold"

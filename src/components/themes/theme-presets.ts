@@ -303,7 +303,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     "accentColor": "#F43F5E",
     "fontHeading": "Playfair Display",
     "fontBody": "Plus Jakarta Sans",
-    "buttonRadius": "full",
+    "buttonRadius": "2xl",
     "badgeText": "US-FDA Approved Aesthetic Dermatology & Cosmetology",
     "heroHeading": "Radiant Skin, Timeless Aesthetics & Advanced Hair Rejuvenation",
     "heroSubheading": "Bespoke aesthetic protocols combining medical dermatology, HydraFacial MD, and US-FDA laser technologies.",
