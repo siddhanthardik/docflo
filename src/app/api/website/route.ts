@@ -17,7 +17,12 @@ export async function GET(req: NextRequest) {
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       include: {
-        gbpAccounts: true,
+        gbpAccounts: {
+          include: {
+            profileSnapshots: { orderBy: { createdAt: "desc" }, take: 1 },
+          },
+          take: 1,
+        },
         reviews: { orderBy: { reviewDate: "desc" }, take: 10 },
         serviceTypes: { where: { isActive: true } },
       },
@@ -26,6 +31,12 @@ export async function GET(req: NextRequest) {
     if (!doctor) {
       return NextResponse.json({ error: "Doctor profile not found" }, { status: 404 });
     }
+
+    // Extract detailed GBP address if available
+    const gbpAccount = doctor.gbpAccounts[0];
+    const gbpSnapshot = gbpAccount?.profileSnapshots?.[0];
+    const snapshotJson = (gbpSnapshot?.json as any) || {};
+    const gbpAddress = snapshotJson.formattedAddress || snapshotJson.address || (snapshotJson.storefrontAddress?.addressLines?.join(", ")) || doctor.address || "";
 
     let existingWebsite = await prisma.clinicWebsite.findUnique({
       where: { doctorId },
@@ -65,6 +76,8 @@ export async function GET(req: NextRequest) {
           showMap: synth.showMap,
           showStickyBar: synth.showStickyBar,
           showPrices: true,
+          showServiceButtons: false,
+          clinicAddress: gbpAddress || doctor.address || "",
           customServices: synth.customServices,
           customFaqs: synth.customFaqs,
           customBio: synth.customBio,
@@ -79,6 +92,7 @@ export async function GET(req: NextRequest) {
           whatsappNumber: synth.whatsappNumber,
           contactPhone: synth.contactPhone,
           contactEmail: synth.contactEmail,
+          clinicAddress: gbpAddress || doctor.address || undefined,
           customServices: synth.customServices,
           customFaqs: synth.customFaqs,
           customBio: synth.customBio,
@@ -94,7 +108,7 @@ export async function GET(req: NextRequest) {
         clinicName: doctor.clinicName,
         specialty: doctor.specialty,
         phone: doctor.phone,
-        address: doctor.address,
+        address: gbpAddress || doctor.address,
         city: doctor.city,
         image: doctor.image,
         workingHoursStart: doctor.workingHoursStart,
@@ -156,6 +170,9 @@ export async function POST(req: NextRequest) {
       showMap = true,
       showStickyBar = true,
       showPrices = true,
+      showServiceButtons = false,
+      clinicAddress,
+      mapEmbedUrl,
       customServices,
       customFaqs,
       customBio,
@@ -203,6 +220,9 @@ export async function POST(req: NextRequest) {
         showMap,
         showStickyBar,
         showPrices,
+        showServiceButtons,
+        clinicAddress,
+        mapEmbedUrl,
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,
@@ -246,6 +266,9 @@ export async function POST(req: NextRequest) {
         showMap,
         showStickyBar,
         showPrices,
+        showServiceButtons,
+        clinicAddress,
+        mapEmbedUrl,
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,

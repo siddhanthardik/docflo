@@ -1479,6 +1479,9 @@ model ClinicWebsite {
   showStickyBar    Boolean         @default(true)
   showHeroBookingForm Boolean      @default(false)
   showPrices       Boolean         @default(true)
+  showServiceButtons Boolean       @default(false)
+  clinicAddress    String?
+  mapEmbedUrl      String?
   
   // Custom Content Overrides (JSON)
   customServices   Json?           // Array of { name, description, duration, price, icon }

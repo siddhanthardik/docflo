@@ -34,11 +34,21 @@ import {
   Baby,
   Eye,
   Pill,
+  Syringe,
+  Cross,
+  Dna,
+  Microscope,
+  Thermometer,
+  FlaskConical,
+  Bandage,
+  Ambulance,
+  Bed,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const ICON_MAP: Record<string, any> = {
+export const ICON_MAP: Record<string, any> = {
   stethoscope: Stethoscope,
   heart: HeartPulse,
   activity: Activity,
@@ -48,6 +58,19 @@ const ICON_MAP: Record<string, any> = {
   pill: Pill,
   shield: ShieldCheck,
   sparkles: Sparkles,
+  syringe: Syringe,
+  cross: Cross,
+  dna: Dna,
+  microscope: Microscope,
+  thermometer: Thermometer,
+  flask: FlaskConical,
+  bandage: Bandage,
+  ambulance: Ambulance,
+  bed: Bed,
+  user: User,
+  phone: Phone,
+  calendar: Calendar,
+  clock: Clock,
 };
 
 export function ThemeRenderer({
@@ -87,10 +110,12 @@ export function ThemeRenderer({
   const waPhone = (data.whatsappNumber || data.contactPhone || data.doctor?.phone || "").replace(/\D/g, "");
   const cleanWaNumber = waPhone.length === 10 ? "91" + waPhone : waPhone;
 
+  const clinicAddressText = data.clinicAddress || data.doctor?.address || "Main Market, New Delhi, India";
+
   const services = data.customServices && data.customServices.length > 0
     ? data.customServices
     : [
-        { name: "Clinical Outpatient Consultation", description: "Comprehensive health check & specialized diagnostic evaluation." },
+        { name: "Comprehensive Clinical Consultation", description: "Detailed medical evaluation, diagnostic assessment, and personalized care plan." },
         { name: "Specialized Treatment & Care", description: "Targeted clinical therapy, advanced procedure, and recovery monitoring." },
       ];
 
@@ -278,30 +303,34 @@ export function ThemeRenderer({
         </div>
       ) : null}
 
-      {/* ── CLINIC NAVIGATION HEADER (Supports Logo or Monogram Name) ── */}
+      {/* ── CLINIC NAVIGATION HEADER (Logo or Monogram Name Isolation) ── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {data.logoUrl ? (
-              <img src={data.logoUrl} alt={data.siteTitle} className="h-11 max-w-[160px] object-contain rounded-lg" />
+              /* If Logo is uploaded, show ONLY the logo image cleanly (no extra text) */
+              <img src={data.logoUrl} alt="" className="h-12 max-w-[200px] object-contain" />
             ) : (
-              <div
-                className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md shrink-0"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {data.siteTitle?.charAt(0) || "C"}
+              /* If NO Logo is uploaded, render monogram badge + site title */
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-11 h-11 rounded-2xl text-white flex items-center justify-center font-black text-lg shadow-md shrink-0"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {data.siteTitle?.charAt(0) || "C"}
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-slate-900">
+                    {data.siteTitle}
+                  </h1>
+                  {data.tagline && data.tagline.trim().length > 0 && (
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5 max-w-xs truncate">
+                      {data.tagline}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
-            <div>
-              <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-slate-900">
-                {data.siteTitle}
-              </h1>
-              {data.tagline && data.tagline.trim().length > 0 && (
-                <p className="text-[11px] text-slate-500 font-medium mt-0.5 max-w-xs truncate">
-                  {data.tagline}
-                </p>
-              )}
-            </div>
           </div>
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600">
@@ -347,7 +376,6 @@ export function ThemeRenderer({
             return renderSectionContainer(
               section,
               <section className="relative min-h-[560px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-950 py-20 px-4">
-                {/* Background Slider Carousel */}
                 <div className="absolute inset-0 z-0">
                   {sliderImages.map((imgUrl, i) => (
                     <div
@@ -456,7 +484,7 @@ export function ThemeRenderer({
                     </div>
                   </div>
 
-                  {/* Right Column: Multi-Image Slider Frame (Unobstructed, zero overlay badges) */}
+                  {/* Right Column: Multi-Image Slider Frame */}
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
                       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5">
@@ -505,7 +533,6 @@ export function ThemeRenderer({
                         </form>
                       </div>
                     ) : (
-                      /* Luxury Multi-Photo Slider (100% Unobstructed) */
                       <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group">
                         {sliderImages.map((imgUrl, i) => (
                           <div
@@ -518,7 +545,6 @@ export function ThemeRenderer({
                           </div>
                         ))}
 
-                        {/* Slider Controls */}
                         {sliderImages.length > 1 && (
                           <div className="absolute inset-0 z-20 flex items-center justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                             <button
@@ -544,7 +570,6 @@ export function ThemeRenderer({
                           </div>
                         )}
 
-                        {/* Slider Dots */}
                         {sliderImages.length > 1 && (
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
                             {sliderImages.map((_, i) => (
@@ -570,7 +595,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 2. SERVICES SECTION
+        // 2. SERVICES SECTION (Rebuilt & Clean without repetitive buttons)
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
@@ -612,7 +637,7 @@ export function ThemeRenderer({
                             <div>
                               <h4 className="text-base font-bold text-slate-900 leading-snug">{svc.name}</h4>
                               {svc.duration && (
-                                <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins duration</p>
+                                <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins</p>
                               )}
                             </div>
                           </div>
@@ -620,22 +645,27 @@ export function ThemeRenderer({
                           <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 text-xs">
-                          {data.showPrices !== false && svc.price ? (
-                            <span className="font-bold text-slate-900">₹{svc.price}</span>
-                          ) : (
-                            <span />
-                          )}
-                          <button
-                            onClick={() => {
-                              setSelectedService(svc.name);
-                              setOpenBookingModal(true);
-                            }}
-                            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
-                          >
-                            <span>Book Consultation</span> <ArrowRight className="w-3 h-3" />
-                          </button>
-                        </div>
+                        {/* Optional Pricing or Optional Action */}
+                        {(data.showPrices !== false && svc.price) || data.showServiceButtons ? (
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 text-xs">
+                            {data.showPrices !== false && svc.price ? (
+                              <span className="font-bold text-slate-900">₹{svc.price}</span>
+                            ) : (
+                              <span />
+                            )}
+                            {data.showServiceButtons && (
+                              <button
+                                onClick={() => {
+                                  setSelectedService(svc.name);
+                                  setOpenBookingModal(true);
+                                }}
+                                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                              >
+                                <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -692,7 +722,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 4. DOCTOR BIO SECTION (STRICT DOCTOR PORTRAIT ONLY, 0 HARDCODED BADGES)
+        // 4. DOCTOR BIO SECTION
         if (section.type === "DOCTOR_BIO") {
           return renderSectionContainer(
             section,
@@ -849,8 +879,11 @@ export function ThemeRenderer({
           );
         }
 
-        // 8. MAP & HOURS SECTION
+        // 8. MAP & HOURS SECTION (Accurate Map Pinning)
         if (section.type === "MAP_HOURS") {
+          const mapQuery = encodeURIComponent(clinicAddressText);
+          const mapSrc = data.mapEmbedUrl || `https://maps.google.com/maps?q=${mapQuery}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+
           return renderSectionContainer(
             section,
             <section id="contact" className="py-20 bg-white border-b border-slate-100">
@@ -870,7 +903,7 @@ export function ThemeRenderer({
                         <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-bold text-slate-900">Clinic Address</p>
-                          <p className="text-slate-600 mt-0.5">{data.doctor?.address || "Main Market, New Delhi, India"}</p>
+                          <p className="text-slate-600 mt-0.5">{clinicAddressText}</p>
                         </div>
                       </div>
 
@@ -901,7 +934,7 @@ export function ThemeRenderer({
                     <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-xl aspect-[16/10] bg-slate-100 relative">
                       <iframe
                         title="Clinic Map"
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent((data.doctor?.address || data.siteTitle) + " " + (data.doctor?.city || ""))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                        src={mapSrc}
                         className="w-full h-full border-0"
                         loading="lazy"
                       />
@@ -933,18 +966,20 @@ export function ThemeRenderer({
         return null;
       })}
 
-      {/* ── FOOTER ── */}
+      {/* ── FOOTER (Logo or Name Isolation) ── */}
       <footer className="py-12 bg-slate-900 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             {data.logoUrl ? (
-              <img src={data.logoUrl} alt={data.siteTitle} className="h-7 max-w-[120px] object-contain rounded" />
+              <img src={data.logoUrl} alt="" className="h-8 max-w-[140px] object-contain rounded" />
             ) : (
-              <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                {data.siteTitle?.charAt(0) || "C"}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  {data.siteTitle?.charAt(0) || "C"}
+                </div>
+                <span className="font-bold text-white">{data.siteTitle}</span>
               </div>
             )}
-            <span className="font-bold text-white">{data.siteTitle}</span>
           </div>
           <p>© {new Date().getFullYear()} {data.siteTitle}. All rights reserved.</p>
           <p className="text-[11px] text-slate-500">

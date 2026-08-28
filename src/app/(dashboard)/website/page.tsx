@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ThemeRenderer } from "@/components/themes/ThemeRenderer";
+import { ThemeRenderer, ICON_MAP } from "@/components/themes/ThemeRenderer";
 import { ClinicWebsiteData, PageSection, SectionType } from "@/components/themes/theme-types";
 import {
   Globe,
@@ -75,7 +75,7 @@ const THEME_OPTIONS = [
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
   { type: "HERO", label: "Hero Banner & Welcome", icon: Layout, description: "Headline, multi-photo slider, logo, and customizable CTA buttons." },
-  { type: "SERVICES", label: "Services & Treatments Grid", icon: Stethoscope, description: "Clinical procedures, descriptions, icons, duration, and optional pricing." },
+  { type: "SERVICES", label: "Services & Treatments Grid", icon: Stethoscope, description: "Clinical procedures, custom icons/images, duration, and optional pricing." },
   { type: "DOCTOR_BIO", label: "Doctor Bio & Experience", icon: ShieldCheck, description: "Doctor credentials, medical degrees, portrait, and philosophy." },
   { type: "REVIEWS", label: "Google Patient Reviews", icon: Star, description: "Verified patient testimonials with 5-star Google rating badge." },
   { type: "CTA_BANNER", label: "Conversion CTA Callout", icon: MessageSquare, description: "High-impact banner to drive WhatsApp consultations and calls." },
@@ -85,7 +85,7 @@ const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; de
   { type: "CUSTOM_TEXT", label: "Custom Story & Notice", icon: Type, description: "Custom headline and rich text for clinic notices or patient guides." },
 ];
 
-const SERVICE_ICONS = ["stethoscope", "heart", "activity", "smile", "baby", "eye", "pill", "shield", "sparkles"];
+const ALL_ICON_KEYS = Object.keys(ICON_MAP);
 
 export default function ElementorComposerPage() {
   const { toast } = useToast();
@@ -93,6 +93,8 @@ export default function ElementorComposerPage() {
   const heroUploadRef = useRef<HTMLInputElement>(null);
   const galleryUploadRef = useRef<HTMLInputElement>(null);
   const doctorPhotoRef = useRef<HTMLInputElement>(null);
+  const servicePhotoRef = useRef<HTMLInputElement>(null);
+  const [activeServiceUploadIdx, setActiveServiceUploadIdx] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -100,7 +102,6 @@ export default function ElementorComposerPage() {
   const [sidebarTab, setSidebarTab] = useState<"elements" | "structure" | "style" | "domain">("elements");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec_hero");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const [copiedUrl, setCopiedUrl] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   // Custom Domain State
@@ -130,6 +131,9 @@ export default function ElementorComposerPage() {
     heroStyle: "IMAGE_ONLY",
     showHeroBookingForm: false,
     showPrices: true,
+    showServiceButtons: false,
+    clinicAddress: "",
+    mapEmbedUrl: "",
     announcementBar: "",
     showAnnouncementBar: false,
     ctaButtonText: "Book Appointment",
@@ -173,6 +177,7 @@ export default function ElementorComposerPage() {
         setSiteData((prev) => ({
           ...prev,
           ...data.website,
+          clinicAddress: data.website.clinicAddress || data.doctor?.address || prev.clinicAddress,
           sections: (data.website.sections && data.website.sections.length > 0) ? data.website.sections : prev.sections,
         }));
         setUrlInput(data.website.subdomain || "");
@@ -183,7 +188,7 @@ export default function ElementorComposerPage() {
         if (forceSync) {
           toast({
             title: "Synced with Google Profile! 🔄",
-            description: "Updated latest clinic address, hours, reviews, services, and doctor details.",
+            description: "Updated verified clinic address, hours, reviews, services, and doctor details.",
           });
         }
       }
@@ -343,6 +348,30 @@ export default function ElementorComposerPage() {
     }
   };
 
+  const handleServicePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || activeServiceUploadIdx === null) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "service");
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      const updated = [...(siteData.customServices || [])];
+      updated[activeServiceUploadIdx].image = data.url;
+      setSiteData((prev) => ({ ...prev, customServices: updated }));
+      toast({ title: "Service Photo Uploaded (WebP) 📸" });
+    } catch (err: any) {
+      toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setActiveServiceUploadIdx(null);
+    }
+  };
+
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -432,22 +461,16 @@ export default function ElementorComposerPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
-      {/* ── TOP ELEMENTOR STUDIO HEADER TOOLBAR ── */}
-      <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        {/* Left: Branding & Theme Selector */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
-              G
-            </span>
-            <div>
-              <p className="text-xs font-black text-slate-900 leading-none">Visual Composer</p>
-              <p className="text-[10px] text-slate-500 font-medium">Award-Winning Studio</p>
-            </div>
-          </div>
+      {/* ── TOP CLEAN APPLE/FIGMA-STYLE STUDIO HEADER ── */}
+      <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
+        {/* Left: Clean Brand & Layout Selector */}
+        <div className="flex items-center gap-3">
+          <span className="font-black text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
+            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black">G</span>
+            Website Studio
+          </span>
 
-          <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-slate-200">
-            <span className="text-[11px] font-bold text-slate-400">Layout Theme:</span>
+          <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200">
             <select
               value={siteData.themeId}
               onChange={(e) => {
@@ -463,34 +486,34 @@ export default function ElementorComposerPage() {
                   toast({ title: `Applied ${found.name} Layout Theme! 🎨` });
                 }
               }}
-              className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50"
+              className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer"
             >
               {THEME_OPTIONS.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
           </div>
         </div>
 
         {/* Center: Viewport Switcher */}
-        <div className="bg-slate-100 p-1 rounded-2xl flex items-center gap-1 border border-slate-200">
+        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
           <button
             onClick={() => setViewport("desktop")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "desktop" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"}`}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "desktop" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
             title="Desktop View (100%)"
           >
             <Monitor className="w-3.5 h-3.5" /> <span className="hidden md:inline">Desktop</span>
           </button>
           <button
             onClick={() => setViewport("tablet")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "tablet" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"}`}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "tablet" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
             title="Tablet View (768px)"
           >
             <Tablet className="w-3.5 h-3.5" /> <span className="hidden md:inline">Tablet</span>
           </button>
           <button
             onClick={() => setViewport("mobile")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "mobile" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"}`}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "mobile" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
             title="Mobile View (390px)"
           >
             <Smartphone className="w-3.5 h-3.5" /> <span className="hidden md:inline">Mobile</span>
@@ -498,15 +521,15 @@ export default function ElementorComposerPage() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={syncingGbp}
             onClick={() => fetchWebsiteData(true)}
-            className="h-9 px-3 rounded-xl text-xs font-bold border-slate-200 text-slate-700 hidden lg:flex items-center gap-1.5"
-            title="Sync latest information from Google Business Profile"
+            className="h-8 px-2.5 rounded-xl text-xs font-bold border-slate-200 text-slate-700 hidden sm:flex items-center gap-1.5"
+            title="Sync verified information from Google Business Profile"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${syncingGbp ? "animate-spin" : ""}`} />
             <span>Sync GBP</span>
@@ -516,7 +539,7 @@ export default function ElementorComposerPage() {
             href={`https://${siteData.subdomain}.gyrex.in`}
             target="_blank"
             rel="noreferrer"
-            className="h-9 px-3 rounded-xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hidden sm:flex items-center gap-1.5"
+            className="h-8 px-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hidden sm:flex items-center gap-1.5"
           >
             <Eye className="w-3.5 h-3.5 text-blue-600" />
             <span>View Live</span>
@@ -525,7 +548,7 @@ export default function ElementorComposerPage() {
           <Button
             onClick={() => setPublishModalOpen(true)}
             size="sm"
-            className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md flex items-center gap-1.5"
+            className="h-8 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Publish Live</span>
@@ -535,9 +558,9 @@ export default function ElementorComposerPage() {
 
       {/* ── MAIN STUDIO BODY: LEFT PALETTE (390px) + CENTER LIVE VISUAL CANVAS ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* ── LEFT ELEMENTOR TOOLBAR / INSPECTOR DRAWER ── */}
+        {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
         <aside className="w-[390px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs">
-          {/* If a section is selected, show Deep Section Inspector */}
+          {/* Deep Section Inspector */}
           {selectedSection ? (
             <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -588,7 +611,7 @@ export default function ElementorComposerPage() {
                     {/* Logo & Clinic Name */}
                     <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <label className="font-bold text-slate-700">Clinic Logo / Icon</label>
+                        <label className="font-bold text-slate-700">Clinic Logo Image</label>
                         {siteData.logoUrl && (
                           <button
                             type="button"
@@ -629,7 +652,7 @@ export default function ElementorComposerPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Clinic Name</label>
+                      <label className="font-bold text-slate-700">Clinic Name (Shown if no logo)</label>
                       <Input
                         value={siteData.siteTitle}
                         onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
@@ -801,23 +824,10 @@ export default function ElementorComposerPage() {
                         ))}
                       </div>
                     </div>
-
-                    {/* Booking Form in Hero Toggle */}
-                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800">Show Quick Booking Form in Hero</span>
-                        <input
-                          type="checkbox"
-                          checked={siteData.showHeroBookingForm || false}
-                          onChange={(e) => setSiteData({ ...siteData, showHeroBookingForm: e.target.checked })}
-                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                        />
-                      </div>
-                    </div>
                   </div>
                 )}
 
-                {/* 2. SERVICES SECTION INSPECTOR */}
+                {/* 2. SERVICES SECTION INSPECTOR (WordPress Style Icon Library & Photo Upload) */}
                 {selectedSection.type === "SERVICES" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -829,18 +839,25 @@ export default function ElementorComposerPage() {
                       />
                     </div>
 
-                    {/* Optional Pricing Switch */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-slate-900">Show Treatment Pricing</p>
-                        <p className="text-[10px] text-slate-500">Turn off if you don&apos;t want fixed prices displayed.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <span className="font-bold text-[11px] text-slate-800">Show Prices</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showPrices !== false}
+                          onChange={(e) => setSiteData({ ...siteData, showPrices: e.target.checked })}
+                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                        />
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={siteData.showPrices !== false}
-                        onChange={(e) => setSiteData({ ...siteData, showPrices: e.target.checked })}
-                        className="w-4 h-4 rounded text-blue-600 cursor-pointer"
-                      />
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <span className="font-bold text-[11px] text-slate-800">Show Card Button</span>
+                        <input
+                          type="checkbox"
+                          checked={siteData.showServiceButtons === true}
+                          onChange={(e) => setSiteData({ ...siteData, showServiceButtons: e.target.checked })}
+                          className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2.5 pt-2 border-t border-slate-100">
@@ -854,7 +871,7 @@ export default function ElementorComposerPage() {
                             const list = siteData.customServices || [];
                             setSiteData({
                               ...siteData,
-                              customServices: [...list, { name: "New Treatment", description: "Comprehensive procedure & clinical care.", icon: "stethoscope" }],
+                              customServices: [...list, { name: "New Clinical Treatment", description: "Comprehensive procedure & specialized care.", icon: "stethoscope" }],
                             });
                           }}
                           className="h-7 text-[11px] font-bold rounded-lg"
@@ -864,79 +881,131 @@ export default function ElementorComposerPage() {
                       </div>
 
                       <div className="space-y-3">
-                        {(siteData.customServices || []).map((s, idx) => (
-                          <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                value={s.name}
-                                onChange={(e) => {
-                                  const updated = [...(siteData.customServices || [])];
-                                  updated[idx].name = e.target.value;
-                                  setSiteData({ ...siteData, customServices: updated });
-                                }}
-                                placeholder="Service Name"
-                                className="h-8 text-xs font-bold bg-white"
-                              />
-                              {siteData.showPrices !== false && (
+                        {(siteData.customServices || []).map((s, idx) => {
+                          const IconComp = (s.icon && ICON_MAP[s.icon.toLowerCase()]) || Stethoscope;
+                          return (
+                            <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                              <div className="flex items-center gap-2">
                                 <Input
-                                  type="number"
-                                  value={s.price || ""}
+                                  value={s.name}
                                   onChange={(e) => {
                                     const updated = [...(siteData.customServices || [])];
-                                    updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
+                                    updated[idx].name = e.target.value;
                                     setSiteData({ ...siteData, customServices: updated });
                                   }}
-                                  placeholder="Price (₹)"
-                                  className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
+                                  placeholder="Service Name"
+                                  className="h-8 text-xs font-bold bg-white"
                                 />
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
-                                  setSiteData({ ...siteData, customServices: updated });
-                                }}
-                                className="text-slate-400 hover:text-rose-600 p-1"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            {/* Service Icon Selector */}
-                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                              <span className="text-[10px] text-slate-400 font-medium">Icon:</span>
-                              {SERVICE_ICONS.map((ic) => (
+                                {siteData.showPrices !== false && (
+                                  <Input
+                                    type="number"
+                                    value={s.price || ""}
+                                    onChange={(e) => {
+                                      const updated = [...(siteData.customServices || [])];
+                                      updated[idx].price = e.target.value ? Number(e.target.value) : undefined;
+                                      setSiteData({ ...siteData, customServices: updated });
+                                    }}
+                                    placeholder="Price (₹)"
+                                    className="h-8 text-xs w-24 bg-white shrink-0 font-bold"
+                                  />
+                                )}
                                 <button
-                                  key={ic}
                                   type="button"
                                   onClick={() => {
-                                    const updated = [...(siteData.customServices || [])];
-                                    updated[idx].icon = ic;
+                                    const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
                                     setSiteData({ ...siteData, customServices: updated });
                                   }}
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold capitalize transition-all ${
-                                    (s.icon || "stethoscope") === ic ? "bg-blue-600 text-white" : "bg-white text-slate-600 border border-slate-200"
-                                  }`}
+                                  className="text-slate-400 hover:text-rose-600 p-1"
                                 >
-                                  {ic}
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                              ))}
-                            </div>
+                              </div>
 
-                            <Textarea
-                              value={s.description}
-                              onChange={(e) => {
-                                const updated = [...(siteData.customServices || [])];
-                                updated[idx].description = e.target.value;
-                                setSiteData({ ...siteData, customServices: updated });
-                              }}
-                              placeholder="Describe clinical procedure and benefits..."
-                              rows={2}
-                              className="text-[11px] bg-white rounded-xl"
-                            />
-                          </div>
-                        ))}
+                              {/* Service Photo or Icon Library Picker */}
+                              <div className="space-y-1.5 p-2 bg-white rounded-xl border border-slate-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-slate-600">Visual Badge:</span>
+                                  <div className="flex items-center gap-2">
+                                    {s.image ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updated = [...(siteData.customServices || [])];
+                                          updated[idx].image = undefined;
+                                          setSiteData({ ...siteData, customServices: updated });
+                                        }}
+                                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                                      >
+                                        Use Icon Instead
+                                      </button>
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setActiveServiceUploadIdx(idx);
+                                          servicePhotoRef.current?.click();
+                                        }}
+                                        className="h-5 px-1.5 text-[9px] font-bold rounded"
+                                      >
+                                        <Upload className="w-2.5 h-2.5 mr-1 text-blue-600" /> Upload Image
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {!s.image && (
+                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-h-20 flex-wrap">
+                                    {ALL_ICON_KEYS.map((ic) => {
+                                      const IComp = ICON_MAP[ic];
+                                      return (
+                                        <button
+                                          key={ic}
+                                          type="button"
+                                          onClick={() => {
+                                            const updated = [...(siteData.customServices || [])];
+                                            updated[idx].icon = ic;
+                                            setSiteData({ ...siteData, customServices: updated });
+                                          }}
+                                          className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                                            (s.icon || "stethoscope") === ic
+                                              ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                          }`}
+                                          title={ic}
+                                        >
+                                          <IComp className="w-3.5 h-3.5" />
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              <Textarea
+                                value={s.description}
+                                onChange={(e) => {
+                                  const updated = [...(siteData.customServices || [])];
+                                  updated[idx].description = e.target.value;
+                                  setSiteData({ ...siteData, customServices: updated });
+                                }}
+                                placeholder="Describe clinical procedure and benefits..."
+                                rows={2}
+                                className="text-[11px] bg-white rounded-xl"
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
+
+                      <input
+                        ref={servicePhotoRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleServicePhotoUpload}
+                      />
                     </div>
                   </div>
                 )}
@@ -1098,7 +1167,43 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 5. FAQ INSPECTOR */}
+                {/* 5. MAP & HOURS INSPECTOR (Accurate Google Map Location) */}
+                {selectedSection.type === "MAP_HOURS" && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Section Title</label>
+                      <Input
+                        value={selectedSection.title || "Clinic Location & Hours"}
+                        onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                        className="h-10 text-xs rounded-xl font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Clinic Verified Address (For Map Pin)</label>
+                      <Textarea
+                        value={siteData.clinicAddress || siteData.doctor?.address || ""}
+                        onChange={(e) => setSiteData({ ...siteData, clinicAddress: e.target.value })}
+                        placeholder="e.g. B-4/32, Safdarjung Enclave, New Delhi, Delhi 110029"
+                        rows={3}
+                        className="text-xs rounded-xl"
+                      />
+                      <p className="text-[10px] text-slate-500">Google Map automatically pins to this exact clinic address.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Custom Google Map Embed URL (Optional)</label>
+                      <Input
+                        value={siteData.mapEmbedUrl || ""}
+                        onChange={(e) => setSiteData({ ...siteData, mapEmbedUrl: e.target.value })}
+                        placeholder="https://maps.google.com/..."
+                        className="h-9 text-xs rounded-xl"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. FAQ INSPECTOR */}
                 {selectedSection.type === "FAQ" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -1173,7 +1278,7 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 6. CTA BANNER INSPECTOR */}
+                {/* 7. CTA BANNER INSPECTOR */}
                 {selectedSection.type === "CTA_BANNER" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -1204,7 +1309,7 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 7. CUSTOM TEXT INSPECTOR (Headline + Rich Text Content) */}
+                {/* 8. CUSTOM TEXT INSPECTOR */}
                 {selectedSection.type === "CUSTOM_TEXT" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -1229,7 +1334,7 @@ export default function ElementorComposerPage() {
                   </div>
                 )}
 
-                {/* 8. REVIEWS INSPECTOR */}
+                {/* 9. REVIEWS INSPECTOR */}
                 {selectedSection.type === "REVIEWS" && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -1260,7 +1365,6 @@ export default function ElementorComposerPage() {
           ) : (
             /* Main Elementor Drawer Tabs */
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Drawer Top Navigation */}
               <div className="grid grid-cols-4 p-2 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
                 <button
                   onClick={() => setSidebarTab("elements")}

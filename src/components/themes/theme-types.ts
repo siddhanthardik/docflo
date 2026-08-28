@@ -66,6 +66,9 @@ export interface ClinicWebsiteData {
   showMap: boolean;
   showStickyBar: boolean;
   showPrices?: boolean;
+  showServiceButtons?: boolean;
+  clinicAddress?: string | null;
+  mapEmbedUrl?: string | null;
   customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string; image?: string }>;
   customFaqs?: Array<{ question: string; answer: string }>;
   customBio?: string | null;
