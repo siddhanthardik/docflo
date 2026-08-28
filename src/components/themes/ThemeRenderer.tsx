@@ -1383,6 +1383,32 @@ export function ThemeRenderer({
         </div>
       )}
 
+
+      {/* ── FLOATING WHATSAPP RECEPTIONIST WIDGET (ALL WEBSITES & SCREENS) ── */}
+      {cleanWaNumber && (
+        <aside aria-label="WhatsApp Contact" className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+          <a
+            href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent(`Hello, I would like to book an appointment with ${data.doctor?.name || data.siteTitle || "the Doctor"}.`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="group flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white pl-4 pr-4 py-3 rounded-full shadow-2xl shadow-emerald-600/40 hover:scale-105 transition-all duration-300 border-2 border-white/80"
+            title="Chat with Clinic WhatsApp AI Receptionist"
+          >
+            <div className="relative">
+              <MessageSquare className="w-5 h-5 fill-white text-emerald-600" />
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-200"></span>
+              </span>
+            </div>
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-100 leading-none">Online 24/7</span>
+              <span className="text-xs font-bold leading-tight mt-0.5">WhatsApp Receptionist</span>
+            </div>
+          </a>
+        </aside>
+      )}
+
       {/* ── INSTANT APPOINTMENT BOOKING MODAL ── */}
       {openBookingModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
