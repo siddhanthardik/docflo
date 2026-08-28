@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "sculpt-aesthetics"
+    ? [
+        { question: "What is the typical recovery timeline after Rhinoplasty?", answer: "Most external swelling subsides within 7 to 10 days when the nasal splint is removed. You can return to social and work life in 10 to 14 days, with final contour refinement continuing over 6 to 12 months." },
+        { question: "Will surgical scars be visible after cosmetic surgery?", answer: "Board-certified plastic surgeons place incisions in natural anatomical skin creases, hairline, or hidden folds. With advanced micro-suturing and post-op scar therapy, scars fade into subtle, barely noticeable lines." },
+        { question: "How does 3D Vectra simulation help before surgery?", answer: "3D Vectra imaging captures a precise 3D model of your face or body, allowing you and the surgeon to preview simulated surgical outcomes and align on natural proportions before entering the operating room." },
+        { question: "How do I schedule a private aesthetic consultation?", answer: "Click 'Book Appointment' or message our private surgical coordinator directly on WhatsApp." },
+      ]
     : themeId === "blossom-gynae"
     ? [
         { question: "How do I prepare for a painless normal delivery?", answer: "Our maternity care includes prenatal pelvic floor conditioning, breathing exercises, birth plan consultations, and 24/7 labor suite monitoring with optional epidural analgesia." },
@@ -468,7 +475,9 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "blossom-gynae"
+        themeId === "sculpt-aesthetics"
+          ? "bg-[#FAFAFA]"
+          : themeId === "blossom-gynae"
           ? "bg-[#FFF5F7]"
           : themeId === "serene-glow"
           ? "bg-[#FAF8F5]"
@@ -811,10 +820,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-11: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-12: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "sculpt-aesthetics"
+            ? [
+                { value: "8,500+", label: "Aesthetic Transformations", icon: "sparkles" },
+                { value: "100%", label: "Board-Certified MCh Surgeons", icon: "shield" },
+                { value: "3D", label: "Vectra 3D Simulation", icon: "activity" },
+                { value: "4.9 ★", label: "Global Patient Rating", icon: "crown" },
+              ]
             : themeId === "blossom-gynae"
             ? [
                 { value: "12,000+", label: "Healthy Deliveries & Babies", icon: "baby" },
