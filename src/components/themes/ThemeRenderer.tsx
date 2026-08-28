@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "nutrilife-dietetics"
+    ? [
+        { question: "Do I have to give up rice, carbs, or my favorite foods?", answer: "Never. Our philosophy is built on sustainable, non-restrictive nutrition. We incorporate your cultural staple foods, portion control, and smart food pairing so you can enjoy meals while achieving your health goals." },
+        { question: "How much weight loss is realistic and healthy per month?", answer: "A sustainable, safe, and fat-loss focused rate is approximately 2 to 4 kg per month. This ensures you lose fat rather than water or muscle, preventing rebound weight gain." },
+        { question: "Can you design a customized plan for strict vegetarians or vegans?", answer: "Yes! We specialize in plant-based nutrition, carefully structuring adequate complete proteins, iron, B12, and essential micronutrients using natural whole foods." },
+        { question: "How do I start my personalized nutrition plan?", answer: "Click 'Book Appointment' or message our dietitian desk directly on WhatsApp." },
+      ]
     : themeId === "zenith-internal-medicine"
     ? [
         { question: "What is an ideal target HbA1c level for diabetes management?", answer: "For most non-pregnant adults with diabetes, a general target HbA1c is below 7.0%, while an individualized target between 6.5% to 7.5% is personalized based on age and clinical profile." },
@@ -482,7 +489,9 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "sculpt-aesthetics"
+        themeId === "nutrilife-dietetics"
+          ? "bg-[#F0FDF4]"
+          : themeId === "sculpt-aesthetics"
           ? "bg-[#FAFAFA]"
           : themeId === "blossom-gynae"
           ? "bg-[#FFF5F7]"
@@ -827,10 +836,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-13: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-14: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "nutrilife-dietetics"
+            ? [
+                { value: "10,000+", label: "Lbs Lost & Sustained", icon: "activity" },
+                { value: "100%", label: "Custom No-Starvation Plans", icon: "leaf" },
+                { value: "1-on-1", label: "Weekly Progress Reviews", icon: "user" },
+                { value: "4.9 ★", label: "Client Success Rating", icon: "star" },
+              ]
             : themeId === "zenith-internal-medicine"
             ? [
                 { value: "30,000+", label: "Patients Treated & Guided", icon: "user" },

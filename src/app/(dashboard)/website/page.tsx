@@ -88,6 +88,7 @@ const THEME_OPTIONS = [
   { id: "blossom-gynae", name: "Blossom Gynae & Maternity", category: "Gynecology & Fertility", primary: "#E11D48", secondary: "#1E1B4B", accent: "#FB7185" },
   { id: "sculpt-aesthetics", name: "Sculpt Luxe Aesthetics", category: "Plastic & Cosmetic Surgery", primary: "#9D174D", secondary: "#09090B", accent: "#D97706" },
   { id: "zenith-internal-medicine", name: "Zenith Internal Medicine", category: "General Physician & Internal Medicine", primary: "#1E3A8A", secondary: "#0F172A", accent: "#10B981" },
+  { id: "nutrilife-dietetics", name: "NutriLife Dietetics", category: "Dietitian & Clinical Nutrition", primary: "#16A34A", secondary: "#1C1917", accent: "#D97706" },
 ];
 
 const FONTS_HEADINGS = [
