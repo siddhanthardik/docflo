@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ClinicWebsiteData, PageSection } from "./theme-types";
 import {
   Phone,
@@ -25,6 +25,9 @@ import {
   ArrowUp,
   ArrowDown,
   Plus,
+  ChevronLeft,
+  ChevronRight,
+  HeartPulse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +40,6 @@ export function ThemeRenderer({
   onSelectSection,
   onMoveSection,
   onDeleteSection,
-  onAddSectionAfter,
 }: {
   data: ClinicWebsiteData;
   previewMode?: boolean;
@@ -46,7 +48,6 @@ export function ThemeRenderer({
   onSelectSection?: (sectionId: string) => void;
   onMoveSection?: (sectionId: string, direction: "up" | "down") => void;
   onDeleteSection?: (sectionId: string) => void;
-  onAddSectionAfter?: (sectionId: string) => void;
 }) {
   const [openBookingModal, setOpenBookingModal] = useState(false);
   const [patientName, setPatientName] = useState("");
@@ -55,6 +56,9 @@ export function ThemeRenderer({
   const [selectedService, setSelectedService] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  // Hero Slider State
+  const [activeSlide, setActiveSlide] = useState(0);
 
   const primaryColor = data.primaryColor || "#2563EB";
   const secondaryColor = data.secondaryColor || "#0F172A";
@@ -67,15 +71,17 @@ export function ThemeRenderer({
   const services = data.customServices && data.customServices.length > 0
     ? data.customServices
     : [
-        { name: "General Consultation", description: "Comprehensive clinical health check & evaluation." },
-        { name: "Specialized Treatment", description: "Targeted clinical therapy and procedures." },
+        { name: "Clinical Outpatient Consultation", description: "Comprehensive health check & specialized diagnostic evaluation." },
+        { name: "Specialized Treatment & Care", description: "Targeted clinical therapy, advanced procedure, and recovery monitoring." },
+        { name: "Routine Follow-up & Review", description: "Health progress tracking, medication optimization, and preventive guidance." },
       ];
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
     : [
-        { question: "How do I book an appointment?", answer: "Book online using our booking button or connect with us directly on WhatsApp." },
-        { question: "What are your operating hours?", answer: `Mon-Sat: ${data.doctor?.workingHoursStart || "09:00 AM"} - ${data.doctor?.workingHoursEnd || "08:00 PM"}` },
+        { question: "How do I schedule an appointment?", answer: "Click 'Book Appointment' to select your preferred slot or connect with our reception directly on WhatsApp." },
+        { question: "What are the clinic consultation hours?", answer: `Mon-Sat: ${data.doctor?.workingHoursStart || "09:00 AM"} - ${data.doctor?.workingHoursEnd || "08:00 PM"}` },
+        { question: "Is prior booking required?", answer: "Prior appointments ensure zero waiting time, though walk-in emergency consultations are also attended." },
       ];
 
   const reviews = data.reviews && data.reviews.length > 0
@@ -85,6 +91,25 @@ export function ThemeRenderer({
         { reviewerName: "Amit K.", rating: 5, comment: "Best clinical experience. No waiting time and modern equipment.", reviewDate: "1 month ago" },
         { reviewerName: "Sunita R.", rating: 5, comment: "Highly recommended for effective and caring treatment.", reviewDate: "2 months ago" },
       ];
+
+  // Hero Slider Images
+  const sliderImages = data.heroSliderImages && data.heroSliderImages.length > 0
+    ? data.heroSliderImages
+    : data.heroImage
+    ? [data.heroImage]
+    : [
+        "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+      ];
+
+  // Auto rotate slider
+  useEffect(() => {
+    if (sliderImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % sliderImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sliderImages.length]);
 
   // Default Sections Sequence
   const activeSections: PageSection[] = data.sections && data.sections.length > 0
@@ -128,13 +153,13 @@ export function ThemeRenderer({
         }}
         className={`relative group transition-all duration-200 ${
           isSelected
-            ? "ring-3 ring-blue-600 ring-offset-2 z-20"
-            : "hover:ring-2 hover:ring-blue-400/80 hover:ring-offset-1"
+            ? "ring-4 ring-blue-600 ring-offset-2 z-20"
+            : "hover:ring-2 hover:ring-blue-400 hover:ring-offset-1"
         }`}
       >
         {/* Elementor Section Action Overlay Header */}
-        <div className="absolute top-2 right-4 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-slate-900 text-white p-1 rounded-xl shadow-xl text-xs">
-          <span className="text-[10px] font-black uppercase tracking-wider px-2 text-slate-300">
+        <div className="absolute top-3 right-4 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md text-white px-2 py-1 rounded-xl shadow-2xl text-xs">
+          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 text-blue-300">
             {section.type.replace("_", " ")}
           </span>
 
@@ -145,7 +170,7 @@ export function ThemeRenderer({
               onSelectSection?.(section.id);
             }}
             className="p-1 hover:bg-slate-800 rounded-lg text-blue-400"
-            title="Edit Section"
+            title="Edit in Inspector"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
@@ -272,7 +297,7 @@ export function ThemeRenderer({
 
       {/* ── DYNAMIC SECTIONS RENDERER (Elementor Ordered Canvas) ── */}
       {activeSections.map((section, index) => {
-        // 1. HERO SECTION
+        // 1. HERO SECTION WITH LUXURY MULTI-IMAGE CAROUSEL SLIDER
         if (section.type === "HERO") {
           return renderSectionContainer(
             section,
@@ -332,6 +357,7 @@ export function ThemeRenderer({
                     </div>
                   </div>
 
+                  {/* Right Column: Multi-Image Slider Frame or Optional Booking Form */}
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
                       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5">
@@ -380,19 +406,64 @@ export function ThemeRenderer({
                         </form>
                       </div>
                     ) : (
+                      /* Luxury Multi-Photo Slider */
                       <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3] bg-slate-100 relative group">
-                        {data.heroImage || section.image ? (
-                          <img src={data.heroImage || section.image || ""} alt={data.siteTitle} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex flex-col items-center justify-center text-white p-8 text-center space-y-3">
-                            <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center font-black text-2xl">
-                              {data.siteTitle.charAt(0)}
-                            </div>
-                            <h4 className="text-xl font-bold">{data.siteTitle}</h4>
-                            <p className="text-xs text-slate-300 max-w-xs">{data.doctor?.specialty || "Dedicated Clinical Practice"}</p>
+                        {sliderImages.map((imgUrl, i) => (
+                          <div
+                            key={i}
+                            className={`absolute inset-0 transition-opacity duration-700 ${
+                              activeSlide === i ? "opacity-100 z-10 scale-100" : "opacity-0 z-0 scale-98"
+                            }`}
+                          >
+                            <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+
+                        {/* Slider Controls */}
+                        {sliderImages.length > 1 && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveSlide((prev) => (prev === 0 ? sliderImages.length - 1 : prev - 1));
+                              }}
+                              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveSlide((prev) => (prev + 1) % sliderImages.length);
+                              }}
+                              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
                           </div>
                         )}
-                        <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3.5 rounded-2xl shadow-md border border-white/50 flex items-center justify-between">
+
+                        {/* Slider Dots */}
+                        {sliderImages.length > 1 && (
+                          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+                            {sliderImages.map((_, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveSlide(i);
+                                }}
+                                className={`h-1.5 rounded-full transition-all ${activeSlide === i ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Bottom Clinic Badge */}
+                        <div className="absolute bottom-4 left-4 right-4 z-20 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-md border border-white/50 flex items-center justify-between">
                           <div>
                             <p className="text-xs font-bold text-slate-900">{data.doctor?.name || data.siteTitle}</p>
                             <p className="text-[11px] text-slate-500">{data.doctor?.specialty || "Senior Specialist"}</p>
@@ -415,7 +486,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 2. SERVICES SECTION
+        // 2. SERVICES SECTION (WITH OPTIONAL PRICING)
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
@@ -451,10 +522,13 @@ export function ThemeRenderer({
                       </div>
 
                       <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 text-xs">
-                        {svc.price ? (
+                        {/* Pricing is completely OPTIONAL */}
+                        {data.showPrices !== false && svc.price ? (
                           <span className="font-bold text-slate-900">₹{svc.price}</span>
                         ) : (
-                          <span className="text-slate-400 font-medium">Consult for pricing</span>
+                          <span className="text-slate-500 font-medium flex items-center gap-1">
+                            <HeartPulse className="w-3.5 h-3.5 text-blue-600" /> Clinical Care
+                          </span>
                         )}
                         <button
                           onClick={() => {
@@ -463,7 +537,7 @@ export function ThemeRenderer({
                           }}
                           className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
                         >
-                          Book <ArrowRight className="w-3 h-3" />
+                          Book Consultation <ArrowRight className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -537,8 +611,11 @@ export function ThemeRenderer({
                         <span className="text-4xl font-black text-slate-300">{data.doctor?.name?.charAt(0) || "D"}</span>
                       )}
                     </div>
-                    <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Senior Consultant Doctor"}</h4>
+                    <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Lead Consultant Doctor"}</h4>
                     <p className="text-xs text-slate-400">{data.doctor?.specialty || "Medical Specialist"}</p>
+                    {data.doctor?.degrees && (
+                      <p className="text-[11px] text-blue-400 font-medium mt-0.5">{data.doctor.degrees}</p>
+                    )}
                   </div>
 
                   <div className="md:col-span-8 space-y-4">
@@ -575,7 +652,7 @@ export function ThemeRenderer({
                   {section.title || "Ready to Book Your Consultation?"}
                 </h3>
                 <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed">
-                  {section.subtitle || "Schedule your appointment in seconds. Receive instant SMS & WhatsApp confirmation."}
+                  {section.subtitle || "Schedule your appointment in seconds. Receive instant confirmation."}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
@@ -605,6 +682,14 @@ export function ThemeRenderer({
 
         // 6. GALLERY WIDGET
         if (section.type === "GALLERY") {
+          const galleryList = (data.galleryImages && data.galleryImages.length > 0)
+            ? data.galleryImages.map((g) => g.url)
+            : [
+                "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80",
+                "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80",
+                "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80",
+              ];
+
           return renderSectionContainer(
             section,
             <section className="py-20 bg-white border-b border-slate-100">
@@ -622,11 +707,7 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[
-                    "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80",
-                    "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80",
-                    "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80",
-                  ].map((imgUrl, i) => (
+                  {galleryList.map((imgUrl, i) => (
                     <div key={i} className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm aspect-[4/3] bg-slate-100 group">
                       <img src={imgUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
