@@ -125,6 +125,7 @@ const BG_PRESETS = [
 
 const AVAILABLE_WIDGETS: Array<{ type: SectionType; label: string; icon: any; description: string }> = [
   { type: "HERO", label: "Hero Banner & Welcome", icon: Layout, description: "Headline, multi-photo slider, logo, and customizable CTA buttons." },
+  { type: "STATS_RIBBON", label: "Trust Metrics & Stats Bar", icon: ShieldCheck, description: "Highlight clinical experience, patient counts, and Google ratings." },
   { type: "SERVICES", label: "Services & Treatments Grid", icon: Stethoscope, description: "Clinical procedures, custom icons/images, duration, and optional pricing." },
   { type: "DOCTOR_BIO", label: "Doctor Bio & Experience", icon: ShieldCheck, description: "Doctor credentials, medical degrees, portrait, and philosophy." },
   { type: "REVIEWS", label: "Google Patient Reviews", icon: Star, description: "Verified patient testimonials with 5-star Google rating badge." },
@@ -1295,6 +1296,97 @@ export default function ElementorComposerPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 1.5. STATS RIBBON INSPECTOR */}
+                  {selectedSection.type === "STATS_RIBBON" && (
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-800">Trust Metrics &amp; Key Numbers</label>
+                        <p className="text-[10px] text-slate-500">Edit the statistics and credentials displayed in the ribbon.</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {((selectedSection.stats && selectedSection.stats.length > 0)
+                          ? selectedSection.stats
+                          : [
+                              { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
+                              { value: "50,000+", label: "Patients Treated", icon: "user" },
+                              { value: "100%", label: "Evidence-Based Care", icon: "sparkles" },
+                              { value: "4.9 ★", label: "Google Rated", icon: "star" },
+                            ]).map((st, idx) => (
+                          <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase text-slate-500">Metric #{idx + 1}</span>
+                              <div className="flex items-center gap-1">
+                                {["shield", "user", "sparkles", "star", "heart", "activity", "cross"].map((ic) => {
+                                  const IComp = ICON_MAP[ic] || ShieldCheck;
+                                  return (
+                                    <button
+                                      key={ic}
+                                      type="button"
+                                      onClick={() => {
+                                        const currentStats = [...((selectedSection.stats && selectedSection.stats.length > 0)
+                                          ? selectedSection.stats
+                                          : [
+                                              { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
+                                              { value: "50,000+", label: "Patients Treated", icon: "user" },
+                                              { value: "100%", label: "Evidence-Based Care", icon: "sparkles" },
+                                              { value: "4.9 ★", label: "Google Rated", icon: "star" },
+                                            ])];
+                                        currentStats[idx].icon = ic;
+                                        updateSelectedSection({ stats: currentStats });
+                                      }}
+                                      className={`p-1 rounded border ${
+                                        (st.icon || "shield") === ic ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-500 border-slate-200"
+                                      }`}
+                                    >
+                                      <IComp className="w-3 h-3" />
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                value={st.value}
+                                onChange={(e) => {
+                                  const currentStats = [...((selectedSection.stats && selectedSection.stats.length > 0)
+                                    ? selectedSection.stats
+                                    : [
+                                        { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
+                                        { value: "50,000+", label: "Patients Treated", icon: "user" },
+                                        { value: "100%", label: "Evidence-Based Care", icon: "sparkles" },
+                                        { value: "4.9 ★", label: "Google Rated", icon: "star" },
+                                      ])];
+                                  currentStats[idx].value = e.target.value;
+                                  updateSelectedSection({ stats: currentStats });
+                                }}
+                                placeholder="Value (e.g. 15+ Years)"
+                                className="h-8 text-xs font-black bg-white"
+                              />
+                              <Input
+                                value={st.label}
+                                onChange={(e) => {
+                                  const currentStats = [...((selectedSection.stats && selectedSection.stats.length > 0)
+                                    ? selectedSection.stats
+                                    : [
+                                        { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
+                                        { value: "50,000+", label: "Patients Treated", icon: "user" },
+                                        { value: "100%", label: "Evidence-Based Care", icon: "sparkles" },
+                                        { value: "4.9 ★", label: "Google Rated", icon: "star" },
+                                      ])];
+                                  currentStats[idx].label = e.target.value;
+                                  updateSelectedSection({ stats: currentStats });
+                                }}
+                                placeholder="Label (e.g. Clinical Excellence)"
+                                className="h-8 text-xs bg-white"
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

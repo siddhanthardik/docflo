@@ -657,6 +657,55 @@ export function ThemeRenderer({
           );
         }
 
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical & Global)
+        if (section.type === "STATS_RIBBON") {
+          const statsList = section.stats && section.stats.length > 0
+            ? section.stats
+            : [
+                { value: "15+ Years", label: "Clinical Excellence", icon: "shield" },
+                { value: "50,000+", label: "Patients Treated", icon: "user" },
+                { value: "100%", label: "Evidence-Based Care", icon: "sparkles" },
+                { value: "4.9 ★", label: "Google Rated", icon: "star" },
+              ];
+
+          return renderSectionContainer(
+            section,
+            <section
+              style={customBg ? { backgroundColor: customBg } : undefined}
+              className={`py-8 border-y border-slate-100 ${
+                !customBg
+                  ? themeId === "apex-clinical"
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-50 text-slate-900"
+                  : ""
+              }`}
+            >
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {statsList.map((st, sIdx) => {
+                    const StIcon = (st.icon && ICON_MAP[st.icon.toLowerCase()]) || ShieldCheck;
+                    return (
+                      <div key={sIdx} className="flex items-center gap-3.5 p-3 rounded-xl">
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-xs shrink-0`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <StIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xl sm:text-2xl font-black tracking-tight leading-none">{st.value}</p>
+                          <p className={`text-xs font-semibold mt-1 ${themeId === "apex-clinical" ? "text-slate-300" : "text-slate-500"}`}>{st.label}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>,
+            index
+          );
+        }
+
         // 2. SERVICES SECTION
         if (section.type === "SERVICES") {
           return renderSectionContainer(

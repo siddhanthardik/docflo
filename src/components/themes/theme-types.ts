@@ -1,5 +1,6 @@
 export type SectionType =
   | "HERO"
+  | "STATS_RIBBON"
   | "SERVICES"
   | "DOCTOR_BIO"
   | "REVIEWS"
@@ -30,6 +31,7 @@ export interface SectionDesignConfig {
 }
 
 export interface PageSection {
+  stats?: Array<{ value: string; label: string; icon?: string }>;
   id: string;
   type: SectionType;
   title?: string;
