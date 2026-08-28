@@ -48,6 +48,12 @@ import {
   Star,
   Layers,
   Palette,
+  Leaf,
+  Flame,
+  Glasses,
+  Heart,
+  Brain,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +81,10 @@ export const ICON_MAP: Record<string, any> = {
   phone: Phone,
   calendar: Calendar,
   clock: Clock,
+  leaf: Leaf,
+  glasses: Glasses,
+  brain: Brain,
+  crown: Crown,
 };
 
 const RADIUS_CLASSES: Record<string, string> = {
@@ -201,7 +211,6 @@ export function ThemeRenderer({
     setBookingSuccess(true);
   };
 
-  // Button Click Handler
   const handleCtaClick = (action?: string, link?: string | null) => {
     if (action === "CUSTOM_URL" && link) {
       window.open(link, "_blank");
@@ -214,7 +223,7 @@ export function ThemeRenderer({
     }
   };
 
-  // Section Container Wrapper with Elementor Controls
+  // Section Container Wrapper with Elementor Non-Continuous (Dashed) Border & Floating Handle
   const renderSectionContainer = (section: PageSection, children: React.ReactNode, index: number) => {
     if (!composerMode) return <React.Fragment key={section.id}>{children}</React.Fragment>;
 
@@ -222,6 +231,7 @@ export function ThemeRenderer({
 
     return (
       <div
+        id={section.id}
         key={section.id}
         onClick={(e) => {
           e.stopPropagation();
@@ -229,12 +239,15 @@ export function ThemeRenderer({
         }}
         className={`relative group transition-all duration-200 ${
           isSelected
-            ? "ring-4 ring-blue-600 ring-offset-2 z-20"
-            : "hover:ring-2 hover:ring-blue-400 hover:ring-offset-1"
+            ? "border-2 border-dashed border-blue-600 bg-blue-50/5 ring-4 ring-blue-500/10 z-20"
+            : "hover:border-2 hover:border-dashed hover:border-blue-400"
         }`}
       >
-        <div className="absolute top-3 right-4 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md text-white px-2 py-1 rounded-xl shadow-2xl text-xs">
-          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 text-blue-300">
+        {/* Elementor Floating Control Handle */}
+        <div className={`absolute top-2 right-4 z-30 flex items-center gap-1.5 bg-blue-600 text-white px-2.5 py-1 rounded-t-lg shadow-xl text-xs transition-opacity ${
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}>
+          <span className="text-[10px] font-black uppercase tracking-wider px-1 text-white">
             {section.type.replace("_", " ")}
           </span>
 
@@ -244,8 +257,8 @@ export function ThemeRenderer({
               e.stopPropagation();
               onSelectSection?.(section.id);
             }}
-            className="p-1 hover:bg-slate-800 rounded-lg text-blue-400"
-            title="Edit in Inspector"
+            className="p-1 hover:bg-blue-700 rounded text-white"
+            title="Edit in Elementor Panel"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
@@ -257,7 +270,7 @@ export function ThemeRenderer({
                 e.stopPropagation();
                 onMoveSection?.(section.id, "up");
               }}
-              className="p-1 hover:bg-slate-800 rounded-lg text-slate-300"
+              className="p-1 hover:bg-blue-700 rounded text-white"
               title="Move Up"
             >
               <ArrowUp className="w-3.5 h-3.5" />
@@ -271,7 +284,7 @@ export function ThemeRenderer({
                 e.stopPropagation();
                 onMoveSection?.(section.id, "down");
               }}
-              className="p-1 hover:bg-slate-800 rounded-lg text-slate-300"
+              className="p-1 hover:bg-blue-700 rounded text-white"
               title="Move Down"
             >
               <ArrowDown className="w-3.5 h-3.5" />
@@ -285,7 +298,7 @@ export function ThemeRenderer({
                 e.stopPropagation();
                 onDeleteSection?.(section.id);
               }}
-              className="p-1 hover:bg-rose-900 rounded-lg text-rose-400"
+              className="p-1 hover:bg-rose-600 rounded text-white"
               title="Delete Section"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -307,9 +320,13 @@ export function ThemeRenderer({
           ? "bg-[#FAF8F5]"
           : themeId === "ayurveda-earth"
           ? "bg-[#FDFBF7]"
+          : themeId === "ophthalmology-vision"
+          ? "bg-[#F0F9FF]"
+          : themeId === "executive-private"
+          ? "bg-[#0A0A0A] text-slate-100"
           : "bg-white"
       }`}
-      style={{ color: secondaryColor }}
+      style={{ color: themeId === "executive-private" ? "#F8FAFC" : secondaryColor }}
     >
       {/* ── TOP ANNOUNCEMENT BAR (Strictly Conditional) ── */}
       {data.showAnnouncementBar === true && data.announcementBar && data.announcementBar.trim().length > 0 ? (
@@ -323,7 +340,11 @@ export function ThemeRenderer({
       ) : null}
 
       {/* ── CLINIC NAVIGATION HEADER (Logo or Monogram Name Isolation) ── */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
+      <header className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-2xs ${
+        themeId === "executive-private"
+          ? "bg-black/90 border-amber-900/30 text-white"
+          : "bg-white/95 border-slate-100"
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {data.logoUrl ? (
@@ -337,7 +358,7 @@ export function ThemeRenderer({
                   {data.siteTitle?.charAt(0) || "C"}
                 </div>
                 <div>
-                  <h1 className="text-base sm:text-lg font-black tracking-tight leading-none text-slate-900">
+                  <h1 className={`text-base sm:text-lg font-black tracking-tight leading-none ${themeId === "executive-private" ? "text-white" : "text-slate-900"}`}>
                     {data.siteTitle}
                   </h1>
                   {data.tagline && data.tagline.trim().length > 0 && (
@@ -350,7 +371,7 @@ export function ThemeRenderer({
             )}
           </div>
 
-          <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600">
+          <nav className={`hidden md:flex items-center gap-6 text-xs font-bold ${themeId === "executive-private" ? "text-slate-300" : "text-slate-600"}`}>
             {data.showServices && <a href="#services" className="hover:text-blue-600 transition-colors">Services</a>}
             {data.showReviews && <a href="#reviews" className="hover:text-blue-600 transition-colors">Reviews</a>}
             {data.showDoctorBio && <a href="#about" className="hover:text-blue-600 transition-colors">About Doctor</a>}
@@ -373,7 +394,9 @@ export function ThemeRenderer({
             {phone && (
               <a
                 href={`tel:${phone}`}
-                className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 ${buttonRadiusClass} text-slate-700 hover:bg-slate-50 border border-slate-200 transition-all`}
+                className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 ${buttonRadiusClass} border transition-all ${
+                  themeId === "executive-private" ? "border-slate-800 text-slate-200 hover:bg-slate-900" : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
               >
                 <Phone className="w-3.5 h-3.5 text-slate-500" />
                 <span>Call Clinic</span>
@@ -392,9 +415,8 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* ── DYNAMIC SECTIONS RENDERER WITH CANVA-GRADE CUSTOMIZATION ── */}
+      {/* ── DYNAMIC SECTIONS RENDERER WITH 10 BESPOKE DESIGNS ── */}
       {activeSections.map((section, index) => {
-        // Section Design Overrides
         const d = section.design || {};
         const customBg = section.bgColor || d.bgColor;
         const paddingClass = d.paddingSize === "compact" ? "py-12" : d.paddingSize === "spacious" ? "py-28" : "py-20";
@@ -403,13 +425,15 @@ export function ThemeRenderer({
         if (section.type === "HERO") {
           const heroHeadline = section.title !== undefined ? section.title : data.heroHeading;
           const heroSub = section.subtitle !== undefined ? section.subtitle : data.heroSubheading;
-          const heroVariant = d.layoutVariant || (themeId === "apex-clinical" || themeId === "executive-private" ? "full_width" : "split");
+          const isFullWidthTheme = themeId === "apex-clinical" || themeId === "executive-private" || themeId === "ophthalmology-vision";
 
-          // HERO VARIANT: FULL WIDTH LUXURY AMBIENT SLIDER
-          if (heroVariant === "full_width" || themeId === "apex-clinical" || themeId === "executive-private") {
+          // THEME ARCHITECTURE: FULL-WIDTH AMBIENT LUXURY SLIDER (Apex, Executive, Ophthalmology)
+          if (isFullWidthTheme) {
             return renderSectionContainer(
               section,
-              <section className={`relative min-h-[580px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-950 ${paddingClass} px-4`}>
+              <section className={`relative min-h-[580px] flex items-center justify-center text-center text-white overflow-hidden ${
+                themeId === "ophthalmology-vision" ? "bg-sky-950" : "bg-slate-950"
+              } ${paddingClass} px-4`}>
                 <div className="absolute inset-0 z-0">
                   {sliderImages.map((imgUrl, i) => (
                     <div
@@ -425,9 +449,15 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-                  {section.badgeText && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white">
-                      <span>{section.badgeText}</span>
+                  {themeId === "ophthalmology-vision" && (
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/20 backdrop-blur-md border border-sky-400/40 text-xs font-bold text-sky-200">
+                      <Glasses className="w-4 h-4 text-sky-300" /> Precision Vision &amp; Retina Care
+                    </div>
+                  )}
+
+                  {themeId === "executive-private" && (
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/40 text-xs font-bold text-amber-200">
+                      <Crown className="w-4 h-4 text-amber-300" /> VIP Concierge Medical Suite
                     </div>
                   )}
 
@@ -465,7 +495,7 @@ export function ThemeRenderer({
             );
           }
 
-          // HERO VARIANT: MODERN SPLIT WITH MULTI-IMAGE CAROUSEL
+          // THEME ARCHITECTURE: ASYMMETRIC / SPLIT LUXURY (CardioCare, Serene Glow, Ayurveda, Vitality, Warm Pediatrics, Minimal Luxe)
           return renderSectionContainer(
             section,
             <section
@@ -480,6 +510,10 @@ export function ThemeRenderer({
                     ? "bg-emerald-50/40"
                     : themeId === "minimal-luxe"
                     ? "bg-cyan-50/30"
+                    : themeId === "cardiocare-executive"
+                    ? "bg-rose-50/30"
+                    : themeId === "neuropsych-horizon"
+                    ? "bg-purple-50/30"
                     : "bg-slate-50/60"
                   : ""
               }`}
@@ -487,15 +521,27 @@ export function ThemeRenderer({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                    {section.badgeText && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-2xs">
-                        <span>{section.badgeText}</span>
+                    {themeId === "cardiocare-executive" && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 text-rose-800 text-xs font-bold shadow-2xs">
+                        <Heart className="w-3.5 h-3.5 text-rose-600" /> Advanced Cardiac Diagnostics
                       </div>
                     )}
 
-                    <h2 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight text-slate-900 ${
-                      data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
-                    }`}>
+                    {themeId === "ayurveda-earth" && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs">
+                        <Leaf className="w-3.5 h-3.5 text-amber-700" /> 100% Authentic Holistic Healing
+                      </div>
+                    )}
+
+                    {themeId === "neuropsych-horizon" && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold shadow-2xs">
+                        <Brain className="w-3.5 h-3.5 text-purple-700" /> Evidence-Based Mental Wellness
+                      </div>
+                    )}
+
+                    <h2 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight ${
+                      themeId === "executive-private" ? "text-white" : "text-slate-900"
+                    } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
                       {heroHeadline}
                     </h2>
 
@@ -609,22 +655,6 @@ export function ThemeRenderer({
                             </button>
                           </div>
                         )}
-
-                        {sliderImages.length > 1 && (
-                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
-                            {sliderImages.map((_, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveSlide(i);
-                                }}
-                                className={`h-1.5 rounded-full transition-all ${activeSlide === i ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
-                              />
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -635,20 +665,28 @@ export function ThemeRenderer({
           );
         }
 
-        // 2. SERVICES SECTION
+        // 2. SERVICES SECTION (Theme Adaptive)
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
             <section
               id="services"
               style={customBg ? { backgroundColor: customBg } : undefined}
-              className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+              className={`${paddingClass} border-b border-slate-100 ${
+                !customBg
+                  ? themeId === "executive-private"
+                    ? "bg-neutral-950 text-white"
+                    : themeId === "ophthalmology-vision"
+                    ? "bg-sky-50/50"
+                    : "bg-white"
+                  : ""
+              }`}
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
-                    data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
-                  }`}>
+                  <h3 className={`text-3xl font-black tracking-tight ${
+                    themeId === "executive-private" ? "text-amber-100" : "text-slate-900"
+                  } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
                     {section.title || "Clinical Services & Procedures"}
                   </h3>
                   {section.subtitle && section.subtitle.trim().length > 0 && (
@@ -664,7 +702,11 @@ export function ThemeRenderer({
                         key={idx}
                         style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
                         className={`p-6 ${buttonRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
-                          !d.cardBg ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300" : "border-slate-200"
+                          themeId === "executive-private"
+                            ? "bg-neutral-900 border-amber-900/40 text-slate-200"
+                            : !d.cardBg
+                            ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300"
+                            : "border-slate-200"
                         }`}
                       >
                         <div className="space-y-3">
@@ -682,7 +724,7 @@ export function ThemeRenderer({
                               </div>
                             )}
                             <div>
-                              <h4 className="text-base font-bold text-slate-900 leading-snug">{svc.name}</h4>
+                              <h4 className={`text-base font-bold leading-snug ${themeId === "executive-private" ? "text-amber-100" : "text-slate-900"}`}>{svc.name}</h4>
                               {svc.duration && (
                                 <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins</p>
                               )}
@@ -863,6 +905,7 @@ export function ThemeRenderer({
           return renderSectionContainer(
             section,
             <section
+              id="gallery"
               style={customBg ? { backgroundColor: customBg } : undefined}
               className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
             >

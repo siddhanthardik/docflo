@@ -16,7 +16,7 @@ export interface NavLinkItem {
 }
 
 export interface SectionDesignConfig {
-  layoutVariant?: string; // "variant_1", "variant_2", "variant_3", "variant_4"
+  layoutVariant?: string;
   bgType?: "solid" | "gradient" | "dark" | "light" | "cream" | "custom";
   bgColor?: string;
   textColor?: string;

@@ -65,6 +65,9 @@ import {
   Shield,
   SlidersVertical,
   Paintbrush,
+  Undo2,
+  Redo2,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,9 +151,13 @@ export default function ElementorComposerPage() {
   const [syncingGbp, setSyncingGbp] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"elements" | "structure" | "style" | "navbar" | "domain">("elements");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>("sec_hero");
-  const [inspectorSubTab, setInspectorSubTab] = useState<"content" | "design">("content");
+  const [inspectorSubTab, setInspectorSubTab] = useState<"content" | "style">("content");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+
+  // Undo / History Stack
+  const [historyStack, setHistoryStack] = useState<ClinicWebsiteData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   // Custom Domain State
   const [customDomainInput, setCustomDomainInput] = useState("");
@@ -216,6 +223,39 @@ export default function ElementorComposerPage() {
     ],
   });
 
+  // History Push Helper
+  const pushHistory = (newState: ClinicWebsiteData) => {
+    setHistoryStack((prev) => {
+      const upToCurrent = prev.slice(0, historyIndex + 1);
+      return [...upToCurrent, JSON.parse(JSON.stringify(newState))];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const targetState = historyStack[historyIndex - 1];
+      setHistoryIndex(historyIndex - 1);
+      setSiteData(JSON.parse(JSON.stringify(targetState)));
+      toast({ title: "Rollback Successful ↩️", description: "Reverted to previous step." });
+    }
+  };
+
+  const scrollToSectionOnCanvas = (sectionId: string) => {
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 50);
+  };
+
+  const handleSelectSection = (sectionId: string) => {
+    setSelectedSectionId(sectionId);
+    setInspectorSubTab("content");
+    scrollToSectionOnCanvas(sectionId);
+  };
+
   const fetchWebsiteData = async (forceSync = false) => {
     try {
       if (forceSync) setSyncingGbp(true);
@@ -225,12 +265,24 @@ export default function ElementorComposerPage() {
       const data = await res.json();
 
       if (data.website) {
-        setSiteData((prev) => ({
-          ...prev,
+        const loadedData = {
           ...data.website,
-          clinicAddress: data.website.clinicAddress || data.doctor?.address || prev.clinicAddress,
-          sections: (data.website.sections && data.website.sections.length > 0) ? data.website.sections : prev.sections,
-        }));
+          clinicAddress: data.website.clinicAddress || data.doctor?.address || "",
+          sections: (data.website.sections && data.website.sections.length > 0) ? data.website.sections : [
+            { id: "sec_hero", type: "HERO" },
+            { id: "sec_services", type: "SERVICES" },
+            { id: "sec_reviews", type: "REVIEWS" },
+            { id: "sec_bio", type: "DOCTOR_BIO" },
+            { id: "sec_cta", type: "CTA_BANNER" },
+            { id: "sec_faq", type: "FAQ" },
+            { id: "sec_map", type: "MAP_HOURS" },
+          ],
+        };
+
+        setSiteData(loadedData);
+        setHistoryStack([JSON.parse(JSON.stringify(loadedData))]);
+        setHistoryIndex(0);
+
         setUrlInput(data.website.subdomain || "");
         if (data.website.customDomain) {
           setCustomDomainInput(data.website.customDomain);
@@ -287,12 +339,16 @@ export default function ElementorComposerPage() {
       const pickedHeadline = headlines[Math.floor(Math.random() * headlines.length)];
       const pickedSubtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
 
-      setSiteData((prev) => ({ ...prev, heroHeading: pickedHeadline, heroSubheading: pickedSubtitle }));
+      const nextState = { ...siteData, heroHeading: pickedHeadline, heroSubheading: pickedSubtitle };
+      setSiteData(nextState);
+      pushHistory(nextState);
       updateSelectedSection({ title: pickedHeadline, subtitle: pickedSubtitle });
       toast({ title: "✨ AI Headline & Subtitle Generated!" });
     } else if (field === "bio") {
       const bioText = `${doctorName} is a distinguished specialist in ${specialty} dedicated to providing compassionate, evidence-based clinical treatments. Combining extensive clinical diagnostic experience with modern medical protocols, ${doctorName} ensures every patient receives customized, high-quality care with the highest safety standards.`;
-      setSiteData((prev) => ({ ...prev, customBio: bioText }));
+      const nextState = { ...siteData, customBio: bioText };
+      setSiteData(nextState);
+      pushHistory(nextState);
       updateSelectedSection({ content: bioText });
       toast({ title: "✨ AI Medical Bio Generated!" });
     }
@@ -302,8 +358,7 @@ export default function ElementorComposerPage() {
   const handleElementCardClick = (type: SectionType) => {
     const existing = (siteData.sections || []).find((s) => s.type === type);
     if (existing) {
-      setSelectedSectionId(existing.id);
-      setInspectorSubTab("content");
+      handleSelectSection(existing.id);
       toast({ title: `Editing ${type.replace("_", " ")} Section ✏️` });
     } else {
       handleAddNewSection(type);
@@ -315,42 +370,45 @@ export default function ElementorComposerPage() {
     const newSection: PageSection = {
       id: newId,
       type,
-      title: type === "CUSTOM_TEXT" ? "Custom Clinic Notice" : undefined,
+      title: type === "CUSTOM_TEXT" ? "Custom Clinic Notice" : type === "GALLERY" ? "Our Modern Clinical Facilities" : undefined,
       subtitle: type === "CUSTOM_TEXT" ? "Write announcements or patient guidance here." : undefined,
       content: type === "CUSTOM_TEXT" ? "Add detailed patient notices, clinic policies, or special guidance here." : undefined,
       isVisible: true,
     };
 
-    setSiteData((prev) => ({
-      ...prev,
-      sections: [...(prev.sections || []), newSection],
-    }));
+    const nextState = {
+      ...siteData,
+      sections: [...(siteData.sections || []), newSection],
+    };
 
-    setSelectedSectionId(newId);
-    setInspectorSubTab("content");
+    setSiteData(nextState);
+    pushHistory(nextState);
+    handleSelectSection(newId);
     toast({ title: "New Section Added to Canvas! 🧩", description: `Inserted ${type.replace("_", " ")}.` });
   };
 
   const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
-    setSiteData((prev) => {
-      const list = [...(prev.sections || [])];
-      const index = list.findIndex((s) => s.id === sectionId);
-      if (index === -1) return prev;
+    const list = [...(siteData.sections || [])];
+    const index = list.findIndex((s) => s.id === sectionId);
+    if (index === -1) return;
 
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= list.length) return prev;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
 
-      const [removed] = list.splice(index, 1);
-      list.splice(targetIndex, 0, removed);
-      return { ...prev, sections: list };
-    });
+    const [removed] = list.splice(index, 1);
+    list.splice(targetIndex, 0, removed);
+    const nextState = { ...siteData, sections: list };
+    setSiteData(nextState);
+    pushHistory(nextState);
   };
 
   const handleDeleteSection = (sectionId: string) => {
-    setSiteData((prev) => ({
-      ...prev,
-      sections: (prev.sections || []).filter((s) => s.id !== sectionId),
-    }));
+    const nextState = {
+      ...siteData,
+      sections: (siteData.sections || []).filter((s) => s.id !== sectionId),
+    };
+    setSiteData(nextState);
+    pushHistory(nextState);
     if (selectedSectionId === sectionId) setSelectedSectionId(null);
     toast({ title: "Section Removed" });
   };
@@ -369,7 +427,9 @@ export default function ElementorComposerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
-      setSiteData((prev) => ({ ...prev, logoUrl: data.url }));
+      const nextState = { ...siteData, logoUrl: data.url };
+      setSiteData(nextState);
+      pushHistory(nextState);
       toast({ title: "Clinic Logo Uploaded (WebP) 🏥", description: "Logo updated in header & footer." });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -390,11 +450,13 @@ export default function ElementorComposerPage() {
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
       const currentSlider = siteData.heroSliderImages || [];
-      setSiteData((prev) => ({
-        ...prev,
+      const nextState = {
+        ...siteData,
         heroImage: data.url,
         heroSliderImages: [...currentSlider, data.url],
-      }));
+      };
+      setSiteData(nextState);
+      pushHistory(nextState);
       toast({ title: "Slide Photo Uploaded (WebP) 📸", description: "Added to hero carousel." });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -416,7 +478,9 @@ export default function ElementorComposerPage() {
 
       const updated = [...(siteData.customServices || [])];
       updated[activeServiceUploadIdx].image = data.url;
-      setSiteData((prev) => ({ ...prev, customServices: updated }));
+      const nextState = { ...siteData, customServices: updated };
+      setSiteData(nextState);
+      pushHistory(nextState);
       toast({ title: "Service Photo Uploaded (WebP) 📸" });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -439,10 +503,12 @@ export default function ElementorComposerPage() {
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
       const currentGallery = siteData.galleryImages || [];
-      setSiteData((prev) => ({
-        ...prev,
+      const nextState = {
+        ...siteData,
         galleryImages: [...currentGallery, { url: data.url, caption: "Clinic Facility" }],
-      }));
+      };
+      setSiteData(nextState);
+      pushHistory(nextState);
       toast({ title: "Gallery Photo Uploaded (WebP) 📸" });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -462,10 +528,12 @@ export default function ElementorComposerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
-      setSiteData((prev) => ({
-        ...prev,
-        doctor: { ...(prev.doctor || { name: "Doctor" }), image: data.url },
-      }));
+      const nextState = {
+        ...siteData,
+        doctor: { ...(siteData.doctor || { name: "Doctor" }), image: data.url },
+      };
+      setSiteData(nextState);
+      pushHistory(nextState);
       toast({ title: "Doctor Photo Uploaded (WebP) 🩺", description: "Portrait updated." });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -501,7 +569,6 @@ export default function ElementorComposerPage() {
     }
   };
 
-  // Selected Section Helper
   const selectedSection = (siteData.sections || []).find((s) => s.id === selectedSectionId);
 
   const updateSelectedSection = (patch: Partial<PageSection>) => {
@@ -526,12 +593,12 @@ export default function ElementorComposerPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
-      {/* ── TOP CLEAN APPLE/FIGMA-STYLE STUDIO HEADER ── */}
+      {/* ── TOP CLEAN ELEMENTOR STUDIO HEADER ── */}
       <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
         <div className="flex items-center gap-3">
           <span className="font-black text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
-            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black">G</span>
-            Website Studio
+            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black">E</span>
+            Elementor Composer
           </span>
 
           <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200">
@@ -540,14 +607,16 @@ export default function ElementorComposerPage() {
               onChange={(e) => {
                 const found = THEME_OPTIONS.find((t) => t.id === e.target.value);
                 if (found) {
-                  setSiteData({
+                  const nextState = {
                     ...siteData,
                     themeId: found.id,
                     primaryColor: found.primary,
                     secondaryColor: found.secondary,
                     accentColor: found.accent,
-                  });
-                  toast({ title: `Applied ${found.name} Design System! 🎨` });
+                  };
+                  setSiteData(nextState);
+                  pushHistory(nextState);
+                  toast({ title: `Applied ${found.name} Theme! 🎨` });
                 }
               }}
               className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer"
@@ -559,29 +628,48 @@ export default function ElementorComposerPage() {
           </div>
         </div>
 
-        {/* Center: Viewport Switcher */}
-        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
+        {/* Center: Viewport & Undo/Rollback Toolbar */}
+        <div className="flex items-center gap-2">
+          {/* Undo Rollback Button */}
           <button
-            onClick={() => setViewport("desktop")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "desktop" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-            title="Desktop View (100%)"
+            type="button"
+            onClick={handleUndo}
+            disabled={historyIndex <= 0}
+            className={`h-8 px-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
+              historyIndex > 0
+                ? "bg-white text-slate-800 border-slate-300 hover:bg-slate-50 shadow-2xs cursor-pointer"
+                : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+            }`}
+            title="Rollback Changes to Previous Step (Undo)"
           >
-            <Monitor className="w-3.5 h-3.5" /> <span className="hidden md:inline">Desktop</span>
+            <Undo2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Rollback</span>
           </button>
-          <button
-            onClick={() => setViewport("tablet")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "tablet" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-            title="Tablet View (768px)"
-          >
-            <Tablet className="w-3.5 h-3.5" /> <span className="hidden md:inline">Tablet</span>
-          </button>
-          <button
-            onClick={() => setViewport("mobile")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "mobile" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-            title="Mobile View (390px)"
-          >
-            <Smartphone className="w-3.5 h-3.5" /> <span className="hidden md:inline">Mobile</span>
-          </button>
+
+          {/* Viewport Switcher */}
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
+            <button
+              onClick={() => setViewport("desktop")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "desktop" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
+              title="Desktop View (100%)"
+            >
+              <Monitor className="w-3.5 h-3.5" /> <span className="hidden md:inline">Desktop</span>
+            </button>
+            <button
+              onClick={() => setViewport("tablet")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "tablet" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
+              title="Tablet View (768px)"
+            >
+              <Tablet className="w-3.5 h-3.5" /> <span className="hidden md:inline">Tablet</span>
+            </button>
+            <button
+              onClick={() => setViewport("mobile")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "mobile" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
+              title="Mobile View (390px)"
+            >
+              <Smartphone className="w-3.5 h-3.5" /> <span className="hidden md:inline">Mobile</span>
+            </button>
+          </div>
         </div>
 
         {/* Right: Actions */}
@@ -624,7 +712,7 @@ export default function ElementorComposerPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
         <aside className="w-[390px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs">
-          {/* Deep Section Inspector with Dual Tabs (Content vs Canva Design) */}
+          {/* Deep Section Inspector with Dual Tabs (Content vs Style) */}
           {selectedSection ? (
             <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
               <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -643,21 +731,21 @@ export default function ElementorComposerPage() {
                   </div>
                 </div>
 
-                {/* Dual Sub-Tabs: Content vs Canva Design */}
+                {/* Dual Sub-Tabs: Content vs Style */}
                 <div className="flex items-center bg-slate-200/80 p-0.5 rounded-xl text-[10px] font-bold">
                   <button
                     type="button"
                     onClick={() => setInspectorSubTab("content")}
                     className={`px-2.5 py-1 rounded-lg transition-all ${inspectorSubTab === "content" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-600"}`}
                   >
-                    📝 Content
+                    Content
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInspectorSubTab("design")}
-                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${inspectorSubTab === "design" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600"}`}
+                    onClick={() => setInspectorSubTab("style")}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${inspectorSubTab === "style" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600"}`}
                   >
-                    <Paintbrush className="w-3 h-3" /> Canva Style
+                    <Paintbrush className="w-3 h-3" /> Style
                   </button>
                 </div>
 
@@ -671,8 +759,8 @@ export default function ElementorComposerPage() {
                 </button>
               </div>
 
-              {/* ── SUB-TAB 2: CANVA-GRADE DESIGN & STYLING CONTROLS ── */}
-              {inspectorSubTab === "design" ? (
+              {/* ── SUB-TAB 2: STYLE CONTROLS ── */}
+              {inspectorSubTab === "style" ? (
                 <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
                   <div className="space-y-1">
                     <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Section Styling Engine</h4>
@@ -690,6 +778,7 @@ export default function ElementorComposerPage() {
                           onClick={() => {
                             updateSelectedSection({ bgColor: preset.value });
                             updateSelectedSectionDesign({ bgColor: preset.value });
+                            pushHistory(siteData);
                           }}
                           className={`p-2 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 transition-all ${
                             (selectedSection.bgColor || selectedSection.design?.bgColor) === preset.value
@@ -732,7 +821,10 @@ export default function ElementorComposerPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => updateSelectedSectionDesign({ cardBg: "#FFFFFF" })}
+                        onClick={() => {
+                          updateSelectedSectionDesign({ cardBg: "#FFFFFF" });
+                          pushHistory(siteData);
+                        }}
                         className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
                           selectedSection.design?.cardBg === "#FFFFFF" ? "border-blue-600 bg-white ring-2 ring-blue-500/20" : "bg-white border-slate-200"
                         }`}
@@ -741,7 +833,10 @@ export default function ElementorComposerPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => updateSelectedSectionDesign({ cardBg: "#F8FAFC" })}
+                        onClick={() => {
+                          updateSelectedSectionDesign({ cardBg: "#F8FAFC" });
+                          pushHistory(siteData);
+                        }}
                         className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
                           selectedSection.design?.cardBg === "#F8FAFC" ? "border-blue-600 bg-slate-50 ring-2 ring-blue-500/20" : "bg-slate-50 border-slate-200"
                         }`}
@@ -759,7 +854,10 @@ export default function ElementorComposerPage() {
                         <button
                           key={sz}
                           type="button"
-                          onClick={() => updateSelectedSectionDesign({ paddingSize: sz as any })}
+                          onClick={() => {
+                            updateSelectedSectionDesign({ paddingSize: sz as any });
+                            pushHistory(siteData);
+                          }}
                           className={`py-1.5 rounded-xl border text-[10px] font-bold capitalize transition-all ${
                             (selectedSection.design?.paddingSize || "normal") === sz
                               ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
@@ -774,12 +872,12 @@ export default function ElementorComposerPage() {
 
                   <div className="pt-4 border-t border-slate-100">
                     <Button
-                      onClick={() => handleSaveWebsite(`${selectedSection.type.replace("_", " ")} Design`)}
+                      onClick={() => handleSaveWebsite(`${selectedSection.type.replace("_", " ")} Style`)}
                       disabled={saving}
                       className="w-full h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md flex items-center justify-center gap-2"
                     >
                       <Save className="w-4 h-4" />
-                      <span>{saving ? "Saving..." : "Save Section Design"}</span>
+                      <span>{saving ? "Saving..." : "Save Section Style"}</span>
                     </Button>
                   </div>
                 </div>
@@ -809,7 +907,11 @@ export default function ElementorComposerPage() {
                           {siteData.logoUrl && (
                             <button
                               type="button"
-                              onClick={() => setSiteData({ ...siteData, logoUrl: null })}
+                              onClick={() => {
+                                const nextState = { ...siteData, logoUrl: null };
+                                setSiteData(nextState);
+                                pushHistory(nextState);
+                              }}
                               className="text-[10px] text-rose-600 font-bold hover:underline"
                             >
                               Remove Logo
@@ -1008,7 +1110,9 @@ export default function ElementorComposerPage() {
                                 type="button"
                                 onClick={() => {
                                   const updated = (siteData.heroSliderImages || []).filter((_, idx) => idx !== i);
-                                  setSiteData({ ...siteData, heroSliderImages: updated, heroImage: updated[0] || null });
+                                  const nextState = { ...siteData, heroSliderImages: updated, heroImage: updated[0] || null };
+                                  setSiteData(nextState);
+                                  pushHistory(nextState);
                                 }}
                                 className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               >
@@ -1063,10 +1167,12 @@ export default function ElementorComposerPage() {
                             size="sm"
                             onClick={() => {
                               const list = siteData.customServices || [];
-                              setSiteData({
+                              const nextState = {
                                 ...siteData,
                                 customServices: [...list, { name: "New Clinical Treatment", description: "Comprehensive procedure & specialized care.", icon: "stethoscope" }],
-                              });
+                              };
+                              setSiteData(nextState);
+                              pushHistory(nextState);
                             }}
                             className="h-7 text-[11px] font-bold rounded-lg"
                           >
@@ -1105,7 +1211,9 @@ export default function ElementorComposerPage() {
                                   type="button"
                                   onClick={() => {
                                     const updated = (siteData.customServices || []).filter((_, i) => i !== idx);
-                                    setSiteData({ ...siteData, customServices: updated });
+                                    const nextState = { ...siteData, customServices: updated };
+                                    setSiteData(nextState);
+                                    pushHistory(nextState);
                                   }}
                                   className="text-slate-400 hover:text-rose-600 p-1"
                                 >
@@ -1124,7 +1232,9 @@ export default function ElementorComposerPage() {
                                         onClick={() => {
                                           const updated = [...(siteData.customServices || [])];
                                           updated[idx].image = undefined;
-                                          setSiteData({ ...siteData, customServices: updated });
+                                          const nextState = { ...siteData, customServices: updated };
+                                          setSiteData(nextState);
+                                          pushHistory(nextState);
                                         }}
                                         className="text-[10px] text-rose-600 font-bold hover:underline"
                                       >
@@ -1158,7 +1268,9 @@ export default function ElementorComposerPage() {
                                           onClick={() => {
                                             const updated = [...(siteData.customServices || [])];
                                             updated[idx].icon = ic;
-                                            setSiteData({ ...siteData, customServices: updated });
+                                            const nextState = { ...siteData, customServices: updated };
+                                            setSiteData(nextState);
+                                            pushHistory(nextState);
                                           }}
                                           className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
                                             (s.icon || "stethoscope") === ic
@@ -1336,7 +1448,9 @@ export default function ElementorComposerPage() {
                                 onChange={(e) => {
                                   const updated = [...(siteData.galleryImages || [])];
                                   updated[i].caption = e.target.value;
-                                  setSiteData({ ...siteData, galleryImages: updated });
+                                  const nextState = { ...siteData, galleryImages: updated };
+                                  setSiteData(nextState);
+                                  pushHistory(nextState);
                                 }}
                                 placeholder="Caption"
                                 className="h-7 text-[10px] bg-white rounded-lg"
@@ -1345,7 +1459,9 @@ export default function ElementorComposerPage() {
                                 type="button"
                                 onClick={() => {
                                   const updated = (siteData.galleryImages || []).filter((_, idx) => idx !== i);
-                                  setSiteData({ ...siteData, galleryImages: updated });
+                                  const nextState = { ...siteData, galleryImages: updated };
+                                  setSiteData(nextState);
+                                  pushHistory(nextState);
                                 }}
                                 className="absolute top-3 right-3 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               >
@@ -1415,10 +1531,12 @@ export default function ElementorComposerPage() {
                             size="sm"
                             onClick={() => {
                               const list = siteData.customFaqs || [];
-                              setSiteData({
+                              const nextState = {
                                 ...siteData,
                                 customFaqs: [...list, { question: "New Question?", answer: "Answer details here." }],
-                              });
+                              };
+                              setSiteData(nextState);
+                              pushHistory(nextState);
                             }}
                             className="h-7 text-[11px] font-bold rounded-lg"
                           >
@@ -1444,7 +1562,9 @@ export default function ElementorComposerPage() {
                                   type="button"
                                   onClick={() => {
                                     const updated = (siteData.customFaqs || []).filter((_, i) => i !== idx);
-                                    setSiteData({ ...siteData, customFaqs: updated });
+                                    const nextState = { ...siteData, customFaqs: updated };
+                                    setSiteData(nextState);
+                                    pushHistory(nextState);
                                   }}
                                   className="text-slate-400 hover:text-rose-600 p-1"
                                 >
@@ -1655,7 +1775,7 @@ export default function ElementorComposerPage() {
                     {(siteData.sections || []).map((sec, idx) => (
                       <div
                         key={sec.id}
-                        onClick={() => setSelectedSectionId(sec.id)}
+                        onClick={() => handleSelectSection(sec.id)}
                         className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-blue-400 flex items-center justify-between gap-2 cursor-pointer shadow-2xs transition-all"
                       >
                         <div className="flex items-center gap-2">
@@ -1858,7 +1978,11 @@ export default function ElementorComposerPage() {
                       <label className="font-bold text-slate-700">Headline Font Family</label>
                       <select
                         value={siteData.fontHeading}
-                        onChange={(e) => setSiteData({ ...siteData, fontHeading: e.target.value })}
+                        onChange={(e) => {
+                          const nextState = { ...siteData, fontHeading: e.target.value };
+                          setSiteData(nextState);
+                          pushHistory(nextState);
+                        }}
                         className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50"
                       >
                         {FONTS_HEADINGS.map((f) => (
@@ -1872,7 +1996,11 @@ export default function ElementorComposerPage() {
                       <label className="font-bold text-slate-700">Body Text Font Family</label>
                       <select
                         value={siteData.fontBody}
-                        onChange={(e) => setSiteData({ ...siteData, fontBody: e.target.value })}
+                        onChange={(e) => {
+                          const nextState = { ...siteData, fontBody: e.target.value };
+                          setSiteData(nextState);
+                          pushHistory(nextState);
+                        }}
                         className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-medium bg-slate-50"
                       >
                         {FONTS_BODY.map((f) => (
@@ -1886,7 +2014,11 @@ export default function ElementorComposerPage() {
                       <label className="font-bold text-slate-700">Button Corner Radius</label>
                       <select
                         value={siteData.buttonRadius || "2xl"}
-                        onChange={(e) => setSiteData({ ...siteData, buttonRadius: e.target.value })}
+                        onChange={(e) => {
+                          const nextState = { ...siteData, buttonRadius: e.target.value };
+                          setSiteData(nextState);
+                          pushHistory(nextState);
+                        }}
                         className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50"
                       >
                         {BUTTON_RADII.map((r) => (
@@ -2112,7 +2244,7 @@ export default function ElementorComposerPage() {
               previewMode={false}
               composerMode={true}
               selectedSectionId={selectedSectionId}
-              onSelectSection={(id) => setSelectedSectionId(id)}
+              onSelectSection={handleSelectSection}
               onMoveSection={handleMoveSection}
               onDeleteSection={handleDeleteSection}
             />
