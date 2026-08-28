@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "endometabolic-care"
+    ? [
+        { question: "Can Type-2 Diabetes truly be reversed?", answer: "Yes! Through medically supervised caloric deficit, low-glycemic nutrition, visceral fat loss, and muscle mass building, many patients achieve remission with normal HbA1c levels without requiring glucose-lowering drugs." },
+        { question: "How do Continuous Glucose Monitoring (CGM) sensors work?", answer: "A small water-resistant sensor placed on the upper arm measures interstitial glucose every minute for 14 days, transmitting data directly to your smartphone without any painful finger pricks." },
+        { question: "How often should thyroid medicine dosage be evaluated?", answer: "Thyroid dosage should be re-evaluated every 6 to 8 weeks after starting or adjusting medication until TSH stabilizes, and every 6 to 12 months thereafter, or immediately upon pregnancy confirmation." },
+        { question: "How do I book an appointment with the endocrinologist?", answer: "Click 'Book Appointment' or message our diabetes care reception directly on WhatsApp." },
+      ]
     : themeId === "kinetic-physio"
     ? [
         { question: "How many physiotherapy sessions are typically required for chronic back or neck pain?", answer: "Most acute to sub-acute conditions show substantial pain reduction within 3 to 6 sessions, while long-standing chronic postural issues benefit from a structured 10 to 12 session strengthening program." },
@@ -524,7 +531,7 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "kinetic-physio" || themeId === "gastrosurg-advanced"
+        themeId === "endometabolic-care" || themeId === "kinetic-physio" || themeId === "gastrosurg-advanced"
           ? "bg-[#F0FDFA]"
           : themeId === "uropulse-advanced" || themeId === "acculab-diagnostics"
           ? "bg-[#F0F9FF]"
@@ -875,10 +882,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-19: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-20: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "endometabolic-care"
+            ? [
+                { value: "18,000+", label: "Diabetic & Hormone Patients", icon: "activity" },
+                { value: "100%", label: "CGM Sensor-Guided Plans", icon: "shield" },
+                { value: "<6.5%", label: "Target HbA1c Goal Rate", icon: "sparkles" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "kinetic-physio"
             ? [
                 { value: "25,000+", label: "Rehab Sessions Delivered", icon: "activity" },

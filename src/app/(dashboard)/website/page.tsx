@@ -94,6 +94,7 @@ const THEME_OPTIONS = [
   { id: "oncohorizon-cancer", name: "OncoHorizon Cancer Care", category: "Oncology & Cancer Center", primary: "#7E22CE", secondary: "#0F172A", accent: "#EC4899" },
   { id: "gastrosurg-advanced", name: "GastroSurg Advanced", category: "General Surgery & GI Surgery", primary: "#0F766E", secondary: "#0F172A", accent: "#D97706" },
   { id: "kinetic-physio", name: "KineticPhysio Pro", category: "Physiotherapy & Sports Rehab", primary: "#0284C7", secondary: "#0F172A", accent: "#EA580C" },
+  { id: "endometabolic-care", name: "EndoMeta Care", category: "Diabetology & Endocrinology", primary: "#1E3A8A", secondary: "#0F172A", accent: "#0284C7" },
 ];
 
 const FONTS_HEADINGS = [
