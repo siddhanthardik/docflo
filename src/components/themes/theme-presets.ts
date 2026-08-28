@@ -619,14 +619,26 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
         "duration": "30"
       },
       {
-        "name": "Childhood Infections & Fast-Track Fever Clinic",
+        "name": "Childhood Infections & Acute Fever Clinic",
         "description": "Same-day rapid diagnosis and gentle treatment for acute fevers, flu, stomach bugs, ear pain, and throat infections.",
         "icon": "bandage",
         "duration": "20"
       },
       {
-        "name": "Adolescent Health & Behavioral Guidance",
-        "description": "Empathetic guidance for school stress, puberty development, ADHD evaluation, and teen lifestyle wellness.",
+        "name": "Pediatric Gut Health & Constipation Clinic",
+        "description": "Non-invasive care for chronic constipation, infant colic, tummy aches, acid reflux, and childhood food intolerances.",
+        "icon": "shield",
+        "duration": "25"
+      },
+      {
+        "name": "Childhood Skin, Eczema & Rash Care",
+        "description": "Targeted pediatric dermatological care for infant atopic dermatitis, diaper rashes, heat rashes, and childhood viral rashes.",
+        "icon": "sparkles",
+        "duration": "25"
+      },
+      {
+        "name": "Adolescent Health, Puberty & Behavioral Care",
+        "description": "Empathetic counseling for school stress, pubertal growth, ADHD screening, and adolescent lifestyle guidance.",
         "icon": "sparkles",
         "duration": "35"
       }
