@@ -14,6 +14,8 @@ model Doctor {
   name                   String
   phone                  String?
   specialty              String?
+  degrees                String?
+  designation            String?
   clinicName             String?
   address                String?
   city                   String?
@@ -1490,6 +1492,7 @@ model ClinicWebsite {
   customServices   Json?           // Array of { name, description, duration, price, icon }
   customFaqs       Json?           // Array of { question, answer }
   customBio        String?         @db.Text
+  doctorInfo       Json?           // { name, specialty, degrees, designation, image }
   galleryImages    Json?           // Array of { url, caption }
   sections         Json?           // Array of PageSection { id, type, title, subtitle, content, ... }
   

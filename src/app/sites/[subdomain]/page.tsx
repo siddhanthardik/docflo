@@ -65,6 +65,8 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     notFound();
   }
 
+  const doctorInfo = (site.doctorInfo as any) || {};
+
   const websiteData: ClinicWebsiteData = {
     id: site.id,
     subdomain: site.subdomain,
@@ -115,20 +117,20 @@ export default async function PublicSubdomainSitePage({ params }: SitePageProps)
     sections: (site.sections as any) || undefined,
     metaTitle: site.metaTitle,
     metaDescription: site.metaDescription,
-    doctor: site.doctor
-      ? {
-          name: site.doctor.name,
-          clinicName: site.doctor.clinicName,
-          specialty: site.doctor.specialty,
-          phone: site.doctor.phone,
-          address: site.clinicAddress || site.doctor.address,
-          city: site.doctor.city,
-          image: site.doctor.image,
-          workingHoursStart: site.doctor.workingHoursStart,
-          workingHoursEnd: site.doctor.workingHoursEnd,
-          daysOff: site.doctor.daysOff,
-        }
-      : undefined,
+    doctor: {
+      name: doctorInfo.name || site.doctor?.name || "Doctor",
+      clinicName: site.doctor?.clinicName,
+      specialty: doctorInfo.specialty || site.doctor?.specialty || "",
+      degrees: doctorInfo.degrees || site.doctor?.degrees || "",
+      designation: doctorInfo.designation || site.doctor?.designation || "",
+      phone: site.doctor?.phone,
+      address: site.clinicAddress || site.doctor?.address,
+      city: site.doctor?.city,
+      image: doctorInfo.image || site.doctor?.image,
+      workingHoursStart: site.doctor?.workingHoursStart,
+      workingHoursEnd: site.doctor?.workingHoursEnd,
+      daysOff: site.doctor?.daysOff,
+    },
     reviews: site.doctor?.reviews?.map((r) => ({
       reviewerName: r.reviewerName,
       rating: r.rating,

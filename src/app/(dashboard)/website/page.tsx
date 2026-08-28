@@ -155,7 +155,7 @@ export default function ElementorComposerPage() {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
 
-  // Undo / History Stack
+  // Undo History Stack
   const [historyStack, setHistoryStack] = useState<ClinicWebsiteData[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
@@ -212,8 +212,15 @@ export default function ElementorComposerPage() {
     customServices: [],
     customFaqs: [],
     galleryImages: [],
+    doctor: {
+      name: "",
+      specialty: "",
+      degrees: "",
+      designation: "",
+      image: "",
+    },
     sections: [
-      { id: "sec_hero", type: "HERO", subtitle: "" },
+      { id: "sec_hero", type: "HERO", badgeText: "", subtitle: "" },
       { id: "sec_services", type: "SERVICES" },
       { id: "sec_reviews", type: "REVIEWS" },
       { id: "sec_bio", type: "DOCTOR_BIO" },
@@ -223,7 +230,6 @@ export default function ElementorComposerPage() {
     ],
   });
 
-  // History Push Helper
   const pushHistory = (newState: ClinicWebsiteData) => {
     setHistoryStack((prev) => {
       const upToCurrent = prev.slice(0, historyIndex + 1);
@@ -268,8 +274,16 @@ export default function ElementorComposerPage() {
         const loadedData = {
           ...data.website,
           clinicAddress: data.website.clinicAddress || data.doctor?.address || "",
+          doctor: {
+            name: data.doctor?.name || data.website.doctorInfo?.name || "",
+            specialty: data.doctor?.specialty || data.website.doctorInfo?.specialty || "",
+            degrees: data.doctor?.degrees || data.website.doctorInfo?.degrees || "",
+            designation: data.doctor?.designation || data.website.doctorInfo?.designation || "",
+            image: data.doctor?.image || data.website.doctorInfo?.image || "",
+            phone: data.doctor?.phone,
+          },
           sections: (data.website.sections && data.website.sections.length > 0) ? data.website.sections : [
-            { id: "sec_hero", type: "HERO" },
+            { id: "sec_hero", type: "HERO", badgeText: "" },
             { id: "sec_services", type: "SERVICES" },
             { id: "sec_reviews", type: "REVIEWS" },
             { id: "sec_bio", type: "DOCTOR_BIO" },
@@ -354,7 +368,6 @@ export default function ElementorComposerPage() {
     }
   };
 
-  // Element Tray Click Handling
   const handleElementCardClick = (type: SectionType) => {
     const existing = (siteData.sections || []).find((s) => s.type === type);
     if (existing) {
@@ -373,6 +386,7 @@ export default function ElementorComposerPage() {
       title: type === "CUSTOM_TEXT" ? "Custom Clinic Notice" : type === "GALLERY" ? "Our Modern Clinical Facilities" : undefined,
       subtitle: type === "CUSTOM_TEXT" ? "Write announcements or patient guidance here." : undefined,
       content: type === "CUSTOM_TEXT" ? "Add detailed patient notices, clinic policies, or special guidance here." : undefined,
+      badgeText: "",
       isVisible: true,
     };
 
@@ -413,7 +427,6 @@ export default function ElementorComposerPage() {
     toast({ title: "Section Removed" });
   };
 
-  // Image Uploads (Auto-WebP)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -630,7 +643,6 @@ export default function ElementorComposerPage() {
 
         {/* Center: Viewport & Undo/Rollback Toolbar */}
         <div className="flex items-center gap-2">
-          {/* Undo Rollback Button */}
           <button
             type="button"
             onClick={handleUndo}
@@ -646,7 +658,6 @@ export default function ElementorComposerPage() {
             <span className="hidden sm:inline">Rollback</span>
           </button>
 
-          {/* Viewport Switcher */}
           <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
             <button
               onClick={() => setViewport("desktop")}
@@ -712,7 +723,6 @@ export default function ElementorComposerPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
         <aside className="w-[390px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs">
-          {/* Deep Section Inspector with Dual Tabs (Content vs Style) */}
           {selectedSection ? (
             <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
               <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -731,7 +741,6 @@ export default function ElementorComposerPage() {
                   </div>
                 </div>
 
-                {/* Dual Sub-Tabs: Content vs Style */}
                 <div className="flex items-center bg-slate-200/80 p-0.5 rounded-xl text-[10px] font-bold">
                   <button
                     type="button"
@@ -764,12 +773,12 @@ export default function ElementorComposerPage() {
                 <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
                   <div className="space-y-1">
                     <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Section Styling Engine</h4>
-                    <p className="text-[10px] text-slate-500">Customize backgrounds, card materials, and layout variants.</p>
+                    <p className="text-[10px] text-slate-500">Customize backgrounds, inner card designs, and spacing.</p>
                   </div>
 
                   {/* Section Background Presets & Custom Hex */}
                   <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                    <label className="font-bold text-slate-800">Section Background Color</label>
+                    <label className="font-bold text-slate-800">Outer Section Background</label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {BG_PRESETS.map((preset) => (
                         <button
@@ -815,18 +824,35 @@ export default function ElementorComposerPage() {
                     </div>
                   </div>
 
-                  {/* Card Background & Container Styling */}
+                  {/* Inner Card Material & Slate Design Customizer */}
                   <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                    <label className="font-bold text-slate-800">Card &amp; Element Material</label>
+                    <label className="font-bold text-slate-800">Inner Card / Block Design</label>
+                    <p className="text-[10px] text-slate-500">Change the card container behind text and doctor details.</p>
                     <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateSelectedSectionDesign({ cardBg: "dark" });
+                          pushHistory(siteData);
+                        }}
+                        className={`p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+                          (selectedSection.design?.cardBg === "dark" || !selectedSection.design?.cardBg)
+                            ? "border-blue-600 bg-slate-900 text-white ring-2 ring-blue-500/20"
+                            : "bg-slate-900 text-white border-slate-800"
+                        }`}
+                      >
+                        Dark Obsidian Card
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
                           updateSelectedSectionDesign({ cardBg: "#FFFFFF" });
                           pushHistory(siteData);
                         }}
-                        className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
-                          selectedSection.design?.cardBg === "#FFFFFF" ? "border-blue-600 bg-white ring-2 ring-blue-500/20" : "bg-white border-slate-200"
+                        className={`p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+                          selectedSection.design?.cardBg === "#FFFFFF"
+                            ? "border-blue-600 bg-white text-slate-900 ring-2 ring-blue-500/20"
+                            : "bg-white text-slate-900 border-slate-200"
                         }`}
                       >
                         Pure White Card
@@ -837,11 +863,27 @@ export default function ElementorComposerPage() {
                           updateSelectedSectionDesign({ cardBg: "#F8FAFC" });
                           pushHistory(siteData);
                         }}
-                        className={`p-2 rounded-xl border text-[10px] font-bold transition-all ${
-                          selectedSection.design?.cardBg === "#F8FAFC" ? "border-blue-600 bg-slate-50 ring-2 ring-blue-500/20" : "bg-slate-50 border-slate-200"
+                        className={`p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+                          selectedSection.design?.cardBg === "#F8FAFC"
+                            ? "border-blue-600 bg-slate-100 text-slate-900 ring-2 ring-blue-500/20"
+                            : "bg-slate-50 text-slate-900 border-slate-200"
                         }`}
                       >
                         Soft Slate Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateSelectedSectionDesign({ cardBg: "#FAF8F5" });
+                          pushHistory(siteData);
+                        }}
+                        className={`p-2.5 rounded-xl border text-[10px] font-bold transition-all ${
+                          selectedSection.design?.cardBg === "#FAF8F5"
+                            ? "border-blue-600 bg-[#FAF8F5] text-slate-900 ring-2 ring-blue-500/20"
+                            : "bg-[#FAF8F5] text-slate-900 border-amber-200/60"
+                        }`}
+                      >
+                        Warm Sand Card
                       </button>
                     </div>
                   </div>
@@ -953,6 +995,16 @@ export default function ElementorComposerPage() {
                           value={siteData.siteTitle}
                           onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
                           className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Hero Floating Badge Text (Leave blank to remove)</label>
+                        <Input
+                          value={selectedSection.badgeText || ""}
+                          onChange={(e) => updateSelectedSection({ badgeText: e.target.value })}
+                          placeholder="e.g. Precision Vision & Retina Care (Leave blank to hide)"
+                          className="h-9 text-xs rounded-xl"
                         />
                       </div>
 
@@ -1330,11 +1382,15 @@ export default function ElementorComposerPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Doctor Name</label>
+                        <label className="font-bold text-slate-700">Doctor Full Name</label>
                         <Input
                           value={siteData.doctor?.name || ""}
-                          onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), name: e.target.value } })}
-                          className="h-10 text-xs rounded-xl font-bold"
+                          onChange={(e) => {
+                            const updatedDoc = { ...(siteData.doctor || { name: "" }), name: e.target.value };
+                            setSiteData({ ...siteData, doctor: updatedDoc });
+                          }}
+                          placeholder="e.g. Dr. Vinay Kumar Rai"
+                          className="h-10 text-xs rounded-xl font-bold bg-white"
                         />
                       </div>
 
@@ -1343,24 +1399,30 @@ export default function ElementorComposerPage() {
                           <label className="font-bold text-slate-700">Specialty</label>
                           <Input
                             value={siteData.doctor?.specialty || ""}
-                            onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), specialty: e.target.value } })}
+                            onChange={(e) => {
+                              const updatedDoc = { ...(siteData.doctor || { name: "" }), specialty: e.target.value };
+                              setSiteData({ ...siteData, doctor: updatedDoc });
+                            }}
                             placeholder="e.g. Pediatrician"
-                            className="h-9 text-xs rounded-xl"
+                            className="h-9 text-xs rounded-xl bg-white"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="font-bold text-slate-700">Degrees</label>
+                          <label className="font-bold text-slate-700">Degrees &amp; Certifications</label>
                           <Input
                             value={siteData.doctor?.degrees || ""}
-                            onChange={(e) => setSiteData({ ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), degrees: e.target.value } })}
+                            onChange={(e) => {
+                              const updatedDoc = { ...(siteData.doctor || { name: "" }), degrees: e.target.value };
+                              setSiteData({ ...siteData, doctor: updatedDoc });
+                            }}
                             placeholder="e.g. MBBS, MD, DNB"
-                            className="h-9 text-xs rounded-xl"
+                            className="h-9 text-xs rounded-xl bg-white"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2 pt-2 border-t border-slate-100">
-                        <label className="font-bold text-slate-700">Doctor Portrait</label>
+                        <label className="font-bold text-slate-700">Doctor Portrait Photo</label>
                         <div className="flex items-center gap-3">
                           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                             {siteData.doctor?.image ? (
@@ -1398,7 +1460,7 @@ export default function ElementorComposerPage() {
                           }}
                           rows={5}
                           placeholder="Detailed medical experience, qualifications, and patient care commitment..."
-                          className="text-xs rounded-xl leading-relaxed"
+                          className="text-xs rounded-xl leading-relaxed bg-white"
                         />
                       </div>
                     </div>
@@ -1973,7 +2035,6 @@ export default function ElementorComposerPage() {
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    {/* Heading Font */}
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Headline Font Family</label>
                       <select
@@ -1991,7 +2052,6 @@ export default function ElementorComposerPage() {
                       </select>
                     </div>
 
-                    {/* Body Font */}
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Body Text Font Family</label>
                       <select
@@ -2009,7 +2069,6 @@ export default function ElementorComposerPage() {
                       </select>
                     </div>
 
-                    {/* Button Corner Styling */}
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Button Corner Radius</label>
                       <select
@@ -2027,7 +2086,6 @@ export default function ElementorComposerPage() {
                       </select>
                     </div>
 
-                    {/* Brand Palette */}
                     <div className="space-y-1.5 pt-2 border-t border-slate-100">
                       <label className="font-bold text-slate-700">Primary Brand Color</label>
                       <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
@@ -2088,7 +2146,6 @@ export default function ElementorComposerPage() {
                     <p className="text-[11px] text-slate-500">Point your branded domain (e.g. drvinayrai.com).</p>
                   </div>
 
-                  {/* Free URL */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                     <label className="font-bold text-slate-700">Free Instant Subdomain</label>
                     <div className="flex items-center gap-1.5">
@@ -2159,7 +2216,6 @@ export default function ElementorComposerPage() {
                       </Button>
                     </div>
 
-                    {/* Step-by-Step DNS Instructions Table */}
                     <div className="pt-2 border-t border-purple-200/80 space-y-2.5">
                       <p className="text-[11px] font-bold text-purple-900">
                         DNS Configuration Steps (GoDaddy, Namecheap, Hostinger, Cloudflare):

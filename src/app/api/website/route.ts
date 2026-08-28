@@ -89,6 +89,13 @@ export async function GET(req: NextRequest) {
           customServices: synth.customServices,
           customFaqs: synth.customFaqs,
           customBio: synth.customBio,
+          doctorInfo: {
+            name: doctor.name,
+            specialty: doctor.specialty || "",
+            degrees: doctor.degrees || "",
+            designation: doctor.designation || "",
+            image: doctor.image || "",
+          },
           galleryImages: [],
           sections: synth.sections || [],
           metaTitle: synth.metaTitle,
@@ -109,17 +116,21 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const savedDoctorInfo = (existingWebsite.doctorInfo as any) || {};
+
     return NextResponse.json({
       website: existingWebsite,
       doctor: {
         id: doctor.id,
-        name: doctor.name,
+        name: savedDoctorInfo.name || doctor.name || "Doctor",
         clinicName: doctor.clinicName,
-        specialty: doctor.specialty,
+        specialty: savedDoctorInfo.specialty || doctor.specialty || "",
+        degrees: savedDoctorInfo.degrees || doctor.degrees || "",
+        designation: savedDoctorInfo.designation || doctor.designation || "",
         phone: doctor.phone,
-        address: gbpAddress || doctor.address,
+        address: existingWebsite.clinicAddress || gbpAddress || doctor.address,
         city: doctor.city,
-        image: doctor.image,
+        image: savedDoctorInfo.image || doctor.image || "",
         workingHoursStart: doctor.workingHoursStart,
         workingHoursEnd: doctor.workingHoursEnd,
         daysOff: doctor.daysOff,
@@ -188,11 +199,34 @@ export async function POST(req: NextRequest) {
       customServices,
       customFaqs,
       customBio,
+      doctor,
       galleryImages,
       sections,
       metaTitle,
       metaDescription,
     } = body;
+
+    // Update Doctor record in database
+    if (doctor) {
+      await prisma.doctor.update({
+        where: { id: doctorId },
+        data: {
+          name: doctor.name || undefined,
+          specialty: doctor.specialty || undefined,
+          degrees: doctor.degrees || undefined,
+          designation: doctor.designation || undefined,
+          image: doctor.image || undefined,
+        },
+      });
+    }
+
+    const doctorInfoToSave = doctor ? {
+      name: doctor.name,
+      specialty: doctor.specialty,
+      degrees: doctor.degrees,
+      designation: doctor.designation,
+      image: doctor.image,
+    } : undefined;
 
     const saved = await prisma.clinicWebsite.upsert({
       where: { doctorId },
@@ -241,6 +275,7 @@ export async function POST(req: NextRequest) {
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,
+        doctorInfo: doctorInfoToSave,
         galleryImages: galleryImages || [],
         sections: sections || [],
         metaTitle: metaTitle || siteTitle,
@@ -290,6 +325,7 @@ export async function POST(req: NextRequest) {
         customServices: customServices || [],
         customFaqs: customFaqs || [],
         customBio,
+        doctorInfo: doctorInfoToSave,
         galleryImages: galleryImages || [],
         sections: sections || [],
         metaTitle: metaTitle || siteTitle,

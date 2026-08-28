@@ -415,19 +415,19 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* ── DYNAMIC SECTIONS RENDERER WITH 10 BESPOKE DESIGNS ── */}
+      {/* ── DYNAMIC SECTIONS RENDERER ── */}
       {activeSections.map((section, index) => {
         const d = section.design || {};
         const customBg = section.bgColor || d.bgColor;
         const paddingClass = d.paddingSize === "compact" ? "py-12" : d.paddingSize === "spacious" ? "py-28" : "py-20";
 
-        // 1. HERO SECTION
+        // 1. HERO SECTION (100% Dynamic - Zero Hardcoded Badges)
         if (section.type === "HERO") {
           const heroHeadline = section.title !== undefined ? section.title : data.heroHeading;
           const heroSub = section.subtitle !== undefined ? section.subtitle : data.heroSubheading;
           const isFullWidthTheme = themeId === "apex-clinical" || themeId === "executive-private" || themeId === "ophthalmology-vision";
 
-          // THEME ARCHITECTURE: FULL-WIDTH AMBIENT LUXURY SLIDER (Apex, Executive, Ophthalmology)
+          // HERO VARIANT 1: FULL-WIDTH LUXURY AMBIENT SLIDER
           if (isFullWidthTheme) {
             return renderSectionContainer(
               section,
@@ -449,17 +449,12 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-                  {themeId === "ophthalmology-vision" && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/20 backdrop-blur-md border border-sky-400/40 text-xs font-bold text-sky-200">
-                      <Glasses className="w-4 h-4 text-sky-300" /> Precision Vision &amp; Retina Care
+                  {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
+                  {section.badgeText && section.badgeText.trim().length > 0 ? (
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-md">
+                      <span>{section.badgeText}</span>
                     </div>
-                  )}
-
-                  {themeId === "executive-private" && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/40 text-xs font-bold text-amber-200">
-                      <Crown className="w-4 h-4 text-amber-300" /> VIP Concierge Medical Suite
-                    </div>
-                  )}
+                  ) : null}
 
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
                     {heroHeadline}
@@ -495,7 +490,7 @@ export function ThemeRenderer({
             );
           }
 
-          // THEME ARCHITECTURE: ASYMMETRIC / SPLIT LUXURY (CardioCare, Serene Glow, Ayurveda, Vitality, Warm Pediatrics, Minimal Luxe)
+          // HERO VARIANT 2: ASYMMETRIC / SPLIT
           return renderSectionContainer(
             section,
             <section
@@ -521,23 +516,12 @@ export function ThemeRenderer({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                    {themeId === "cardiocare-executive" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 text-rose-800 text-xs font-bold shadow-2xs">
-                        <Heart className="w-3.5 h-3.5 text-rose-600" /> Advanced Cardiac Diagnostics
+                    {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
+                    {section.badgeText && section.badgeText.trim().length > 0 ? (
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-2xs">
+                        <span>{section.badgeText}</span>
                       </div>
-                    )}
-
-                    {themeId === "ayurveda-earth" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs">
-                        <Leaf className="w-3.5 h-3.5 text-amber-700" /> 100% Authentic Holistic Healing
-                      </div>
-                    )}
-
-                    {themeId === "neuropsych-horizon" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold shadow-2xs">
-                        <Brain className="w-3.5 h-3.5 text-purple-700" /> Evidence-Based Mental Wellness
-                      </div>
-                    )}
+                    ) : null}
 
                     <h2 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight ${
                       themeId === "executive-private" ? "text-white" : "text-slate-900"
@@ -665,7 +649,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 2. SERVICES SECTION (Theme Adaptive)
+        // 2. SERVICES SECTION
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
@@ -814,8 +798,26 @@ export function ThemeRenderer({
           );
         }
 
-        // 4. DOCTOR BIO SECTION
+        // 4. DOCTOR BIO SECTION (100% Customizable Inner Card & Text)
         if (section.type === "DOCTOR_BIO") {
+          const doctorName = data.doctor?.name || "Consultant Doctor";
+          const doctorSpecialty = data.doctor?.specialty || "Medical Specialist";
+          const doctorDegrees = data.doctor?.degrees || "";
+          const bioContent = section.content || data.customBio || `${doctorName} is dedicated to providing compassionate, evidence-based healthcare. Combining clinical expertise with modern medical standards, ${doctorName} ensures optimal patient outcomes.`;
+
+          // Inner Card Material Style from Design Config
+          const cardBgStyle = d.cardBg === "#FFFFFF"
+            ? "bg-white text-slate-900 border border-slate-200 shadow-xl"
+            : d.cardBg === "#FAF8F5"
+            ? "bg-[#FAF8F5] text-slate-900 border border-amber-200/80 shadow-xl"
+            : d.cardBg === "#F8FAFC"
+            ? "bg-slate-50 text-slate-900 border border-slate-200 shadow-xl"
+            : d.cardBg === "primary"
+            ? "text-white shadow-2xl"
+            : "bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white shadow-2xl";
+
+          const isLightCard = d.cardBg === "#FFFFFF" || d.cardBg === "#FAF8F5" || d.cardBg === "#F8FAFC";
+
           return renderSectionContainer(
             section,
             <section
@@ -824,31 +826,42 @@ export function ThemeRenderer({
               className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
             >
               <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className={`bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 ${buttonRadiusClass} p-8 sm:p-12 text-white shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}>
+                <div
+                  style={d.cardBg && d.cardBg !== "primary" && !d.cardBg.startsWith("#") ? undefined : d.cardBg === "primary" ? { backgroundColor: primaryColor } : undefined}
+                  className={`${cardBgStyle} ${buttonRadiusClass} p-8 sm:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}
+                >
                   <div className="md:col-span-4 text-center">
-                    <div className={`w-32 h-32 ${buttonRadiusClass} bg-slate-800 border-2 border-slate-700 mx-auto overflow-hidden flex items-center justify-center shadow-lg`}>
+                    <div className={`w-32 h-32 ${buttonRadiusClass} mx-auto overflow-hidden flex items-center justify-center shadow-lg ${
+                      isLightCard ? "bg-slate-100 border-2 border-slate-200" : "bg-slate-800 border-2 border-slate-700"
+                    }`}>
                       {data.doctor?.image ? (
-                        <img src={data.doctor.image} alt={data.doctor?.name || ""} className="w-full h-full object-cover" />
+                        <img src={data.doctor.image} alt={doctorName} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-4xl font-black text-slate-300">{data.doctor?.name?.charAt(0) || "D"}</span>
+                        <span className={`text-4xl font-black ${isLightCard ? "text-slate-700" : "text-slate-300"}`}>{doctorName.charAt(0) || "D"}</span>
                       )}
                     </div>
-                    <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Consultant Doctor"}</h4>
-                    <p className="text-xs text-slate-400">{data.doctor?.specialty || "Medical Specialist"}</p>
-                    {data.doctor?.degrees && (
-                      <p className="text-[11px] text-blue-400 font-medium mt-0.5">{data.doctor.degrees}</p>
+                    <h4 className={`text-lg font-bold mt-4 ${isLightCard ? "text-slate-900" : "text-white"}`}>{doctorName}</h4>
+                    <p className={`text-xs ${isLightCard ? "text-slate-500" : "text-slate-400"}`}>{doctorSpecialty}</p>
+                    {doctorDegrees && (
+                      <p className={`text-[11px] font-medium mt-0.5 ${isLightCard ? "text-blue-600" : "text-blue-400"}`}>{doctorDegrees}</p>
                     )}
                   </div>
 
                   <div className="md:col-span-8 space-y-4">
-                    <h3 className="text-2xl font-black tracking-tight">{section.title || "Clinical Philosophy & Background"}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">
-                      {section.content || data.customBio || `${data.doctor?.name || "Our lead doctor"} is committed to providing modern, patient-first clinical healthcare. Combining extensive diagnostic expertise with compassionate treatment, we ensure every patient receives customized, high-quality care.`}
+                    <h3 className={`text-2xl font-black tracking-tight ${isLightCard ? "text-slate-900" : "text-white"}`}>
+                      {section.title || "Clinical Philosophy & Background"}
+                    </h3>
+                    <p className={`text-sm leading-relaxed ${isLightCard ? "text-slate-600" : "text-slate-300"}`}>
+                      {bioContent}
                     </p>
                     <div className="flex items-center gap-4 pt-2">
                       <button
                         onClick={() => setOpenBookingModal(true)}
-                        className={`bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-10 px-5 ${buttonRadiusClass} shadow-lg`}
+                        className={`font-bold text-xs h-10 px-5 ${buttonRadiusClass} shadow-lg transition-transform hover:scale-105 ${
+                          isLightCard
+                            ? "bg-slate-900 text-white hover:bg-black"
+                            : "bg-white text-slate-900 hover:bg-slate-100"
+                        }`}
                       >
                         Consult Doctor Today
                       </button>
@@ -900,7 +913,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 6. GALLERY WIDGET (100% Dynamic)
+        // 6. GALLERY WIDGET
         if (section.type === "GALLERY") {
           return renderSectionContainer(
             section,
