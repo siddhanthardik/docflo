@@ -59,10 +59,19 @@ export default auth((req) => {
         subdomain = sub;
       }
     } else if (!currentHost.includes("gyrex.in") && !currentHost.includes("localhost")) {
-      // Potential custom domain (e.g. drsharma.com)
+      // Potential custom domain (e.g. www.drvinaykumar.com)
+      if (
+        pathname.startsWith("/_next") ||
+        pathname.startsWith("/api") ||
+        pathname.startsWith("/uploads") ||
+        pathname.includes(".")
+      ) {
+        return NextResponse.next();
+      }
+
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set("x-custom-domain", currentHost);
-      return NextResponse.rewrite(new URL(`/sites/_custom/${encodeURIComponent(currentHost)}${pathname}`, req.url), {
+      return NextResponse.rewrite(new URL(`/sites/_custom/${encodeURIComponent(currentHost)}${pathname === "/" ? "" : pathname}`, req.url), {
         request: { headers: requestHeaders },
       });
     }

@@ -41,6 +41,8 @@ import {
   Sliders,
   CheckCheck,
   Lock,
+  Link2,
+  Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,7 +112,8 @@ const COLOR_PRESETS = [
 ];
 
 const NAV_SECTIONS = [
-  { id: "url", label: "Website URL & Domain", icon: Globe, badge: "Infrastructure" },
+  { id: "url", label: "Website URL & Gyrex Link", icon: Globe, badge: "Free Subdomain" },
+  { id: "custom_domain", label: "Custom Branded Domain", icon: Link2, badge: "Your Own .com" },
   { id: "theme", label: "Themes & Branding", icon: Palette, badge: "Identity" },
   { id: "header", label: "Header & Hero Section", icon: Layout, badge: "First Impression" },
   { id: "services", label: "Services & Treatments", icon: Stethoscope, badge: "Clinical" },
@@ -130,9 +133,14 @@ export default function WebsiteStudioPage() {
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Website URL validation state
+  // Free URL validation state
   const [urlInput, setUrlInput] = useState("");
   const [urlStatus, setUrlStatus] = useState<{ available?: boolean; checking?: boolean; reason?: string }>({});
+
+  // Custom Domain state
+  const [customDomainInput, setCustomDomainInput] = useState("");
+  const [connectingDomain, setConnectingDomain] = useState(false);
+  const [customDomainStatus, setCustomDomainStatus] = useState<{ connectedDomain?: string | null; dnsConfigured?: boolean }>({});
 
   // Website State
   const [siteData, setSiteData] = useState<ClinicWebsiteData>({
@@ -177,6 +185,10 @@ export default function WebsiteStudioPage() {
       if (data.website) {
         setSiteData(data.website);
         setUrlInput(data.website.subdomain || "");
+        if (data.website.customDomain) {
+          setCustomDomainInput(data.website.customDomain);
+          setCustomDomainStatus({ connectedDomain: data.website.customDomain, dnsConfigured: true });
+        }
         if (forceSync) {
           toast({
             title: "Synced with Google Business Profile & Settings! 🔄",
@@ -184,6 +196,9 @@ export default function WebsiteStudioPage() {
           });
         }
       }
+
+      // Also fetch custom domain health
+      fetchCustomDomainStatus();
     } catch (err: any) {
       toast({ title: "Failed to load website configuration", description: err.message, variant: "destructive" });
     } finally {
@@ -192,11 +207,24 @@ export default function WebsiteStudioPage() {
     }
   };
 
+  const fetchCustomDomainStatus = async () => {
+    try {
+      const res = await fetch("/api/websites/custom-domain");
+      const data = await res.json();
+      if (data.customDomain) {
+        setCustomDomainInput(data.customDomain);
+        setCustomDomainStatus({ connectedDomain: data.customDomain, dnsConfigured: data.dnsConfigured });
+      } else {
+        setCustomDomainStatus({ connectedDomain: null, dnsConfigured: false });
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchWebsiteData();
   }, []);
 
-  // URL Availability Check
+  // Free URL Availability Check
   const checkUrlAvailability = async (slug: string) => {
     if (!slug || slug.length < 3) {
       setUrlStatus({ available: false, reason: "Website URL name must be at least 3 characters." });
@@ -213,6 +241,54 @@ export default function WebsiteStudioPage() {
       }
     } catch (e) {
       setUrlStatus({ available: false, reason: "Error validating website URL availability." });
+    }
+  };
+
+  // Connect Custom Domain
+  const handleConnectCustomDomain = async () => {
+    if (!customDomainInput.trim()) {
+      toast({ title: "Domain Required", description: "Please enter your domain name (e.g. www.drvinaykumar.com)", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setConnectingDomain(true);
+      const res = await fetch("/api/websites/custom-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: customDomainInput }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to connect domain");
+
+      setCustomDomainStatus({ connectedDomain: data.customDomain, dnsConfigured: data.dnsConfigured });
+      toast({
+        title: "Domain Saved & Verified! 🌐",
+        description: data.message,
+      });
+    } catch (err: any) {
+      toast({ title: "Domain Connection Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setConnectingDomain(false);
+    }
+  };
+
+  // Disconnect Custom Domain
+  const handleDisconnectDomain = async () => {
+    try {
+      setConnectingDomain(true);
+      const res = await fetch("/api/websites/custom-domain", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to disconnect");
+
+      setCustomDomainInput("");
+      setCustomDomainStatus({ connectedDomain: null, dnsConfigured: false });
+      toast({ title: "Custom Domain Disconnected", description: "Your website will now serve via your free Gyrex URL." });
+    } catch (err: any) {
+      toast({ title: "Disconnect Error", description: err.message, variant: "destructive" });
+    } finally {
+      setConnectingDomain(false);
     }
   };
 
@@ -267,10 +343,13 @@ export default function WebsiteStudioPage() {
   };
 
   const copyLiveUrl = () => {
-    navigator.clipboard.writeText(`https://${siteData.subdomain}.gyrex.in`);
+    const activeUrl = customDomainStatus.connectedDomain
+      ? `https://${customDomainStatus.connectedDomain}`
+      : `https://${siteData.subdomain}.gyrex.in`;
+    navigator.clipboard.writeText(activeUrl);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2500);
-    toast({ title: "Website URL Copied! 📋", description: "Link copied to clipboard." });
+    toast({ title: "Website Link Copied! 📋", description: "Link copied to clipboard." });
   };
 
   return (
@@ -297,14 +376,25 @@ export default function WebsiteStudioPage() {
 
           <div className="flex items-center gap-2 pt-0.5">
             <span className="text-xs text-slate-400 font-medium">Public Portal:</span>
-            <a
-              href={`https://${siteData.subdomain}.gyrex.in`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 font-mono inline-flex items-center gap-1 bg-blue-50/70 hover:bg-blue-50 px-3 py-1 rounded-xl border border-blue-100 transition-colors"
-            >
-              https://{siteData.subdomain}.gyrex.in <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
+            {customDomainStatus.connectedDomain ? (
+              <a
+                href={`https://${customDomainStatus.connectedDomain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 font-mono inline-flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 transition-colors"
+              >
+                https://{customDomainStatus.connectedDomain} <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            ) : (
+              <a
+                href={`https://${siteData.subdomain}.gyrex.in`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 font-mono inline-flex items-center gap-1 bg-blue-50/70 hover:bg-blue-50 px-3 py-1 rounded-xl border border-blue-100 transition-colors"
+              >
+                https://{siteData.subdomain}.gyrex.in <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            )}
             <button
               onClick={copyLiveUrl}
               className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
@@ -400,7 +490,7 @@ export default function WebsiteStudioPage() {
         {/* RIGHT COLUMN: MODULE CONFIGURATION CANVAS (8.5 Columns) */}
         <div className="lg:col-span-8 space-y-6">
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 1: WEBSITE URL & DOMAIN */}
+          {/* SECTION 1: WEBSITE URL & SUBDOMAIN */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "url" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -408,9 +498,9 @@ export default function WebsiteStudioPage() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
                   Domain Infrastructure
                 </span>
-                <h3 className="text-xl font-bold text-slate-900">Official Clinic Website Address</h3>
+                <h3 className="text-xl font-bold text-slate-900">Free Clinic Website URL</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Your patients will access your clinic portal at this address. You can update your URL name or connect a custom domain.
+                  Your patients will access your clinic portal at this address. You can customize the name or connect your own domain in the Custom Domain tab.
                 </p>
               </div>
 
@@ -472,9 +562,9 @@ export default function WebsiteStudioPage() {
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                   <div className="flex items-center gap-2 text-indigo-800 font-bold text-xs">
-                    <Building2 className="w-4 h-4 text-indigo-600" /> Custom Domain Ready
+                    <Link2 className="w-4 h-4 text-indigo-600" /> Custom Domain Ready
                   </div>
-                  <p className="text-[11px] text-slate-500">Supports CNAME point to your own branded domain.</p>
+                  <p className="text-[11px] text-slate-500">Connect your own .com or .in domain in next tab.</p>
                 </div>
               </div>
 
@@ -493,7 +583,110 @@ export default function WebsiteStudioPage() {
           )}
 
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 2: THEMES & BRANDING */}
+          {/* SECTION 2: CUSTOM BRANDED DOMAIN */}
+          {/* ──────────────────────────────────────────────────────────── */}
+          {activeSection === "custom_domain" && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100">
+                  Custom Domain Setup
+                </span>
+                <h3 className="text-xl font-bold text-slate-900">Connect Your Own Branded Domain</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Use your own domain (e.g. <strong>www.drvinaykumar.com</strong> or <strong>delhiskinclinic.in</strong>) with automated SSL security.
+                </p>
+              </div>
+
+              {/* Connected Domain Status Card */}
+              {customDomainStatus.connectedDomain && (
+                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Custom Domain Connected</span>
+                    </div>
+                    <a
+                      href={`https://${customDomainStatus.connectedDomain}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-base font-bold text-slate-900 hover:underline font-mono inline-flex items-center gap-1"
+                    >
+                      https://{customDomainStatus.connectedDomain} <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+                    </a>
+                    <p className="text-[11px] text-emerald-700 font-medium">Automatic Let&apos;s Encrypt SSL active.</p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDisconnectDomain}
+                    disabled={connectingDomain}
+                    className="h-10 px-4 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold flex items-center gap-1.5 shrink-0"
+                  >
+                    <Unlink className="w-4 h-4" />
+                    <span>Disconnect Domain</span>
+                  </Button>
+                </div>
+              )}
+
+              {/* Input Form */}
+              <div className="max-w-xl space-y-3 pt-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Enter Your Domain
+                </label>
+                <div className="flex items-center gap-2.5">
+                  <Input
+                    value={customDomainInput}
+                    onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
+                    placeholder="e.g. www.drvinaykumar.com"
+                    className="h-12 px-4 rounded-2xl text-sm font-mono font-bold border-slate-300 focus:ring-slate-900"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleConnectCustomDomain}
+                    disabled={connectingDomain}
+                    className="h-12 px-6 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-all shrink-0"
+                  >
+                    {connectingDomain ? "Verifying..." : "Connect Domain"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* 3-Step DNS Instructions */}
+              <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <Settings className="w-4 h-4 text-blue-600" /> DNS Setup Instructions (GoDaddy / Hostinger / Namecheap)
+                </div>
+
+                <div className="space-y-3 text-xs text-slate-700">
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                    <p className="font-bold text-slate-900">Step 1: Add CNAME Record (Recommended for www subdomains)</p>
+                    <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
+                      <div><span className="text-slate-400">Type:</span> <strong>CNAME</strong></div>
+                      <div><span className="text-slate-400">Host / Name:</span> <strong>www</strong></div>
+                      <div><span className="text-slate-400">Points To:</span> <strong>domains.gyrex.in</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                    <p className="font-bold text-slate-900">Step 2: Add A-Record (For root domain e.g. drvinaykumar.com)</p>
+                    <div className="grid grid-cols-3 gap-3 p-2.5 bg-slate-50 rounded-xl font-mono text-[11px]">
+                      <div><span className="text-slate-400">Type:</span> <strong>A</strong></div>
+                      <div><span className="text-slate-400">Host / Name:</span> <strong>@</strong></div>
+                      <div><span className="text-slate-400">Points To:</span> <strong>103.189.88.35</strong></div>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 pt-1">
+                    Once DNS records are saved at your registrar, click <strong>&quot;Connect Domain&quot;</strong> above. Automated SSL will be provisioned on the first patient visit.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* SECTION 3: THEMES & BRANDING */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "theme" && (
             <div className="space-y-6 animate-in fade-in duration-150">
@@ -646,7 +839,7 @@ export default function WebsiteStudioPage() {
           )}
 
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 3: HEADER & HERO */}
+          {/* SECTION 4: HEADER & HERO */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "header" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -799,7 +992,7 @@ export default function WebsiteStudioPage() {
           )}
 
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 4: SERVICES & TREATMENTS */}
+          {/* SECTION 5: SERVICES & TREATMENTS */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "services" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -893,7 +1086,7 @@ export default function WebsiteStudioPage() {
           )}
 
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 5: DOCTOR BIO & CREDENTIALS */}
+          {/* SECTION 6: DOCTOR BIO & CREDENTIALS */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "bio" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -930,7 +1123,7 @@ export default function WebsiteStudioPage() {
           )}
 
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* SECTION 6: SECTION MANAGER */}
+          {/* SECTION 7: SECTION MANAGER */}
           {/* ──────────────────────────────────────────────────────────── */}
           {activeSection === "sections" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-150">
@@ -1034,7 +1227,9 @@ export default function WebsiteStudioPage() {
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-400">Live Device Preview:</span>
               <span className="text-xs font-bold font-mono text-emerald-400">
-                https://{siteData.subdomain}.gyrex.in
+                {customDomainStatus.connectedDomain
+                  ? `https://${customDomainStatus.connectedDomain}`
+                  : `https://${siteData.subdomain}.gyrex.in`}
               </span>
             </div>
 
