@@ -121,6 +121,7 @@ export default async function CustomDomainSitePage({ params }: CustomDomainProps
     customServices: (site.customServices as any) || site.doctor?.serviceTypes.map((s) => ({ name: s.name, description: s.description || "" })),
     customFaqs: (site.customFaqs as any) || [],
     customBio: site.customBio,
+    sections: (site.sections as any) || undefined,
     doctor: site.doctor
       ? {
           name: site.doctor.name,

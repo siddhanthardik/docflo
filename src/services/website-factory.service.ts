@@ -30,6 +30,7 @@ export interface GeneratedWebsiteData {
   customServices: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string }>;
   customFaqs: Array<{ question: string; answer: string }>;
   customBio: string | null;
+  sections?: any[];
   metaTitle: string;
   metaDescription: string;
 }

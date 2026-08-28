@@ -1,6 +1,32 @@
+export type SectionType =
+  | "HERO"
+  | "SERVICES"
+  | "DOCTOR_BIO"
+  | "REVIEWS"
+  | "GALLERY"
+  | "CTA_BANNER"
+  | "FAQ"
+  | "MAP_HOURS"
+  | "CUSTOM_TEXT";
+
+export interface PageSection {
+  id: string;
+  type: SectionType;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  image?: string | null;
+  ctaText?: string;
+  ctaAction?: string;
+  bgColor?: string;
+  isVisible?: boolean;
+  data?: any;
+}
+
 export interface ClinicWebsiteData {
   id?: string;
   subdomain: string;
+  customDomain?: string | null;
   themeId: string;
   primaryColor: string;
   secondaryColor: string;
@@ -29,6 +55,7 @@ export interface ClinicWebsiteData {
   customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string }>;
   customFaqs?: Array<{ question: string; answer: string }>;
   customBio?: string | null;
+  sections?: PageSection[];
   metaTitle?: string | null;
   metaDescription?: string | null;
   doctor?: {
