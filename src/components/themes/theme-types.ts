@@ -17,9 +17,12 @@ export interface PageSection {
   content?: string;
   image?: string | null;
   sliderImages?: string[];
-  heroStyle?: "FULL_WIDTH_SLIDER" | "SPLIT_FRAME" | "SPLIT_BOOKING";
+  heroStyle?: "SPLIT" | "FULL_WIDTH";
+  badgeText?: string;
   ctaText?: string;
   ctaAction?: string;
+  secondaryCtaText?: string;
+  secondaryCtaAction?: string;
   bgColor?: string;
   showPrices?: boolean;
   isVisible?: boolean;
@@ -45,6 +48,7 @@ export interface ClinicWebsiteData {
   heroStyle?: string;
   showHeroBookingForm?: boolean;
   announcementBar?: string | null;
+  showAnnouncementBar?: boolean;
   ctaButtonText: string;
   ctaButtonAction: string;
   whatsappNumber?: string | null;
@@ -57,7 +61,7 @@ export interface ClinicWebsiteData {
   showMap: boolean;
   showStickyBar: boolean;
   showPrices?: boolean;
-  customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string }>;
+  customServices?: Array<{ name: string; description: string; duration?: number; price?: number; icon?: string; image?: string }>;
   customFaqs?: Array<{ question: string; answer: string }>;
   customBio?: string | null;
   galleryImages?: Array<{ url: string; caption?: string }>;

@@ -28,9 +28,27 @@ import {
   ChevronLeft,
   ChevronRight,
   HeartPulse,
+  Activity,
+  Smile,
+  Baby,
+  Eye,
+  Pill,
+  Sparkle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const ICON_MAP: Record<string, any> = {
+  stethoscope: Stethoscope,
+  heart: HeartPulse,
+  activity: Activity,
+  smile: Smile,
+  baby: Baby,
+  eye: Eye,
+  pill: Pill,
+  shield: ShieldCheck,
+  sparkles: Sparkles,
+};
 
 export function ThemeRenderer({
   data,
@@ -73,15 +91,13 @@ export function ThemeRenderer({
     : [
         { name: "Clinical Outpatient Consultation", description: "Comprehensive health check & specialized diagnostic evaluation." },
         { name: "Specialized Treatment & Care", description: "Targeted clinical therapy, advanced procedure, and recovery monitoring." },
-        { name: "Routine Follow-up & Review", description: "Health progress tracking, medication optimization, and preventive guidance." },
       ];
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
     : [
-        { question: "How do I schedule an appointment?", answer: "Click 'Book Appointment' to select your preferred slot or connect with our reception directly on WhatsApp." },
+        { question: "How do I schedule an appointment?", answer: "Click 'Book Appointment' or connect with our reception directly on WhatsApp." },
         { question: "What are the clinic consultation hours?", answer: `Mon-Sat: ${data.doctor?.workingHoursStart || "09:00 AM"} - ${data.doctor?.workingHoursEnd || "08:00 PM"}` },
-        { question: "Is prior booking required?", answer: "Prior appointments ensure zero waiting time, though walk-in emergency consultations are also attended." },
       ];
 
   const reviews = data.reviews && data.reviews.length > 0
@@ -89,7 +105,6 @@ export function ThemeRenderer({
     : [
         { reviewerName: "Priya M.", rating: 5, comment: "Exceptional doctor. Thorough diagnosis and very caring staff.", reviewDate: "2 weeks ago" },
         { reviewerName: "Amit K.", rating: 5, comment: "Best clinical experience. No waiting time and modern equipment.", reviewDate: "1 month ago" },
-        { reviewerName: "Sunita R.", rating: 5, comment: "Highly recommended for effective and caring treatment.", reviewDate: "2 months ago" },
       ];
 
   // Hero Slider Images
@@ -99,7 +114,6 @@ export function ThemeRenderer({
     ? [data.heroImage]
     : [
         "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
       ];
 
   // Auto rotate slider
@@ -111,7 +125,7 @@ export function ThemeRenderer({
     return () => clearInterval(interval);
   }, [sliderImages.length]);
 
-  // Default Sections Sequence
+  // Dynamic Sections Sequence
   const activeSections: PageSection[] = data.sections && data.sections.length > 0
     ? data.sections.filter((s) => s.isVisible !== false)
     : [
@@ -231,10 +245,10 @@ export function ThemeRenderer({
         color: secondaryColor,
       }}
     >
-      {/* Announcement Bar */}
-      {data.announcementBar && (
+      {/* Dynamic Announcement Bar (Only shows if configured and enabled) */}
+      {data.showAnnouncementBar !== false && data.announcementBar && (
         <div
-          className="text-xs font-bold text-center py-2.5 px-4 flex items-center justify-center gap-2 text-white"
+          className="text-xs font-bold text-center py-2.5 px-4 flex items-center justify-center gap-2 text-white shadow-2xs"
           style={{ backgroundColor: secondaryColor }}
         >
           <Building2 className="w-3.5 h-3.5 text-blue-300" />
@@ -266,7 +280,7 @@ export function ThemeRenderer({
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600">
             {data.showServices && <a href="#services" className="hover:text-blue-600 transition-colors">Services</a>}
-            {data.showReviews && <a href="#reviews" className="hover:text-blue-600 transition-colors">Patient Feedback</a>}
+            {data.showReviews && <a href="#reviews" className="hover:text-blue-600 transition-colors">Reviews</a>}
             {data.showDoctorBio && <a href="#about" className="hover:text-blue-600 transition-colors">About Doctor</a>}
             {data.showFaq && <a href="#faq" className="hover:text-blue-600 transition-colors">FAQs</a>}
             {data.showMap && <a href="#contact" className="hover:text-blue-600 transition-colors">Location &amp; Timings</a>}
@@ -295,9 +309,9 @@ export function ThemeRenderer({
         </div>
       </header>
 
-      {/* ── DYNAMIC SECTIONS RENDERER (Elementor Ordered Canvas) ── */}
+      {/* ── DYNAMIC SECTIONS RENDERER ── */}
       {activeSections.map((section, index) => {
-        // 1. HERO SECTION WITH LUXURY MULTI-IMAGE CAROUSEL SLIDER
+        // 1. HERO SECTION
         if (section.type === "HERO") {
           return renderSectionContainer(
             section,
@@ -305,10 +319,12 @@ export function ThemeRenderer({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold">
-                      <span className="flex text-amber-400 font-bold">★★★★★</span>
-                      <span>Verified Google Patient Rating</span>
-                    </div>
+                    {/* Badge is fully dynamic or omitted */}
+                    {section.badgeText && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold">
+                        <span>{section.badgeText}</span>
+                      </div>
+                    )}
 
                     <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-slate-900">
                       {section.title || data.heroHeading}
@@ -340,24 +356,9 @@ export function ThemeRenderer({
                         </a>
                       )}
                     </div>
-
-                    <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200 max-w-lg mx-auto lg:mx-0 text-center">
-                      <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-                        <p className="text-xl font-black text-slate-900">100%</p>
-                        <p className="text-[11px] text-slate-500 font-semibold">Evidence-Based</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-                        <p className="text-xl font-black text-slate-900">0 min</p>
-                        <p className="text-[11px] text-slate-500 font-semibold">Fast Response</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-                        <p className="text-xl font-black text-emerald-600">5.0 ★</p>
-                        <p className="text-[11px] text-slate-500 font-semibold">Google Rated</p>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Right Column: Multi-Image Slider Frame or Optional Booking Form */}
+                  {/* Right Column: Multi-Image Slider Frame or Booking Form */}
                   <div className="lg:col-span-5">
                     {data.showHeroBookingForm ? (
                       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5">
@@ -486,7 +487,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 2. SERVICES SECTION (WITH OPTIONAL PRICING)
+        // 2. SERVICES SECTION
         if (section.type === "SERVICES") {
           return renderSectionContainer(
             section,
@@ -494,7 +495,7 @@ export function ThemeRenderer({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
                   <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                    Specialized Treatments
+                    Clinical Care
                   </span>
                   <h3 className="text-3xl font-black text-slate-900 tracking-tight">
                     {section.title || "Clinical Services & Procedures"}
@@ -505,43 +506,57 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {services.map((svc, idx) => (
-                    <div
-                      key={idx}
-                      className="p-6 rounded-3xl bg-slate-50/70 border border-slate-200/80 hover:border-blue-300 hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
-                    >
-                      <div className="space-y-3">
-                        <div
-                          className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-xs"
-                          style={{ backgroundColor: primaryColor }}
-                        >
-                          <Stethoscope className="w-5 h-5" />
-                        </div>
-                        <h4 className="text-lg font-bold text-slate-900">{svc.name}</h4>
-                        <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
-                      </div>
+                  {services.map((svc, idx) => {
+                    const IconComponent = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                    return (
+                      <div
+                        key={idx}
+                        className="p-6 rounded-3xl bg-slate-50/70 border border-slate-200/80 hover:border-blue-300 hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            {svc.image ? (
+                              <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                                <img src={svc.image} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div
+                                className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                <IconComponent className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="text-base font-bold text-slate-900 leading-snug">{svc.name}</h4>
+                              {svc.duration && (
+                                <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins duration</p>
+                              )}
+                            </div>
+                          </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 text-xs">
-                        {/* Pricing is completely OPTIONAL */}
-                        {data.showPrices !== false && svc.price ? (
-                          <span className="font-bold text-slate-900">₹{svc.price}</span>
-                        ) : (
-                          <span className="text-slate-500 font-medium flex items-center gap-1">
-                            <HeartPulse className="w-3.5 h-3.5 text-blue-600" /> Clinical Care
-                          </span>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedService(svc.name);
-                            setOpenBookingModal(true);
-                          }}
-                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                          Book Consultation <ArrowRight className="w-3 h-3" />
-                        </button>
+                          <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 text-xs">
+                          {data.showPrices !== false && svc.price ? (
+                            <span className="font-bold text-slate-900">₹{svc.price}</span>
+                          ) : (
+                            <span />
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedService(svc.name);
+                              setOpenBookingModal(true);
+                            }}
+                            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                          >
+                            <span>Book Consultation</span> <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>,
@@ -560,7 +575,7 @@ export function ThemeRenderer({
                     Patient Feedback
                   </span>
                   <h3 className="text-3xl font-black text-slate-900 tracking-tight">
-                    {section.title || "Verified Google Patient Reviews"}
+                    {section.title || "Verified Patient Feedback"}
                   </h3>
                   <p className="text-sm text-slate-500">
                     {section.subtitle || "Real feedback from patients treated at our clinic."}
@@ -596,7 +611,7 @@ export function ThemeRenderer({
           );
         }
 
-        // 4. DOCTOR BIO SECTION
+        // 4. DOCTOR BIO SECTION (STRICT DOCTOR PORTRAIT ONLY)
         if (section.type === "DOCTOR_BIO") {
           return renderSectionContainer(
             section,
@@ -605,13 +620,13 @@ export function ThemeRenderer({
                 <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
                   <div className="md:col-span-4 text-center">
                     <div className="w-32 h-32 rounded-3xl bg-slate-800 border-2 border-slate-700 mx-auto overflow-hidden flex items-center justify-center shadow-lg">
-                      {data.doctor?.image || data.heroImage ? (
-                        <img src={data.doctor?.image || data.heroImage || ""} alt={data.doctor?.name || ""} className="w-full h-full object-cover" />
+                      {data.doctor?.image ? (
+                        <img src={data.doctor.image} alt={data.doctor?.name || ""} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-4xl font-black text-slate-300">{data.doctor?.name?.charAt(0) || "D"}</span>
                       )}
                     </div>
-                    <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Lead Consultant Doctor"}</h4>
+                    <h4 className="text-lg font-bold mt-4">{data.doctor?.name || "Consultant Doctor"}</h4>
                     <p className="text-xs text-slate-400">{data.doctor?.specialty || "Medical Specialist"}</p>
                     {data.doctor?.degrees && (
                       <p className="text-[11px] text-blue-400 font-medium mt-0.5">{data.doctor.degrees}</p>
@@ -683,11 +698,11 @@ export function ThemeRenderer({
         // 6. GALLERY WIDGET
         if (section.type === "GALLERY") {
           const galleryList = (data.galleryImages && data.galleryImages.length > 0)
-            ? data.galleryImages.map((g) => g.url)
+            ? data.galleryImages
             : [
-                "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80",
-                "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80",
-                "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80",
+                { url: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80", caption: "Consultation Suite" },
+                { url: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80", caption: "Clinical Care Room" },
+                { url: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80", caption: "Reception Lounge" },
               ];
 
           return renderSectionContainer(
@@ -707,9 +722,14 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {galleryList.map((imgUrl, i) => (
-                    <div key={i} className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm aspect-[4/3] bg-slate-100 group">
-                      <img src={imgUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {galleryList.map((item, i) => (
+                    <div key={i} className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm aspect-[4/3] bg-slate-100 relative group">
+                      <img src={item.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      {item.caption && (
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white text-xs font-bold">
+                          {item.caption}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
