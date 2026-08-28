@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "ayurveda-earth"
+    ? [
+        { name: "Authentic Panchakarma Detoxification", description: "Full 5-fold classical body cleansing including Vamana, Virechana, Basti, and Nasya.", icon: "leaf", duration: "60" },
+        { name: "Nadi Pariksha & Dosha Analysis", description: "Ancient Ayurvedic pulse diagnosis to identify root-cause imbalances across Vata, Pitta, and Kapha.", icon: "activity", duration: "30" },
+        { name: "Shirodhara & Stress Relief Therapy", description: "Continuous warm medicated herbal oil pouring on the third-eye chakra for anxiety and insomnia.", icon: "sparkles", duration: "45" },
+        { name: "Kati Basti & Janu Basti (Joint Care)", description: "Warm herbal oil reservoirs for chronic lower back pain, sciatica, and knee arthritis.", icon: "heart", duration: "45" },
+        { name: "Herbal Udvartana & Metabolism Scrub", description: "Exfoliating herbal powder deep-tissue massage to stimulate lymphatic flow and reduce body fat.", icon: "leaf", duration: "45" },
+        { name: "Chronic Disease & Autoimmune Protocol", description: "Root-cause integrative herbal therapy for digestive disorders (IBS), skin psoriasis, and thyroid.", icon: "shield", duration: "30" },
+      ]
     : themeId === "vitality-rehab"
     ? [
         { name: "Robotic Total Knee & Hip Replacement", description: "Sub-millimeter robotic precision for faster recovery, minimal blood loss, and natural joint feeling.", icon: "activity", duration: "45" },
@@ -190,6 +199,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "ayurveda-earth"
+    ? [
+        { question: "How many days does a complete Panchakarma detox take?", answer: "A full classical Panchakarma program typically ranges from 7, 14, to 21 days depending on your individual health condition and dosha constitution." },
+        { question: "Are Ayurvedic herbal medicines safe for long-term use?", answer: "Yes, when prescribed by a qualified BAMS/MD Ayurvedic physician, authentic herbal formulations are natural, non-habit forming, and free from synthetic chemicals." },
+        { question: "Can I take Ayurvedic medicines alongside my regular allopathic prescriptions?", answer: "Yes, in most cases Ayurvedic therapies complement modern treatments. Our Vaidya will review your ongoing medications to ensure safe, synergistic coordination." },
+        { question: "How do I schedule a Nadi Pariksha consultation?", answer: "Click 'Book Appointment' or message our Ayurvedic clinic reception directly on WhatsApp." },
+      ]
     : themeId === "vitality-rehab"
     ? [
         { question: "How soon can I walk after Robotic Knee Replacement?", answer: "Most patients are able to stand and walk with support within 4 to 6 hours after robotic surgery and climb stairs within 48 hours." },
@@ -738,10 +754,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "ayurveda-earth"
+            ? [
+                { value: "100%", label: "Pure Classical Herbals", icon: "leaf" },
+                { value: "18,000+", label: "Patients Healed Naturally", icon: "heart" },
+                { value: "3 Doshas", label: "Nadi Imbalance Diagnosis", icon: "sparkles" },
+                { value: "4.9 ★", label: "Google Holistic Rated", icon: "star" },
+              ]
             : themeId === "vitality-rehab"
             ? [
                 { value: "10,000+", label: "Joint Surgeries & Rehabs", icon: "activity" },
