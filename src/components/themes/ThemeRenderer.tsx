@@ -138,6 +138,15 @@ export function ThemeRenderer({
 
   const services: Array<{ name: string; description: string; duration?: number | string; price?: number; icon?: string; image?: string }> = data.customServices && data.customServices.length > 0
     ? data.customServices
+    : themeId === "neuropsych-horizon"
+    ? [
+        { name: "Digital Video EEG & Epilepsy Care", description: "32-channel video electroencephalogram mapping for seizures, fainting spells, and epilepsy.", icon: "brain", duration: "45" },
+        { name: "Migraine, Headache & Vertigo Clinic", description: "Targeted nerve block injections, vestibular rehabilitation, and prophylactic migraine protocols.", icon: "activity", duration: "30" },
+        { name: "Evidence-Based Psychotherapy & CBT", description: "Structured psychotherapy for anxiety, panic attacks, OCD, depression, and trauma recovery.", icon: "heart", duration: "50" },
+        { name: "Stroke Rehab & Nerve Studies (EMG/NCV)", description: "Electromyography, nerve conduction studies, and multidisciplinary motor rehabilitation.", icon: "shield", duration: "45" },
+        { name: "Sleep Disorder & Insomnia Diagnostic Suite", description: "Polysomnography sleep apnea evaluation and non-pharmacological sleep hygiene therapy.", icon: "sparkles", duration: "45" },
+        { name: "Memory & Movement Disorders (Parkinson's)", description: "Neurocognitive profiling, tremor management, and comprehensive caregiver support programs.", icon: "brain", duration: "30" },
+      ]
     : themeId === "cardiocare-executive"
     ? [
         { name: "Comprehensive 3D Color Doppler 2D Echo", description: "Detailed real-time assessment of heart chambers, ejection fraction, and cardiac valve function.", icon: "heart", duration: "30" },
@@ -208,6 +217,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "neuropsych-horizon"
+    ? [
+        { question: "Are therapy and psychiatry sessions strictly confidential?", answer: "Yes, absolute patient confidentiality is guaranteed. All clinical records and consultations are strictly protected under medical privacy protocols." },
+        { question: "Are psychiatric medications safe and addictive?", answer: "Modern psychiatric medications (like SSRIs) prescribed for depression and anxiety are non-addictive, safe, and carefully monitored with periodic clinical reviews." },
+        { question: "When should I consult a Neurologist versus a Psychiatrist?", answer: "Neurologists diagnose physical conditions of the brain and nervous system (stroke, epilepsy, migraines, tremors). Psychiatrists and psychologists specialize in emotional, cognitive, and mental health conditions (anxiety, depression, sleep disorders)." },
+        { question: "How do I schedule a confidential consultation?", answer: "Click 'Book Appointment' or message our mental health reception directly on WhatsApp." },
+      ]
     : themeId === "cardiocare-executive"
     ? [
         { question: "What are the critical early warning signs of a heart attack?", answer: "Pressure, tightness, or squeezing pain in the center of the chest spreading to the left arm, neck, or jaw, accompanied by shortness of breath, cold sweating, or unexplained dizziness. Seek emergency care immediately." },
@@ -770,10 +786,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth, Theme 8: CardioCare Executive & Global)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1: Apex Clinical, Theme 2: Ophthalmology Vision, Theme 3: Serene Glow, Theme 4: Minimal Cyan Precision, Theme 5: Warm Family, Theme 6: Vitality Active, Theme 7: Ayurveda Earth, Theme 8: CardioCare Executive, Theme 9: NeuroPsych Horizon & Global)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "neuropsych-horizon"
+            ? [
+                { value: "100%", label: "Confidential & Private", icon: "shield" },
+                { value: "14,000+", label: "Lives Guided & Restored", icon: "brain" },
+                { value: "Digital", label: "Video EEG & EMG Studies", icon: "activity" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "cardiocare-executive"
             ? [
                 { value: "15,000+", label: "Angiographies & Stenting", icon: "heart" },
