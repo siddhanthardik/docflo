@@ -12,23 +12,75 @@ import {
   Cpu, Target, Sparkles, ArrowUpRight, Signal, RefreshCw, Check, Share2, Menu, X,
   ShieldCheck, Calculator, ArrowRightCircle, CreditCard, Bell, UserCheck, Inbox,
   CheckCircle, Sparkle, Stethoscope, Laptop, Smartphone, Download, Bot, ChevronUp,
-  HelpCircle, BadgeCheck, Flame, Palette, Layout, FileText, Monitor, CheckCircle as CheckIcon
+  HelpCircle, BadgeCheck, Flame, Palette, Layout, FileText, Monitor, CheckCircle as CheckIcon,
+  Smile, Baby, Eye, Pill, HeartPulse, Bone, Droplets, QrCode, Compass
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 
-interface PlacePrediction {
-  place_id: string;
-  structured_formatting: {
-    main_text: string;
-    secondary_text?: string;
-  };
-  types: string[];
-}
+// 8 Medical Specialties for the Visual Photography Grid
+const SPECIALTY_CARDS = [
+  {
+    name: "Pediatrics & Child Care",
+    tagline: "Stress-Free Care for Kids",
+    icon: "🧸",
+    image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=400&q=80",
+    themeId: "warm-pediatrics",
+  },
+  {
+    name: "Dermatology & Aesthetics",
+    tagline: "Laser & Skin Transformations",
+    icon: "✨",
+    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=400&q=80",
+    themeId: "radiant-derma",
+  },
+  {
+    name: "Dental & Orthodontics",
+    tagline: "Painless Digital Dentistry",
+    icon: "🦷",
+    image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=400&q=80",
+    themeId: "smile-dental",
+  },
+  {
+    name: "Cardiology & Vascular",
+    tagline: "Compassionate Heart Care",
+    icon: "❤️",
+    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=400&q=80",
+    themeId: "cardiac-care",
+  },
+  {
+    name: "IVF & Fertility Care",
+    tagline: "Confidential Parenthood Support",
+    icon: "🌸",
+    image: "https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&w=400&q=80",
+    themeId: "miracle-ivf",
+  },
+  {
+    name: "Diabetology & Endocrine",
+    tagline: "Evidence-Based Glycemic Control",
+    icon: "🩸",
+    image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=400&q=80",
+    themeId: "endo-diabetes",
+  },
+  {
+    name: "Orthopedics & Joint Care",
+    tagline: "Advanced Mobility & Spine Care",
+    icon: "🦴",
+    image: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=400&q=80",
+    themeId: "warm-pediatrics",
+  },
+  {
+    name: "Ophthalmology & Eye Care",
+    tagline: "Precision Vision & Lasik",
+    icon: "👁️",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80",
+    themeId: "smile-dental",
+  },
+];
 
-// Specialty Themes with High-Resolution Photography (Clean Clinic Branding - No Individual Doctor Names)
+// Specialty Themes for the Interactive Builder Showcase
 const SPECIALTY_THEMES = [
   {
     id: "warm-pediatrics",
@@ -118,15 +170,9 @@ const SPECIALTY_THEMES = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<PlacePrediction | null>(null);
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [activeFeatureCategory, setActiveFeatureCategory] = useState<"growth" | "websites" | "operations">("growth");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   // Dynamic Superadmin Packages State
@@ -138,7 +184,6 @@ export default function LandingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          // Filter core plans: STARTER, GROWTH, PREMIUM
           const filtered = data.filter((p: any) =>
             ["starter", "growth", "premium"].includes(p.slug?.toLowerCase()) ||
             ["STARTER", "GROWTH", "PREMIUM"].includes(p.name?.toUpperCase())
@@ -153,8 +198,12 @@ export default function LandingPage() {
   // Scroll-reveal refs
   const statsRef = useRef<HTMLDivElement>(null);
   const statsInView = useInView(statsRef, { once: true, margin: "-60px" });
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const featuresInView = useInView(featuresRef, { once: true, margin: "-60px" });
+  const bentoRef = useRef<HTMLDivElement>(null);
+  const bentoInView = useInView(bentoRef, { once: true, margin: "-60px" });
+  const roadmapRef = useRef<HTMLDivElement>(null);
+  const roadmapInView = useInView(roadmapRef, { once: true, margin: "-60px" });
+  const specialtyGridRef = useRef<HTMLDivElement>(null);
+  const specialtyGridInView = useInView(specialtyGridRef, { once: true, margin: "-60px" });
   const websitesRef = useRef<HTMLDivElement>(null);
   const websitesInView = useInView(websitesRef, { once: true, margin: "-60px" });
   const pricingRef = useRef<HTMLDivElement>(null);
@@ -183,73 +232,11 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Interactive ROI Calculator State
   const [avgFee, setAvgFee] = useState<number>(3000);
   const [newPatients, setNewPatients] = useState<number>(12);
   const monthlyRevenue = avgFee * newPatients;
   const annualRevenue = monthlyRevenue * 12;
-
-  // Google Places Autocomplete Debounced Search
-  const fetchPredictions = async (query: string) => {
-    if (!query || query.trim().length < 3) {
-      setPredictions([]);
-      setShowDropdown(false);
-      return;
-    }
-    try {
-      setIsLoadingSuggestions(true);
-      const res = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      if (data.predictions && Array.isArray(data.predictions)) {
-        setPredictions(data.predictions);
-        setShowDropdown(true);
-      } else {
-        setPredictions([]);
-      }
-    } catch (err) {
-      console.error("Autocomplete error:", err);
-      setPredictions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    setSelectedPlace(null);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      fetchPredictions(val);
-    }, 300);
-  };
-
-  const handleSelectPlace = (place: PlacePrediction) => {
-    setSelectedPlace(place);
-    setSearchQuery(place.structured_formatting.main_text);
-    setShowDropdown(false);
-    handleScan(place);
-  };
-
-  const handleScan = (placeToScan?: PlacePrediction) => {
-    const target = placeToScan || selectedPlace;
-    if (target) {
-      router.push(
-        `/local-seo/free-audit?placeId=${encodeURIComponent(target.place_id)}&clinicName=${encodeURIComponent(
-          target.structured_formatting.main_text
-        )}`
-      );
-    } else if (searchQuery.trim()) {
-      router.push(`/local-seo/free-audit?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      router.push("/local-seo/free-audit");
-    }
-  };
 
   const activeTheme = SPECIALTY_THEMES[selectedThemeIndex];
 
@@ -257,12 +244,12 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       <LandingHeader />
 
-            {/* ── HERO SECTION: CLEAN, HIGH-IMPACT 2-COLUMN SHOWCASE ── */}
+      {/* ── HERO SECTION: CLEAN 2-COLUMN SHOWCASE WITH GIANT ROTATING PUNCHLINES ── */}
       <section className="relative pt-28 pb-12 md:pt-36 md:pb-16 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             
-            {/* Left Column: Headline, Giant Rotating Punchline & High-Converting CTAs (7 Cols) */}
+            {/* Left Column: Headline, Giant Rotating Punchline & Direct CTAs (7 Cols) */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               
               <motion.h1 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
@@ -378,56 +365,236 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 4-PILLAR CORE CAPABILITY SHOWCASE (BELOW HERO) ── */}
-      <section className="py-10 bg-white border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* ── GREXA-INSPIRED 4-AGENT MODULAR BENTO GRID (THE CONNECTED PRACTICE OS) ── */}
+      <section ref={bentoRef} className="py-16 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Meet Your Complete Digital Practice Growth Team
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+              4 specialized AI engines working seamlessly together to rank your clinic, build your brand, and automate patient communication.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             
-            {/* Pillar 1: Google Maps SEO */}
-            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-                <MapPin className="w-5 h-5" />
+            {/* Agent 1: Google Maps SEO & GBP Booster (Amber / Orange) */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4 }}
+              className="rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
+              style={{ backgroundImage: "linear-gradient(135deg, #FFF9F2 0%, #FFFFFF 100%)" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Google Maps SEO Engine</h3>
+                    <span className="text-[11px] font-bold text-amber-700">Local Catchment Domination</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full border border-amber-200">
+                  Rank #1
+                </span>
               </div>
-              <h3 className="text-sm font-black text-slate-900">Automate Google Maps SEO</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                5×5 Geo-Rank heatmaps simulate virtual searchers to dominate local neighborhood map packs.
+                Simulates 25 virtual searchers across a 5km radius to identify exact competitor gaps and rank your clinic at the top of Google Maps.
               </p>
+              <div className="bg-white p-3.5 rounded-2xl border border-amber-100 flex items-center justify-between shadow-2xs">
+                <span className="text-xs font-bold text-slate-700">5×5 Geo-Rank Coverage</span>
+                <span className="text-xs font-black text-amber-600">+85% OPD Inquiries</span>
+              </div>
+            </motion.div>
+
+            {/* Agent 2: 24/7 WhatsApp AI Receptionist (Emerald / Green) */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.1 }}
+              className="rounded-3xl p-6 sm:p-7 border border-emerald-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
+              style={{ backgroundImage: "linear-gradient(135deg, #F2FFFA 0%, #FFFFFF 100%)" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">24/7 WhatsApp Receptionist</h3>
+                    <span className="text-[11px] font-bold text-emerald-700">Multilingual AI Booking</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Online 24/7
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Instantly answers patient queries about fees, doctor availability, and procedures in 6+ languages and confirms appointment slots.
+              </p>
+              <div className="bg-white p-3.5 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-2xs">
+                <span className="text-xs font-bold text-slate-700">Response Speed</span>
+                <span className="text-xs font-black text-emerald-600">&lt; 3 Seconds • 98% Open Rate</span>
+              </div>
+            </motion.div>
+
+            {/* Agent 3: Healthcare Website Builder (Indigo / Purple) */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.2 }}
+              className="rounded-3xl p-6 sm:p-7 border border-indigo-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
+              style={{ backgroundImage: "linear-gradient(135deg, #FAF8FF 0%, #FFFFFF 100%)" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                    <Layout className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Healthcare Website Builder</h3>
+                    <span className="text-[11px] font-bold text-indigo-700">20 Specialty Clinical Themes</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full border border-indigo-200">
+                  Custom Domain
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pre-configured for Pediatrics, Derma, Dental, IVF, Cardiology, and more. Equipped with 1-click WhatsApp booking and Google 99+ PageSpeed.
+              </p>
+              <div className="bg-white p-3.5 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-2xs">
+                <span className="text-xs font-bold text-slate-700">PageSpeed Performance</span>
+                <span className="text-xs font-black text-indigo-600">99 / 100 ⚡ Turbopack</span>
+              </div>
+            </motion.div>
+
+            {/* Agent 4: 5-Star WhatsApp Review Engine (Blue / Cyan) */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.3 }}
+              className="rounded-3xl p-6 sm:p-7 border border-blue-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
+              style={{ backgroundImage: "linear-gradient(135deg, #F0F7FF 0%, #FFFFFF 100%)" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
+                    <Star className="w-5 h-5 fill-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">5-Star Review Engine</h3>
+                    <span className="text-[11px] font-bold text-blue-700">Automated Patient Feedback</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full border border-blue-200">
+                  70%+ Conversion
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Dispatches polite 2-step WhatsApp feedback surveys after consultations, converting happy patients into glowing 5-star Google reviews.
+              </p>
+              <div className="bg-white p-3.5 rounded-2xl border border-blue-100 flex items-center justify-between shadow-2xs">
+                <span className="text-xs font-bold text-slate-700">Review Velocity</span>
+                <span className="text-xs font-black text-blue-600">+30 to +50 Reviews / mo</span>
+              </div>
+            </motion.div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 8 MEDICAL SPECIALTY PHOTOGRAPHY GRID ("BUILT EXCLUSIVELY FOR CLINICS") ── */}
+      <section ref={specialtyGridRef} className="py-16 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Engineered for Medical Specialists
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600">
+              Select your specialty to experience tailored clinical workflows, patient service menus, and customized website themes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {SPECIALTY_CARDS.map((spec, i) => (
+              <Link
+                key={i}
+                href="#clinic-websites"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xl transition-all duration-300 flex items-center justify-between overflow-hidden group p-3 hover:-translate-y-1"
+              >
+                <div className="space-y-1 pr-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{spec.icon}</span>
+                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+                      {spec.name}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">{spec.tagline}</p>
+                </div>
+                <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+                  <img
+                    src={spec.image}
+                    alt={spec.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 3-STEP CONNECTED WORKFLOW ROADMAP ── */}
+      <section ref={roadmapRef} className="py-16 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              How Gyrex Powers Your Practice in 3 Simple Steps
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600">
+              No technical expertise needed. Go live in under 2 minutes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative max-w-5xl mx-auto">
+            
+            {/* Step 1 */}
+            <div className="bg-slate-50 p-7 rounded-3xl border border-slate-200 text-center space-y-4 relative">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                1
+              </div>
+              <h3 className="text-base font-black text-slate-900">Connect in 60 Seconds</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Scan the QR code to link your Clinic WhatsApp line and sync your Google Business Profile with 1 click.
+              </p>
+              <div className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                <QrCode className="w-3.5 h-3.5" /> Instant QR Pairing
+              </div>
             </div>
 
-            {/* Pillar 2: Specialty Websites */}
-            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-                <Layout className="w-5 h-5" />
+            {/* Step 2 */}
+            <div className="bg-slate-50 p-7 rounded-3xl border border-slate-200 text-center space-y-4 relative">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
+                2
               </div>
-              <h3 className="text-sm font-black text-slate-900">Specialty Clinic Websites</h3>
+              <h3 className="text-base font-black text-slate-900">AI Activates Practice OS</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                20 tailored clinical themes with Google 99+ PageSpeed and custom domain support.
+                Gyrex instantly deploys your custom specialty website, clinical procedures menu, and 24/7 AI chat receptionist.
               </p>
+              <div className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                <Sparkles className="w-3.5 h-3.5" /> Auto-Configured CMS
+              </div>
             </div>
 
-            {/* Pillar 3: 24/7 WhatsApp Receptionist */}
-            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                <Bot className="w-5 h-5" />
+            {/* Step 3 */}
+            <div className="bg-slate-50 p-7 rounded-3xl border border-slate-200 text-center space-y-4 relative">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                3
               </div>
-              <h3 className="text-sm font-black text-slate-900">24/7 WhatsApp Receptionist</h3>
+              <h3 className="text-base font-black text-slate-900">Automate Growth &amp; Rank #1</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Captures patient inquiries in 6+ languages and books appointments directly into your calendar.
+                Watch appointments fill your calendar and 5-star patient reviews climb to dominate your local neighborhood search.
               </p>
-            </div>
-
-            {/* Pillar 4: 5-Star Reputation */}
-            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 hover:shadow-lg transition-all space-y-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+              <div className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                <TrendingUp className="w-3.5 h-3.5" /> Predictable OPD Revenue
               </div>
-              <h3 className="text-sm font-black text-slate-900">5-Star Review Engine</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Automated 2-step WhatsApp surveys convert 70%+ of happy patients into 5-star Google reviews.
-              </p>
             </div>
 
           </div>
+
         </div>
       </section>
 
@@ -538,7 +705,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Right Column: Clean Clinical Hero Photography (No Overlays) */}
+              {/* Right Column: Clean Clinical Hero Photography */}
               <div className="lg:col-span-5 space-y-3">
                 <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-lg space-y-3">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100">
@@ -566,7 +733,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── COMPLETE FEATURE MATRIX SECTION (TIGHT & CLUTTER-FREE) ── */}
+      {/* ── COMPLETE FEATURE MATRIX SECTION ── */}
       <section id="features" className="py-16 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
@@ -610,7 +777,7 @@ export default function LandingPage() {
           </div>
 
           {/* Feature Grid */}
-          <div ref={featuresRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             {/* ── GROWTH FEATURES ── */}
             {activeFeatureCategory === "growth" && (<>
@@ -802,7 +969,7 @@ export default function LandingPage() {
                 +₹{monthlyRevenue.toLocaleString("en-IN")} in additional monthly revenue
               </p>
               <div className="pt-3 border-t border-white/10">
-                <Link href="/local-seo/free-audit">
+                <Link href="/register">
                   <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs h-11 rounded-xl shadow-lg">
                     Unlock This Growth for Your Practice 🚀
                   </Button>
@@ -1007,7 +1174,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FAQ SECTION (TIGHT & CLUTTER-FREE) ── */}
+      {/* ── FAQ SECTION ── */}
       <section id="faq" ref={faqRef} className="py-16 bg-white border-t border-slate-200/80">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           <div className="text-center space-y-2">
