@@ -132,8 +132,8 @@ export function ThemeRenderer({
   const buttonRadiusClass = RADIUS_CLASSES[data.buttonRadius || "2xl"] || "rounded-2xl";
   const cardRadiusClass = data.buttonRadius === "none" ? "rounded-none" : "rounded-2xl sm:rounded-3xl";
 
-  const phone = data.contactPhone || data.doctor?.phone || "";
-  const waPhone = (data.whatsappNumber || data.contactPhone || data.doctor?.phone || "").replace(/\D/g, "");
+  const phone = data.doctor?.phone || data.contactPhone || "";
+  const waPhone = (data.doctor?.phone || data.whatsappNumber || data.contactPhone || "").replace(/\D/g, "");
   const cleanWaNumber = waPhone.length === 10 ? "91" + waPhone : waPhone;
 
   const clinicAddressText = data.clinicAddress || data.doctor?.address || "Safdarjung Enclave, New Delhi, India";

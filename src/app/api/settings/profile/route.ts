@@ -125,6 +125,21 @@ export async function PUT(req: Request) {
       updateData.password = await hash(newPassword, 12);
     }
 
+    // Auto-sync clinic website phone and WhatsApp number if phone changed
+    if (phone) {
+      try {
+        await prisma.clinicWebsite.updateMany({
+          where: { doctorId: session.user.id },
+          data: {
+            whatsappNumber: phone,
+            contactPhone: phone,
+          },
+        });
+      } catch (e) {
+        console.error("Failed to auto-sync website phone:", e);
+      }
+    }
+
     const updatedDoctor = await prisma.doctor.update({
       where: { id: session.user.id },
       data: updateData,
