@@ -226,6 +226,13 @@ export function ThemeRenderer({
 
   const faqs = data.customFaqs && data.customFaqs.length > 0
     ? data.customFaqs
+    : themeId === "uropulse-advanced"
+    ? [
+        { question: "How is laser kidney stone removal (RIRS) done without any cuts or incisions?", answer: "RIRS uses a flexible, ultra-thin endoscope passed naturally through the urinary tract. A high-precision Holmium/Thulium laser fiber pulverizes the kidney stone into fine dust, eliminating the need for skin cuts or stitches." },
+        { question: "How quickly can I resume normal work after RIRS stone surgery?", answer: "Most patients are discharged within 24 hours and can resume normal desk work and daily light activities within 48 hours." },
+        { question: "Are men's sexual health and andrology consultations completely confidential?", answer: "Yes, absolute privacy and strict clinical confidentiality are maintained for all male sexual wellness, ED, and infertility consultations." },
+        { question: "How do I book an appointment with the senior urologist?", answer: "Click 'Book Appointment' or message our urology care reception directly on WhatsApp." },
+      ]
     : themeId === "acculab-diagnostics"
     ? [
         { question: "Which blood tests require 10 to 12 hours of fasting?", answer: "Tests such as Fasting Blood Sugar, Lipid Profile (Cholesterol), and Comprehensive Full Body Checkups require 10 to 12 hours of overnight fasting. You may drink plain water." },
@@ -496,7 +503,7 @@ export function ThemeRenderer({
       className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
-        themeId === "acculab-diagnostics"
+        themeId === "uropulse-advanced" || themeId === "acculab-diagnostics"
           ? "bg-[#F0F9FF]"
           : themeId === "nutrilife-dietetics"
           ? "bg-[#F0FDF4]"
@@ -845,10 +852,17 @@ export function ThemeRenderer({
           );
         }
 
-        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-15: All Distinct Bespoke Layout Themes)
+        // 1.5. STATS & TRUST METRICS RIBBON (Theme 1-16: All Distinct Bespoke Layout Themes)
         if (section.type === "STATS_RIBBON") {
           const statsList = section.stats && section.stats.length > 0
             ? section.stats
+            : themeId === "uropulse-advanced"
+            ? [
+                { value: "12,500+", label: "Laser Uro-Surgeries Done", icon: "shield" },
+                { value: "100%", label: "No-Cut Keyhole Tech", icon: "activity" },
+                { value: "Same-Day", label: "Discharge for RIRS Care", icon: "clock" },
+                { value: "4.9 ★", label: "Google Patient Rating", icon: "star" },
+              ]
             : themeId === "acculab-diagnostics"
             ? [
                 { value: "99.9%", label: "Diagnostic Accuracy Rate", icon: "microscope" },
