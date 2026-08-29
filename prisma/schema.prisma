@@ -21,6 +21,7 @@ model Doctor {
   city                   String?
   state                  String?
   country                String?
+  pincode                String?
   role                   UserRole                @default(DOCTOR)
   emailVerified          DateTime?
   image                  String?

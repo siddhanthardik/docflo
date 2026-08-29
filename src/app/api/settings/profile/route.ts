@@ -23,6 +23,7 @@ export async function GET() {
         city: true,
         state: true,
         country: true,
+        pincode: true,
         image: true,
         currency: true,
         isCurrencyLocked: true,
@@ -78,7 +79,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { 
       name, phone, specialty, 
-      clinicName, address, city, state, country, image, 
+      clinicName, address, city, state, country, pincode, image, 
       currentPassword, newPassword,
       currency, invoicePrefix, taxGstNumber, invoiceFooter,
       language, dateFormat, firstDayOfWeek,
@@ -87,7 +88,7 @@ export async function PUT(req: Request) {
 
     const updateData: any = {
       name, phone, specialty,
-      clinicName, address, city, state, country, image,
+      clinicName, address, city, state, country, pincode, image,
       invoicePrefix, taxGstNumber, invoiceFooter,
       language, dateFormat, 
       firstDayOfWeek: firstDayOfWeek === "Sunday" ? 0 : (firstDayOfWeek === "Monday" ? 1 : Number(firstDayOfWeek) || 0),
