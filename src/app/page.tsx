@@ -584,7 +584,7 @@ export default function LandingPage() {
               <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
                 2
               </div>
-              <h3 className="text-base font-black text-slate-900">AI Activates Practice OS</h3>
+              <h3 className="text-base font-black text-slate-900">AI Activates Practice Platform</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Gyrex instantly deploys your custom specialty website, clinical procedures menu, and 24/7 AI chat receptionist.
               </p>
