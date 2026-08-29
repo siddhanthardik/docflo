@@ -165,8 +165,9 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
               <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">Phone Number</Label>
-              <Input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="h-10 text-sm rounded-xl border-slate-200" />
+              <Label className="text-xs font-semibold text-slate-700">Doctor WhatsApp Number</Label>
+              <Input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="e.g. 9876543210" className="h-10 text-sm rounded-xl border-slate-200" />
+              <p className="text-[11px] text-slate-500 leading-tight">Used by the 24/7 AI Receptionist to recognize you for schedule queries, delegated booking, &amp; cancellations.</p>
             </div>
 
             <div className="space-y-1.5">

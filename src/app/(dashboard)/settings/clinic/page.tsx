@@ -20,6 +20,7 @@ export default function SettingsClinicPage() {
     city: "",
     state: "",
     country: "",
+    phone: "",
     image: "", // logo
     currency: "USD",
     invoicePrefix: "INV-",
@@ -75,6 +76,7 @@ export default function SettingsClinicPage() {
           city: data.city || "",
           state: data.state || "",
           country: data.country || "",
+          phone: data.phone || "",
           image: data.image || "",
           currency: data.currency || "USD",
           invoicePrefix: data.invoicePrefix || "INV-",
@@ -261,6 +263,18 @@ export default function SettingsClinicPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="clinicPhone" className={labelClass}>Clinic Contact / Admin Phone</label>
+                <input
+                  id="clinicPhone"
+                  type="tel"
+                  className={inputClass}
+                  value={clinic.phone}
+                  onChange={(e) => setClinic({ ...clinic, phone: e.target.value })}
+                  placeholder="e.g. +91 9876543210"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Official clinic contact number displayed on patient invoices, receipts, and clinic notifications.</p>
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="address" className={labelClass}>Address</label>

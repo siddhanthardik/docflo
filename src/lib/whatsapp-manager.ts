@@ -354,11 +354,9 @@ class WhatsAppManager {
               orderBy: { displayOrder: "asc" }
             });
 
-            const staffPhones = [doctorInfo?.phone, ...practitioners.map(p => p.phone)]
-              .filter(Boolean)
-              .map(p => this.normalizePhone(p as string));
-              
-            const isStaff = staffPhones.includes(patientPhone);
+            const matchedPractitioner = practitioners.find(p => p.phone && this.normalizePhone(p.phone) === patientPhone);
+            const isStaff = !!matchedPractitioner || (doctorInfo?.phone && this.normalizePhone(doctorInfo.phone) === patientPhone);
+            const staffName = matchedPractitioner?.name || doctorInfo?.name || "Doctor";
 
             let patient = null;
             if (!isStaff) {
@@ -784,9 +782,9 @@ class WhatsAppManager {
                         const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
                         const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
                         await prisma.appointment.create({
-                          data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
+                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
-                        const docName = formatDoctorDisplayName(doctorInfo?.name);
+                        const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                         const patientJid = `${phoneDigits4}@s.whatsapp.net`;
@@ -816,11 +814,16 @@ class WhatsAppManager {
                 const weekEnd = new Date(today);
                 weekEnd.setDate(weekEnd.getDate() + 7);
                 
+                const appointmentWhere: any = {
+                  doctorId,
+                  date: { gte: today, lt: weekEnd }
+                };
+                if (matchedPractitioner && !matchedPractitioner.isOwner) {
+                  appointmentWhere.practitionerId = matchedPractitioner.id;
+                }
+
                 const appointments = await prisma.appointment.findMany({
-                  where: {
-                    doctorId,
-                    date: { gte: today, lt: weekEnd }
-                  },
+                  where: appointmentWhere,
                   include: { patient: true, practitioner: true },
                   orderBy: { date: 'asc' }
                 });
@@ -830,7 +833,7 @@ class WhatsAppManager {
                   textMessage,
                   history,
                   appointments,
-                  { doctorName: doctorInfo?.name || "Doctor" }
+                  { doctorName: staffName }
                 );
               } else {
                 const history = recentMessages.reverse().map(rm => 
@@ -1048,9 +1051,9 @@ class WhatsAppManager {
                         }
                       });
                       await prisma.appointment.create({
-                        data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                        data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
-                      const docName = formatDoctorDisplayName(doctorInfo?.name);
+                      const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
                       const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                       const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                       await sock.sendMessage(`${prefilledPhone}@s.whatsapp.net`, {
@@ -1077,7 +1080,7 @@ class WhatsAppManager {
                         // SCENARIO 1: Exact single match - book immediately
                         const pt = exactMatches[0];
                         await prisma.appointment.create({
-                          data: { patientId: pt.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                          data: { patientId: pt.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                         });
                         if (pt.phone) {
                           const patientJid = `${pt.phone.replace(/\D/g, '')}@s.whatsapp.net`;

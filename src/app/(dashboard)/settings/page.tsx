@@ -143,7 +143,7 @@ export default function SettingsProfilePage() {
                 />
               </div>
               <div>
-                <label htmlFor="phone" className={labelClass}>Phone Number</label>
+                <label htmlFor="phone" className={labelClass}>Admin / Account Phone Number</label>
                 <div className="flex gap-2">
                   <Select
                     value={getPhoneParts(profile.phone).countryCode}
@@ -169,6 +169,7 @@ export default function SettingsProfilePage() {
                     onChange={(e) => setProfile({ ...profile, phone: getPhoneParts(profile.phone).dialCode + e.target.value.replace(/\D/g, '') })}
                   />
                 </div>
+                <p className="text-[11px] text-slate-500 mt-1">Used for account security &amp; admin alerts. To manage doctor practicing phone numbers, configure the <strong>Doctors</strong> tab.</p>
               </div>
               <div>
                 <label htmlFor="specialty" className={labelClass}>Medical Specialty</label>
