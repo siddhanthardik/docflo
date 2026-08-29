@@ -15,12 +15,8 @@ export function Footer() {
               <GyrexLogo size="md" lightText />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              The complete practice growth operating system for modern doctors and specialty clinics. Automated Google Maps SEO, custom clinic websites, 24/7 WhatsApp AI receptionist, and 5-star review growth.
+              The complete practice growth platform for modern doctors and specialty clinics. Automated Google Maps SEO, custom clinic websites, 24/7 WhatsApp AI receptionist, and 5-star review growth.
             </p>
-            <div className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] font-bold text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Medical Data Privacy &amp; Secure Cloud Architecture</span>
-            </div>
           </div>
           
           {/* Platform Solutions */}
