@@ -348,11 +348,6 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
           </div>
         </div>
         <div className="mt-4 space-y-3">
-          {pkg.name?.toUpperCase().includes("STARTER") && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-2 py-1 rounded-md text-center">
-              📌 Starter requires 3-Month Commitment (Save 10%)
-            </div>
-          )}
           {pkg.prices && pkg.prices.length > 0 ? (
             pkg.prices.map((price: any) => {
               const sym = price.currency === 'INR' ? '₹' : price.currency === 'GBP' ? '£' : price.currency === 'EUR' ? '€' : '$';

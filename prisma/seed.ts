@@ -151,10 +151,20 @@ async function main() {
   console.log('🚀 Updating packages in database...')
 
   // Starter
+  const existingStarter = await prisma.package.findFirst({
+    where: {
+      OR: [
+        { slug: 'starter' },
+        { name: { contains: 'Starter', mode: 'insensitive' } }
+      ]
+    }
+  })
+
   const starter = await prisma.package.upsert({
-    where: { slug: 'starter' },
+    where: { id: existingStarter?.id || 'non-existent-starter-id' },
     update: {
-      name: 'Starter',
+      slug: 'starter',
+      name: 'STARTER',
       description: 'Grow your local presence on Google Maps & build 5-star reviews',
       priceMonthly: 1499,
       priceQuarterly: 4048,
@@ -164,7 +174,7 @@ async function main() {
     },
     create: {
       slug: 'starter',
-      name: 'Starter',
+      name: 'STARTER',
       description: 'Grow your local presence on Google Maps & build 5-star reviews',
       priceMonthly: 1499,
       priceQuarterly: 4048,
@@ -201,10 +211,20 @@ async function main() {
   })
 
   // Growth
+  const existingGrowth = await prisma.package.findFirst({
+    where: {
+      OR: [
+        { slug: 'growth' },
+        { name: { contains: 'Growth', mode: 'insensitive' } }
+      ]
+    }
+  })
+
   const growth = await prisma.package.upsert({
-    where: { slug: 'growth' },
+    where: { id: existingGrowth?.id || 'non-existent-growth-id' },
     update: {
-      name: 'Growth',
+      slug: 'growth',
+      name: 'GROWTH',
       description: 'Full clinical website, Google Maps SEO & digital practice billing',
       priceMonthly: 2499,
       priceQuarterly: 6748,
@@ -214,7 +234,7 @@ async function main() {
     },
     create: {
       slug: 'growth',
-      name: 'Growth',
+      name: 'GROWTH',
       description: 'Full clinical website, Google Maps SEO & digital practice billing',
       priceMonthly: 2499,
       priceQuarterly: 6748,
@@ -251,12 +271,12 @@ async function main() {
     ]
   })
 
-  // Premium / Autopilot (₹3,999)
+  // Premium (₹3,999)
   const existingPremium = await prisma.package.findFirst({
     where: {
       OR: [
-        { slug: 'premium-autopilot' },
         { slug: 'premium' },
+        { slug: 'premium-autopilot' },
         { name: { contains: 'Premium', mode: 'insensitive' } },
         { name: { contains: 'Autopilot', mode: 'insensitive' } }
       ]
@@ -266,8 +286,8 @@ async function main() {
   const premium = await prisma.package.upsert({
     where: { id: existingPremium?.id || 'non-existent-premium-id' },
     update: {
-      slug: 'premium-autopilot',
-      name: 'Premium / Autopilot',
+      slug: 'premium',
+      name: 'PREMIUM',
       description: '24/7 Front-Desk Multilingual WhatsApp AI Receptionist & Full Clinic Suite',
       priceMonthly: 3999,
       priceQuarterly: 10798,
@@ -276,8 +296,8 @@ async function main() {
       isArchived: false,
     },
     create: {
-      slug: 'premium-autopilot',
-      name: 'Premium / Autopilot',
+      slug: 'premium',
+      name: 'PREMIUM',
       description: '24/7 Front-Desk Multilingual WhatsApp AI Receptionist & Full Clinic Suite',
       priceMonthly: 3999,
       priceQuarterly: 10798,
@@ -316,7 +336,7 @@ async function main() {
   })
 
   // Archive standalone AI Receptionist if exists
-  const aiReceptionistPkg = await prisma.package.findFirst({
+  const aiReceptionistPkgs = await prisma.package.findMany({
     where: {
       OR: [
         { slug: 'ai-receptionist' },
@@ -325,9 +345,9 @@ async function main() {
     }
   })
 
-  if (aiReceptionistPkg) {
+  for (const pkg of aiReceptionistPkgs) {
     await prisma.package.update({
-      where: { id: aiReceptionistPkg.id },
+      where: { id: pkg.id },
       data: { isArchived: true }
     })
   }

@@ -200,10 +200,23 @@ export default function LandingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          const filtered = data.filter((p: any) =>
-            ["starter", "growth", "premium"].includes(p.slug?.toLowerCase()) ||
-            ["STARTER", "GROWTH", "PREMIUM"].includes(p.name?.toUpperCase())
-          );
+          const targetKeys = ["starter", "growth", "premium"];
+          const filtered = data
+            .filter((p: any) =>
+              targetKeys.some((k) =>
+                (p.slug || "").toLowerCase().includes(k) || (p.name || "").toLowerCase().includes(k)
+              )
+            )
+            .sort((a: any, b: any) => {
+              const rank = (pkg: any) => {
+                const str = ((pkg.slug || "") + " " + (pkg.name || "")).toLowerCase();
+                if (str.includes("starter")) return 1;
+                if (str.includes("growth")) return 2;
+                if (str.includes("premium")) return 3;
+                return 99;
+              };
+              return rank(a) - rank(b);
+            });
           setPackages(filtered.length > 0 ? filtered : data.filter((p: any) => p.priceMonthly > 0));
         }
       })
@@ -1065,7 +1078,7 @@ export default function LandingPage() {
                     )}
 
                     <div className="space-y-3.5">
-                      <h3 className="text-xl font-black text-slate-900">{pkg.name}</h3>
+                      <h3 className="text-xl font-black text-slate-900">{pkg.name?.replace(/\s*\/\s*AUTOPILOT/i, "").trim()}</h3>
                       <p className="text-xs text-slate-500 leading-relaxed">{pkg.description || "Complete healthcare growth plan."}</p>
                       
                       <div className="pt-1">
@@ -1104,7 +1117,7 @@ export default function LandingPage() {
                               "Digital Invoicing & WhatsApp Sharing",
                               "Medical SEO Schema & Meta Tags"
                             ];
-                          } else if (slug.includes("premium") || slug.includes("autopilot")) {
+                          } else if (slug.includes("premium")) {
                             featureList = [
                               "Everything in Growth, plus:",
                               "24/7 Multilingual WhatsApp AI Receptionist",
