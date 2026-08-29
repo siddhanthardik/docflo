@@ -89,16 +89,21 @@ class WhatsAppManager {
   // Normalizes phone numbers to standard format (E.164 without +)
   normalizePhone(phone: string): string {
     if (!phone) return "";
-    
-    if (phone.trim().startsWith('+')) {
-      return phone.replace(/\D/g, '');
-    }
-    
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length === 10) {
       cleanPhone = `91${cleanPhone}`;
     }
     return cleanPhone;
+  }
+
+  // Robust comparison comparing the core 10-digit number
+  isPhoneMatch(phoneA?: string | null, phoneB?: string | null): boolean {
+    if (!phoneA || !phoneB) return false;
+    const digitsA = phoneA.replace(/\D/g, '');
+    const digitsB = phoneB.replace(/\D/g, '');
+    const last10A = digitsA.length >= 10 ? digitsA.slice(-10) : digitsA;
+    const last10B = digitsB.length >= 10 ? digitsB.slice(-10) : digitsB;
+    return !!last10A && !!last10B && last10A === last10B;
   }
 
   // Connects or reconnects a doctor's WhatsApp session
@@ -354,9 +359,23 @@ class WhatsAppManager {
               orderBy: { displayOrder: "asc" }
             });
 
-            const matchedPractitioner = practitioners.find(p => p.phone && this.normalizePhone(p.phone) === patientPhone);
-            const isStaff = !!matchedPractitioner || (doctorInfo?.phone && this.normalizePhone(doctorInfo.phone) === patientPhone);
-            const staffName = matchedPractitioner?.name || doctorInfo?.name || "Doctor";
+            const staffMembers = await prisma.staffMember.findMany({
+              where: { doctorId, isActive: true },
+              select: { id: true, name: true, phone: true, role: true }
+            });
+
+            const matchedPractitioner = practitioners.find(p => p.phone && this.isPhoneMatch(p.phone, patientPhone));
+            const matchedStaff = staffMembers.find(s => s.phone && this.isPhoneMatch(s.phone, patientPhone));
+            const isOwnerMatch = doctorInfo?.phone && this.isPhoneMatch(doctorInfo.phone, patientPhone);
+
+            const isStaff = !!matchedPractitioner || !!matchedStaff || !!isOwnerMatch;
+            const staffName = matchedPractitioner?.name || matchedStaff?.name || doctorInfo?.name || "Doctor";
+
+            if (isStaff) {
+              console.log(`[WhatsAppManager] 🩺 Recognized DOCTOR/STAFF: "${staffName}" (${patientPhone}). Routing to Staff Assistant AI.`);
+            } else {
+              console.log(`[WhatsAppManager] 👤 Recognized PATIENT: ${patientPhone}. Routing to Patient Receptionist AI.`);
+            }
 
             let patient = null;
             if (!isStaff) {
@@ -833,7 +852,11 @@ class WhatsAppManager {
                   textMessage,
                   history,
                   appointments,
-                  { doctorName: staffName }
+                  { 
+                    doctorName: staffName,
+                    clinicName: doctorInfo?.clinicName || undefined,
+                    assistantName: effectiveConfig?.assistantName || "Riya"
+                  }
                 );
               } else {
                 const history = recentMessages.reverse().map(rm => 
