@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const member = await prisma.$transaction(async (tx) => {
       // 1. Lock the Doctor row to prevent concurrent creations from exceeding limits
       const doctorId = session.user.id;
-      await tx.$queryRaw`SELECT 1 FROM "Doctor" WHERE id = ${doctorId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT 1 FROM "doctors" WHERE id = ${doctorId} FOR UPDATE`;
 
       // 2. Enforce MAX_STAFF_SEATS under CLINIC_CORE
       const block = await entitlementGuard(doctorId, req, { module: "CLINIC_CORE", limit: "MAX_STAFF_SEATS" });

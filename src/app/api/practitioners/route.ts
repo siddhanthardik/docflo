@@ -5,23 +5,23 @@ import { EntitlementService } from "@/services/entitlement.service";
 import * as z from "zod";
 
 const createPractitionerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().optional().or(z.literal('')),
-  specialty: z.string().optional().or(z.literal('')),
-  otherSpecialty: z.string().optional().or(z.literal('')),
-  qualification: z.string().optional().or(z.literal('')),
-  registrationNumber: z.string().optional().or(z.literal('')),
-  consultationFee: z.number().optional(),
-  duration: z.number().optional(),
-  bufferTime: z.number().optional(),
+  name: z.string().min(2, "Name is required (at least 2 characters)"),
+  email: z.string().email("Invalid email format").optional().or(z.literal('')).nullable(),
+  phone: z.string().optional().or(z.literal('')).nullable(),
+  specialty: z.string().optional().or(z.literal('')).nullable(),
+  otherSpecialty: z.string().optional().or(z.literal('')).nullable(),
+  qualification: z.string().optional().or(z.literal('')).nullable(),
+  registrationNumber: z.string().optional().or(z.literal('')).nullable(),
+  consultationFee: z.number().nullable().optional(),
+  duration: z.number().nullable().optional(),
+  bufferTime: z.number().nullable().optional(),
   isActive: z.boolean().default(true),
-  calendarColor: z.string().optional(),
+  calendarColor: z.string().optional().nullable(),
   displayOrder: z.number().default(0),
   workingDays: z.array(z.string()).default([]),
-  workingHoursStart: z.string().optional(),
-  workingHoursEnd: z.string().optional(),
-  profileImageUrl: z.string().optional(),
+  workingHoursStart: z.string().optional().nullable(),
+  workingHoursEnd: z.string().optional().nullable(),
+  profileImageUrl: z.string().optional().nullable(),
 });
 
 export async function GET() {
@@ -79,6 +79,9 @@ export async function POST(req: Request) {
     if (error.name === 'UsageLimitExceededError') {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
-    return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors[0]?.message || "Invalid doctor input data." }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message || "Failed to add doctor." }, { status: 500 });
   }
 }

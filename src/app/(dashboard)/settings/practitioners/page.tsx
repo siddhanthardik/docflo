@@ -29,17 +29,18 @@ export default function PractitionersPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Doctors</h1>
-        <p className="text-gray-500 mt-1 text-sm">Manage doctors working in your clinic.</p>
+    <div className="min-h-screen bg-slate-50/50 pb-12 space-y-6 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-2xs space-y-1">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Doctors</h1>
+        <p className="text-slate-500 text-xs sm:text-sm">Manage practicing doctors, consultation fees, and WhatsApp AI scheduling numbers</p>
       </div>
 
       <SettingsTabs />
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+        <div className="flex items-center justify-center py-20 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
       ) : (
         <PractitionerList practitioners={practitioners} onRefresh={fetchPractitioners} />
