@@ -40,8 +40,8 @@ export async function GET() {
         priceYearly: inPrice?.priceYearly ?? pkg.priceYearly,
         currency: inPrice?.currency ?? "INR",
         modules: pkg.modules.map((m: any) => m.moduleName),
-        limits: pkg.limits.reduce((acc: Record<string, number>, l: any) => {
-          acc[l.limitName] = l.value;
+        limits: pkg.limits.reduce((acc: Record<string, number | null>, l: any) => {
+          acc[l.limitName] = l.limitValue ?? null;
           return acc;
         }, {}),
         features: pkg.packageFeatures

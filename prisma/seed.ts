@@ -147,7 +147,192 @@ async function main() {
     }
   }
 
-  console.log('🎉 Seeding completed.')
+  // 4. SEED / UPDATE PACKAGES (Starter: 1499, Growth: 2499, Premium: 3999)
+  console.log('🚀 Updating packages in database...')
+
+  // Starter
+  const starter = await prisma.package.upsert({
+    where: { slug: 'starter' },
+    update: {
+      name: 'Starter',
+      description: 'Grow your local presence on Google Maps & build 5-star reviews',
+      priceMonthly: 1499,
+      priceQuarterly: 4048,
+      priceYearly: 14390,
+      isActive: true,
+      isArchived: false,
+    },
+    create: {
+      slug: 'starter',
+      name: 'Starter',
+      description: 'Grow your local presence on Google Maps & build 5-star reviews',
+      priceMonthly: 1499,
+      priceQuarterly: 4048,
+      priceYearly: 14390,
+      isActive: true,
+      isArchived: false,
+    },
+  })
+
+  await prisma.packagePrice.upsert({
+    where: { packageId_countryCode: { packageId: starter.id, countryCode: 'IN' } },
+    update: { currency: 'INR', priceMonthly: 1499, priceQuarterly: 4048, priceYearly: 14390 },
+    create: { packageId: starter.id, countryCode: 'IN', currency: 'INR', priceMonthly: 1499, priceQuarterly: 4048, priceYearly: 14390 }
+  })
+
+  await prisma.packageModule.deleteMany({ where: { packageId: starter.id } })
+  await prisma.packageModule.createMany({
+    data: [
+      { packageId: starter.id, moduleName: 'CLINIC_CORE' },
+      { packageId: starter.id, moduleName: 'GROWTH_SEO' }
+    ]
+  })
+
+  await prisma.packageLimit.deleteMany({ where: { packageId: starter.id } })
+  await prisma.packageLimit.createMany({
+    data: [
+      { packageId: starter.id, limitName: 'MAX_STAFF_SEATS', limitValue: 3 },
+      { packageId: starter.id, limitName: 'MAX_PATIENTS', limitValue: null },
+      { packageId: starter.id, limitName: 'MAX_GBP_LOCATIONS', limitValue: 1 },
+      { packageId: starter.id, limitName: 'MAX_TRACKED_KEYWORDS', limitValue: 5 },
+      { packageId: starter.id, limitName: 'MAX_SCHEDULED_POSTS', limitValue: 4 },
+      { packageId: starter.id, limitName: 'AI_CREDITS_PER_MONTH', limitValue: 50 },
+    ]
+  })
+
+  // Growth
+  const growth = await prisma.package.upsert({
+    where: { slug: 'growth' },
+    update: {
+      name: 'Growth',
+      description: 'Full clinical website, Google Maps SEO & digital practice billing',
+      priceMonthly: 2499,
+      priceQuarterly: 6748,
+      priceYearly: 23990,
+      isActive: true,
+      isArchived: false,
+    },
+    create: {
+      slug: 'growth',
+      name: 'Growth',
+      description: 'Full clinical website, Google Maps SEO & digital practice billing',
+      priceMonthly: 2499,
+      priceQuarterly: 6748,
+      priceYearly: 23990,
+      isActive: true,
+      isArchived: false,
+    },
+  })
+
+  await prisma.packagePrice.upsert({
+    where: { packageId_countryCode: { packageId: growth.id, countryCode: 'IN' } },
+    update: { currency: 'INR', priceMonthly: 2499, priceQuarterly: 6748, priceYearly: 23990 },
+    create: { packageId: growth.id, countryCode: 'IN', currency: 'INR', priceMonthly: 2499, priceQuarterly: 6748, priceYearly: 23990 }
+  })
+
+  await prisma.packageModule.deleteMany({ where: { packageId: growth.id } })
+  await prisma.packageModule.createMany({
+    data: [
+      { packageId: growth.id, moduleName: 'CLINIC_CORE' },
+      { packageId: growth.id, moduleName: 'GROWTH_SEO' },
+      { packageId: growth.id, moduleName: 'WHATSAPP_CRM' }
+    ]
+  })
+
+  await prisma.packageLimit.deleteMany({ where: { packageId: growth.id } })
+  await prisma.packageLimit.createMany({
+    data: [
+      { packageId: growth.id, limitName: 'MAX_STAFF_SEATS', limitValue: 10 },
+      { packageId: growth.id, limitName: 'MAX_PATIENTS', limitValue: null },
+      { packageId: growth.id, limitName: 'MAX_GBP_LOCATIONS', limitValue: 1 },
+      { packageId: growth.id, limitName: 'MAX_TRACKED_KEYWORDS', limitValue: 10 },
+      { packageId: growth.id, limitName: 'MAX_SCHEDULED_POSTS', limitValue: 15 },
+      { packageId: growth.id, limitName: 'AI_CREDITS_PER_MONTH', limitValue: 150 },
+    ]
+  })
+
+  // Premium / Autopilot (₹3,999)
+  const existingPremium = await prisma.package.findFirst({
+    where: {
+      OR: [
+        { slug: 'premium-autopilot' },
+        { slug: 'premium' },
+        { name: { contains: 'Premium', mode: 'insensitive' } },
+        { name: { contains: 'Autopilot', mode: 'insensitive' } }
+      ]
+    }
+  })
+
+  const premium = await prisma.package.upsert({
+    where: { id: existingPremium?.id || 'non-existent-premium-id' },
+    update: {
+      slug: 'premium-autopilot',
+      name: 'Premium / Autopilot',
+      description: '24/7 Front-Desk Multilingual WhatsApp AI Receptionist & Full Clinic Suite',
+      priceMonthly: 3999,
+      priceQuarterly: 10798,
+      priceYearly: 38390,
+      isActive: true,
+      isArchived: false,
+    },
+    create: {
+      slug: 'premium-autopilot',
+      name: 'Premium / Autopilot',
+      description: '24/7 Front-Desk Multilingual WhatsApp AI Receptionist & Full Clinic Suite',
+      priceMonthly: 3999,
+      priceQuarterly: 10798,
+      priceYearly: 38390,
+      isActive: true,
+      isArchived: false,
+    },
+  })
+
+  await prisma.packagePrice.upsert({
+    where: { packageId_countryCode: { packageId: premium.id, countryCode: 'IN' } },
+    update: { currency: 'INR', priceMonthly: 3999, priceQuarterly: 10798, priceYearly: 38390 },
+    create: { packageId: premium.id, countryCode: 'IN', currency: 'INR', priceMonthly: 3999, priceQuarterly: 10798, priceYearly: 38390 }
+  })
+
+  await prisma.packageModule.deleteMany({ where: { packageId: premium.id } })
+  await prisma.packageModule.createMany({
+    data: [
+      { packageId: premium.id, moduleName: 'CLINIC_CORE' },
+      { packageId: premium.id, moduleName: 'GROWTH_SEO' },
+      { packageId: premium.id, moduleName: 'WHATSAPP_CRM' },
+      { packageId: premium.id, moduleName: 'AI_ASSISTANT' }
+    ]
+  })
+
+  await prisma.packageLimit.deleteMany({ where: { packageId: premium.id } })
+  await prisma.packageLimit.createMany({
+    data: [
+      { packageId: premium.id, limitName: 'MAX_STAFF_SEATS', limitValue: null },
+      { packageId: premium.id, limitName: 'MAX_PATIENTS', limitValue: null },
+      { packageId: premium.id, limitName: 'MAX_GBP_LOCATIONS', limitValue: 1 },
+      { packageId: premium.id, limitName: 'MAX_TRACKED_KEYWORDS', limitValue: null },
+      { packageId: premium.id, limitName: 'MAX_SCHEDULED_POSTS', limitValue: null },
+      { packageId: premium.id, limitName: 'AI_CREDITS_PER_MONTH', limitValue: null },
+    ]
+  })
+
+  // Archive standalone AI Receptionist if exists
+  const aiReceptionistPkg = await prisma.package.findFirst({
+    where: {
+      OR: [
+        { slug: 'ai-receptionist' },
+        { name: { equals: 'AI Receptionist', mode: 'insensitive' } }
+      ]
+    }
+  })
+
+  if (aiReceptionistPkg) {
+    await prisma.package.update({
+      where: { id: aiReceptionistPkg.id },
+      data: { isArchived: true }
+    })
+  }
+
+  console.log('🎉 Seeding and package update completed.')
 }
 
 main()

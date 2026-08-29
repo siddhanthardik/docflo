@@ -1080,23 +1080,48 @@ export default function LandingPage() {
                         )}
                       </div>
 
-                      {/* Package Features from Database */}
+                      {/* Package Features */}
                       <div className="space-y-2.5 pt-4 border-t border-slate-100 text-xs text-slate-700 font-medium">
-                        {pkg.features && pkg.features.length > 0 ? (
-                          pkg.features.map((feat: string, fIdx: number) => (
-                            <div key={fIdx} className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{feat}</span>
+                        {(() => {
+                          const slug = pkg.slug?.toLowerCase() || pkg.name?.toLowerCase();
+                          let featureList = [
+                            "5×5 Geo-Rank Google Maps Heatmaps",
+                            "Automated 5-Star WhatsApp Reviews",
+                            "AI Google Review Auto-Responder",
+                            "Google Business Profile Optimizer",
+                            "Patient CRM & History",
+                            "Direct QR WhatsApp Pairing"
+                          ];
+
+                          if (slug.includes("growth")) {
+                            featureList = [
+                              "Everything in Starter, plus:",
+                              "Custom Specialty Website (20 Themes)",
+                              "Connect Custom Domain (drname.com)",
+                              "Web Appointment Booking Engine",
+                              "AI Google Business Post Generator",
+                              "Digital Invoicing & WhatsApp Sharing",
+                              "Medical SEO Schema & Meta Tags"
+                            ];
+                          } else if (slug.includes("premium") || slug.includes("autopilot")) {
+                            featureList = [
+                              "Everything in Growth, plus:",
+                              "24/7 Multilingual WhatsApp AI Receptionist",
+                              "Doctor WhatsApp Delegation Assistant",
+                              "Multi-Doctor Practice Scheduling",
+                              "24h & 2h Automated WhatsApp Reminders",
+                              "1-Day Post-Care WhatsApp Check-Ins",
+                              "Unlimited AI Patient Conversations"
+                            ];
+                          }
+
+                          return featureList.map((feat: string, fIdx: number) => (
+                            <div key={fIdx} className="flex items-start gap-2">
+                              <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${feat.startsWith("Everything") ? "text-blue-600 font-bold" : "text-emerald-600"}`} />
+                              <span className={feat.startsWith("Everything") ? "font-bold text-slate-900" : ""}>{feat}</span>
                             </div>
-                          ))
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 20 Specialty Clinical Website Themes</div>
-                            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> WhatsApp AI Receptionist &amp; Booking</div>
-                            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> 5×5 Geo-Rank Heatmap Tracker</div>
-                            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Automated 5-Star WhatsApp Reviews</div>
-                          </>
-                        )}
+                          ));
+                        })()}
                       </div>
                     </div>
 
