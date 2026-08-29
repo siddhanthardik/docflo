@@ -1315,6 +1315,8 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                 }
 
                 // Send reply via Baileys
+                // Strip any stray internal AI action tags before sending to doctor or patient
+                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT):.*?\]/gi, "").trim();
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage

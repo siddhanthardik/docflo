@@ -88,9 +88,19 @@ export function ChatWindow({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-gray-900 truncate">{name}</h3>
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                Patient
-              </span>
+              {name.toLowerCase().includes("doctor") ? (
+                <span className="bg-purple-50 text-purple-700 border border-purple-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  Doctor
+                </span>
+              ) : name.toLowerCase().includes("staff") ? (
+                <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  Staff
+                </span>
+              ) : (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  Patient
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
               <span
