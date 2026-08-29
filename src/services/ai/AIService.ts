@@ -75,7 +75,47 @@ export class AIService {
     // 4. Call selected AI provider
     const provider = this.getProvider();
     try {
-      const content = await provider.generateText(prompt, options);
+      let content = "";
+      let promptTokens = 0;
+      let completionTokens = 0;
+      let totalTokens = 0;
+      let providerName = "GEMINI";
+      let modelName = "gemini-2.0-flash";
+
+      if (provider.generateWithUsage) {
+        const res = await provider.generateWithUsage(prompt, options);
+        content = res.content;
+        promptTokens = res.promptTokens;
+        completionTokens = res.completionTokens;
+        totalTokens = res.totalTokens;
+        providerName = res.provider;
+        modelName = res.model;
+      } else {
+        content = await provider.generateText(prompt, options);
+        promptTokens = Math.ceil(prompt.length / 4);
+        completionTokens = Math.ceil(content.length / 4);
+        totalTokens = promptTokens + completionTokens;
+      }
+
+      // Calculate estimated cost in INR (₹)
+      // Gemini 2.0 Flash: ~$0.10/1M input, $0.40/1M output * 85 INR/USD
+      const costPerInputTokenInr = providerName === "OPENAI" ? (0.15 / 1000000) * 85 : (0.10 / 1000000) * 85;
+      const costPerOutputTokenInr = providerName === "OPENAI" ? (0.60 / 1000000) * 85 : (0.40 / 1000000) * 85;
+      const estimatedCostInr = (promptTokens * costPerInputTokenInr) + (completionTokens * costPerOutputTokenInr);
+
+      // Record Telemetry Asynchronously (Non-blocking)
+      prisma.aiTokenLog.create({
+        data: {
+          doctorId,
+          feature: feature.toString(),
+          provider: providerName,
+          model: modelName,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          estimatedCostInr: Number(estimatedCostInr.toFixed(6)),
+        }
+      }).catch((err) => console.error("[Telemetry] Failed to log AI token usage:", err));
 
       // Determine remaining
       const newCurrent = mode !== 'OFF' ? limitCheck.current + creditCost : limitCheck.current;

@@ -20,7 +20,8 @@ import {
   LogOut,
   X,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Cpu
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -35,6 +36,7 @@ const primaryMobileTabs = [
 const secondaryMobileMenu = [
   { name: "Packages", href: "/admin/packages", icon: Package },
   { name: "Features", href: "/admin/features", icon: Layers },
+  { name: "AI Analytics", href: "/admin/ai-analytics", icon: Cpu },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
   { name: "AI Sales Agent", href: "/admin/prospector", icon: Bot },
   { name: "Team", href: "/admin/team", icon: Users },

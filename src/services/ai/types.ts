@@ -14,6 +14,16 @@ export interface AIGenerationOptions {
   imageUrl?: string;
 }
 
+export interface AIGenerationResult {
+  content: string;
+  provider: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export interface AIProvider {
   generateText(prompt: string, options?: AIGenerationOptions): Promise<string>;
+  generateWithUsage?(prompt: string, options?: AIGenerationOptions): Promise<AIGenerationResult>;
 }

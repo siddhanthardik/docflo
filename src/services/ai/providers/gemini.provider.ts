@@ -99,4 +99,93 @@ export class GeminiProvider implements AIProvider {
 
     throw lastError || new Error("All Gemini models in downgrade cascade are currently unavailable.");
   }
+
+  async generateWithUsage(prompt: string, options?: AIGenerationOptions): Promise<import('../types').AIGenerationResult> {
+    const generationConfig = {
+      temperature: options?.temperature ?? 0.7,
+      maxOutputTokens: options?.maxTokens ?? 1024,
+    };
+
+    let finalPrompt = prompt;
+    if (options?.systemPrompt) {
+      finalPrompt = `${options.systemPrompt}\n\n${prompt}`;
+    }
+
+    const parts: any[] = [{ text: finalPrompt }];
+
+    if (options?.imageUrl) {
+      try {
+        let imageUrl = options.imageUrl;
+        if (imageUrl.startsWith("/")) {
+          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          imageUrl = `${baseUrl}${imageUrl}`;
+        }
+
+        let base64Data = "";
+        let mimeType = "image/jpeg";
+
+        if (imageUrl.startsWith("data:")) {
+          const matches = imageUrl.match(/^data:(.+);base64,(.+)$/);
+          if (matches) {
+            mimeType = matches[1];
+            base64Data = matches[2];
+          }
+        } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+          const imgRes = await fetch(imageUrl);
+          if (imgRes.ok) {
+            const arrayBuf = await imgRes.arrayBuffer();
+            base64Data = Buffer.from(arrayBuf).toString("base64");
+            mimeType = imgRes.headers.get("content-type") || "image/jpeg";
+          }
+        }
+
+        if (base64Data) {
+          parts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Could not load image for Gemini vision processing:", e);
+      }
+    }
+
+    let lastError: any = null;
+    for (const modelName of CANDIDATE_MODELS) {
+      try {
+        const model = this.genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts }],
+          generationConfig,
+        });
+
+        const response = await result.response;
+        const content = response.text() || '';
+        const usage = (response as any).usageMetadata;
+
+        const promptTokens = usage?.promptTokenCount || Math.ceil(finalPrompt.length / 4);
+        const completionTokens = usage?.candidatesTokenCount || Math.ceil(content.length / 4);
+        const totalTokens = usage?.totalTokenCount || (promptTokens + completionTokens);
+
+        return {
+          content,
+          provider: 'GEMINI',
+          model: modelName,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+        };
+      } catch (err: any) {
+        lastError = err;
+        const errText = err.message || err.toString() || "";
+        console.warn(`[GeminiProvider] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        continue;
+      }
+    }
+
+    throw lastError || new Error("All Gemini models in downgrade cascade are currently unavailable.");
+  }
 }

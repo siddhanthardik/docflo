@@ -72,6 +72,7 @@ model Doctor {
   notifications          Notification[]
   aiAgentFeedbacks       AIAgentFeedback[]
   website                ClinicWebsite?
+  aiTokenLogs            AiTokenLog[]
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -1514,6 +1515,27 @@ model ClinicWebsite {
   @@index([subdomain])
   @@index([customDomain])
   @@map("clinic_websites")
+}
+
+model AiTokenLog {
+  id               String   @id @default(cuid())
+  doctorId         String
+  feature          String   // e.g. "WHATSAPP_AI_RECEPTIONIST", "GBP_POST", "REVIEW_REPLY", "AUDIT_RECOMMENDER"
+  provider         String   @default("GEMINI") // "GEMINI" or "OPENAI"
+  model            String   @default("gemini-2.0-flash")
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  estimatedCostInr Float    @default(0)
+  createdAt        DateTime @default(now())
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([doctorId, createdAt])
+  @@index([createdAt])
+  @@index([feature])
+  @@map("ai_token_logs")
 }
 
 

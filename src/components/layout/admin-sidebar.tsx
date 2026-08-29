@@ -19,6 +19,7 @@ import {
   Bot,
   Megaphone,
   Newspaper,
+  Cpu,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
   { name: "Packages", href: "/admin/packages", icon: Package },
   { name: "Features", href: "/admin/features", icon: Layers },
+  { name: "AI Analytics", href: "/admin/ai-analytics", icon: Cpu },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
   { name: "Clinics", href: "/admin/clinics", icon: Building },
   { name: "Leads", href: "/admin/leads", icon: UserPlus },

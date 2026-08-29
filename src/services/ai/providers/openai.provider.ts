@@ -13,6 +13,11 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async generateText(prompt: string, options?: AIGenerationOptions): Promise<string> {
+    const res = await this.generateWithUsage(prompt, options);
+    return res.content;
+  }
+
+  async generateWithUsage(prompt: string, options?: AIGenerationOptions): Promise<import('../types').AIGenerationResult> {
     const messages: any[] = [];
     
     if (options?.systemPrompt) {
@@ -28,6 +33,18 @@ export class OpenAIProvider implements AIProvider {
       max_tokens: options?.maxTokens ?? 1024,
     });
 
-    return response.choices[0]?.message?.content || '';
+    const content = response.choices[0]?.message?.content || '';
+    const promptTokens = response.usage?.prompt_tokens || Math.ceil((prompt.length + (options?.systemPrompt?.length || 0)) / 4);
+    const completionTokens = response.usage?.completion_tokens || Math.ceil(content.length / 4);
+    const totalTokens = response.usage?.total_tokens || (promptTokens + completionTokens);
+
+    return {
+      content,
+      provider: 'OPENAI',
+      model: this.model,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    };
   }
 }
