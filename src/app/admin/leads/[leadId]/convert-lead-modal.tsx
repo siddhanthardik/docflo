@@ -95,7 +95,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
                 <SelectContent>
                   {packages.map(pkg => (
                     <SelectItem key={pkg.id} value={pkg.id}>
-                      {pkg.name} (${pkg.priceMonthly}/mo)
+                      {pkg.name} (₹{pkg.priceMonthly}/mo)
                     </SelectItem>
                   ))}
                 </SelectContent>

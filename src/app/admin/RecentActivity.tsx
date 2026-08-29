@@ -45,7 +45,10 @@ export function LatestPayments({ payments }: { payments: any[] }) {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-bold text-gray-900">${payment.amount}</p>
+            <p className="text-sm font-bold text-gray-900">
+              {payment.currency === "USD" ? "$" : "₹"}
+              {Number(payment.amount).toLocaleString(payment.currency === "USD" ? "en-US" : "en-IN")}
+            </p>
             <Badge variant="default" className="mt-1 text-[10px] h-4 leading-none bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
               {payment.status}
             </Badge>
@@ -75,7 +78,10 @@ export function TopClinicsList({ clinics }: { clinics: any[] }) {
             </div>
           </div>
           <div className="text-right pl-4">
-            <p className="text-sm font-bold text-gray-900">${clinic.mrr}</p>
+            <p className="text-sm font-bold text-gray-900">
+              {clinic.currency === "USD" ? "$" : "₹"}
+              {Number(clinic.mrr).toLocaleString(clinic.currency === "USD" ? "en-US" : "en-IN")}
+            </p>
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">MRR</p>
           </div>
         </div>

@@ -37,11 +37,11 @@ export function RevenueChart({ data }: { data: any[] }) {
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: "#6b7280" }}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => `₹${Number(value).toLocaleString("en-IN")}`}
           />
           <Tooltip 
             contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
-            formatter={(value: any) => [`$${value}`, 'Revenue']}
+            formatter={(value: any) => [`₹${Number(value).toLocaleString("en-IN")}`, 'Revenue']}
           />
           <Area 
             type="monotone" 

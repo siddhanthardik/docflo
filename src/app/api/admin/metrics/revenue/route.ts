@@ -11,32 +11,59 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // 1. Calculate MRR & ARR
+    // 1. Calculate MRR & ARR separated by currency
     const activeSubscriptions = await prisma.doctor.findMany({
       where: { subscriptionStatus: "ACTIVE" },
-      include: { package: true }
-    });
-
-    let mrr = 0;
-    activeSubscriptions.forEach((doc) => {
-      if (!doc.package) return;
-      if (doc.billingPeriod === "yearly") {
-        mrr += doc.package.priceYearly / 12;
-      } else if (doc.billingPeriod === "quarterly") {
-        mrr += doc.package.priceQuarterly / 3;
-      } else {
-        mrr += doc.package.priceMonthly;
+      include: {
+        package: {
+          include: {
+            prices: true,
+          }
+        }
       }
     });
 
-    const arr = mrr * 12;
+    let inrMrr = 0;
+    let usdMrr = 0;
 
-    // 2. Calculate Total Revenue
-    const revenueResult = await prisma.paymentTransaction.aggregate({
-      where: { status: "SUCCESS" },
+    activeSubscriptions.forEach((doc) => {
+      if (!doc.package) return;
+      
+      const isInternational = doc.country && doc.country !== "IN" && doc.country !== "IND" && doc.country !== "INDIA";
+      const inPrice = doc.package.prices?.find((p: any) => p.countryCode === "IN");
+      const usPrice = doc.package.prices?.find((p: any) => p.countryCode === "US" || p.countryCode === "GLOBAL");
+
+      let monthlyVal = doc.package.priceMonthly;
+      if (doc.billingPeriod === "yearly") {
+        monthlyVal = doc.package.priceYearly ? doc.package.priceYearly / 12 : doc.package.priceMonthly * 0.8;
+      } else if (doc.billingPeriod === "quarterly") {
+        monthlyVal = doc.package.priceQuarterly ? doc.package.priceQuarterly / 3 : doc.package.priceMonthly * 0.9;
+      }
+
+      if (isInternational) {
+        const usdMonthly = usPrice?.priceMonthly || (monthlyVal > 500 ? Math.round(monthlyVal / 85) : monthlyVal);
+        usdMrr += usdMonthly;
+      } else {
+        const inrMonthly = inPrice?.priceMonthly || monthlyVal;
+        inrMrr += inrMonthly;
+      }
+    });
+
+    const inrArr = inrMrr * 12;
+    const usdArr = usdMrr * 12;
+
+    // 2. Calculate Total Revenue separated by currency
+    const inrRevenueResult = await prisma.paymentTransaction.aggregate({
+      where: { status: "SUCCESS", currency: "INR" },
       _sum: { amount: true }
     });
-    const totalRevenue = revenueResult._sum.amount || 0;
+    const inrTotalRevenue = inrRevenueResult._sum.amount || 0;
+
+    const usdRevenueResult = await prisma.paymentTransaction.aggregate({
+      where: { status: "SUCCESS", currency: { not: "INR" } },
+      _sum: { amount: true }
+    });
+    const usdTotalRevenue = usdRevenueResult._sum.amount || 0;
 
     // 3. Last 6 months revenue for chart
     const sixMonthsAgo = new Date();
@@ -48,7 +75,7 @@ export async function GET() {
         status: "SUCCESS",
         createdAt: { gte: sixMonthsAgo }
       },
-      select: { amount: true, createdAt: true }
+      select: { amount: true, currency: true, createdAt: true }
     });
 
     const monthlyData: Record<string, number> = {};
@@ -72,9 +99,19 @@ export async function GET() {
     }));
 
     return NextResponse.json({
-      mrr: Math.round(mrr),
-      arr: Math.round(arr),
-      totalRevenue: Math.round(totalRevenue),
+      inr: {
+        mrr: Math.round(inrMrr),
+        arr: Math.round(inrArr),
+        totalRevenue: Math.round(inrTotalRevenue),
+      },
+      usd: {
+        mrr: Math.round(usdMrr),
+        arr: Math.round(usdArr),
+        totalRevenue: Math.round(usdTotalRevenue),
+      },
+      mrr: Math.round(inrMrr),
+      arr: Math.round(inrArr),
+      totalRevenue: Math.round(inrTotalRevenue),
       revenueChart
     });
   } catch (error) {

@@ -165,7 +165,8 @@ export function ClinicsClient({ initialClinics, packages }: { initialClinics: an
                         )}
                       </td>
                       <td className="px-6 py-4 font-medium text-gray-900">
-                        ${revenue.toFixed(2)}
+                        {clinic.country && clinic.country !== "IN" && clinic.country !== "IND" ? "$" : "₹"}
+                        {revenue.toLocaleString(clinic.country && clinic.country !== "IN" && clinic.country !== "IND" ? "en-US" : "en-IN")}
                       </td>
                       <td className="px-6 py-4 text-gray-600">
                         {new Date(clinic.createdAt).toLocaleDateString()}

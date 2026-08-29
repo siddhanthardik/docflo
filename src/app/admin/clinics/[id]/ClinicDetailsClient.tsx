@@ -280,7 +280,7 @@ export function ClinicDetailsClient({
                     {format(new Date(tx.createdAt), "MMM d, yyyy h:mm a")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${tx.amount}
+                    {tx.currency === "USD" ? "$" : "₹"}{Number(tx.amount).toLocaleString(tx.currency === "USD" ? "en-US" : "en-IN")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <Badge variant={tx.status === "SUCCESS" ? "default" : "secondary"}>

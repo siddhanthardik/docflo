@@ -67,12 +67,24 @@ export default async function AdminDashboardPage() {
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-xs transition-all hover:border-emerald-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Total MRR</span>
-            <div className="p-1.5 sm:p-2 bg-emerald-50 rounded-xl">
-              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+            <div className="p-1.5 sm:p-2 bg-emerald-50 rounded-xl text-emerald-700 font-extrabold text-xs">
+              ₹
             </div>
           </div>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">${revenueData?.mrr || 0}</h3>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-1">ARR: ${revenueData?.arr || 0}</p>
+          <div className="space-y-0.5">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              ₹{(revenueData?.inr?.mrr ?? revenueData?.mrr ?? 0).toLocaleString("en-IN")}
+            </h3>
+            {Boolean(revenueData?.usd?.mrr && revenueData.usd.mrr > 0) && (
+              <p className="text-xs font-bold text-slate-500">
+                + ${revenueData.usd.mrr.toLocaleString("en-US")} USD
+              </p>
+            )}
+          </div>
+          <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+            ARR: ₹{(revenueData?.inr?.arr ?? revenueData?.arr ?? 0).toLocaleString("en-IN")}
+            {Boolean(revenueData?.usd?.arr && revenueData.usd.arr > 0) && ` + $${revenueData.usd.arr.toLocaleString("en-US")}`}
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-xs transition-all hover:border-blue-200">
@@ -82,7 +94,16 @@ export default async function AdminDashboardPage() {
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             </div>
           </div>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">${revenueData?.totalRevenue || 0}</h3>
+          <div className="space-y-0.5">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              ₹{(revenueData?.inr?.totalRevenue ?? revenueData?.totalRevenue ?? 0).toLocaleString("en-IN")}
+            </h3>
+            {Boolean(revenueData?.usd?.totalRevenue && revenueData.usd.totalRevenue > 0) && (
+              <p className="text-xs font-bold text-slate-500">
+                + ${revenueData.usd.totalRevenue.toLocaleString("en-US")} USD
+              </p>
+            )}
+          </div>
           <p className="text-[11px] text-slate-400 font-medium mt-1">Lifetime</p>
         </div>
 

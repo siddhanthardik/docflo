@@ -44,6 +44,7 @@ export async function GET() {
           id: doc.id,
           name: doc.clinicName || doc.name,
           mrr: Math.round(mrr),
+          currency: (doc.country && doc.country !== "IN" && doc.country !== "IND") ? "USD" : "INR",
           package: doc.package?.name || "None"
         };
       })
