@@ -1085,12 +1085,12 @@ export default function LandingPage() {
                         {(() => {
                           const slug = pkg.slug?.toLowerCase() || pkg.name?.toLowerCase();
                           let featureList = [
-                            "5×5 Geo-Rank Google Maps Heatmaps",
+                            "5×5 Geo-Rank Google Maps (5 Keywords)",
                             "Automated 5-Star WhatsApp Reviews",
                             "AI Google Review Auto-Responder",
                             "Google Business Profile Optimizer",
-                            "Patient CRM & History",
-                            "Direct QR WhatsApp Pairing"
+                            "4 Scheduled Google Posts / Month",
+                            "Patient CRM & Direct QR WhatsApp"
                           ];
 
                           if (slug.includes("growth")) {
@@ -1099,7 +1099,8 @@ export default function LandingPage() {
                               "Custom Specialty Website (20 Themes)",
                               "Connect Custom Domain (drname.com)",
                               "Web Appointment Booking Engine",
-                              "AI Google Business Post Generator",
+                              "WhatsApp CRM & Announcements (500/mo)",
+                              "AI Google Business Posts (15 Posts/mo)",
                               "Digital Invoicing & WhatsApp Sharing",
                               "Medical SEO Schema & Meta Tags"
                             ];
@@ -1108,10 +1109,10 @@ export default function LandingPage() {
                               "Everything in Growth, plus:",
                               "24/7 Multilingual WhatsApp AI Receptionist",
                               "Doctor WhatsApp Delegation Assistant",
-                              "Multi-Doctor Practice Scheduling",
+                              "Unlimited WhatsApp Announcements",
+                              "Unlimited Google Posts & AI Creator",
                               "24h & 2h Automated WhatsApp Reminders",
-                              "1-Day Post-Care WhatsApp Check-Ins",
-                              "Unlimited AI Patient Conversations"
+                              "Multi-Doctor Practice Scheduling & VIP Support"
                             ];
                           }
 
