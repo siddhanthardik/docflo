@@ -20,83 +20,83 @@ import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 
-// 12 Medical Specialties with Verified Accurate Photography
+// 12 Medical Specialties - Static Local Paths (Customizable via /public/images/specialties/)
 const SPECIALTY_CARDS = [
   {
     name: "Pediatrics & Child Care",
     icon: "🧸",
-    image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/pediatrics.jpg",
     themeId: "warm-pediatrics",
   },
   {
     name: "Dermatology & Aesthetics",
     icon: "✨",
-    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/dermatology.jpg",
     themeId: "radiant-derma",
   },
   {
     name: "Dental & Orthodontics",
     icon: "🦷",
-    image: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/dental.jpg",
     themeId: "smile-dental",
   },
   {
     name: "Cardiology & Heart Care",
     icon: "❤️",
-    image: "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/cardiology.jpg",
     themeId: "cardiac-care",
   },
   {
     name: "IVF & Fertility Care",
     icon: "🌸",
-    image: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/ivf.jpg",
     themeId: "miracle-ivf",
   },
   {
     name: "Diabetology & Endocrine",
     icon: "🩸",
-    image: "https://images.unsplash.com/photo-1628348070889-cb656235b4eb?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/diabetology.jpg",
     themeId: "endo-diabetes",
   },
   {
     name: "Orthopedics & Joint Care",
     icon: "🦴",
-    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/orthopedics.jpg",
     themeId: "warm-pediatrics",
   },
   {
     name: "Ophthalmology & Eye Care",
     icon: "👁️",
-    image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/ophthalmology.jpg",
     themeId: "smile-dental",
   },
   {
     name: "Gynecology & Obstetrics",
     icon: "🤰",
-    image: "https://images.unsplash.com/photo-1579684453423-f84349ef60b0?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/gynecology.jpg",
     themeId: "miracle-ivf",
   },
   {
     name: "ENT & Head-Neck Care",
     icon: "👂",
-    image: "https://images.unsplash.com/photo-1583912267670-6575ad373689?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/ent.jpg",
     themeId: "cardiac-care",
   },
   {
     name: "Psychiatry & Mental Health",
     icon: "🧠",
-    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/psychiatry.jpg",
     themeId: "radiant-derma",
   },
   {
     name: "Physiotherapy & Rehab",
     icon: "🏃",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80",
+    image: "/images/specialties/physiotherapy.jpg",
     themeId: "endo-diabetes",
   },
 ];
 
-// Specialty Themes for the Interactive Builder Showcase with Accurate Images
+// Specialty Themes for Builder Showcase - Local Paths (Customizable via /public/images/themes/)
 const SPECIALTY_THEMES = [
   {
     id: "warm-pediatrics",
@@ -106,7 +106,7 @@ const SPECIALTY_THEMES = [
     color: "#059669",
     secondaryColor: "#F59E0B",
     clinicName: "Little Stars Pediatrics & Child Care",
-    heroImage: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/pediatrics-hero.jpg",
     specialty: "Pediatrics & Neonatal Care",
     headline: "Gentle, Loving Healthcare for Happy, Healthy & Thriving Kids",
     badges: ["🧸 Stress-Free Play Zone", "💉 Pain-Free Vaccines", "🌡️ 24/7 Fever Support"],
@@ -120,7 +120,7 @@ const SPECIALTY_THEMES = [
     color: "#be185d",
     secondaryColor: "#fda4af",
     clinicName: "Lumina Dermatology & Aesthetic Center",
-    heroImage: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/dermatology-hero.jpg",
     specialty: "Dermatology & Aesthetics",
     headline: "Science-Backed Skin & Hair Transformations for Radiant Confidence",
     badges: ["✨ US-FDA Laser Tech", "🔬 3D Skin Analysis", "🌿 Chemical-Free Peels"],
@@ -134,7 +134,7 @@ const SPECIALTY_THEMES = [
     color: "#0284c7",
     secondaryColor: "#38bdf8",
     clinicName: "Apex Dental & Implant Centre",
-    heroImage: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/dental-hero.jpg",
     specialty: "Dental & Orthodontics",
     headline: "Pain-Free Modern Dentistry for Your Family's Healthiest Smiles",
     badges: ["🦷 Painless Digital Anesthesia", "⚡ Same-Day Ceramic Crowns", "✨ Invisible Aligners"],
@@ -148,7 +148,7 @@ const SPECIALTY_THEMES = [
     color: "#b91c1c",
     secondaryColor: "#f87171",
     clinicName: "CareVascular Heart & Vascular Institute",
-    heroImage: "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/cardiology-hero.jpg",
     specialty: "Cardiology & Vascular",
     headline: "Advanced Heart & Vascular Care with Compassionate Precision",
     badges: ["❤️ Emergency Echo in 10 Mins", "🔬 2D/3D Color Doppler", "📊 Lipid Risk Assessment"],
@@ -162,7 +162,7 @@ const SPECIALTY_THEMES = [
     color: "#7c3aed",
     secondaryColor: "#c084fc",
     clinicName: "Bloom Fertility & IVF Center",
-    heroImage: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/ivf-hero.jpg",
     specialty: "IVF & Reproductive Health",
     headline: "Compassionate, Science-Driven Fertility Care on Your Journey to Parenthood",
     badges: ["🌸 78% First-Cycle Success", "🔬 AI Blastocyst Scoring", "🤝 100% Confidential Care"],
@@ -176,7 +176,7 @@ const SPECIALTY_THEMES = [
     color: "#0891b2",
     secondaryColor: "#06b6d4",
     clinicName: "Metabolic Health & Endocrine Clinic",
-    heroImage: "https://images.unsplash.com/photo-1628348070889-cb656235b4eb?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "/images/themes/diabetology-hero.jpg",
     specialty: "Diabetology & Endocrinology",
     headline: "Evidence-Based Glycemic Control & Hormone Balance Solutions",
     badges: ["📊 Continuous Glucose CGMS", "🩺 Diabetic Foot Screening", "⚖️ Thyroid & Hormone Panels"],
