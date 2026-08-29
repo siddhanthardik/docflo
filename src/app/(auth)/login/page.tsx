@@ -154,6 +154,20 @@ function LoginContent() {
           <Link href="/"><GyrexLogo size="md" /></Link>
         </div>
 
+        {searchParams.get("verified") === "1" && (
+          <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Email verified successfully! You can now sign in.</span>
+          </div>
+        )}
+
+        {searchParams.get("registered") === "1" && (
+          <div className="mb-6 p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-semibold text-blue-800 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Account created! Please check your email to verify your account.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {/* Email */}
           <div className="space-y-1">
@@ -226,7 +240,7 @@ function LoginContent() {
           <p className="text-sm text-slate-500">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-bold text-blue-600 hover:underline">
-              Start free trial
+              Sign up
             </Link>
           </p>
         </div>

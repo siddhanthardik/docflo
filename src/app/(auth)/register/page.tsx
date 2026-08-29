@@ -3,13 +3,13 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Activity, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2, Check, X } from "lucide-react";
+import { Activity, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2, Check, X, Mail, Send, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const isValidEmail = (v: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+  /^[^s@]+@[^s@]+.[^s@]{2,}$/.test(v.trim());
 
 type FieldErrors = {
   name?: string;
@@ -77,6 +77,10 @@ export function RegisterPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -128,7 +132,6 @@ export function RegisterPage() {
     else if (key === "email") err = validateEmail(v);
     else if (key === "password") {
       err = validatePassword(v);
-      // Also revalidate confirmPassword if it's been touched
       if (touched.confirmPassword) {
         setErrors(prev => ({
           ...prev,
@@ -155,6 +158,28 @@ export function RegisterPage() {
     setErrors(prev => ({ ...prev, [key]: err }));
   };
 
+  // ── Resend verification email ────────────────────────────────────────────────
+  const handleResend = async () => {
+    if (!registeredEmail) return;
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/verify-email/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: registeredEmail }),
+      });
+      if (res.ok) {
+        toast({ title: "Email sent", description: "A fresh verification link has been sent to your email." });
+      } else {
+        toast({ title: "Verification email sent", description: "Please check your inbox and spam folder." });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to resend verification email. Please try again.", variant: "destructive" });
+    } finally {
+      setResending(false);
+    }
+  };
+
   // ── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,13 +203,14 @@ export function RegisterPage() {
     }
 
     setLoading(true);
+    const targetEmail = formData.email.trim().toLowerCase();
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name.trim(),
-          email: formData.email.trim().toLowerCase(),
+          email: targetEmail,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
           affiliateCode: searchParams.get("ref") || undefined,
@@ -193,8 +219,9 @@ export function RegisterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
 
-      toast({ title: "Account created!", description: "Sign in to complete your profile setup." });
-      router.push("/login?setup=1");
+      setRegisteredEmail(targetEmail);
+      setIsSubmitted(true);
+      toast({ title: "Account created!", description: "Please check your email to verify your account." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -216,170 +243,223 @@ export function RegisterPage() {
           <Link href="/"><GyrexLogo size="md" /></Link>
         </div>
 
-        {searchParams.get("ref") && (
-          <div className="mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 text-center">
-            You are registering via a partner referral link.
-          </div>
-        )}
+        {isSubmitted ? (
+          /* ── POST-SIGNUP VERIFICATION CONFIRMATION SCREEN ── */
+          <div className="text-center space-y-6 py-2">
+            <div className="w-16 h-16 bg-blue-50 border border-blue-200 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <Mail className="w-8 h-8 text-blue-600" />
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Verify Your Email</h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                We sent a verification link to:
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 bg-slate-100 py-1.5 px-3 rounded-xl inline-block break-all border border-slate-200">
+                {registeredEmail}
+              </p>
+            </div>
 
-          {/* Full Name */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Full Name</label>
-            <InputWrapper hasError={!!errors.name && !!touched.name}>
-              <input
-                type="text"
-                placeholder="Dr. Priya Sharma"
-                value={formData.name}
-                onChange={handleChange("name")}
-                onBlur={handleBlur("name")}
-                disabled={loading}
-                className="w-full h-11 px-4 pr-10 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
-              {nameOk && (
-                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
-              )}
-            </InputWrapper>
-            <FieldError msg={touched.name ? errors.name : undefined} />
-          </div>
+            <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 text-xs text-slate-600 leading-relaxed text-left space-y-1.5">
+              <p className="font-semibold text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" /> Check your inbox to activate your account
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Click the verification link in the email we sent you. If you don&apos;t see it within a minute, please check your spam or promotions folder.
+              </p>
+            </div>
 
-          {/* Email */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Email</label>
-            <InputWrapper hasError={!!errors.email && !!touched.email}>
-              <input
-                type="email"
-                placeholder="doctor@yourclinic.com"
-                value={formData.email}
-                onChange={handleChange("email")}
-                onBlur={handleBlur("email")}
-                disabled={loading}
-                className="w-full h-11 px-4 pr-10 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
-              {emailOk && (
-                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
-              )}
-            </InputWrapper>
-            <FieldError msg={touched.email ? errors.email : undefined} />
-          </div>
-
-          {/* Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
-            <InputWrapper hasError={!!errors.password && !!touched.password}>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Create a strong password"
-                value={formData.password}
-                onChange={handleChange("password")}
-                onBlur={handleBlur("password")}
-                disabled={loading}
-                className="w-full h-11 px-4 pr-12 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
+            <div className="space-y-3 pt-2">
               <button
                 type="button"
-                onClick={() => setShowPassword(s => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                onClick={handleResend}
+                disabled={resending}
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {resending ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Sending verification email...</>
+                ) : (
+                  <><Send className="w-4 h-4" /> Resend Verification Email</>
+                )}
               </button>
-            </InputWrapper>
 
-            {/* Password strength bar (shows once user starts typing) */}
-            {formData.password && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 grid grid-cols-4 gap-1">
-                    {[0, 1, 2, 3].map(i => (
-                      <div
-                        key={i}
-                        className={`h-1 rounded-full transition-all duration-300 ${
-                          i < strength.score ? strength.color : "bg-slate-200"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className={`text-[11px] font-bold ${
-                    strength.score <= 1 ? "text-rose-500" :
-                    strength.score === 2 ? "text-amber-500" :
-                    strength.score === 3 ? "text-blue-500" : "text-emerald-600"
-                  }`}>{strength.label}</span>
-                </div>
-                {/* Rule checklist */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                  {PASSWORD_RULES.map(rule => {
-                    const passed = rule.test(formData.password);
-                    return (
-                      <div key={rule.label} className="flex items-center gap-1">
-                        {passed
-                          ? <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                          : <X className="w-3 h-3 text-slate-300 shrink-0" />
-                        }
-                        <span className={`text-[11px] ${passed ? "text-emerald-700" : "text-slate-400"}`}>
-                          {rule.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <FieldError msg={touched.password ? errors.password : undefined} />
-          </div>
-
-          {/* Confirm Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Confirm Password</label>
-            <InputWrapper hasError={!!errors.confirmPassword && !!touched.confirmPassword}>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Re-enter your password"
-                value={formData.confirmPassword}
-                onChange={handleChange("confirmPassword")}
-                onBlur={handleBlur("confirmPassword")}
-                disabled={loading}
-                className="w-full h-11 px-4 pr-20 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                {confirmOk && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+              <Link href="/login?registered=1" className="block">
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(s => !s)}
-                  className="text-slate-400 hover:text-slate-600 transition"
+                  className="w-full h-11 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Proceed to Sign In <ArrowRight className="w-4 h-4" />
                 </button>
-              </div>
-            </InputWrapper>
-            <FieldError msg={touched.confirmPassword ? errors.confirmPassword : undefined} />
+              </Link>
+            </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-colors shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 mt-4"
-          >
-            {loading ? (
-              <><Activity className="w-4 h-4 animate-spin" /> Creating account…</>
-            ) : (
-              <>Create Free Account <ArrowRight className="w-4 h-4" /></>
+        ) : (
+          /* ── SIGNUP FORM ── */
+          <>
+            {searchParams.get("ref") && (
+              <div className="mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 text-center">
+                You are registering via a partner referral link.
+              </div>
             )}
-          </button>
 
-          <p className="text-center text-xs text-slate-400 pt-1">
-            By signing up you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-slate-600">Terms</Link>{" "}and{" "}
-            <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
-          </p>
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-          <p className="text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link href="/login" className="font-bold text-blue-600 hover:underline">Sign in</Link>
-          </p>
-        </div>
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Full Name</label>
+                <InputWrapper hasError={!!errors.name && !!touched.name}>
+                  <input
+                    type="text"
+                    placeholder="Dr. Priya Sharma"
+                    value={formData.name}
+                    onChange={handleChange("name")}
+                    onBlur={handleBlur("name")}
+                    disabled={loading}
+                    className="w-full h-11 px-4 pr-10 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  {nameOk && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
+                  )}
+                </InputWrapper>
+                <FieldError msg={touched.name ? errors.name : undefined} />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Email</label>
+                <InputWrapper hasError={!!errors.email && !!touched.email}>
+                  <input
+                    type="email"
+                    placeholder="doctor@yourclinic.com"
+                    value={formData.email}
+                    onChange={handleChange("email")}
+                    onBlur={handleBlur("email")}
+                    autoComplete="email"
+                    disabled={loading}
+                    className="w-full h-11 px-4 pr-10 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  {emailOk && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
+                  )}
+                </InputWrapper>
+                <FieldError msg={touched.email ? errors.email : undefined} />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
+                <InputWrapper hasError={!!errors.password && !!touched.password}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a strong password"
+                    value={formData.password}
+                    onChange={handleChange("password")}
+                    onBlur={handleBlur("password")}
+                    disabled={loading}
+                    className="w-full h-11 px-4 pr-10 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(s => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </InputWrapper>
+                <FieldError msg={touched.password ? errors.password : undefined} />
+
+                {/* Password strength indicator */}
+                {formData.password && (
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Strength:</span>
+                      <span className="font-bold text-slate-700">{strength.label}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 h-1.5">
+                      {[1, 2, 3, 4].map(i => (
+                        <div
+                          key={i}
+                          className={`rounded-full transition-all duration-300 ${
+                            i <= strength.score ? strength.color : "bg-slate-100"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      {PASSWORD_RULES.map(r => {
+                        const pass = r.test(formData.password);
+                        return (
+                          <div
+                            key={r.label}
+                            className={`flex items-center gap-1.5 text-[11px] ${
+                              pass ? "text-emerald-600 font-semibold" : "text-slate-400"
+                            }`}
+                          >
+                            {pass ? <Check className="w-3 h-3 text-emerald-500 shrink-0" /> : <X className="w-3 h-3 text-slate-300 shrink-0" />}
+                            <span>{r.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Confirm Password</label>
+                <InputWrapper hasError={!!errors.confirmPassword && !!touched.confirmPassword}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange("confirmPassword")}
+                    onBlur={handleBlur("confirmPassword")}
+                    disabled={loading}
+                    className="w-full h-11 px-4 pr-20 rounded-xl bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    {confirmOk && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(s => !s)}
+                      className="text-slate-400 hover:text-slate-600 transition"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </InputWrapper>
+                <FieldError msg={touched.confirmPassword ? errors.confirmPassword : undefined} />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-colors shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 mt-4"
+              >
+                {loading ? (
+                  <><Activity className="w-4 h-4 animate-spin" /> Creating account…</>
+                ) : (
+                  <>Create Free Account <ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
+
+              <p className="text-center text-xs text-slate-400 pt-1">
+                By signing up you agree to our{" "}
+                <Link href="/terms" className="underline hover:text-slate-600">Terms</Link>{" "}and{" "}
+                <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
+              </p>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+              <p className="text-sm text-slate-500">
+                Already have an account?{" "}
+                <Link href="/login" className="font-bold text-blue-600 hover:underline">Sign in</Link>
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
