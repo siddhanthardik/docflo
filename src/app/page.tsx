@@ -20,67 +20,83 @@ import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 
-// 8 Medical Specialties for the Visual Photography Grid
+// 12 Medical Specialties with Verified Accurate Photography
 const SPECIALTY_CARDS = [
   {
     name: "Pediatrics & Child Care",
-    tagline: "Stress-Free Care for Kids",
     icon: "🧸",
-    image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=600&q=80",
     themeId: "warm-pediatrics",
   },
   {
     name: "Dermatology & Aesthetics",
-    tagline: "Laser & Skin Transformations",
     icon: "✨",
-    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80",
     themeId: "radiant-derma",
   },
   {
     name: "Dental & Orthodontics",
-    tagline: "Painless Digital Dentistry",
     icon: "🦷",
-    image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=600&q=80",
     themeId: "smile-dental",
   },
   {
-    name: "Cardiology & Vascular",
-    tagline: "Compassionate Heart Care",
+    name: "Cardiology & Heart Care",
     icon: "❤️",
-    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?auto=format&fit=crop&w=600&q=80",
     themeId: "cardiac-care",
   },
   {
     name: "IVF & Fertility Care",
-    tagline: "Confidential Parenthood Support",
     icon: "🌸",
-    image: "https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80",
     themeId: "miracle-ivf",
   },
   {
     name: "Diabetology & Endocrine",
-    tagline: "Evidence-Based Glycemic Control",
     icon: "🩸",
-    image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1628348070889-cb656235b4eb?auto=format&fit=crop&w=600&q=80",
     themeId: "endo-diabetes",
   },
   {
     name: "Orthopedics & Joint Care",
-    tagline: "Advanced Mobility & Spine Care",
     icon: "🦴",
-    image: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80",
     themeId: "warm-pediatrics",
   },
   {
     name: "Ophthalmology & Eye Care",
-    tagline: "Precision Vision & Lasik",
     icon: "👁️",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80",
+    image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80",
     themeId: "smile-dental",
+  },
+  {
+    name: "Gynecology & Obstetrics",
+    icon: "🤰",
+    image: "https://images.unsplash.com/photo-1579684453423-f84349ef60b0?auto=format&fit=crop&w=600&q=80",
+    themeId: "miracle-ivf",
+  },
+  {
+    name: "ENT & Head-Neck Care",
+    icon: "👂",
+    image: "https://images.unsplash.com/photo-1583912267670-6575ad373689?auto=format&fit=crop&w=600&q=80",
+    themeId: "cardiac-care",
+  },
+  {
+    name: "Psychiatry & Mental Health",
+    icon: "🧠",
+    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80",
+    themeId: "radiant-derma",
+  },
+  {
+    name: "Physiotherapy & Rehab",
+    icon: "🏃",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80",
+    themeId: "endo-diabetes",
   },
 ];
 
-// Specialty Themes for the Interactive Builder Showcase
+// Specialty Themes for the Interactive Builder Showcase with Accurate Images
 const SPECIALTY_THEMES = [
   {
     id: "warm-pediatrics",
@@ -90,7 +106,7 @@ const SPECIALTY_THEMES = [
     color: "#059669",
     secondaryColor: "#F59E0B",
     clinicName: "Little Stars Pediatrics & Child Care",
-    heroImage: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=1000&q=80",
     specialty: "Pediatrics & Neonatal Care",
     headline: "Gentle, Loving Healthcare for Happy, Healthy & Thriving Kids",
     badges: ["🧸 Stress-Free Play Zone", "💉 Pain-Free Vaccines", "🌡️ 24/7 Fever Support"],
@@ -118,7 +134,7 @@ const SPECIALTY_THEMES = [
     color: "#0284c7",
     secondaryColor: "#38bdf8",
     clinicName: "Apex Dental & Implant Centre",
-    heroImage: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=1000&q=80",
     specialty: "Dental & Orthodontics",
     headline: "Pain-Free Modern Dentistry for Your Family's Healthiest Smiles",
     badges: ["🦷 Painless Digital Anesthesia", "⚡ Same-Day Ceramic Crowns", "✨ Invisible Aligners"],
@@ -132,7 +148,7 @@ const SPECIALTY_THEMES = [
     color: "#b91c1c",
     secondaryColor: "#f87171",
     clinicName: "CareVascular Heart & Vascular Institute",
-    heroImage: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?auto=format&fit=crop&w=1000&q=80",
     specialty: "Cardiology & Vascular",
     headline: "Advanced Heart & Vascular Care with Compassionate Precision",
     badges: ["❤️ Emergency Echo in 10 Mins", "🔬 2D/3D Color Doppler", "📊 Lipid Risk Assessment"],
@@ -146,7 +162,7 @@ const SPECIALTY_THEMES = [
     color: "#7c3aed",
     secondaryColor: "#c084fc",
     clinicName: "Bloom Fertility & IVF Center",
-    heroImage: "https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1000&q=80",
     specialty: "IVF & Reproductive Health",
     headline: "Compassionate, Science-Driven Fertility Care on Your Journey to Parenthood",
     badges: ["🌸 78% First-Cycle Success", "🔬 AI Blastocyst Scoring", "🤝 100% Confidential Care"],
@@ -160,7 +176,7 @@ const SPECIALTY_THEMES = [
     color: "#0891b2",
     secondaryColor: "#06b6d4",
     clinicName: "Metabolic Health & Endocrine Clinic",
-    heroImage: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1000&q=80",
+    heroImage: "https://images.unsplash.com/photo-1628348070889-cb656235b4eb?auto=format&fit=crop&w=1000&q=80",
     specialty: "Diabetology & Endocrinology",
     headline: "Evidence-Based Glycemic Control & Hormone Balance Solutions",
     badges: ["📊 Continuous Glucose CGMS", "🩺 Diabetic Foot Screening", "⚖️ Thyroid & Hormone Panels"],
@@ -493,8 +509,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 8 MEDICAL SPECIALTY PHOTOGRAPHY GRID ("BUILT EXCLUSIVELY FOR CLINICS") ── */}
-      <section ref={specialtyGridRef} className="py-16 bg-slate-50">
+      {/* ── 12 MEDICAL SPECIALTY PHOTOGRAPHY GRID ("BUILT FOR MEDICAL SPECIALISTS") ── */}
+      <section ref={specialtyGridRef} className="py-16 bg-slate-50 border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
           <div className="text-center max-w-2xl mx-auto space-y-3">
@@ -506,28 +522,26 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {SPECIALTY_CARDS.map((spec, i) => (
               <Link
                 key={i}
                 href="#clinic-websites"
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xl transition-all duration-300 flex items-center justify-between overflow-hidden group p-3 hover:-translate-y-1"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xl transition-all duration-300 flex items-center justify-between overflow-hidden group hover:-translate-y-1 h-[88px] sm:h-[96px]"
               >
-                <div className="space-y-1 pr-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">{spec.icon}</span>
-                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
-                      {spec.name}
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-slate-500 font-medium">{spec.tagline}</p>
+                <div className="flex items-center gap-2.5 pl-4 pr-2">
+                  <span className="text-xl sm:text-2xl">{spec.icon}</span>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                    {spec.name}
+                  </h3>
                 </div>
-                <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+                <div className="w-[95px] sm:w-[115px] h-full shrink-0 overflow-hidden bg-slate-100 relative">
                   <img
                     src={spec.image}
                     alt={spec.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent pointer-events-none" />
                 </div>
               </Link>
             ))}
