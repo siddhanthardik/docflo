@@ -775,7 +775,7 @@ class WhatsAppManager {
                         const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
 
                         await prisma.appointment.create({
-                          data: { patientId: newPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
+                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
 
                         const docName = formatDoctorDisplayName(doctorInfo?.name);
@@ -823,7 +823,7 @@ class WhatsAppManager {
                          const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
 
                          await prisma.appointment.create({
-                           data: { patientId: selectedPatient.id, doctorId, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                           data: { patientId: selectedPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                          });
 
                          const docName = formatDoctorDisplayName(doctorInfo?.name);
@@ -1288,10 +1288,12 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         }
 
                         // 4. Create the Appointment
+                        const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                         await prisma.appointment.create({
                           data: {
                             patientId: patient.id,
                             doctorId: doctorId,
+                            practitionerId: defaultPractitioner?.id || null,
                             date: appointmentDate,
                             startTime: startTime,
                             endTime: endTime,
