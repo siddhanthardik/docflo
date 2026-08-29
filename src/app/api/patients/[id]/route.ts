@@ -65,7 +65,7 @@ export async function GET(
         type: "APPOINTMENT",
         title: `Appointment ${apt.status === "CONFIRMED" ? "Confirmed" : apt.status === "CHECKED_IN" ? "Checked In" : apt.status === "COMPLETED" ? "Completed" : apt.status === "CANCELLED" ? "Cancelled" : "No Show"}`,
         description: `With ${apt.practitioner?.name || 'Clinic'}${apt.reason ? ` for ${apt.reason}` : ''}`,
-        date: apt.date, // or apt.createdAt if we have it, but apt.date is the clinical event time
+        date: apt.startTime || apt.date,
         status: apt.status
       });
     });
