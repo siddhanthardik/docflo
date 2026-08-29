@@ -106,6 +106,72 @@ class WhatsAppManager {
     return !!last10A && !!last10B && last10A === last10B;
   }
 
+  // Sends an outbound WhatsApp message to a patient, ensures conversation exists in CRM, and saves ChatMessage record
+  async sendOutboundPatientMessage(
+    sock: any,
+    doctorId: string,
+    rawPhone: string,
+    text: string,
+    patientId?: string | null,
+    patientName?: string | null
+  ): Promise<boolean> {
+    try {
+      const normalizedPhone = this.normalizePhone(rawPhone);
+      if (!normalizedPhone || normalizedPhone.length < 10) {
+        console.error(`[WhatsAppManager] Cannot send message: invalid patient phone "${rawPhone}"`);
+        return false;
+      }
+
+      const patientJid = `${normalizedPhone}@s.whatsapp.net`;
+      await sock.sendMessage(patientJid, { text });
+      console.log(`[WhatsAppManager] 📤 Outbound WhatsApp sent to ${patientJid}`);
+
+      // Ensure Conversation exists and is tracked in CRM inbox
+      let conversation = await prisma.conversation.findUnique({
+        where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
+      });
+
+      if (!conversation) {
+        conversation = await prisma.conversation.create({
+          data: {
+            doctorId,
+            patientPhone: normalizedPhone,
+            patientName: patientName || `Patient +${normalizedPhone}`,
+            patientId: patientId || null,
+            status: "OPEN",
+            lastMessageAt: new Date(),
+          }
+        });
+      } else {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: {
+            lastMessageAt: new Date(),
+            status: "OPEN",
+            ...(patientName ? { patientName } : {}),
+            ...(patientId ? { patientId } : {})
+          }
+        });
+      }
+
+      // Record outbound chat message in CRM
+      await prisma.chatMessage.create({
+        data: {
+          conversationId: conversation.id,
+          direction: "OUTGOING",
+          messageType: "text",
+          content: text,
+          senderName: "AI Assistant",
+        }
+      });
+
+      return true;
+    } catch (err) {
+      console.error(`[WhatsAppManager] Error sending outbound patient message to ${rawPhone}:`, err);
+      return false;
+    }
+  }
+
   // Connects or reconnects a doctor's WhatsApp session
   async connect(doctorId: string) {
     if (this.connectingDoctors.has(doctorId)) {
@@ -405,7 +471,7 @@ class WhatsAppManager {
               }
             }
 
-            const patientName = isStaff ? "Clinic Staff/Doctor" : `${patient!.firstName} ${patient!.lastName}`;
+            const patientName = isStaff ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor") : `${patient!.firstName} ${patient!.lastName}`.trim();
 
             // Find or create Conversation
             let conversation = await prisma.conversation.findUnique({
@@ -425,7 +491,13 @@ class WhatsAppManager {
             } else {
               await prisma.conversation.update({
                 where: { id: conversation.id },
-                data: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, status: "OPEN", patientId: isStaff ? null : patient!.id }
+                data: { 
+                  lastMessageAt: new Date(), 
+                  unreadCount: { increment: 1 }, 
+                  status: "OPEN", 
+                  patientId: isStaff ? null : patient!.id,
+                  patientName,
+                }
               });
             }
 
@@ -709,10 +781,8 @@ class WhatsAppManager {
                         const docName = formatDoctorDisplayName(doctorInfo?.name);
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                        const patientJid = `${phoneDigits}@s.whatsapp.net`;
-                        await sock.sendMessage(patientJid, {
-                          text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                        });
+                        const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                        await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits, ptMsg, newPatient.id, patientName);
 
                         const confirmMsg = `Done, Doctor! I have created a new patient profile for *${patientName}* and booked their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
@@ -760,11 +830,9 @@ class WhatsAppManager {
                          const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                          const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                          if (selectedPatient.phone) {
-                           const patientJid = `${selectedPatient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                           await sock.sendMessage(patientJid, {
-                             text: `Hi ${selectedPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                           });
-                         }
+                            const ptMsg = `Hi ${selectedPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                            await this.sendOutboundPatientMessage(sock, doctorId, selectedPatient.phone, ptMsg, selectedPatient.id, `${selectedPatient.firstName} ${selectedPatient.lastName}`.trim());
+                          }
                          const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
                          await sock.sendMessage(remoteJid, { text: confirmMsg });
                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
@@ -806,10 +874,8 @@ class WhatsAppManager {
                         const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                        const patientJid = `${phoneDigits4}@s.whatsapp.net`;
-                        await sock.sendMessage(patientJid, {
-                          text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                        });
+                        const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                        await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits4, ptMsg, newPatient.id, patientName);
                         const confirmMsg = `Done, Doctor! I have created a new profile for *${patientName}* (Phone: ${phoneDigits4}) and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
                         await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
@@ -906,12 +972,12 @@ class WhatsAppManager {
                        
                        // Notify patient via WhatsApp
                        if (apt.patient?.phone) {
-                         const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                         const docName = formatDoctorDisplayName(doctorInfo?.name);
-                         const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
-                         await sock.sendMessage(patientJid, { text: msg });
-                         console.log(`[WhatsAppManager] Sent cancellation to ${patientJid}`);
-                       }
+                          const docName = formatDoctorDisplayName(doctorInfo?.name);
+                          const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.
+
+We sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
+                        }
                     }
                   } catch (e) {
                     console.error("[WhatsAppManager] Cancel Error:", e);
@@ -987,7 +1053,7 @@ class WhatsAppManager {
                     const patientJid = `${cleanPhone}@s.whatsapp.net`;
                     
                     // Send message via Baileys
-                    await sock.sendMessage(patientJid, { text: msgContent.trim() });
+                    await this.sendOutboundPatientMessage(sock, doctorId, cleanPhone, msgContent.trim());
                     console.log(`[WhatsAppManager] AI relayed message to patient ${patientJid}`);
                     
                     // Create conversation/message records so AI remembers context
@@ -1079,9 +1145,8 @@ class WhatsAppManager {
                       const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
                       const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                       const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                      await sock.sendMessage(`${prefilledPhone}@s.whatsapp.net`, {
-                        text: `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                      });
+                      const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                      await this.sendOutboundPatientMessage(sock, doctorId, prefilledPhone, ptMsg, newPatient.id, `${newPatient.firstName} ${newPatient.lastName}`.trim());
                       finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                     } else {
                       // No phone provided upfront: search by name
@@ -1106,13 +1171,11 @@ class WhatsAppManager {
                           data: { patientId: pt.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                         });
                         if (pt.phone) {
-                          const patientJid = `${pt.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                          const docName = formatDoctorDisplayName(doctorInfo?.name);
+                          const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
                           const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
                           const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                          await sock.sendMessage(patientJid, {
-                            text: `Hi ${pt.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
-                          });
+                          const ptMsg = `Hi ${pt.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, pt.phone, ptMsg, pt.id, `${pt.firstName} ${pt.lastName}`.trim());
                           finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
                         }
 
