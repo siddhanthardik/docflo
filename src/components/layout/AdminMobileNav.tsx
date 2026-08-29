@@ -161,7 +161,7 @@ export function AdminMobileNav() {
               </div>
 
               <button
-                onClick={() => signOut({ callbackUrl: "/team/login" })}
+                onClick={() => signOut({ callbackUrl: "/login" })}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 font-bold text-xs hover:bg-rose-100 transition-colors active:scale-98"
               >
                 <LogOut className="w-4 h-4 text-rose-600" />
