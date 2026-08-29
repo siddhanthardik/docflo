@@ -1401,7 +1401,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
       console.warn(`[WhatsAppManager] onWhatsApp verification warning for ${cleanPhone}:`, e);
     }
 
-    const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
+        const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
     if (!sent) {
       const err = new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
       logSystemError(err, {
@@ -1410,6 +1410,48 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
         metadata: { doctorId, phone: cleanPhone }
       });
       throw err;
+    }
+
+    // Ensure Conversation & ChatMessage are recorded in WhatsApp CRM
+    try {
+      let conversation = await prisma.conversation.findUnique({
+        where: { doctorId_patientPhone: { doctorId, patientPhone: cleanPhone } }
+      });
+
+      if (!conversation) {
+        const pt = await prisma.patient.findFirst({
+          where: { doctorId, phone: { in: [cleanPhone, `+${cleanPhone}`, cleanPhone.slice(-10)] } }
+        });
+        const ptName = pt ? `${pt.firstName} ${pt.lastName}`.trim() : `Patient +${cleanPhone}`;
+
+        conversation = await prisma.conversation.create({
+          data: {
+            doctorId,
+            patientPhone: cleanPhone,
+            patientName: ptName,
+            patientId: pt?.id || null,
+            status: "OPEN",
+            lastMessageAt: new Date(),
+          }
+        });
+      } else {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { lastMessageAt: new Date(), status: "OPEN" }
+        });
+      }
+
+      await prisma.chatMessage.create({
+        data: {
+          conversationId: conversation.id,
+          direction: "OUTGOING",
+          messageType: "text",
+          content: text,
+          senderName: "Clinic AI",
+        }
+      });
+    } catch (crmErr) {
+      console.warn(`[WhatsAppManager] Failed to record outbound message to CRM database for ${cleanPhone}:`, crmErr);
     }
 
     return cleanPhone; // Return the normalized phone so callers can use it for DB lookups
@@ -1495,10 +1537,32 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
       }
     };
 
-    // Run every 30 seconds
+        // Run every 30 seconds
     this.watchdogTimer = setInterval(runWatchdogSweep, 30000);
     // Initial sweep after 5 seconds
     setTimeout(runWatchdogSweep, 5000);
+
+    // Autonomous Background Automations Runner (24h/2h Reminders, Follow-ups, Review Surveys)
+    const runAutonomousAutomations = async () => {
+      try {
+        // 1. Evaluate and send 24h & 2h appointment reminders + post-consult follow-ups
+        const { ReminderService } = await import("@/services/reminder.service");
+        const reminderService = new ReminderService();
+        await reminderService.sendAppointmentReminders().catch(e => console.error('[Autonomous Reminders Error]:', e));
+        await reminderService.sendFollowUpReminders().catch(e => console.error('[Autonomous Follow-up Error]:', e));
+
+        // 2. Evaluate completed consultations for feedback surveys & Google Reviews
+        const { ReviewDispatcherService } = await import("@/services/review-dispatcher.service");
+        await ReviewDispatcherService.evaluateAppointments().catch(e => console.error('[Autonomous Review Surveys Error]:', e));
+      } catch (autoErr) {
+        console.error('[WhatsAppManager Autonomous Automations Error]:', autoErr);
+      }
+    };
+
+    // Run automations every 3 minutes (180,000 ms)
+    setInterval(runAutonomousAutomations, 180000);
+    // Initial automation sweep 10 seconds after server start
+    setTimeout(runAutonomousAutomations, 10000);
   }
 
   // Helper to check if any sockets exist

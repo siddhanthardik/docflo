@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { formatDoctorDisplayName } from "@/services/ai-agents.service";
 
 export class ReminderService {
+  /**
+   * Evaluates upcoming confirmed appointments and dispatches 24-hour and 2-hour WhatsApp reminders.
+   */
   async sendAppointmentReminders() {
     try {
       const now = new Date();
@@ -32,6 +36,7 @@ export class ReminderService {
             },
             include: {
               patient: true,
+              practitioner: true,
             },
           });
 
@@ -41,8 +46,24 @@ export class ReminderService {
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
             if (hoursUntilAppointment <= 24 && hoursUntilAppointment > 2) {
-              const timeStr = appointmentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-              const msg = `Hi ${appointment.patient.firstName}! Just a friendly reminder from ${doctor.clinicName || 'our clinic'} about your appointment tomorrow at ${timeStr}.\n\nIf anything has changed, please let us know.`;
+              const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              });
+              const dateStr = appointmentTime.toLocaleDateString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              });
+
+              const docName = formatDoctorDisplayName(appointment.practitioner?.name || doctor.name);
+              const clinicLabel = doctor.clinicName || `${docName}'s Clinic`;
+
+              const msg = `Hi ${appointment.patient.firstName}! 👋\n\nJust a friendly reminder from *${clinicLabel}* about your upcoming consultation with *${docName}* on *${dateStr} at ${timeStr}*.\n\n📍 Please arrive 5-10 minutes early. If you need to reschedule, reply directly to this message. See you soon! 😊`;
+
               await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 
               await prisma.appointmentFollowUp.create({
@@ -78,6 +99,7 @@ export class ReminderService {
             },
             include: {
               patient: true,
+              practitioner: true,
             },
           });
 
@@ -87,8 +109,18 @@ export class ReminderService {
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
             if (hoursUntilAppointment > 0 && hoursUntilAppointment <= 2.2) {
-              const timeStr = appointmentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-              const msg = `Hi ${appointment.patient.firstName}! Friendly reminder: Your appointment with ${doctor.clinicName || 'our clinic'} is today in 2 hours at ${timeStr}.\n\nWe look forward to seeing you soon! 🩺`;
+              const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              });
+
+              const docName = formatDoctorDisplayName(appointment.practitioner?.name || doctor.name);
+              const clinicLabel = doctor.clinicName || `${docName}'s Clinic`;
+
+              const msg = `Hi ${appointment.patient.firstName}! 🔔\n\nFriendly reminder: Your appointment with *${docName}* at *${clinicLabel}* is today in 2 hours at *${timeStr}*.\n\nWe look forward to seeing you shortly! 🩺`;
+
               await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 
               await prisma.appointmentFollowUp.create({
@@ -117,6 +149,7 @@ export class ReminderService {
         include: {
           patient: true,
           doctor: true,
+          practitioner: true,
         },
       });
 
@@ -135,17 +168,20 @@ export class ReminderService {
 
       let reviewLink = "https://g.page/r/yourbusiness"; // Fallback
       if (gbpAccount?.locationName) {
-        // Extract place ID from location name
         const placeId = gbpAccount.locationName.split("/").pop();
         reviewLink = `https://search.google.com/local/writereview?placeid=${placeId}`;
       }
 
-      const msg = `Hi ${appointment.patient.firstName}, thank you for visiting ${appointment.doctor.clinicName || "us"} today! We would love to hear your feedback. Please leave us a review: ${reviewLink}`;
+      const docName = formatDoctorDisplayName(appointment.practitioner?.name || appointment.doctor.name);
+      const clinicLabel = appointment.doctor.clinicName || `${docName}'s Clinic`;
+
+      const msg = `Hi ${appointment.patient.firstName}, thank you for visiting *${clinicLabel}* today! We would love to hear your feedback on your consultation with ${docName}. Please leave us a quick review: ${reviewLink}`;
+
       await whatsappManager.sendMessage(appointment.doctorId, appointment.patient.phone, msg);
 
       await prisma.appointment.update({
         where: { id: appointment.id },
-        data: { reviewRequested: true },
+        data: { reviewRequested: true, reviewStatus: "LINK_SENT" },
       });
 
       return { success: true, message: "Review request sent" };
@@ -175,7 +211,6 @@ export class ReminderService {
               gte: past48Hours,
               lte: past24Hours,
             },
-            // Ensure no "1_DAY" follow up has been sent yet
             followUps: {
               none: {
                 type: "1_DAY"
@@ -184,12 +219,16 @@ export class ReminderService {
           },
           include: {
             patient: true,
-            doctor: true
+            doctor: true,
+            practitioner: true,
           }
         });
 
         for (const appointment of recentAppointments) {
-          const msg = `Hi ${appointment.patient.firstName}, this is ${appointment.doctor.clinicName || 'our clinic'} checking in! We hope you're feeling great after your visit with us yesterday.\n\nYour health is our priority—if you have any lingering questions or concerns, please don't hesitate to reach out right here. Take care! 💙`;
+          const docName = formatDoctorDisplayName(appointment.practitioner?.name || appointment.doctor.name);
+          const clinicLabel = appointment.doctor.clinicName || `${docName}'s Clinic`;
+
+          const msg = `Hi ${appointment.patient.firstName}, this is *${clinicLabel}* checking in! We hope you are feeling well after your consultation with ${docName} yesterday.\n\nYour health is our top priority—if you have any questions or need anything, please feel free to reply right here. Take care! 💙`;
           
           await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 
