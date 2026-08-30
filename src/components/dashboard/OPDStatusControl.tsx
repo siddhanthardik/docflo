@@ -8,7 +8,8 @@ import {
   ChevronDown, 
   Activity,
   PauseCircle,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -31,6 +32,7 @@ export function OPDStatusControl() {
   // Modal State
   const [selectedDelay, setSelectedDelay] = useState<number>(30);
   const [notifyPatients, setNotifyPatients] = useState<boolean>(true);
+  const [showAdjustDelay, setShowAdjustDelay] = useState<boolean>(false);
 
   const fetchStatus = async () => {
     try {
@@ -67,10 +69,11 @@ export function OPDStatusControl() {
       const json = await res.json();
       if (res.ok) {
         toast({
-          title: action === "RESUME" ? "Schedule Restored" : "Schedule Updated",
+          title: action === "RESUME" ? "Schedule Restored! ✅" : "Schedule Updated",
           description: json.message,
         });
         setIsOpen(false);
+        setShowAdjustDelay(false);
         fetchStatus();
       } else {
         toast({
@@ -119,7 +122,10 @@ export function OPDStatusControl() {
       {/* ── Top Header Pill Button (Clean, Native System Design) ────────── */}
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setShowAdjustDelay(false);
+          setIsOpen(true);
+        }}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-2xs hover:shadow-xs active:scale-95 ${
           opdStatus === "ACTIVE"
             ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80"
@@ -155,7 +161,7 @@ export function OPDStatusControl() {
         <ChevronDown className="w-3 h-3 text-slate-400 -ml-0.5" />
       </button>
 
-      {/* ── Mobile-First Light Dialog (Fits 100% On Screen) ──────────────── */}
+      {/* ── State-Driven Mobile-First Dialog ─────────────────────────────── */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl p-5 font-sans border-slate-200 bg-white shadow-xl">
           {/* Header */}
@@ -186,128 +192,256 @@ export function OPDStatusControl() {
               </div>
             </div>
 
-            {/* Non-Active State (Resume Action) */}
-            {opdStatus !== "ACTIVE" && (
-              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2 text-xs">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-amber-900">
-                      {opdStatus === "RUNNING_LATE"
-                        ? `OPD is currently running ${currentDelay} minutes late.`
-                        : opdStatus === "PAUSED"
-                        ? "New online WhatsApp bookings are paused for today."
-                        : "Today's OPD is marked as emergency cancelled."}
-                    </p>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
-                      {doctor.opdStatusNote || "Inquiring patients will be guided accordingly."}
-                    </p>
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {/* ── STATE 1: WHEN OPD IS PAUSED ───────────────────────────────── */}
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {opdStatus === "PAUSED" && (
+              <div className="space-y-3.5 pt-1">
+                <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-amber-900">
+                    <PauseCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Online WhatsApp Bookings are Paused for Today</span>
                   </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
+                    Existing appointments remain intact. Inquiring patients on WhatsApp are politely guided to tomorrow&apos;s slots or direct walk-in tokens.
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleAction("RESUME")}
                   disabled={updating}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 active:scale-98"
                 >
-                  <PlayCircle className="w-4 h-4" /> Resume Normal Schedule
+                  {updating ? <Activity className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                  Resume Online Bookings (Normal Schedule)
+                </button>
+
+                <div className="pt-2 border-t border-slate-100 text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleAction("CANCEL_TODAY")}
+                    disabled={updating}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline inline-flex items-center gap-1"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" /> Emergency Cancel All Today&apos;s Appointments
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {/* ── STATE 2: WHEN OPD IS EMERGENCY CANCELLED ──────────────────── */}
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {opdStatus === "CANCELLED" && (
+              <div className="space-y-3.5 pt-1">
+                <div className="p-4 rounded-xl bg-rose-50/80 border border-rose-200 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-rose-900">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Today&apos;s OPD is Marked as Emergency Cancelled</span>
+                  </div>
+                  <p className="text-[11px] text-rose-800 leading-relaxed pl-6">
+                    All today&apos;s appointments are cancelled and new bookings are stopped.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAction("RESUME")}
+                  disabled={updating}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 active:scale-98"
+                >
+                  {updating ? <Activity className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                  Reopen & Resume Normal OPD Schedule
                 </button>
               </div>
             )}
 
-            {/* Delay Selector */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-800">Running Late? Shift Slots</span>
-                <span className="text-[11px] text-slate-400">Select delay time:</span>
-              </div>
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {/* ── STATE 3: WHEN OPD IS RUNNING LATE (DELAYED) ───────────────── */}
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {opdStatus === "RUNNING_LATE" && (
+              <div className="space-y-3.5 pt-1">
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-amber-900">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>OPD is currently Delayed by +{currentDelay} Minutes</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
+                    Appointments for today were shifted forward by {currentDelay} minutes.
+                  </p>
+                </div>
 
-              <div className="grid grid-cols-4 gap-1.5">
-                {[15, 30, 45, 60].map((mins) => (
-                  <button
-                    key={mins}
-                    type="button"
-                    onClick={() => setSelectedDelay(mins)}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                      selectedDelay === mins
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    +{mins}m
-                  </button>
-                ))}
-              </div>
+                <button
+                  type="button"
+                  onClick={() => handleAction("RESUME")}
+                  disabled={updating}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 active:scale-98"
+                >
+                  {updating ? <Activity className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Reset Delay & Resume Normal Schedule
+                </button>
 
-              {/* Dynamic 1-Line Preview */}
-              <p className="text-[11px] text-slate-500 bg-indigo-50/60 border border-indigo-100/80 p-2.5 rounded-xl leading-relaxed">
-                Shifts today&apos;s slots by <strong>{selectedDelay} mins</strong> (next slot starts ~<strong>{previewStartTime}</strong>).
-                {notifyPatients && todayTotalCount > 0 && (
-                  <span className="block mt-0.5 text-indigo-700 font-semibold">
-                    • <strong>{todayTotalCount} booked patient(s)</strong> will receive a polite WhatsApp delay notice.
-                  </span>
+                {!showAdjustDelay ? (
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdjustDelay(true)}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+                    >
+                      ✏️ Change Delay Duration
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAction("CANCEL_TODAY")}
+                      disabled={updating}
+                      className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline"
+                    >
+                      Emergency Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-800">Adjust Delay Time:</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdjustDelay(false)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[15, 30, 45, 60].map((mins) => (
+                        <button
+                          key={mins}
+                          type="button"
+                          onClick={() => setSelectedDelay(mins)}
+                          className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                            selectedDelay === mins
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          +{mins}m
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAction("DELAY")}
+                      disabled={updating}
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs"
+                    >
+                      Apply New {selectedDelay}-Min Delay
+                    </button>
+                  </div>
                 )}
-              </p>
-            </div>
-
-            {/* WhatsApp Notification Switch */}
-            <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="space-y-0.5">
-                <Label htmlFor="notify-switch" className="text-xs font-semibold text-slate-800 cursor-pointer">
-                  Notify Patients on WhatsApp
-                </Label>
-                <p className="text-[10px] text-slate-400">
-                  Sends courteous delay message to affected patients.
-                </p>
               </div>
-              <Switch
-                id="notify-switch"
-                checked={notifyPatients}
-                onCheckedChange={setNotifyPatients}
-              />
-            </div>
+            )}
 
-            {/* Primary Action Button */}
-            <button
-              type="button"
-              onClick={() => handleAction("DELAY")}
-              disabled={updating}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-98"
-            >
-              {updating ? (
-                <Activity className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Clock className="w-4 h-4" /> Apply {selectedDelay}-Min Delay
-                </>
-              )}
-            </button>
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {/* ── STATE 4: WHEN OPD IS ACTIVE (NORMAL OPERATION) ────────────── */}
+            {/* ═════════════════════════════════════════════════════════════════ */}
+            {opdStatus === "ACTIVE" && (
+              <div className="space-y-4">
+                {/* Delay Selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800">Running Late? Shift Slots</span>
+                    <span className="text-[11px] text-slate-400">Select delay:</span>
+                  </div>
 
-            {/* Emergency Controls (Subtle & Compact) */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[15, 30, 45, 60].map((mins) => (
+                      <button
+                        key={mins}
+                        type="button"
+                        onClick={() => setSelectedDelay(mins)}
+                        className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                          selectedDelay === mins
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        +{mins}m
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Dynamic 1-Line Preview */}
+                  <p className="text-[11px] text-slate-500 bg-indigo-50/60 border border-indigo-100/80 p-2.5 rounded-xl leading-relaxed">
+                    Shifts today&apos;s slots by <strong>{selectedDelay} mins</strong> (next slot starts ~<strong>{previewStartTime}</strong>).
+                    {notifyPatients && todayTotalCount > 0 && (
+                      <span className="block mt-0.5 text-indigo-700 font-semibold">
+                        • <strong>{todayTotalCount} booked patient(s)</strong> will receive a polite WhatsApp delay notice.
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* WhatsApp Notification Switch */}
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="notify-switch" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                      Notify Patients on WhatsApp
+                    </Label>
+                    <p className="text-[10px] text-slate-400">
+                      Sends courteous delay message to affected patients.
+                    </p>
+                  </div>
+                  <Switch
+                    id="notify-switch"
+                    checked={notifyPatients}
+                    onCheckedChange={setNotifyPatients}
+                  />
+                </div>
+
+                {/* Primary Action Button */}
                 <button
                   type="button"
-                  onClick={() => handleAction("PAUSE_TODAY")}
+                  onClick={() => handleAction("DELAY")}
                   disabled={updating}
-                  className="py-2 px-2 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-[11px] rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-98"
                 >
-                  <PauseCircle className="w-3.5 h-3.5 text-slate-400" />
-                  Pause New Bookings
+                  {updating ? (
+                    <Activity className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Clock className="w-4 h-4" /> Apply {selectedDelay}-Min Delay
+                    </>
+                  )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleAction("CANCEL_TODAY")}
-                  disabled={updating}
-                  className="py-2 px-2 bg-white hover:bg-rose-50 text-rose-600 font-semibold text-[11px] rounded-xl border border-rose-200 transition-all flex items-center justify-center gap-1"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                  Emergency Cancel
-                </button>
+                {/* Emergency Controls (Subtle & Clean) */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAction("PAUSE_TODAY")}
+                      disabled={updating}
+                      className="py-2 px-2 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-[11px] rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1"
+                    >
+                      <PauseCircle className="w-3.5 h-3.5 text-slate-400" />
+                      Pause New Bookings
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAction("CANCEL_TODAY")}
+                      disabled={updating}
+                      className="py-2 px-2 bg-white hover:bg-rose-50 text-rose-600 font-semibold text-[11px] rounded-xl border border-rose-200 transition-all flex items-center justify-center gap-1"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                      Emergency Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
