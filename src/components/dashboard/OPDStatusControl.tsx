@@ -10,8 +10,7 @@ import {
   PauseCircle,
   ShieldAlert,
   CheckCircle2,
-  ArrowLeft,
-  X
+  Info
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -35,7 +34,7 @@ export function OPDStatusControl() {
   const [selectedDelay, setSelectedDelay] = useState<number>(30);
   const [notifyPatients, setNotifyPatients] = useState<boolean>(true);
   const [showAdjustDelay, setShowAdjustDelay] = useState<boolean>(false);
-  const [confirmingAction, setConfirmingAction] = useState<"PAUSE" | "CANCEL" | null>(null);
+  const [confirmingAction, setConfirmingAction] = useState<"PAUSE" | "CANCEL" | "DELAY" | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -176,6 +175,76 @@ export function OPDStatusControl() {
       >
         <DialogContent className="sm:max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl p-5 font-sans border-slate-200 bg-white shadow-xl">
           
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {/* ── CONFIRMATION MODAL: APPLY DELAY ───────────────────────────── */}
+          {/* ═════════════════════════════════════════════════════════════════ */}
+          {confirmingAction === "DELAY" && (
+            <div className="space-y-4 py-1">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-slate-900">
+                    Apply {selectedDelay}-Minute Delay to OPD?
+                  </DialogTitle>
+                  <p className="text-xs text-slate-500">Confirm schedule shift and patient updates</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs text-indigo-950 space-y-2 leading-relaxed">
+                <p className="font-bold flex items-center gap-1.5 text-indigo-900">
+                  <Info className="w-4 h-4 text-indigo-600" />
+                  What happens when delayed:
+                </p>
+                <ul className="list-disc pl-4 space-y-1.5 text-indigo-900/90 text-[11px]">
+                  <li>Today&apos;s upcoming appointments will shift forward by <strong>{selectedDelay} minutes</strong>.</li>
+                  <li>Next consultation is estimated to begin at ~<strong>{previewStartTime}</strong>.</li>
+                  <li>New inquiries on WhatsApp will automatically receive slots aligned with this delayed timing.</li>
+                </ul>
+              </div>
+
+              {/* WhatsApp Notification Toggle */}
+              {todayTotalCount > 0 && (
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="delay-notify-switch" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                      Notify {todayTotalCount} patient(s) on WhatsApp
+                    </Label>
+                    <p className="text-[10px] text-slate-400">
+                      Sends polite delay update message to affected patients.
+                    </p>
+                  </div>
+                  <Switch
+                    id="delay-notify-switch"
+                    checked={notifyPatients}
+                    onCheckedChange={setNotifyPatients}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingAction(null)}
+                  disabled={updating}
+                  className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAction("DELAY")}
+                  disabled={updating}
+                  className="py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  {updating ? <Activity className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                  Confirm {selectedDelay}m Delay
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ═════════════════════════════════════════════════════════════════ */}
           {/* ── CONFIRMATION MODAL: PAUSE NEW BOOKINGS ────────────────────── */}
           {/* ═════════════════════════════════════════════════════════════════ */}
@@ -458,11 +527,10 @@ export function OPDStatusControl() {
 
                         <button
                           type="button"
-                          onClick={() => handleAction("DELAY")}
-                          disabled={updating}
+                          onClick={() => setConfirmingAction("DELAY")}
                           className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs"
                         >
-                          Apply New {selectedDelay}-Min Delay
+                          Review & Apply {selectedDelay}-Min Delay
                         </button>
                       </div>
                     )}
@@ -507,37 +575,13 @@ export function OPDStatusControl() {
                       </p>
                     </div>
 
-                    {/* WhatsApp Notification Switch */}
-                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="notify-switch" className="text-xs font-semibold text-slate-800 cursor-pointer">
-                          Notify Patients on WhatsApp
-                        </Label>
-                        <p className="text-[10px] text-slate-400">
-                          Sends courteous delay message to affected patients.
-                        </p>
-                      </div>
-                      <Switch
-                        id="notify-switch"
-                        checked={notifyPatients}
-                        onCheckedChange={setNotifyPatients}
-                      />
-                    </div>
-
-                    {/* Primary Action Button */}
+                    {/* Primary Action Button (Triggers Confirmation) */}
                     <button
                       type="button"
-                      onClick={() => handleAction("DELAY")}
-                      disabled={updating}
+                      onClick={() => setConfirmingAction("DELAY")}
                       className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-98"
                     >
-                      {updating ? (
-                        <Activity className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Clock className="w-4 h-4" /> Apply {selectedDelay}-Min Delay
-                        </>
-                      )}
+                      <Clock className="w-4 h-4" /> Apply {selectedDelay}-Min Delay
                     </button>
 
                     {/* Emergency Controls (Opens Confirmation Dialog) */}
