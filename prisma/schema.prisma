@@ -95,6 +95,18 @@ model Doctor {
   currentAiCredits Int @default(0)
   currentPatients  Int @default(0)
 
+  // AI Booking Capacity & Pacing Rules
+  maxDailyAiBookings    Int?    @default(10) // null = unlimited
+  maxMorningAiBookings  Int?    @default(5)
+  maxEveningAiBookings  Int?    @default(5)
+  aiSlotPacing          String  @default("STAGGERED") // STAGGERED or CONTINUOUS
+
+  // Live OPD Status & Emergency Schedule Controls
+  opdStatus             String    @default("ACTIVE") // ACTIVE, PAUSED, RUNNING_LATE, CANCELLED
+  opdDelayMinutes       Int       @default(0)
+  opdStatusNote         String?
+  opdStatusUpdatedAt    DateTime?
+
   @@map("doctors")
 }
 

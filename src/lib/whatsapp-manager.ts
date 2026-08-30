@@ -25,14 +25,29 @@ class WhatsAppManager {
   private activeConnections: Set<string> = new Set(); // Tracks fully opened connections
   private reconnectAttempts: Map<string, number> = new Map(); // Tracks retry backoff per doctor/superadmin
   private watchdogTimer: NodeJS.Timeout | null = null;
-  // Holds mid-flight booking intents awaiting disambiguation (doctorPhone -> intent)
-  private pendingIntents: Map<string, {
-    type: 'AWAITING_PHONE' | 'AWAITING_SELECTION',
-    patientName: string,
-    dateStr: string,
-    timeStr: string,
-    candidates?: Array<{ id: string; firstName: string; lastName: string; phone: string; lastVisit?: Date | null }>
-  }> = new Map();
+  // Holds mid-flight booking or schedule disruption intents (doctorPhone -> intent)
+  private pendingIntents: Map<string, 
+    | {
+        type: 'AWAITING_PHONE';
+        patientName: string;
+        dateStr: string;
+        timeStr: string;
+        candidates?: Array<{ id: string; firstName: string; lastName: string; phone: string; lastVisit?: Date | null }>;
+      }
+    | {
+        type: 'AWAITING_SELECTION';
+        patientName: string;
+        dateStr: string;
+        timeStr: string;
+        candidates: Array<{ id: string; firstName: string; lastName: string; phone: string; lastVisit?: Date | null }>;
+      }
+    | {
+        type: 'AWAITING_SCHEDULE_CONFIRMATION';
+        action: 'DELAY' | 'CANCEL';
+        delayMinutes?: number;
+        impactedAptIds: string[];
+      }
+  > = new Map();
 
   constructor() {
     // Ensure auth folder exists
@@ -378,6 +393,13 @@ class WhatsAppManager {
                 createdAt: true,
                 subscriptionStatus: true,
                 subscriptionExpiry: true,
+                opdStatus: true,
+                opdDelayMinutes: true,
+                opdStatusNote: true,
+                maxDailyAiBookings: true,
+                maxMorningAiBookings: true,
+                maxEveningAiBookings: true,
+                aiSlotPacing: true,
                 package: {
                   include: {
                     packageFeatures: {
@@ -885,11 +907,181 @@ class WhatsAppManager {
                         console.error('[WhatsAppManager] New patient from AWAITING_SELECTION error:', e);
                       }
                     }
+                  } else if (pendingIntent.type === 'AWAITING_SCHEDULE_CONFIRMATION') {
+                    const isYes = /^(1|yes|haan|ha|confirm|theek|ok|sure|proceed|do it)/i.test(replyText);
+                    const isNo = /^(2|no|nahi|na|cancel|discard|stop|abort)/i.test(replyText);
+
+                    if (isYes) {
+                      this.pendingIntents.delete(patientPhone);
+                      handled = true;
+                      const { action, delayMinutes, impactedAptIds } = pendingIntent;
+
+                      try {
+                        if (action === 'DELAY') {
+                          const delay = delayMinutes || 30;
+                          await prisma.doctor.update({
+                            where: { id: doctorId },
+                            data: {
+                              opdStatus: "RUNNING_LATE",
+                              opdDelayMinutes: delay,
+                              opdStatusNote: `Running ${delay} mins late`,
+                              opdStatusUpdatedAt: new Date()
+                            }
+                          });
+
+                          const apts = await prisma.appointment.findMany({
+                            where: { id: { in: impactedAptIds } },
+                            include: { patient: true }
+                          });
+
+                          let count = 0;
+                          const docName = formatDoctorDisplayName(doctorInfo?.name);
+                          for (const apt of apts) {
+                            if (apt.startTime) {
+                              const newStart = new Date(apt.startTime.getTime() + delay * 60000);
+                              const newEnd = apt.endTime ? new Date(apt.endTime.getTime() + delay * 60000) : new Date(newStart.getTime() + 30 * 60000);
+                              await prisma.appointment.update({
+                                where: { id: apt.id },
+                                data: { startTime: newStart, endTime: newEnd }
+                              });
+                              if (apt.patient?.phone) {
+                                const newTimeStr = newStart.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                                const msg = `⚠️ *OPD Timing Update*\n\nHi ${apt.patient.firstName}, ${docName} is currently running approx *${delay} minutes late* due to urgent hospital procedures. Your appointment is now scheduled for *${newTimeStr}* today. Thank you for your patience! 😊`;
+                                await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
+                                count++;
+                              }
+                            }
+                          }
+
+                          const confirmMsg = `✅ Confirmed, Doctor! Your OPD schedule has been delayed by *${delay} minutes* in Docflo, and WhatsApp delay notifications have been dispatched to *${count} booked patients*.`;
+                          await sock.sendMessage(remoteJid, { text: confirmMsg });
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                          return;
+                        } else if (action === 'CANCEL') {
+                          await prisma.doctor.update({
+                            where: { id: doctorId },
+                            data: {
+                              opdStatus: "CANCELLED",
+                              opdStatusNote: "Emergency cancel",
+                              opdStatusUpdatedAt: new Date()
+                            }
+                          });
+
+                          const apts = await prisma.appointment.findMany({
+                            where: { id: { in: impactedAptIds } },
+                            include: { patient: true }
+                          });
+
+                          let count = 0;
+                          const docName = formatDoctorDisplayName(doctorInfo?.name);
+                          for (const apt of apts) {
+                            await prisma.appointment.update({
+                              where: { id: apt.id },
+                              data: { status: "CANCELLED" }
+                            });
+                            if (apt.patient?.phone) {
+                              const msg = `⚠️ *Important Clinic Notice*\n\nDear ${apt.patient.firstName}, ${docName} had an unexpected hospital emergency and will not be available for OPD consultations today. We sincerely apologize for any inconvenience. Please reply here to reschedule for tomorrow or call the clinic.`;
+                              await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
+                              count++;
+                            }
+                          }
+
+                          const confirmMsg = `✅ Confirmed, Doctor! Today's OPD is marked as *Emergency Cancelled* in Docflo. Cancellation notices have been sent to *${count} booked patients*, and new WhatsApp bookings for today are paused.`;
+                          await sock.sendMessage(remoteJid, { text: confirmMsg });
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                          return;
+                        }
+                      } catch (e) {
+                        console.error('[WhatsAppManager] Schedule confirmation error:', e);
+                      }
+                    } else if (isNo) {
+                      this.pendingIntents.delete(patientPhone);
+                      handled = true;
+                      const abortMsg = `Understood, Doctor! I have cancelled this request. No changes were made to your Docflo schedule or patient appointments.`;
+                      await sock.sendMessage(remoteJid, { text: abortMsg });
+                      await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: abortMsg, senderName: 'AI Assistant' } });
+                      await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                      return;
+                    }
                   }
                 }
               }
 
               if (isStaff) {
+                // ── Doctor Natural Language Schedule Command Detection ──────────
+                const lowerText = textMessage.toLowerCase();
+                const delayMatch = lowerText.match(/(?:running\s+)?(\d{1,2})\s*(?:mins?|minutes?|hr|hour|hours?)\s+late/i)
+                  || lowerText.match(/late\s+by\s+(\d{1,2})\s*(?:mins?|minutes?|hr|hour|hours?)/i);
+                const isCancelToday = /cancel\s+(?:all\s+)?(?:today'?s?|evening|morning)?\s*(?:opd|appointments?)/i.test(lowerText) || /emergency.*cancel/i.test(lowerText);
+                const isResumeOpd = /resume\s+(?:normal\s+)?opd/i.test(lowerText) || /opd\s+active/i.test(lowerText);
+
+                if (isResumeOpd) {
+                  await prisma.doctor.update({
+                    where: { id: doctorId },
+                    data: { opdStatus: "ACTIVE", opdDelayMinutes: 0, opdStatusNote: null, opdStatusUpdatedAt: new Date() }
+                  });
+                  const resumeMsg = `✅ Done, Doctor! Your OPD status is back to *Active Normal Schedule*. Online WhatsApp bookings are operating as usual.`;
+                  await sock.sendMessage(remoteJid, { text: resumeMsg });
+                  await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: resumeMsg, senderName: 'AI Assistant' } });
+                  await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                  return;
+                }
+
+                if (delayMatch || isCancelToday) {
+                  const todayStart = new Date();
+                  todayStart.setHours(0, 0, 0, 0);
+                  const todayEnd = new Date(todayStart);
+                  todayEnd.setHours(23, 59, 59, 999);
+
+                  const todayApts = await prisma.appointment.findMany({
+                    where: {
+                      doctorId,
+                      date: { gte: todayStart, lte: todayEnd },
+                      status: "CONFIRMED"
+                    },
+                    include: { patient: true },
+                    orderBy: { startTime: 'asc' }
+                  });
+
+                  if (delayMatch) {
+                    let mins = parseInt(delayMatch[1]);
+                    if (/hr|hour/i.test(delayMatch[0])) mins = mins * 60;
+
+                    const summaryLines = todayApts.map((a, i) => {
+                      const orig = a.startTime ? a.startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                      const newT = a.startTime ? new Date(a.startTime.getTime() + mins * 60000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                      return `  ${i + 1}. *${a.patient.firstName} ${a.patient.lastName}* (${orig} ➔ ${newT})`;
+                    });
+
+                    this.pendingIntents.set(patientPhone, {
+                      type: 'AWAITING_SCHEDULE_CONFIRMATION',
+                      action: 'DELAY',
+                      delayMinutes: mins,
+                      impactedAptIds: todayApts.map(a => a.id)
+                    });
+
+                    const msg = `Doctor, I detected an OPD Schedule Delay request:\n\n⏱️ *Delay*: *${mins} Minutes* for Today's OPD.\n👥 *Impacted Booked Patients* (${todayApts.length}):\n${summaryLines.length > 0 ? summaryLines.join('\n') : '  (No appointments booked yet)'}\n\nShould I shift their appointment times in Docflo and send polite WhatsApp delay notices to them?\n\n👉 Reply *1* or *CONFIRM* to apply & notify patients.\n👉 Reply *2* or *NO* to cancel.`;
+                    await sock.sendMessage(remoteJid, { text: msg });
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                    return;
+                  } else if (isCancelToday) {
+                    this.pendingIntents.set(patientPhone, {
+                      type: 'AWAITING_SCHEDULE_CONFIRMATION',
+                      action: 'CANCEL',
+                      impactedAptIds: todayApts.map(a => a.id)
+                    });
+
+                    const msg = `⚠️ *Emergency OPD Cancellation Request*\n\nDoctor, you have *${todayApts.length} confirmed appointments* booked for today.\n\nShould I mark today's OPD as Emergency Cancelled, update their status in Docflo, and send polite cancellation/reschedule messages to all ${todayApts.length} patients?\n\n👉 Reply *1* or *CONFIRM* to proceed.\n👉 Reply *2* or *NO* to keep appointments unchanged.`;
+                    await sock.sendMessage(remoteJid, { text: msg });
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                    return;
+                  }
+                }
+
                 const history = recentMessages.reverse().map(rm => 
                   `${rm.direction === "INCOMING" ? "Staff" : "Assistant"}: ${rm.content}`
                 );
@@ -931,6 +1123,43 @@ class WhatsAppManager {
 
                 const clinicPhone = doctorInfo?.phone || "";
 
+                // Calculate Live Schedule Context & Daily Quota
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                const todayEnd = new Date(todayStart);
+                todayEnd.setHours(23, 59, 59, 999);
+
+                const todayAppointments = await prisma.appointment.findMany({
+                  where: {
+                    doctorId,
+                    date: { gte: todayStart, lte: todayEnd },
+                    status: { in: ["SCHEDULED", "CONFIRMED", "CHECKED_IN"] }
+                  },
+                  select: { startTime: true, notes: true }
+                });
+
+                const todayAiCount = todayAppointments.filter(a => 
+                  a.notes?.toLowerCase().includes("ai") || a.notes?.toLowerCase().includes("whatsapp")
+                ).length;
+
+                const maxDaily = doctorInfo?.maxDailyAiBookings ?? 10;
+                const isTodayQuotaFull = maxDaily !== null && todayAiCount >= maxDaily;
+
+                const bookedSlotsToday = todayAppointments
+                  .filter(a => a.startTime)
+                  .map(a => a.startTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+
+                const scheduleContext = {
+                  opdStatus: doctorInfo?.opdStatus || "ACTIVE",
+                  opdDelayMinutes: doctorInfo?.opdDelayMinutes || 0,
+                  opdStatusNote: doctorInfo?.opdStatusNote || null,
+                  maxDailyAiBookings: maxDaily,
+                  todayAiCount,
+                  isTodayQuotaFull,
+                  bookedSlotsToday,
+                  pacingStrategy: doctorInfo?.aiSlotPacing || "STAGGERED"
+                };
+
                 aiReply = await AIAgentsService.runAppointmentAgent(
                   doctorId,
                   textMessage,
@@ -945,7 +1174,8 @@ class WhatsAppManager {
                   clinicAddress,
                   clinicMapsUri,
                   practitioners,
-                  websiteUrl
+                  websiteUrl,
+                  scheduleContext
                 );
               }
 
@@ -1242,14 +1472,32 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                 const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
                 const match = aiReply.match(bookingRegex);
                 
-                if (match && !isStaff && patient) {
+                if (match && !isStaff) {
                   const [fullTag, dateStr, sessionStr, patientFullName] = match;
                   
                   try {
+                    let targetPatient = patient;
+
+                    // If patient record is missing, create it
+                    if (!targetPatient) {
+                      const nameParts = (patientFullName || "Patient").trim().split(" ");
+                      const firstName = nameParts[0] || "Patient";
+                      const lastName = nameParts.slice(1).join(" ") || "";
+                      targetPatient = await prisma.patient.create({
+                        data: {
+                          doctorId,
+                          firstName,
+                          lastName,
+                          phone: patientPhone,
+                          patientType: "ACTIVE"
+                        }
+                      });
+                    }
+
                     // 1. Check if patient already has an active appointment
                     const activeAppointment = await prisma.appointment.findFirst({
                       where: {
-                        patientId: patient.id,
+                        patientId: targetPatient.id,
                         doctorId: doctorId,
                         date: { gte: new Date() },
                         status: "CONFIRMED"
@@ -1263,47 +1511,77 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     } else {
                       // 2. Parse Date
                       const appointmentDate = new Date(dateStr.trim());
-                      // Basic validation: Is it a valid date and not in the past?
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
                       
                       if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
-                        // Create fake times based on session
-                        const isMorning = sessionStr.toLowerCase().includes("morning");
-                        const startTime = new Date(appointmentDate);
-                        startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); // Default 10am or 5pm
-                        
-                        const endTime = new Date(startTime);
-                        endTime.setHours(startTime.getHours() + 1);
+                        // Check daily quota for that date
+                        const startOfBookingDay = new Date(appointmentDate);
+                        startOfBookingDay.setHours(0, 0, 0, 0);
+                        const endOfBookingDay = new Date(appointmentDate);
+                        endOfBookingDay.setHours(23, 59, 59, 999);
 
-                        // 3. Update Patient Profile Name if it's default
-                        if (patient.firstName === "Patient" && patient.lastName.startsWith("+")) {
-                          const nameParts = patientFullName.trim().split(" ");
-                          const firstName = nameParts[0];
-                          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-                          await prisma.patient.update({
-                            where: { id: patient.id },
-                            data: { firstName, lastName }
-                          });
-                        }
-
-                        // 4. Create the Appointment
-                        const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
-                        await prisma.appointment.create({
-                          data: {
-                            patientId: patient.id,
-                            doctorId: doctorId,
-                            practitionerId: defaultPractitioner?.id || null,
-                            date: appointmentDate,
-                            startTime: startTime,
-                            endTime: endTime,
-                            status: "CONFIRMED",
-                            notes: `Booked via AI Assistant (${sessionStr.trim()})`,
-                            type: "IN_CLINIC"
+                        const existingAiBookings = await prisma.appointment.count({
+                          where: {
+                            doctorId,
+                            date: { gte: startOfBookingDay, lte: endOfBookingDay },
+                            notes: { contains: "AI" }
                           }
                         });
-                        console.log(`[WhatsAppManager] Successfully agentic-booked appointment for ${patientPhone}`);
-                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
+
+                        const maxDaily = doctorInfo?.maxDailyAiBookings ?? 10;
+
+                        if (maxDaily !== null && existingAiBookings >= maxDaily) {
+                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                          finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in tokens are available at the clinic reception.)*`;
+                        } else {
+                          const isMorning = sessionStr.toLowerCase().includes("morning");
+                          const startTime = new Date(appointmentDate);
+                          startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); // Default 10am or 5pm
+                          
+                          const endTime = new Date(startTime);
+                          endTime.setHours(startTime.getHours() + 1);
+
+                          // Update Patient Profile Name if it's default
+                          if (targetPatient.firstName === "Patient" && (targetPatient.lastName.startsWith("+") || !targetPatient.lastName)) {
+                            const nameParts = patientFullName.trim().split(" ");
+                            const firstName = nameParts[0];
+                            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+                            await prisma.patient.update({
+                              where: { id: targetPatient.id },
+                              data: { firstName, lastName }
+                            });
+                          }
+
+                          // Create the Appointment in CRM
+                          const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+                          await prisma.appointment.create({
+                            data: {
+                              patientId: targetPatient.id,
+                              doctorId: doctorId,
+                              practitionerId: defaultPractitioner?.id || null,
+                              date: appointmentDate,
+                              startTime: startTime,
+                              endTime: endTime,
+                              status: "CONFIRMED",
+                              notes: `Booked via WhatsApp AI Assistant (${sessionStr.trim()})`,
+                              type: "IN_CLINIC"
+                            }
+                          });
+
+                          console.log(`[WhatsAppManager] Successfully agentic-booked appointment for ${patientPhone}`);
+                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+
+                          // Notify doctor on their WhatsApp
+                          if (doctorInfo?.phone) {
+                            const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
+                            const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+                            const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                            const cleanPtName = patientFullName.trim();
+                            const docAlert = `🔔 *New AI Appointment Booked*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\nThis appointment has been added to your Docflo calendar.`;
+                            await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
+                          }
+                        }
                       } else {
                         // Invalid date hallucinated by AI
                         finalAiReply = finalAiReply.replace(fullTag, "").trim();

@@ -443,7 +443,6 @@ function buildDeterministicReceptionistReply(
     if (clinicAddress) {
       return `Our clinic address is:\n📍 *${clinicAddress}*${clinicMapsUri ? `\n🗺️ Google Maps: ${clinicMapsUri}` : ""}\n\n${docTitle} is available during OPD hours (${clinicTimings}).\n\nWould you like to schedule a visit?${phoneSuffix}`;
     }
-    return `Our clinic is located at *${clinicName}*. For exact street directions or landmark guidance, please feel free to call our reception.${phoneSuffix}`;
   }
 
   // 10.7 Symptoms / Health Concern
@@ -461,6 +460,17 @@ function buildDeterministicReceptionistReply(
   }
 
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
+}
+
+export interface DoctorScheduleContext {
+  opdStatus?: string; // ACTIVE, RUNNING_LATE, PAUSED, CANCELLED
+  opdDelayMinutes?: number;
+  opdStatusNote?: string | null;
+  maxDailyAiBookings?: number | null;
+  todayAiCount?: number;
+  isTodayQuotaFull?: boolean;
+  bookedSlotsToday?: string[];
+  pacingStrategy?: string; // STAGGERED or CONTINUOUS
 }
 
 async function generateWithFallback(prompt: string): Promise<string> {
@@ -499,7 +509,8 @@ export class AIAgentsService {
     clinicAddress?: string | null,
     clinicMapsUri?: string | null,
     practitioners?: ClinicPractitionerInfo[],
-    websiteUrl?: string | null
+    websiteUrl?: string | null,
+    scheduleContext?: DoctorScheduleContext
   ) {
     const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
     const doctorName = formatDoctorDisplayName(rawDocName);
@@ -545,6 +556,14 @@ export class AIAgentsService {
 
       const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+      // Live OPD Status & Capacity Context
+      const opdStatus = scheduleContext?.opdStatus || "ACTIVE";
+      const opdDelay = scheduleContext?.opdDelayMinutes || 0;
+      const todayQuotaFull = Boolean(scheduleContext?.isTodayQuotaFull);
+      const bookedSlots = scheduleContext?.bookedSlotsToday && scheduleContext.bookedSlotsToday.length > 0
+        ? `\n- Currently Booked Slots for Today: ${scheduleContext.bookedSlotsToday.join(", ")}`
+        : "";
+
       // Clinic Location (sourced from connected GMB/GBP profile — never hardcoded)
       const locationBlock = clinicAddress
         ? `- Clinic Address: ${clinicAddress}${clinicMapsUri ? `\n- Google Maps Link: ${clinicMapsUri}` : ''}`
@@ -574,6 +593,9 @@ CLINIC OPD & SCHEDULE SPECIFICATIONS:
 - Evening OPD Hours: ${eveningOpd || "Check Full Schedule"}
 - Full Schedule Summary: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
+- Doctor OPD Status Today: ${opdStatus} ${opdDelay > 0 ? `(Doctor is running ~${opdDelay} mins late due to hospital procedures)` : ""}
+- Today's AI Booking Quota Status: ${todayQuotaFull ? "FULLY BOOKED FOR TODAY (QUOTA REACHED)" : "SLOTS AVAILABLE"}
+${bookedSlots}
 ${websiteUrl ? `- Official Clinic Website: ${websiteUrl}` : ""}
 ${practitionersBlock ? practitionersBlock : ""}
 ${locationBlock ? locationBlock : ""}
@@ -589,12 +611,20 @@ ${isPediatrician ? `- Available Pediatric Vaccinations: ${vaccinationsList}` : "
 ${customRules ? `- Doctor Custom Instructions: "${customRules}"` : ""}
 
 CRITICAL RECEPTIONIST INSTRUCTIONS:
-1. **NATURAL, WARM & EMPATHETIC TONE**:
+1. **CAPACITY & CANCELLATION RULES**:
+   - If Doctor OPD Status is "CANCELLED" or "PAUSED", or if Today's AI Booking Quota Status is "FULLY BOOKED FOR TODAY":
+     * State politely that ${doctorName}'s WhatsApp appointment slots for TODAY are fully booked or doctor is attending to emergency hospital procedures today.
+     * Proactively offer TOMORROW's earliest available OPD slot.
+     * For urgent same-day consultations, mention: "For urgent same-day consultations, a limited number of direct walk-in tokens are available at the clinic counter on a first-come, first-served basis."
+   - If Doctor OPD Status is "RUNNING_LATE":
+     * Reassure the patient and mention that ${doctorName} will be available starting ~${opdDelay} minutes later today due to earlier hospital procedures, and offer slots after the revised start time.
+
+2. **NATURAL, WARM & EMPATHETIC TONE**:
    - Write like a real, polite clinic receptionist on WhatsApp.
    - NEVER include robotic disclaimers like "(I am the clinic's AI assistant...)" or template disclaimers.
    - Do NOT duplicate titles (always refer to the doctor as "${doctorName}").
 
-2. **AUTOMATIC MULTI-LINGUAL ADAPTATION (NATIVE SCRIPTS & ROMANIZED TRANSLITERATIONS)**:
+3. **AUTOMATIC MULTI-LINGUAL ADAPTATION (NATIVE SCRIPTS & ROMANIZED TRANSLITERATIONS)**:
    - Match the patient's language and dialect naturally and accurately:
      * **Bengali / Bonglish** ("Ami kal ke aasbo", "Apni ki bangla bolchhen", "কখন আসব"): Respond in polite, natural Bengali / Bonglish ("Hyan nishchoi! Slot confirm korar jonno...").
      * **Tamil / Tanglish** ("Naalaikku vara mudiyuma", "நாளை வருகிறேன்"): Respond in polite, natural Tamil / Tanglish.
@@ -608,11 +638,11 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
      * **English**: Respond in warm, professional English.
      * **Global & International Languages** (Arabic, Spanish, French, Russian, German, Persian, Turkish, etc.): Seamlessly detect and respond in the patient's language with courteous medical receptionist etiquette.
 
-3. **MULTI-DOCTOR SCHEDULE & SPECIALTY MATCHING**:
+4. **MULTI-DOCTOR SCHEDULE & SPECIALTY MATCHING**:
    - If the patient mentions a specific doctor or specialty (e.g. Skin, Dental, Child), provide THAT doctor's specific OPD timings and details.
    - If the patient asks generally for clinic doctors, list the available doctors with their active schedules.
 
-4. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
+5. **CHECK OPD TIMINGS BEFORE OFFERING SLOTS**:
    - Only offer slots during active OPD hours for the requested doctor.
    - If Morning OPD is not available, offer Evening slots only.
 

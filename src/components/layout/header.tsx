@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Bell } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { OPDStatusControl } from "@/components/dashboard/OPDStatusControl";
 import { useEffect, useState } from "react";
 
 export function Header() {
@@ -44,6 +45,9 @@ export function Header() {
 
       {/* Right: actions + avatar */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        {session?.user?.role !== "SUPERADMIN" && session?.user?.role !== "ADMIN" && (
+          <OPDStatusControl />
+        )}
         <NotificationBell />
 
         <div className="flex items-center gap-2 pl-2.5 border-l border-slate-200/60">

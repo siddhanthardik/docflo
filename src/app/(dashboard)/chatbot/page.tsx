@@ -593,11 +593,92 @@ export default function AIAgentsHubPage() {
                   </div>
                 </div>
 
+                {/* 🎟️ BOOKING CAPACITY & INVENTORY CONTROLS */}
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-600" />
+                    3. AI Booking Capacity & Pacing Controls
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">Daily AI Booking Cap</Label>
+                      <Select 
+                        value={configDraft.maxDailyAiBookings ? String(configDraft.maxDailyAiBookings) : (configDraft.maxDailyAiBookings === null ? "unlimited" : "10")}
+                        onValueChange={(v) => setConfigDraft({ ...configDraft, maxDailyAiBookings: v === "unlimited" ? null : parseInt(v) })}
+                      >
+                        <SelectTrigger className="h-10 text-sm bg-white border-slate-200">
+                          <SelectValue placeholder="Select Daily Cap" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">Max 5 Patients / day</SelectItem>
+                          <SelectItem value="8">Max 8 Patients / day</SelectItem>
+                          <SelectItem value="10">Max 10 Patients / day</SelectItem>
+                          <SelectItem value="15">Max 15 Patients / day</SelectItem>
+                          <SelectItem value="20">Max 20 Patients / day</SelectItem>
+                          <SelectItem value="unlimited">Unlimited (Fill all available slots)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Limits total confirmed AI bookings per day.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">Morning Session Max</Label>
+                      <Input 
+                        type="number"
+                        placeholder="e.g. 5"
+                        value={configDraft.maxMorningAiBookings ?? 5}
+                        onChange={(e) => setConfigDraft({ ...configDraft, maxMorningAiBookings: parseInt(e.target.value) || 0 })}
+                        className="h-10 text-sm bg-white border-slate-200"
+                      />
+                      <p className="text-[10px] text-slate-400">Max morning slots for AI.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">Evening Session Max</Label>
+                      <Input 
+                        type="number"
+                        placeholder="e.g. 5"
+                        value={configDraft.maxEveningAiBookings ?? 5}
+                        onChange={(e) => setConfigDraft({ ...configDraft, maxEveningAiBookings: parseInt(e.target.value) || 0 })}
+                        className="h-10 text-sm bg-white border-slate-200"
+                      />
+                      <p className="text-[10px] text-slate-400">Max evening slots for AI.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">Slot Pacing Strategy</Label>
+                      <Select 
+                        value={configDraft.aiSlotPacing || "STAGGERED"}
+                        onValueChange={(v) => setConfigDraft({ ...configDraft, aiSlotPacing: v })}
+                      >
+                        <SelectTrigger className="h-10 text-sm bg-white border-slate-200">
+                          <SelectValue placeholder="Pacing Strategy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="STAGGERED">Staggered (Leaves 15m gaps for walk-ins)</SelectItem>
+                          <SelectItem value="CONTINUOUS">Continuous (Fills back-to-back)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Staggered prevents waiting room overcrowding.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">When Quota is Reached</Label>
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                        AI politely offers <strong>Tomorrow&apos;s earliest slot</strong> + shares direct clinic counter walk-in token instructions.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 💉 SERVICES & VACCINATION CATALOG */}
                 <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                    3. Services & Vaccination Catalog
+                    4. Services & Vaccination Catalog
                   </h4>
 
                   <div className="space-y-1.5">

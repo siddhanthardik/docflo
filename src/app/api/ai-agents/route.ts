@@ -162,6 +162,19 @@ export async function PUT(req: Request) {
       }
     });
 
+    // Synchronize capacity settings directly to Doctor model
+    if (agentType === "APPOINTMENT" && config) {
+      await prisma.doctor.update({
+        where: { id: doctorId },
+        data: {
+          ...(config.maxDailyAiBookings !== undefined && { maxDailyAiBookings: config.maxDailyAiBookings }),
+          ...(config.maxMorningAiBookings !== undefined && { maxMorningAiBookings: config.maxMorningAiBookings }),
+          ...(config.maxEveningAiBookings !== undefined && { maxEveningAiBookings: config.maxEveningAiBookings }),
+          ...(config.aiSlotPacing !== undefined && { aiSlotPacing: config.aiSlotPacing }),
+        }
+      }).catch(e => console.warn("Failed to sync capacity to doctor model:", e));
+    }
+
     return NextResponse.json({ agent });
   } catch (error: any) {
     console.error("PUT /api/ai-agents error:", error);
