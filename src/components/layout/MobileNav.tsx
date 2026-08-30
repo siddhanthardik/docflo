@@ -12,7 +12,6 @@ import {
   MessageCircle,
   Calendar,
   Users,
-  UserPlus,
   Menu,
   X,
   FileText,
@@ -21,10 +20,12 @@ import {
   TrendingUp,
   MessageSquare,
   BarChart3,
-  Bot,
   Settings,
   ShieldAlert,
-  LogOut
+  LogOut,
+  Globe,
+  Zap,
+  Download
 } from "lucide-react";
 
 const mainTabs = [
@@ -36,18 +37,19 @@ const mainTabs = [
 
 const allNavItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Clinic Website", href: "/website", icon: Globe },
   { name: "WhatsApp Inbox", href: "/whatsapp", icon: MessageCircle },
   { name: "Patients", href: "/patients", icon: Users },
-  { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Appointments", href: "/appointments", icon: Calendar },
-  { name: "Billing & Invoices", href: "/billing", icon: FileText },
+  { name: "Billing", href: "/billing", icon: FileText },
   { name: "Announcements", href: "/campaigns", icon: Megaphone },
   { name: "Google Profile", href: "/gbp", icon: Star },
   { name: "Local SEO", href: "/local-seo", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
   { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "AI Agents", href: "/ai-agents", icon: Bot },
+  { name: "Smart Automation", href: "/ai-agents", icon: Zap },
+  { name: "Download App", href: "/download", icon: Download },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
