@@ -1482,7 +1482,55 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                   }
                 }
 
-                // 2. Intercept Patient Booking Tag
+                // 2. Intercept Patient Cancellation Tag or Intent
+                const patientCancelRegex = /\[(CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT)\]/i;
+                const isPatientCancelTag = patientCancelRegex.test(aiReply);
+                const isPatientCancelIntent = !isStaff && /(?:cancel|cancellation)\s+(?:my\s+)?(?:appointment|booking|slot)|nahi\s+aa\s*(?:paunga|sakta|payenge)|cannot\s+come/i.test(textMessage);
+
+                if ((isPatientCancelTag || isPatientCancelIntent) && !isStaff) {
+                  try {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const activeApt = await prisma.appointment.findFirst({
+                      where: {
+                        doctorId,
+                        OR: [
+                          ...(patient ? [{ patientId: patient.id }] : []),
+                          { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
+                        ],
+                        date: { gte: today },
+                        status: { in: ["SCHEDULED", "CONFIRMED", "CHECKED_IN"] }
+                      },
+                      orderBy: { date: 'asc' },
+                      include: { patient: true }
+                    });
+
+                    if (activeApt) {
+                      await prisma.appointment.update({
+                        where: { id: activeApt.id },
+                        data: { status: "CANCELLED", notes: `${activeApt.notes || ""} [Cancelled by Patient on WhatsApp]`.trim() }
+                      });
+                      console.log(`[WhatsAppManager] Successfully cancelled appointment ${activeApt.id} for patient ${patientPhone}`);
+
+                      // Notify Doctor on WhatsApp immediately so doctor knows slot is now open
+                      if (doctorInfo?.phone) {
+                        const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
+                        const dateLabel = activeApt.date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+                        const timeLabel = activeApt.startTime ? activeApt.startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time';
+                        const cleanPtName = activeApt.patient ? `${activeApt.patient.firstName} ${activeApt.patient.lastName}`.trim() : (patient ? `${patient.firstName} ${patient.lastName}`.trim() : 'Patient');
+                        
+                        const docAlert = `🔔 *Patient Appointment Cancelled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Cancelled Slot: *${dateLabel} at ${timeLabel}*\n\n✨ This slot is now *OPEN & Available* for new bookings in your Docflo calendar.`;
+                        await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
+                      }
+                    }
+                    finalAiReply = finalAiReply.replace(/\[(CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT)\]/gi, "").trim();
+                  } catch (cancelErr) {
+                    console.error("[WhatsAppManager] Patient Cancellation Error:", cancelErr);
+                  }
+                }
+
+                // 3. Intercept Patient Booking Tag
                 const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
                 const match = aiReply.match(bookingRegex);
                 
@@ -1637,7 +1685,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
                 // Send reply via Baileys
                 // Strip any stray internal AI action tags before sending to doctor or patient
-                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT):.*?\]/gi, "").trim();
+                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT)(?::.*?)?\]/gi, "").trim();
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage
