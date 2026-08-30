@@ -43,7 +43,7 @@ class WhatsAppManager {
       }
     | {
         type: 'AWAITING_SCHEDULE_CONFIRMATION';
-        action: 'DELAY' | 'CANCEL';
+        action: 'DELAY' | 'CANCEL' | 'PAUSE';
         delayMinutes?: number;
         impactedAptIds: string[];
       }
@@ -992,6 +992,21 @@ class WhatsAppManager {
                           await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
                           await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
                           return;
+                        } else if (action === 'PAUSE') {
+                          await prisma.doctor.update({
+                            where: { id: doctorId },
+                            data: {
+                              opdStatus: "PAUSED",
+                              opdStatusNote: "Paused online bookings for today",
+                              opdStatusUpdatedAt: new Date()
+                            }
+                          });
+
+                          const confirmMsg = `✅ Confirmed, Doctor! New online WhatsApp bookings are now *PAUSED for today*. Your existing *${impactedAptIds.length} booked appointment(s)* remain safe and active.`;
+                          await sock.sendMessage(remoteJid, { text: confirmMsg });
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                          return;
                         }
                       } catch (e) {
                         console.error('[WhatsAppManager] Schedule confirmation error:', e);
@@ -1015,6 +1030,7 @@ class WhatsAppManager {
                 const delayMatch = lowerText.match(/(?:running\s+)?(\d{1,2})\s*(?:mins?|minutes?|hr|hour|hours?)\s+late/i)
                   || lowerText.match(/late\s+by\s+(\d{1,2})\s*(?:mins?|minutes?|hr|hour|hours?)/i);
                 const isCancelToday = /cancel\s+(?:all\s+)?(?:today'?s?|evening|morning)?\s*(?:opd|appointments?)/i.test(lowerText) || /emergency.*cancel/i.test(lowerText);
+                const isPauseToday = /(?:pause|stop|block)\s+(?:new\s+)?(?:booking|patient|opd|appointment)/i.test(lowerText);
                 const isResumeOpd = /resume\s+(?:normal\s+)?opd/i.test(lowerText) || /opd\s+active/i.test(lowerText);
 
                 if (isResumeOpd) {
@@ -1029,7 +1045,7 @@ class WhatsAppManager {
                   return;
                 }
 
-                if (delayMatch || isCancelToday) {
+                if (delayMatch || isCancelToday || isPauseToday) {
                   const todayStart = new Date();
                   todayStart.setHours(0, 0, 0, 0);
                   const todayEnd = new Date(todayStart);
@@ -1075,6 +1091,18 @@ class WhatsAppManager {
                     });
 
                     const msg = `⚠️ *Emergency OPD Cancellation Request*\n\nDoctor, you have *${todayApts.length} confirmed appointments* booked for today.\n\nShould I mark today's OPD as Emergency Cancelled, update their status in Docflo, and send polite cancellation/reschedule messages to all ${todayApts.length} patients?\n\n👉 Reply *1* or *CONFIRM* to proceed.\n👉 Reply *2* or *NO* to keep appointments unchanged.`;
+                    await sock.sendMessage(remoteJid, { text: msg });
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
+                    return;
+                  } else if (isPauseToday) {
+                    this.pendingIntents.set(patientPhone, {
+                      type: 'AWAITING_SCHEDULE_CONFIRMATION',
+                      action: 'PAUSE',
+                      impactedAptIds: todayApts.map(a => a.id)
+                    });
+
+                    const msg = `Doctor, I received your request to *PAUSE new WhatsApp bookings for today*.\n\n• Existing booked appointments (${todayApts.length}) will remain valid and active.\n• New inquiring patients will be offered tomorrow's slots or clinic walk-in tokens.\n\n👉 Reply *1* or *CONFIRM* to pause today's bookings.\n👉 Reply *2* or *NO* to keep bookings open.`;
                     await sock.sendMessage(remoteJid, { text: msg });
                     await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
                     await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
