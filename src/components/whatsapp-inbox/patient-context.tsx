@@ -41,11 +41,11 @@ export function PatientContext({ patient }: { patient: Patient }) {
         {/* Avatar + name */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-base font-bold text-indigo-700 flex-shrink-0">
-            {(patient.firstName[0] + patient.lastName[0]).toUpperCase()}
+            {((patient.firstName?.[0] || "") + (patient.lastName?.[0] || "")).toUpperCase() || patient.firstName?.[0]?.toUpperCase() || "P"}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
-              {patient.firstName} {patient.lastName}
+              {patient.firstName} {patient.lastName || ""}
             </h3>
             <p className="text-xs text-gray-500">Patient Profile</p>
           </div>

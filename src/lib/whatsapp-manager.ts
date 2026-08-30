@@ -141,9 +141,17 @@ class WhatsAppManager {
       await sock.sendMessage(patientJid, { text });
       console.log(`[WhatsAppManager] 📤 Outbound WhatsApp sent to ${patientJid}`);
 
-      // Ensure Conversation exists and is tracked in CRM inbox
-      let conversation = await prisma.conversation.findUnique({
-        where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
+      // Ensure Conversation exists and is tracked in CRM inbox (deduplicate by 10-digit suffix)
+      const last10 = normalizedPhone.slice(-10);
+      let conversation = await prisma.conversation.findFirst({
+        where: {
+          doctorId,
+          OR: [
+            { patientPhone: normalizedPhone },
+            { patientPhone: last10 },
+            { patientPhone: { endsWith: last10 } }
+          ]
+        }
       });
 
       if (!conversation) {
@@ -495,9 +503,17 @@ class WhatsAppManager {
 
             const patientName = isStaff ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor") : `${patient!.firstName} ${patient!.lastName}`.trim();
 
-            // Find or create Conversation
-            let conversation = await prisma.conversation.findUnique({
-              where: { doctorId_patientPhone: { doctorId, patientPhone } }
+            // Find or create Conversation (deduplicate by 10-digit suffix)
+            const last10Incoming = patientPhone.slice(-10);
+            let conversation = await prisma.conversation.findFirst({
+              where: {
+                doctorId,
+                OR: [
+                  { patientPhone },
+                  { patientPhone: last10Incoming },
+                  { patientPhone: { endsWith: last10Incoming } }
+                ]
+              }
             });
 
             if (!conversation) {
@@ -1310,42 +1326,12 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     }
                     const patientJid = `${cleanPhone}@s.whatsapp.net`;
                     
-                    // Send message via Baileys
-                    await this.sendOutboundPatientMessage(sock, doctorId, cleanPhone, msgContent.trim());
+                    const patientRecord = await prisma.patient.findFirst({ where: { phone: { endsWith: cleanPhone.slice(-10) }, doctorId } });
+                    const ptName = patientRecord ? `${patientRecord.firstName} ${patientRecord.lastName}`.trim() : "Patient";
+                    
+                    // Send message via Baileys & record in CRM
+                    await this.sendOutboundPatientMessage(sock, doctorId, cleanPhone, msgContent.trim(), patientRecord?.id || null, ptName);
                     console.log(`[WhatsAppManager] AI relayed message to patient ${patientJid}`);
-                    
-                    // Create conversation/message records so AI remembers context
-                    let patientConvo = await prisma.conversation.findUnique({
-                      where: { doctorId_patientPhone: { doctorId, patientPhone: cleanPhone } }
-                    });
-                    
-                    if (!patientConvo) {
-                      const patientRecord = await prisma.patient.findFirst({ where: { phone: cleanPhone, doctorId } });
-                      patientConvo = await prisma.conversation.create({
-                        data: {
-                          doctorId,
-                          patientPhone: cleanPhone,
-                          patientName: patientRecord ? `${patientRecord.firstName} ${patientRecord.lastName}` : "Patient",
-                          patientId: patientRecord ? patientRecord.id : null,
-                          status: "OPEN"
-                        }
-                      });
-                    }
-                    
-                    await prisma.chatMessage.create({
-                      data: {
-                        conversationId: patientConvo.id,
-                        direction: "OUTGOING",
-                        messageType: "text",
-                        content: msgContent.trim(),
-                        senderName: "Clinic"
-                      }
-                    });
-                    
-                    await prisma.conversation.update({
-                      where: { id: patientConvo.id },
-                      data: { lastMessageAt: new Date() }
-                    });
 
                     finalAiReply = finalAiReply.replace(fullTag, "").trim();
                   } catch (e) {
@@ -1751,8 +1737,16 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
     // Ensure Conversation & ChatMessage are recorded in WhatsApp CRM
     try {
-      let conversation = await prisma.conversation.findUnique({
-        where: { doctorId_patientPhone: { doctorId, patientPhone: cleanPhone } }
+      const last10Out = cleanPhone.slice(-10);
+      let conversation = await prisma.conversation.findFirst({
+        where: {
+          doctorId,
+          OR: [
+            { patientPhone: cleanPhone },
+            { patientPhone: last10Out },
+            { patientPhone: { endsWith: last10Out } }
+          ]
+        }
       });
 
       if (!conversation) {
