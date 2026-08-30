@@ -1509,10 +1509,24 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       finalAiReply = finalAiReply.replace(fullTag, "").trim();
                       finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
                     } else {
-                      // 2. Parse Date
-                      const appointmentDate = new Date(dateStr.trim());
-                      const today = new Date();
+                      // 2. Parse Date with intelligent fallback
+                      let appointmentDate = new Date(dateStr.trim());
+                      const now = new Date();
+                      const today = new Date(now);
                       today.setHours(0, 0, 0, 0);
+
+                      if (isNaN(appointmentDate.getTime())) {
+                        const cleanStr = dateStr.trim().toLowerCase();
+                        if (cleanStr.includes("today") || cleanStr.includes("aaj")) {
+                          appointmentDate = new Date(today);
+                        } else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
+                          appointmentDate = new Date(today);
+                          appointmentDate.setDate(appointmentDate.getDate() + 1);
+                        } else if (cleanStr.includes("day after") || cleanStr.includes("parso")) {
+                          appointmentDate = new Date(today);
+                          appointmentDate.setDate(appointmentDate.getDate() + 2);
+                        }
+                      }
                       
                       if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
                         // Check daily quota for that date
@@ -1537,7 +1551,20 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         } else {
                           const isMorning = sessionStr.toLowerCase().includes("morning");
                           const startTime = new Date(appointmentDate);
-                          startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); // Default 10am or 5pm
+                          
+                          // Intelligent hour & minute extraction
+                          const timeMatch = sessionStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+                          let hour = isMorning ? 10 : 17;
+                          let minute = 0;
+                          if (timeMatch) {
+                            let parsedHour = parseInt(timeMatch[1]);
+                            if (timeMatch[2]) minute = parseInt(timeMatch[2]);
+                            const mer = (timeMatch[3] || '').toLowerCase();
+                            if (mer === 'pm' && parsedHour < 12) parsedHour += 12;
+                            if (mer === 'am' && parsedHour === 12) parsedHour = 0;
+                            if (parsedHour >= 0 && parsedHour <= 23) hour = parsedHour;
+                          }
+                          startTime.setHours(hour, minute, 0, 0);
                           
                           const endTime = new Date(startTime);
                           endTime.setHours(startTime.getHours() + 1);
