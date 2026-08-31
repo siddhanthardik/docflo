@@ -20,7 +20,7 @@ export async function POST(
 
     const { content } = await req.json();
 
-    const conversation = await prisma.conversation.findUnique({
+    const conversation = await prisma.conversation.findFirst({
       where: { id, doctorId },
     });
 

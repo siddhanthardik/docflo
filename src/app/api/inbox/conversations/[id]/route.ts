@@ -17,7 +17,7 @@ export async function GET(
     const block = await entitlementGuard(doctorId, req, { module: "WHATSAPP_CRM" });
     if (block) return block;
 
-    const conversation = await prisma.conversation.findUnique({
+    const conversation = await prisma.conversation.findFirst({
       where: { id, doctorId },
       include: {
         messages: {
