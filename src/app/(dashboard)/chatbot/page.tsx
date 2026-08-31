@@ -787,6 +787,38 @@ export default function AIAgentsHubPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-semibold text-slate-700">Target Patient Demographics</Label>
+                      <Select 
+                        value={configDraft.targetDemographics || "all"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, targetDemographics: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue className="truncate" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Age Groups (General Practice)</SelectItem>
+                          <SelectItem value="pediatric">Pediatric Care Only (0–18 Years)</SelectItem>
+                          <SelectItem value="adult">Adult & Geriatric Care (18+ Years)</SelectItem>
+                          <SelectItem value="women">Women's Health & Gynae Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Helps AI decline mismatched patient demographics politely.</p>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-semibold text-slate-700">Emergency Desk / Ambulance Phone</Label>
+                      <Input 
+                        placeholder="e.g., +91 9876543210 (or 108)"
+                        value={configDraft.emergencyPhone || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, emergencyPhone: e.target.value})}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                      <p className="text-[10px] text-slate-400">Shared when emergency or red-flag symptoms are detected.</p>
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5 min-w-0">
                     <Label className="text-xs font-semibold text-slate-700">Emergency Escalation Triggers</Label>
                     <Input 

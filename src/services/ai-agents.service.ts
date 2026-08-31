@@ -382,6 +382,26 @@ function buildDeterministicReceptionistReply(
       }
     }
 
+    // 9.01 Critical Red-Flag Emergency Triage
+    if (/chest\s*pain|heart\s*attack|saans\s*nahi|breathless|unconscious|heavy\s*bleeding|khoon\s*behta|stroke|paralysis|poison|zehar|severe\s*burn|head\s*injury/i.test(textLower)) {
+      return `⚠️ *Emergency Alert*: Yeh sthiti aapatkaleen (emergency) lag rahi hai. Kripya turant nearest hospital emergency room (ICU/Casualty) pahuchein ya Ambulance (108/112) ko call karein. Clinic OPD standard appointments aapatkaleen sthiti ke liye anukul nahi hain.`;
+    }
+
+    // 9.02 Medication Dosage & Prescription Safety Shield
+    if (/\b(kitna\s*ml|kitni\s*goli|kitna\s*mg|dose|dosage|how\s*many\s*ml|how\s*many\s*drops|paracetamol|antibiotic|combiflam|augmentin|dawa\s*kitni)\b/i.test(textLower)) {
+      return `Kripya dhyan dein: Patient ki suraksha ke liye dawa ki sahi dose (mg/ml) keval doctor physical checkup ke baad nirdharit kar sakte hain. Kripya clinic ki likhi parchi (prescription) dekhein ya OPD timings me ${docTitle} se direct consult karein.${phoneSuffix}`;
+    }
+
+    // 9.03 Medical Certificate & Sick Leave Policy
+    if (/medical\s*certificate|fitness\s*certificate|sick\s*leave|leave\s*letter|parchi\s*bhejo/i.test(textLower)) {
+      return `Medical illness ya fitness certificate kanooni roop se bina doctor ke samne aaye nahi diya ja sakta. Certificate ke liye kripya valid ID ke sath ${docTitle} (${specialty}) ke OPD me physical consultation ke liye padharein.${phoneSuffix}`;
+    }
+
+    // 9.04 Follow-up & Report Review Policy
+    if (/report\s*dikhana|report\s*check|follow\s*up|dikhaya\s*tha|pehle\s*aaye\s*the|dubara\s*dikhana/i.test(textLower)) {
+      return `Ji bilkul! Agar aapne pichle 7 dino ke andar ${docTitle} (${specialty}) ko consult kiya tha, to test report review ka koi alag se consultation fee nahi lagta. Kripya clinic ke OPD hours (*${clinicTimings}*) me apni physical report ke sath aaiye.${phoneSuffix}`;
+    }
+
     // 9.1 Late night / 24x7 question
     if (/itni\s*raat|raat\s*ko|raat\s*me|open|khula|24\/7/i.test(textLower) && /appointment|mil|hoga|book/i.test(textLower)) {
       return `Ji bilkul! Hamara 24/7 automated receptionist kisi bhi samay agle din ke OPD slot ke liye appointment book kar sakta hai 😊\n\n${docTitle} (${specialty}) OPD me *${clinicTimings}* uplabdh rahenge. Kripya patient ka **Naam** aur **Date (aaj ya kal)** share karein, main turant reserve kar deti hoon!${phoneSuffix}`;
@@ -705,6 +725,7 @@ export class AIAgentsService {
     const assistantName = config?.assistantName || "Riya";
     const customRules = config?.trainingPrompt || config?.customRules || "";
     const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
+    const targetDemographics = config?.targetDemographics || "all";
 
     try {
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
@@ -881,13 +902,44 @@ ${allowTeleConsultation
     - NEVER reset the conversation or send an introductory greeting if you are already in an ongoing discussion.
     - If the patient requests home blood collection, ask for their address and preferred morning pickup time (7:00 AM – 9:30 AM).
 
-13. **CURRENT PATIENT INTENT TAKES ABSOLUTE HIGHEST PRIORITY (NEW INTENT OVERRIDES PREVIOUS LOOP)**:
-    - The patient's latest message is their IMMEDIATE CURRENT CONCERN and strictly takes precedence over previous unfinished appointment questions.
-    - If the patient mentions an acute health concern, fever, emergency, severe pain, or asks "Mujhe abhi bahut jyada fever hai, abhi appointment mil sakta hai?":
-      * Empathize immediately with clinical care and warmth.
-      * State the doctor's earliest OPD availability or clinic emergency walk-in option directly.
-      * DO NOT blindly repeat the previous name/date question! Address their acute condition/concern first.
-    - If the patient asks about clinic timings, fees, address, rescheduling, or cancellation, directly answer their new intent.
+14. **MEDICATION DOSAGE & PRESCRIPTION SAFETY SHIELD (CRITICAL)**:
+    - NEVER suggest drug dosages, mg/ml amounts, drop counts, or prescribe new medicines over WhatsApp.
+    - If the patient asks for dosage (e.g., "Paracetamol kitna ml dena hai?"), reply:
+      "For patient safety, exact medicine dosage and prescription changes can only be advised by the doctor based on physical checkup. Please refer to your written clinic prescription or consult ${doctorName} during OPD hours."
+
+15. **FOLLOW-UP CONSULTATION & REPORT REVIEW POLICY**:
+    - Follow-up Fee Policy: ${followUpFee ? `₹${followUpFee}` : "₹0 / Free"} for returning patients visiting within ${followUpDays} of their initial consultation to show test reports.
+    - If a patient states they visited recently (within ${followUpDays}) and wants to show test reports or follow up on previous treatment, warmly confirm:
+      "Since your visit was within our ${followUpDays} report review window, there is no fresh consultation fee. Please bring your physical test reports during OPD hours."
+
+16. **RED-FLAG EMERGENCY & CRITICAL SYMPTOMS TRIAGING**:
+    - If the patient reports acute emergency symptoms (severe chest pain, stroke, breathlessness, loss of consciousness, uncontrolled bleeding, poisoning, severe trauma), IMMEDIATELY provide emergency instructions:
+      "⚠️ *Emergency Notice*: This appears to require urgent medical attention. Please visit the nearest hospital emergency room (ICU/Casualty) or call an ambulance (108/112) immediately."
+
+17. **SPECIALTY & DEMOGRAPHICS SCOPE MATCHING**:
+    ${targetDemographics === "pediatric" ? `- Note: ${doctorName} is a Pediatric Specialist (Child Care 0–18 years). If an adult patient asks for adult consultation, politely explain that the clinic treats children (0-18 yrs) and recommend consulting an adult physician.` : ""}
+    ${targetDemographics === "women" ? `- Note: ${doctorName} is a Women's Health & Gynaecology Specialist. Politely redirect unrelated male/general queries to appropriate specialists.` : ""}
+
+18. **PROXY & FAMILY MEMBER BOOKING**:
+    - When a user books for a family member (e.g. "mere bete Aarav ke liye", "for my mother Saroj Devi"), always extract the family member's name as the Patient Full Name in the booking tag:
+      [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Beneficiary Full Name]
+
+19. **MIDNIGHT TEMPORAL NORMALIZER & DUAL DATE ECHO**:
+    - If messaging between 12:00 AM (midnight) and 5:00 AM, treat the upcoming daytime as "Today".
+    - When confirming bookings, ALWAYS echo both the **Day of Week** and **Calendar Date** (e.g., "Tuesday, 1st September") to prevent date misinterpretation.
+
+20. **PRE-PROCEDURE TEST PREPARATION ADVICE**:
+    - Abdominal/Pelvic USG & Sonography: Remind patient to drink 4–5 glasses of water 1 hour prior for a full bladder.
+    - Fasting Blood Sugar / Lipid Profile: Remind patient of 10–12 hours overnight fasting (water permitted).
+
+21. **VACCINE STOCK INVENTORY NOTICE**:
+    - For specialized pediatric vaccines, inform that the clinic front desk will verify cold-chain inventory stock and send confirmation before the visit.
+
+22. **QUEUE & TOKEN PACING EXPECTATION**:
+    - State that appointments are attended in token queue order during the scheduled OPD session upon clinic arrival.
+
+23. **SICK LEAVE & MEDICAL CERTIFICATES**:
+    - Explain that medical fitness and sick leave certificates legally require in-person physical consultation and identity verification at the clinic.
       `;
 
       const prompt = `

@@ -349,7 +349,31 @@ class WhatsAppManager {
         if (!msg.message || msg.key.fromMe) continue;
 
         const remoteJid = msg.key.remoteJid;
-        const textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        let textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+        // Voice Note Transcription (Audio Message Fallback via OpenAI Whisper)
+        if (!textMessage && msg.message.audioMessage && process.env.OPENAI_API_KEY) {
+          try {
+            const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+            const audioBuffer = await downloadMediaMessage(msg, "buffer", {});
+            if (audioBuffer && audioBuffer.length > 0) {
+              const OpenAI = (await import("openai")).default;
+              const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+              const { toFile } = await import("openai");
+              const file = await toFile(audioBuffer, "voice_note.ogg", { type: "audio/ogg" });
+              const transcription = await openai.audio.transcriptions.create({
+                file,
+                model: "whisper-1",
+              });
+              if (transcription.text) {
+                textMessage = transcription.text.trim();
+                console.log(`[WhatsAppManager] 🎙️ Transcribed incoming voice note from ${remoteJid}: "${textMessage}"`);
+              }
+            }
+          } catch (audioErr) {
+            console.warn(`[WhatsAppManager] Voice note transcription failed:`, audioErr);
+          }
+        }
 
         if (remoteJid && textMessage && !remoteJid.includes('@g.us') && !remoteJid.includes('status@broadcast')) {
           let rawPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@lid', '');
@@ -1560,6 +1584,61 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     finalAiReply = finalAiReply.replace(/\[(CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT)\]/gi, "").trim();
                   } catch (cancelErr) {
                     console.error("[WhatsAppManager] Patient Cancellation Error:", cancelErr);
+                  }
+                }
+
+                // 2.5 Intercept Patient Reschedule Tag
+                const patientRescheduleRegex = /\[RESCHEDULE_APPOINTMENT:\s*([^,]+),\s*([^,]+)(?:,\s*([^\]]+))?\]/i;
+                const resMatch = aiReply.match(patientRescheduleRegex);
+                if (resMatch && !isStaff) {
+                  const [, resDateStr, resSessionStr] = resMatch;
+                  try {
+                    const todayDate = new Date();
+                    todayDate.setHours(0, 0, 0, 0);
+
+                    const existingActiveApt = await prisma.appointment.findFirst({
+                      where: {
+                        doctorId,
+                        OR: [
+                          ...(patient ? [{ patientId: patient.id }] : []),
+                          { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
+                        ],
+                        date: { gte: todayDate },
+                        status: { in: ["SCHEDULED", "CONFIRMED"] }
+                      },
+                      orderBy: { date: 'asc' }
+                    });
+
+                    if (existingActiveApt) {
+                      let newDate = new Date(resDateStr.trim());
+                      if (isNaN(newDate.getTime())) {
+                        const cleanStr = resDateStr.trim().toLowerCase();
+                        if (cleanStr.includes("today") || cleanStr.includes("aaj")) newDate = new Date(todayDate);
+                        else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
+                          newDate = new Date(todayDate);
+                          newDate.setDate(newDate.getDate() + 1);
+                        }
+                      }
+                      const isMorning = resSessionStr.toLowerCase().includes("morning");
+                      const newStart = new Date(newDate);
+                      newStart.setHours(isMorning ? 10 : 17, 0, 0, 0);
+                      const newEnd = new Date(newStart);
+                      newEnd.setHours(newStart.getHours() + 1);
+
+                      await prisma.appointment.update({
+                        where: { id: existingActiveApt.id },
+                        data: {
+                          date: newDate,
+                          startTime: newStart,
+                          endTime: newEnd,
+                          notes: `${existingActiveApt.notes || ""} [Rescheduled via WhatsApp to ${resSessionStr.trim()}]`.trim()
+                        }
+                      });
+                      console.log(`[WhatsAppManager] Atomically rescheduled appointment ${existingActiveApt.id} for ${patientPhone}`);
+                    }
+                    finalAiReply = finalAiReply.replace(patientRescheduleRegex, "").trim();
+                  } catch (resErr) {
+                    console.error("[WhatsAppManager] Patient Rescheduling Error:", resErr);
                   }
                 }
 
