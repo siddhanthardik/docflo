@@ -28,6 +28,17 @@ export async function POST(req: Request) {
         }
       }
 
+      // Find default Free package
+      const freePackage = await prisma.package.findFirst({
+        where: {
+          OR: [
+            { slug: "free" },
+            { name: { contains: "Free", mode: "insensitive" } },
+            { priceMonthly: 0 }
+          ]
+        }
+      });
+
       // Calculate 14-day trial expiry
       const trialExpiry = new Date();
       trialExpiry.setDate(trialExpiry.getDate() + 14);
@@ -43,6 +54,7 @@ export async function POST(req: Request) {
           clinicName: validatedData.clinicName,
           address: validatedData.address,
           salesRepId,
+          packageId: freePackage?.id || null,
           subscriptionStatus: "ACTIVE",
           subscriptionExpiry: trialExpiry,
           practitioners: {

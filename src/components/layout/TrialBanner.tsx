@@ -23,7 +23,7 @@ export function TrialBanner({
       <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
       <p className="text-amber-800 font-medium text-center leading-tight">
         Your Gyrex Pro trial expires in {daysLeft} {daysLeft === 1 ? "day" : "days"}. 
-        <Link href="/settings/billing" className="ml-1.5 font-bold underline hover:text-amber-900 transition-colors">
+        <Link href="/subscription" className="ml-1.5 font-bold underline hover:text-amber-900 transition-colors">
           Upgrade Now
         </Link>
         {" "}to prevent disruption to automated workflows.

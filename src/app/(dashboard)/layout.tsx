@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Fetch fresh doctor data to check subscription status
+  // Fetch fresh doctor data to check subscription status & package
   const doctor = await prisma.doctor.findUnique({
     where: { id: session.user.doctorId || session.user.id },
     select: {
@@ -28,22 +28,17 @@ export default async function DashboardLayout({
       stripeCustomerId: true,
       razorpayCustomerId: true,
       subscriptionStatus: true,
+      package: {
+        select: {
+          slug: true,
+          name: true,
+          priceMonthly: true,
+        }
+      }
     }
   });
 
   const hasPaymentMethod = !!(doctor?.stripeCustomerId || doctor?.razorpayCustomerId);
-
-  // Enforce trial expiry
-  if (doctor?.subscriptionExpiry && !hasPaymentMethod && doctor.subscriptionStatus !== "ACTIVE") {
-    // Check if expired
-    if (new Date() > doctor.subscriptionExpiry) {
-      redirect("/settings/billing?reason=trial_expired");
-    }
-  } else if (doctor?.subscriptionExpiry && !hasPaymentMethod) {
-    if (new Date() > doctor.subscriptionExpiry) {
-      redirect("/settings/billing?reason=trial_expired");
-    }
-  }
 
   return (
     <SessionProvider>
