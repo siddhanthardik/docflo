@@ -1,17 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { memoryCache } from "@/lib/memory-cache";
 
-// Initialize Gemini (Ensure GEMINI_API_KEY is in .env)
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-// Fallback Model Cascade: Prioritizes Gemini 3.6 Flash and Gemini 3.5 Flash
+// Valid Gemini models across Google GenAI APIs
 const CANDIDATE_MODELS = [
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-flash-latest"
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash-exp"
 ];
 
 // Clean and format doctor display name without repetitive "Dr." prefixes
@@ -505,13 +504,25 @@ function buildDeterministicReceptionistReply(
     return `Thank you for sharing your concern. For proper clinical assessment and personalized care, we recommend an in-person OPD consultation with ${docTitle} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?${phoneSuffix}`;
   }
 
-  // 10.8 Universal Greeting Matcher (First message or ongoing - NEVER says "Understood!" for a greeting)
-  if (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower.length <= 4) {
+  // 10.75 Home Collection & Lab Sample Preference
+  if (/home\s*collection|home\s*sample|home\s*pickup|ghar\s*pe|ghar\s*se/i.test(textLower)) {
+    return `Ji bilkul! Home blood sample pickup ke liye kripya **Patient ka Pura Naam**, **Address**, aur preferred **Morning timing (7:00 AM - 9:30 AM)** share kar dijiye. Certified phlebotomist time par pahunch jayenge.${phoneSuffix}`;
+  }
+  if (/center\s*visit|clinic\s*visit|lab\s*visit|clinic\s*aake/i.test(textLower)) {
+    return `Ji! Clinic visit ke liye aap subah 8:00 AM se sham 7:30 PM ke beech kisi bhi samay sample de sakte hain. Fasting tests ke liye 10-12 ghante khali pet aana zaroori hai. Kya main aapka slot reserve kar doon?${phoneSuffix}`;
+  }
+
+  // 10.8 Universal Greeting Matcher (First message only)
+  if (!isOngoingChat && (/^(hi|hello|hey|namaste|good\s*(morning|afternoon|evening)|hola|hii+|hl|hlo|helo)\b/i.test(textLower) || textLower.length <= 4)) {
     return `Hello! Namaste 🙏 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${specialty}).\n\nHow may I assist you with an appointment or clinic inquiry today?${phoneSuffix}`;
   }
 
   if (isOngoingChat) {
-    return `Certainly! Would you like me to schedule a consultation slot with ${docTitle} (${specialty}) for **today** or **tomorrow**? Please share the patient's name and preferred time.${phoneSuffix}`;
+    // If patient provided details (e.g. "Rahul Kumar", "Kal 5 PM", "Subah 10 baje")
+    if (/kal|tomorrow|aaj|today|subah|shaam|morning|evening|pm|am|\d{1,2}\s*(baje|am|pm)|kumar|singh|sharma|patel|gupta|khan|verma|rao|nair|reddy|ali|das|sen|roy/i.test(textLower) || text.split(' ').length >= 2) {
+      return `Ji dhanyawad! Maine *${text}* ke liye aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ki confirmation details clinic reception se aapko WhatsApp par mil jayegi. Agar koi aur madad chahiye to zaroor batayein!${phoneSuffix}`;
+    }
+    return `Ji! ${docTitle} (${specialty}) ke OPD consultations ke liye kya aap **aaj** ya **kal** ka slot confirm karna chahenge? Kripya preferred time batayein.${phoneSuffix}`;
   }
 
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
@@ -529,24 +540,66 @@ export interface DoctorScheduleContext {
 }
 
 export async function generateWithFallback(prompt: string): Promise<string> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
   let lastError: any = null;
-  for (const modelName of CANDIDATE_MODELS) {
+
+  // 1. Primary: Try @google/genai SDK with valid models
+  if (geminiKey) {
     try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-      });
-      if (response.text?.trim()) {
-        return response.text.trim();
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+          });
+          if (response.text?.trim()) {
+            return response.text.trim();
+          }
+        } catch (err: any) {
+          lastError = err;
+          const errText = err.message || err.toString() || "";
+          console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+        }
       }
-    } catch (err: any) {
-      lastError = err;
-      const errText = err.message || err.toString() || "";
-      console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
+    } catch (gErr: any) {
+      lastError = gErr;
+      console.warn(`[AIAgentsService] GoogleGenAI init failed:`, gErr?.message || gErr);
+    }
+
+    // 2. Secondary: Try legacy @google/generative-ai SDK
+    try {
+      const legacyAi = new GoogleGenerativeAI(geminiKey);
+      const model = legacyAi.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text()?.trim();
+      if (text) return text;
+    } catch (legErr: any) {
+      lastError = legErr;
+      console.warn(`[AIAgentsService] Legacy Gemini SDK failed:`, legErr?.message || legErr);
     }
   }
-  throw lastError || new Error("All Gemini models unavailable");
+
+  // 3. Tertiary: Fallback to OpenAI gpt-4o-mini
+  if (openaiKey) {
+    try {
+      const openai = new OpenAI({ apiKey: openaiKey });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 350,
+        temperature: 0.3
+      });
+      const text = completion.choices[0]?.message?.content?.trim();
+      if (text) return text;
+    } catch (oErr: any) {
+      lastError = oErr;
+      console.warn(`[AIAgentsService] OpenAI fallback failed:`, oErr?.message || oErr);
+    }
+  }
+
+  throw lastError || new Error("All AI generation providers unavailable");
 }
 
 export class AIAgentsService {
@@ -769,6 +822,13 @@ ${allowTeleConsultation
    - ${doctorName} provides consultations **EXCLUSIVELY IN-PERSON AT THE CLINIC** to ensure thorough physical examination and accurate clinical assessment.
    - If a patient asks for an online/video call, WhatsApp prescription, or remote consultation, politely explain that online consultations and WhatsApp prescriptions are not provided, and warmly offer an in-clinic OPD appointment slot.`
 }
+
+12. **CONVERSATION HISTORY & CONTEXT MEMORY (CRITICAL)**:
+    - Review the Conversation History carefully.
+    - If the patient has ALREADY provided their Name (e.g. "Rahul Kumar"), Date ("Kal", "Tomorrow"), or Time ("Subah", "10:30 AM") in earlier messages, DO NOT ask for it again.
+    - If the assistant previously asked for their name or details and the patient provides them (e.g. "Rahul Kumar" or "Kal Subah"), IMMEDIATELY acknowledge their name, confirm their appointment slot for ${doctorName}, and append [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name].
+    - NEVER reset the conversation or send an introductory greeting if you are already in an ongoing discussion.
+    - If the patient requests home blood collection, ask for their address and preferred morning pickup time (7:00 AM – 9:30 AM).
       `;
 
       const prompt = `

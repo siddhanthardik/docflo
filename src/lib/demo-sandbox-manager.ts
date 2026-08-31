@@ -32,6 +32,7 @@ class DemoSandboxManager {
   private activeConnections: Set<string> = new Set();
   private connectingSessions: Set<string> = new Set();
   private expiryTimers: Map<string, NodeJS.Timeout> = new Map();
+  private conversationHistories: Map<string, string[]> = new Map(); // `${sessionId}:${senderJid}` -> messages[]
 
   constructor() {
     const baseDir = getSandboxBaseDir();
@@ -53,6 +54,13 @@ class DemoSandboxManager {
     if (timer) {
       clearTimeout(timer);
       this.expiryTimers.delete(sessionId);
+    }
+
+    // Clear conversation histories for this session
+    for (const key of Array.from(this.conversationHistories.keys())) {
+      if (key.startsWith(`${sessionId}:`)) {
+        this.conversationHistories.delete(key);
+      }
     }
 
     const sock = this.sockets.get(sessionId);
@@ -268,6 +276,9 @@ class DemoSandboxManager {
             const clinicName = currentProfile.clinicName || "our Clinic";
             const specialty = currentProfile.specialty || "Medical Consultation";
 
+            const historyKey = `${sessionId}:${senderJid}`;
+            const history = this.conversationHistories.get(historyKey) || [];
+
             const reply = await AIAgentsService.runDemoReceptionist(
               text.trim(),
               {
@@ -280,10 +291,17 @@ class DemoSandboxManager {
                 teleConsultationFee: 1000,
                 clinicTimings: "Mon-Sat: 10:00 AM - 1:00 PM & 5:00 PM - 8:30 PM",
                 clinicPhone: currentProfile.phone
-              }
+              },
+              history
             ).catch(() => 
               `Namaste! 🙏 I am ${assistantName}, 24/7 AI Receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment or visit today?`
             );
+
+            // Record turn in history
+            history.push(`Patient: ${text.trim()}`);
+            history.push(`${assistantName}: ${reply}`);
+            if (history.length > 10) history.splice(0, history.length - 10);
+            this.conversationHistories.set(historyKey, history);
 
             await sock.sendMessage(senderJid, { text: reply });
             console.log(`[DemoSandboxManager] 📤 Replied to ${senderJid} in sandbox ${sessionId}`);
