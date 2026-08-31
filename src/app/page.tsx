@@ -311,7 +311,7 @@ export default function LandingPage() {
                 <Link href="#ai-simulator">
                   <Button variant="outline" className="h-13 px-6 rounded-2xl border-emerald-500/40 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-950 font-bold text-sm shadow-xs flex items-center gap-2 transition-transform hover:scale-105">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span>Test Live AI in 60s</span>
+                    <span>AI Receptionist Demo</span>
                   </Button>
                 </Link>
                 <Link href="#clinic-websites">

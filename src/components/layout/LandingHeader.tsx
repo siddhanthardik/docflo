@@ -19,17 +19,22 @@ export function LandingHeader() {
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-7">
             {[
               { label: "Features", href: "/#local-seo" },
-              { label: "Pricing", href: "/#pricing" },
+              { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
+              { label: "Pricing", href: "/#pricing" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                className={`text-sm font-semibold transition-colors ${
+                  item.label.includes("Demo") 
+                    ? "text-emerald-700 hover:text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60" 
+                    : "text-slate-600 hover:text-blue-600"
+                }`}
               >
                 {item.label}
               </Link>
@@ -71,18 +76,21 @@ export function LandingHeader() {
             </button>
           </div>
           
-          <nav className="flex flex-col gap-6 text-lg font-semibold text-slate-700">
+          <nav className="flex flex-col gap-5 text-lg font-semibold text-slate-700">
             {[
               { label: "Features", href: "/#local-seo" },
-              { label: "Pricing", href: "/#pricing" },
+              { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
+              { label: "Pricing", href: "/#pricing" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
+                className={`transition-colors border-b border-slate-100 pb-3.5 ${
+                  item.label.includes("Demo") ? "text-emerald-700 font-bold" : "hover:text-blue-600"
+                }`}
               >
                 {item.label}
               </Link>
