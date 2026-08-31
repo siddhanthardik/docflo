@@ -140,22 +140,25 @@ function buildDeterministicReceptionistReply(
   const hasGujarati = /[\u0A80-\u0AFF]/.test(text);
   const hasPunjabi = /[\u0A00-\u0A7F]/.test(text);
 
-  // Romanized Transliteration Keywords
-  const isBonglish = hasBengali || /\b(ami|amra|apni|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kotha|kothay|koto|lagbe|daktar|dekhte|dekhabo|shomoy|shomoye|ache|achhe|thakben|thakbe|hobe|korbo|parbo|bangla|bengali|dhonnobad|kalke|aajke|ajke|raat|raate|rate)\b/i.test(textLower);
-  const isTanglish = hasTamil || /\b(vanakkam|naan|nanga|neenga|ungalukku|vara|varren|varen|vandhuten|naalaikku|nalaikku|innikku|iniku|epbo|eppo|evvalo|evvalavu|panam|kaasu|paakanum|paarka|pakanum|irukka|iruku|irukku|kedaikkuma|engae|enge|enga|solla|sollunga|nandri|seri|mudiyuma|mudiyum|tamil|thamizh)\b/i.test(textLower);
-  const isTelugish = hasTelugu || /\b(namaskaram|namaskaramu|nenu|memu|meeru|repu|ee\s*roju|eeroju|vastanu|vastam|vasta|eppudu|enta|entha|chupinchali|chudali|unnara|untara|undha|ekkada|ekada|cheppandi|cheppu|dhanyavadalu|telugu)\b/i.test(textLower);
-  const isMarathish = !hasDevanagari && /\b(namaskar|mee|amhi|tumhi|udya|aajch|yenar|yeto|yete|kadhi|kiti|dakhvaycha|bhetaycha|aahet|nahit|kuthe|kothe|sanga|saanga|dhanyawad|marathi)\b/i.test(textLower);
-  const isKanglish = hasKannada || /\b(namaskara|naanu|naavu|neevu|nimma|naale|ivathu|ee\s*dina|bartheeni|barodu|barala|yaavaga|yaava|eshtu|thorisbeku|nodbeku|iddara|irthara|elli|ellige|heli|helra|dhanyavadagalu|kannada)\b/i.test(textLower);
-  const isManglish = hasMalayalam || /\b(namaskaram|njan|njangal|ningal|naale|innu|varam|varunnu|eppol|eppozhum|ethra|kanikkanam|kaananam|undo|undavumo|evide|evidaya|parayamo|parayoo|nanni|malayalam)\b/i.test(textLower);
-  const isGujlish = hasGujarati || /\b(kem\s*cho|majama|hu|ame|tame|kale|aaje|aavishu|aavu|aavvu|kyare|ketla|ketli|batavvu|malvu|nathi|kyaan|janavo|aabhar|gujarati)\b/i.test(textLower);
-  const isPunlish = hasPunjabi || /\b(sat\s*sri\s*akaal|sasrikal|assi|tussi|ajj|aaunga|aunde|kadon|kado|kinne|kinni|dikhauna|hanji|haanji|kithe|kithay|dasso|dasan|dhanwad|punjabi)\b/i.test(textLower);
+  // Strong Hindi grammar markers
+  const hasHindiMarkers = hasDevanagari || /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|bataya|batayein|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|rahi|gya|gaya|pehle|abhi|hu|hoon|hume|humko|mera|meri|karna|karvana|baje|subah|shaam|dopahar|pakka)\b/i.test(textLower);
+
+  // Romanized Transliteration Keywords (Only match if NOT standard Hindi/Hinglish)
+  const isBonglish = hasBengali || (!hasHindiMarkers && /\b(ami|amra|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kothay|daktar|dekhabo|shomoye|thakben|thakbe|dhonnobad|kalke|aajke|ajke)\b/i.test(textLower));
+  const isTanglish = hasTamil || (!hasHindiMarkers && /\b(vanakkam|naan|nanga|neenga|ungalukku|vara|varren|varen|vandhuten|naalaikku|nalaikku|innikku|iniku|epbo|eppo|evvalo|evvalavu|panam|kaasu|paakanum|paarka|pakanum|irukka|iruku|irukku|kedaikkuma|engae|enge|enga|solla|sollunga|nandri|seri|mudiyuma|mudiyum)\b/i.test(textLower));
+  const isTelugish = hasTelugu || (!hasHindiMarkers && /\b(namaskaram|namaskaramu|nenu|memu|meeru|repu|ee\s*roju|eeroju|vastanu|vastam|vasta|eppudu|enta|entha|chupinchali|chudali|unnara|untara|undha|ekkada|ekada|cheppandi|cheppu|dhanyavadalu)\b/i.test(textLower));
+  const isMarathish = !hasDevanagari && !hasHindiMarkers && /\b(namaskar|mee|amhi|tumhi|udya|aajch|yenar|yeto|yete|kadhi|kiti|dakhvaycha|bhetaycha|aahet|nahit|kuthe|kothe|sanga|saanga|dhanyawad)\b/i.test(textLower);
+  const isKanglish = hasKannada || (!hasHindiMarkers && /\b(namaskara|naanu|naavu|neevu|nimma|naale|ivathu|ee\s*dina|bartheeni|barodu|barala|yaavaga|yaava|eshtu|thorisbeku|nodbeku|iddara|irthara|elli|ellige|heli|helra|dhanyavadagalu)\b/i.test(textLower));
+  const isManglish = hasMalayalam || (!hasHindiMarkers && /\b(namaskaram|njan|njangal|ningal|naale|innu|varam|varunnu|eppol|eppozhum|ethra|kanikkanam|kaananam|undo|undavumo|evide|evidaya|parayamo|parayoo|nanni)\b/i.test(textLower));
+  const isGujlish = hasGujarati || (!hasHindiMarkers && /\b(kem\s*cho|majama|tamaro|tamari|aavishu|aavvu|kyare|ketla|batavvu|malvu|kyaan|janavo|aabhar|gujarati)\b/i.test(textLower));
+  const isPunlish = hasPunjabi || (!hasHindiMarkers && /\b(sat\s*sri\s*akaal|sasrikal|assi|tussi|ajj|aaunga|aunde|kadon|kado|kinne|kinni|dikhauna|hanji|haanji|kithe|kithay|dasso|dasan|dhanwad)\b/i.test(textLower));
 
   // International / Global Languages
   const isSpanish = /\b(hola|buenos\s*dias|buenas\s*tardes|buenas\s*noches|cita|doctor|gracias|precio|consulta|saludos|adonde|donde|quiero)\b/i.test(textLower);
   const isFrench = /\b(bonjour|bonsoir|salut|rendez-vous|medecin|merci|horaires|docteur|combien)\b/i.test(textLower);
   const isArabic = /[\u0600-\u06FF]/.test(text) || /\b(marhaban|salam|shukran|tabib|maw3id|ahlan)\b/i.test(textLower);
 
-  const isHindiOrHinglish = hasDevanagari || (!isBonglish && !isTanglish && !isTelugish && !isMarathish && !isKanglish && !isManglish && !isGujlish && !isPunlish && !isSpanish && !isFrench && !isArabic && /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|gya|gaya|time\s*pe)\b/i.test(textLower));
+  const isHindiOrHinglish = hasHindiMarkers || (!isBonglish && !isTanglish && !isTelugish && !isMarathish && !isKanglish && !isManglish && !isGujlish && !isPunlish && !isSpanish && !isFrench && !isArabic);
 
   // User explicitly asking for phone / human call
   const wantsCallOrHuman = /human|speak|call|phone|number|contact|talk|baat|phone\s*number/i.test(textLower);
@@ -412,14 +415,24 @@ function buildDeterministicReceptionistReply(
       return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
     }
 
-    // 9.6 Appointment Booking Request
-    if (/appointment|book|visit|consult|slot|milna|dikhana|aana|chahiye|booking|apointment|apointmnt|अपॉइंटमेंट|बुक|मिलना|दिखाना|चाहिए|स्लॉट/i.test(textLower) || text.includes("अपॉइंटमेंट") || text.includes("चाहिए")) {
-      return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam** aur ${slotPromptHi} share karein. Main turant confirm kar dungi!${phoneSuffix}`;
+    // 9.6.1 User explicitly states they already provided their name / details
+    if (/abhi\s*to\s*naam|pehle\s*hi|already|naam\s*bataya|naam\s*to|de\s*diya/i.test(textLower)) {
+      return `Ji mafi chahti hoon! Maine aapki details note kar li hain. ${docTitle} (${specialty}) ke OPD session ke liye aapki appointment request register ho gayi hai. Clinic reception se aapko WhatsApp confirmation mil jayegi.${phoneSuffix}`;
     }
 
-    // 9.7 Tomorrow / Specific Date
-    if (/\b(kal|tomorrow|parso|aaj|today|monday|tuesday|wednesday|thursday|friday|saturday)\b/i.test(textLower) || text.includes("कल") || text.includes("आज")) {
-      return `Ji theek hai! Slot confirm karne ke liye kripya **Patient ka Pura Naam** bata dijiye. ${docTitle} OPD me *${clinicTimings}* uplabdh rahenge.${phoneSuffix}`;
+    // 9.6.2 User asking if appointment is confirmed
+    if (/confirm\s*appointment|confirm\s*hai|pakka|is\s*it\s*confirmed|confirm\s*karein|confirm\s*hua/i.test(textLower)) {
+      return `Ji bilkul! ${docTitle} (${specialty}) ke pass aapka appointment slot confirm hai. Kripya nirdharit samay par clinic pahuchein. Dhanyawad! 🙏${phoneSuffix}`;
+    }
+
+    // 9.6.3 Appointment details provided (Date + Time + Name)
+    if (/\b(kal|tomorrow|parso|aaj|today|pm|am|baje|subah|shaam|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)/i.test(textLower)) {
+      return `Ji dhanyawad! Maine *${text}* ke liye ${docTitle} (${specialty}) ke OPD session me aapki appointment request note kar li hai. Clinic reception se aapko turant token SMS/WhatsApp mil jayega. Agar koi aur jankari chahiye to zaroor batayein!${phoneSuffix}`;
+    }
+
+    // 9.6 Appointment Booking Request (General Inquiry without date/time)
+    if (/appointment|book|visit|consult|slot|milna|dikhana|aana|chahiye|booking|apointment|apointmnt|अपॉइंटमेंट|बुक|मिलना|दिखाना|चाहिए|स्लॉट/i.test(textLower) || text.includes("अपॉइंटमेंट") || text.includes("चाहिए")) {
+      return `Ji bilkul! ${docTitle} (${specialty}) ke sath appointment ke liye kripya patient ka **Naam** aur ${slotPromptHi} share karein. Main turant confirm kar dungi!${phoneSuffix}`;
     }
 
     // 9.8 Affirmation / Confirmation
@@ -433,7 +446,7 @@ function buildDeterministicReceptionistReply(
     }
 
     if (isOngoingChat) {
-      return `Ji! Kya aap ${docTitle} ke sath **aaj** ya **kal** ke liye appointment slot book karna chahenge? Kripya apna naam aur samay batayein.${phoneSuffix}`;
+      return `Ji dhanyawad! Maine *${text}* ke liye aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ki confirmation details clinic reception se aapko WhatsApp par mil jayegi.${phoneSuffix}`;
     }
 
     return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
@@ -483,6 +496,16 @@ function buildDeterministicReceptionistReply(
     return `${docTitle} is available for clinic consultations during OPD hours:\n🕒 *${clinicTimings}*\n\nWould you like to schedule an appointment for *today* or *tomorrow*? Please share your preferred time and patient name.${phoneSuffix}`;
   }
 
+  // 10.35 Appointment Details Provided in English (Name, Date, Time)
+  if (isOngoingChat && (/\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower) || text.length > 2)) {
+    return `Thank you! I have registered your appointment request for *${text}* with ${docTitle} (${specialty}). Our clinic front desk will send your booking confirmation token shortly on WhatsApp.${phoneSuffix}`;
+  }
+
+  // 10.36 Confirmation Query in English
+  if (/is\s*it\s*confirmed|is\s*this\s*confirmed|confirm\s*appointment|booked|status/i.test(textLower)) {
+    return `Yes, certainly! Your appointment request has been received for ${docTitle} (${specialty}). Please arrive a few minutes before your scheduled OPD slot. Thank you! 🙏${phoneSuffix}`;
+  }
+
   // 10.4 Appointment Booking / Schedule
   if (/appointment|book|visit|consult|slot|schedule|available|doctor|reserve/i.test(textLower)) {
     return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name** and your ${slotPromptEn}. I will be happy to confirm it for you!${phoneSuffix}`;
@@ -520,11 +543,7 @@ function buildDeterministicReceptionistReply(
   }
 
   if (isOngoingChat) {
-    // If patient provided details (e.g. "Rahul Kumar", "Kal 5 PM", "Subah 10 baje")
-    if (/kal|tomorrow|aaj|today|subah|shaam|morning|evening|pm|am|\d{1,2}\s*(baje|am|pm)|kumar|singh|sharma|patel|gupta|khan|verma|rao|nair|reddy|ali|das|sen|roy/i.test(textLower) || text.split(' ').length >= 2) {
-      return `Ji dhanyawad! Maine *${text}* ke liye aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ki confirmation details clinic reception se aapko WhatsApp par mil jayegi. Agar koi aur madad chahiye to zaroor batayein!${phoneSuffix}`;
-    }
-    return `Ji! ${docTitle} (${specialty}) ke OPD consultations ke liye kya aap **aaj** ya **kal** ka slot confirm karna chahenge? Kripya preferred time batayein.${phoneSuffix}`;
+    return `Thank you! I have noted your details (*${text}*) for ${docTitle} (${specialty}). Our clinic front desk will share your booking confirmation on WhatsApp shortly.${phoneSuffix}`;
   }
 
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
@@ -562,35 +581,30 @@ export async function generateWithFallback(prompt: string): Promise<string> {
         } catch (err: any) {
           lastError = err;
           const errText = err.message || err.toString() || "";
-          console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+          console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}).`);
+          
+          // Fast failover immediately on 429 Quota Exceeded
+          if (/429|quota|resourceexhausted|too many requests/i.test(errText)) {
+            console.warn(`[AIAgentsService] ⚡ Gemini 429 Quota Limit detected. Triggering instant failover to OpenAI...`);
+            break;
+          }
         }
       }
     } catch (gErr: any) {
       lastError = gErr;
       console.warn(`[AIAgentsService] GoogleGenAI init failed:`, gErr?.message || gErr);
     }
-
-    // 2. Secondary: Try legacy @google/generative-ai SDK
-    try {
-      const legacyAi = new GoogleGenerativeAI(geminiKey);
-      const model = legacyAi.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      const text = result.response.text()?.trim();
-      if (text) return text;
-    } catch (legErr: any) {
-      lastError = legErr;
-      console.warn(`[AIAgentsService] Legacy Gemini SDK failed:`, legErr?.message || legErr);
-    }
   }
 
-  // 3. Tertiary: Fallback to OpenAI gpt-4o-mini
+  // 2. Secondary: Fast Fallback to OpenAI gpt-4o-mini
   if (openaiKey) {
     try {
+      console.log("[AIAgentsService] 🚀 Generating with OpenAI gpt-4o-mini fallback...");
       const openai = new OpenAI({ apiKey: openaiKey });
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 350,
+        max_tokens: 400,
         temperature: 0.3
       });
       const text = completion.choices[0]?.message?.content?.trim();

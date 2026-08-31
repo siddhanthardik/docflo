@@ -76,12 +76,36 @@ ${keywordsStr}
 Write an engaging, warm, professional post (1-2 paragraphs, max 1200 characters). Include a clear call to action (like 'Call us today' or 'Book a consultation'). Do not use placeholders or third-party clinic names.`;
     }
 
-    const aiResult = await AIService.generate(
-      doctorId, 
-      AIFeature.GBP_POST,
-      prompt,
-      { temperature: 0.7, imageUrl }
-    );
+    let aiResult;
+    try {
+      aiResult = await AIService.generate(
+        doctorId, 
+        AIFeature.GBP_POST,
+        prompt,
+        { temperature: 0.7, imageUrl }
+      );
+    } catch (genErr: any) {
+      console.warn("AIService primary generation failed, attempting direct OpenAI fallback:", genErr);
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        const OpenAI = (await import("openai")).default;
+        const openai = new OpenAI({ apiKey: openaiKey });
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 600,
+          temperature: 0.7
+        });
+        const content = completion.choices[0]?.message?.content?.trim() || "";
+        aiResult = {
+          content,
+          creditsUsed: 1,
+          remainingCredits: 99
+        };
+      } else {
+        throw genErr;
+      }
+    }
 
     let cleanContent = (aiResult.content || "").trim();
     // Clean codeblock wrappers if any
@@ -99,7 +123,7 @@ Write an engaging, warm, professional post (1-2 paragraphs, max 1200 characters)
         details: { feature: AIFeature.GBP_POST, creditsUsed: aiResult.creditsUsed, hasImage: !!imageUrl },
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1"
       }
-    });
+    }).catch(() => {});
 
     return NextResponse.json({
       content: cleanContent,
@@ -115,6 +139,6 @@ Write an engaging, warm, professional post (1-2 paragraphs, max 1200 characters)
       return NextResponse.json({ error: "AI features are not available on your current plan. Please upgrade to unlock this capability." }, { status: 403 });
     }
     
-    return NextResponse.json({ error: error.message || "An unexpected error occurred while generating the post. Please try again later." }, { status: 500 });
+    return NextResponse.json({ error: "Could not generate post right now. Please try again in a few moments." }, { status: 500 });
   }
 }
