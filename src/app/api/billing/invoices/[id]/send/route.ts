@@ -36,9 +36,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const pdfBuffer = await generateInvoicePDF(invoice as any);
     const fileName = `Invoice_${invoice.invoiceNumber}.pdf`;
     
+    // Construct Real Patient Name
+    let patientGreetingName = "";
+    const fn = (invoice.patient.firstName || "").trim();
+    const ln = (invoice.patient.lastName || "").trim();
+    if (fn && fn.toLowerCase() !== "patient") {
+      patientGreetingName = (ln && !ln.startsWith("+")) ? `${fn} ${ln}` : fn;
+    } else if (ln && !ln.startsWith("+")) {
+      patientGreetingName = ln;
+    } else {
+      // Check if conversation has a recorded name
+      const conv = await prisma.conversation.findUnique({
+        where: { doctorId_patientPhone: { doctorId, patientPhone: invoice.patient.phone } },
+        select: { patientName: true }
+      });
+      if (conv?.patientName && conv.patientName.toLowerCase() !== "patient" && !conv.patientName.startsWith("+")) {
+        patientGreetingName = conv.patientName;
+      }
+    }
+
+    if (!patientGreetingName) {
+      patientGreetingName = "Valued Patient";
+    }
+
     // Construct WhatsApp Caption
     const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
-    let caption = `Hi ${invoice.patient.firstName},\n\nAttached is your invoice (#${invoice.invoiceNumber}) from ${invoice.doctor.clinicName || invoice.doctor.name} for ${sym}${invoice.totalAmount}.\n\n`;
+    let caption = `Hi ${patientGreetingName},\n\nAttached is your invoice (#${invoice.invoiceNumber}) from ${invoice.doctor.clinicName || invoice.doctor.name} for ${sym}${invoice.totalAmount}.\n\n`;
 
     if (balanceDue > 0) {
       caption += `You have a remaining balance of ${sym}${balanceDue}. You can pay this securely via UPI or cash at the clinic.\n\n`;

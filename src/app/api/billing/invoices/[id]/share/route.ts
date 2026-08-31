@@ -4,6 +4,7 @@ import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { generateInvoicePDF } from "@/lib/pdf";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export async function POST(
   req: Request,
@@ -41,17 +42,40 @@ export async function POST(
     // Generate PDF
     const pdfBuffer = await generateInvoicePDF(invoice as any);
 
+    // Construct Real Patient Name
+    let patientGreetingName = "";
+    const fn = (invoice.patient.firstName || "").trim();
+    const ln = (invoice.patient.lastName || "").trim();
+    if (fn && fn.toLowerCase() !== "patient") {
+      patientGreetingName = (ln && !ln.startsWith("+")) ? `${fn} ${ln}` : fn;
+    } else if (ln && !ln.startsWith("+")) {
+      patientGreetingName = ln;
+    } else {
+      const conv = await prisma.conversation.findUnique({
+        where: { doctorId_patientPhone: { doctorId, patientPhone: invoice.patient.phone } },
+        select: { patientName: true }
+      });
+      if (conv?.patientName && conv.patientName.toLowerCase() !== "patient" && !conv.patientName.startsWith("+")) {
+        patientGreetingName = conv.patientName;
+      }
+    }
+
+    if (!patientGreetingName) {
+      patientGreetingName = "Valued Patient";
+    }
+
+    const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
     let caption = "";
     let fileName = `Invoice_${invoice.invoiceNumber}.pdf`;
 
     if (type === "RECEIPT") {
-      caption = `Hi ${invoice.patient.firstName},\n\nWe have received your payment of $${invoice.totalAmount}. Attached is your receipt for your records. Thank you!`;
+      caption = `Hi ${patientGreetingName},\n\nWe have received your payment of ${sym}${invoice.totalAmount}. Attached is your receipt for your records. Thank you!`;
       fileName = `Receipt_${invoice.invoiceNumber}.pdf`;
     } else if (type === "REMINDER") {
-      caption = `Hi ${invoice.patient.firstName},\n\nThis is a gentle reminder regarding your outstanding invoice for $${invoice.totalAmount}. Attached is the invoice for your reference.`;
+      caption = `Hi ${patientGreetingName},\n\nThis is a gentle reminder regarding your outstanding invoice for ${sym}${invoice.totalAmount}. Attached is the invoice for your reference.`;
     } else {
       // INVOICE
-      caption = `Hi ${invoice.patient.firstName},\n\nAttached is your invoice for $${invoice.totalAmount}. Please review and complete your payment at your earliest convenience.`;
+      caption = `Hi ${patientGreetingName},\n\nAttached is your invoice (#${invoice.invoiceNumber}) for ${sym}${invoice.totalAmount}. Please review and complete your payment at your earliest convenience.`;
     }
 
     // Send Document

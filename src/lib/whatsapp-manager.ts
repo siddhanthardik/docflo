@@ -480,22 +480,53 @@ class WhatsAppManager {
                 where: { phone: patientPhone, doctorId },
               });
 
-              // If no patient exists, auto-create as a Patient
+              // If no patient exists, auto-create as a Patient or with WhatsApp pushName
+              const pushNameRaw = (msg.pushName || "").trim();
+              const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
+
               if (!patient) {
+                const parts = hasValidPushName ? pushNameRaw.split(" ") : ["Patient", `+${patientPhone}`];
                 patient = await prisma.patient.create({
                   data: {
                     doctorId,
-                    firstName: "Patient",
-                    lastName: `+${patientPhone}`,
+                    firstName: parts[0] || "Patient",
+                    lastName: parts.slice(1).join(" ") || `+${patientPhone}`,
                     phone: patientPhone,
                     patientType: "ACTIVE",
                     tags: ["WhatsApp"]
                   }
                 });
-                console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}`);
+                console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}: ${patient.firstName} ${patient.lastName}`);
+              } else if (patient.firstName === "Patient" && hasValidPushName) {
+                const parts = pushNameRaw.split(" ");
+                patient = await prisma.patient.update({
+                  where: { id: patient.id },
+                  data: {
+                    firstName: parts[0] || "Patient",
+                    lastName: parts.slice(1).join(" ") || ""
+                  }
+                });
               }
 
-              if (patient.isBlocked) {
+              // Also check if text message explicitly starts with name (e.g. "Saroj Kumari.. tumi ki...")
+              if (patient && patient.firstName === "Patient" && textMessage) {
+                const nameIntroMatch = textMessage.match(/^(?:my name is|mera naam|naam|i am|this is)?\s*([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})+)/);
+                if (nameIntroMatch && nameIntroMatch[1]) {
+                  const extractedName = nameIntroMatch[1].trim();
+                  const nameParts = extractedName.split(" ");
+                  if (nameParts[0] && !/^(appointment|doctor|clinic|please|hello|namaste|thanks|good)/i.test(nameParts[0])) {
+                    patient = await prisma.patient.update({
+                      where: { id: patient.id },
+                      data: {
+                        firstName: nameParts[0],
+                        lastName: nameParts.slice(1).join(" ") || ""
+                      }
+                    });
+                  }
+                }
+              }
+
+              if (patient && patient.isBlocked) {
                 console.log(`[WhatsAppManager] Ignored message from BLOCKED patient ${patientPhone}`);
                 continue; // Skip processing
               }
@@ -527,15 +558,17 @@ class WhatsAppManager {
                 }
               });
             } else {
+              const updatedData: any = {
+                lastMessageAt: new Date(), 
+                unreadCount: { increment: 1 }, 
+                status: "OPEN",
+              };
+              if (patient && patient.firstName !== "Patient" && (!conversation.patientName || conversation.patientName === "Patient" || conversation.patientName.includes("+"))) {
+                updatedData.patientName = `${patient.firstName} ${patient.lastName}`.trim();
+              }
               await prisma.conversation.update({
                 where: { id: conversation.id },
-                data: { 
-                  lastMessageAt: new Date(), 
-                  unreadCount: { increment: 1 }, 
-                  status: "OPEN", 
-                  patientId: isStaff ? null : patient!.id,
-                  patientName,
-                }
+                data: updatedData
               });
             }
 
