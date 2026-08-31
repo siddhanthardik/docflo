@@ -84,8 +84,8 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    name: searchParams?.get("name") || "",
+    email: searchParams?.get("email") || "",
     password: "",
     confirmPassword: "",
   });
