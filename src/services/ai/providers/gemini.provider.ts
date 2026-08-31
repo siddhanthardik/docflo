@@ -1,5 +1,6 @@
 import { AIProvider, AIGenerationOptions } from '../types';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 const CANDIDATE_MODELS = [
   'gemini-3.7-flash',
@@ -100,7 +101,26 @@ export class GeminiProvider implements AIProvider {
       }
     }
 
-    throw lastError || new Error("All Gemini models in downgrade cascade are currently unavailable.");
+    // Secondary automatic fallback to OpenAI gpt-4o-mini if Gemini is unavailable
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      try {
+        console.log("[GeminiProvider] Falling back to OpenAI gpt-4o-mini...");
+        const openai = new OpenAI({ apiKey: openaiKey });
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: finalPrompt }],
+          max_tokens: options?.maxTokens ?? 1024,
+          temperature: options?.temperature ?? 0.7,
+        });
+        const content = completion.choices[0]?.message?.content?.trim();
+        if (content) return content;
+      } catch (oErr) {
+        console.error("[GeminiProvider] OpenAI fallback also failed:", oErr);
+      }
+    }
+
+    throw lastError || new Error("All Gemini and fallback AI models are currently unavailable.");
   }
 
   async generateWithUsage(prompt: string, options?: AIGenerationOptions): Promise<import('../types').AIGenerationResult> {
@@ -189,6 +209,36 @@ export class GeminiProvider implements AIProvider {
       }
     }
 
-    throw lastError || new Error("All Gemini models in downgrade cascade are currently unavailable.");
+    // Secondary automatic fallback to OpenAI gpt-4o-mini for generateWithUsage
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      try {
+        console.log("[GeminiProvider] generateWithUsage falling back to OpenAI gpt-4o-mini...");
+        const openai = new OpenAI({ apiKey: openaiKey });
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: finalPrompt }],
+          max_tokens: options?.maxTokens ?? 1024,
+          temperature: options?.temperature ?? 0.7,
+        });
+        const content = completion.choices[0]?.message?.content?.trim() || "";
+        const promptTokens = completion.usage?.prompt_tokens || Math.ceil(finalPrompt.length / 4);
+        const completionTokens = completion.usage?.completion_tokens || Math.ceil(content.length / 4);
+        const totalTokens = completion.usage?.total_tokens || (promptTokens + completionTokens);
+
+        return {
+          content,
+          provider: 'OPENAI',
+          model: 'gpt-4o-mini',
+          promptTokens,
+          completionTokens,
+          totalTokens,
+        };
+      } catch (oErr) {
+        console.error("[GeminiProvider] OpenAI generateWithUsage fallback also failed:", oErr);
+      }
+    }
+
+    throw lastError || new Error("All Gemini and fallback models in downgrade cascade are currently unavailable.");
   }
 }
