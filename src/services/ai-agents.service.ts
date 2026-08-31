@@ -528,7 +528,7 @@ export interface DoctorScheduleContext {
   pacingStrategy?: string; // STAGGERED or CONTINUOUS
 }
 
-async function generateWithFallback(prompt: string): Promise<string> {
+export async function generateWithFallback(prompt: string): Promise<string> {
   let lastError: any = null;
   for (const modelName of CANDIDATE_MODELS) {
     try {

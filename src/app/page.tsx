@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
+import { AIRepceptionistSimulator } from "@/components/marketing/AIRepceptionistSimulator";
 
 // 12 Medical Specialties - Static Local Paths (Customizable via /public/images/specialties/)
 const SPECIALTY_CARDS = [
@@ -300,17 +301,23 @@ export default function LandingPage() {
 
               {/* Primary Direct CTAs */}
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-                className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+                className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2">
                 <Link href="/register">
-                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-13 px-8 rounded-2xl shadow-xl shadow-blue-500/25 transition-transform hover:scale-105 flex items-center gap-2">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-13 px-7 rounded-2xl shadow-xl shadow-blue-500/25 transition-transform hover:scale-105 flex items-center gap-2">
                     <span>Start 14-Day Free Trial</span>
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
+                <Link href="#ai-simulator">
+                  <Button variant="outline" className="h-13 px-6 rounded-2xl border-emerald-500/40 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-950 font-bold text-sm shadow-xs flex items-center gap-2 transition-transform hover:scale-105">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>Test Live AI in 60s</span>
+                  </Button>
+                </Link>
                 <Link href="#clinic-websites">
-                  <Button variant="outline" className="h-13 px-6 rounded-2xl border-slate-300 hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-xs flex items-center gap-2">
+                  <Button variant="outline" className="h-13 px-5 rounded-2xl border-slate-300 hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-xs flex items-center gap-2">
                     <Palette className="w-4 h-4 text-purple-600" />
-                    <span>Explore 20 Clinic Themes</span>
+                    <span>20 Themes</span>
                   </Button>
                 </Link>
               </motion.div>
@@ -393,6 +400,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── INTERACTIVE 60-SECOND AI RECEPTIONIST SIMULATOR LEAD MAGNET ── */}
+      <AIRepceptionistSimulator />
 
       {/* ── GREXA-INSPIRED 4-AGENT MODULAR BENTO GRID (THE CONNECTED PRACTICE OS) ── */}
       <section ref={bentoRef} className="py-16 bg-white border-y border-slate-200/80">
