@@ -2,7 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, fetchL
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateWithFallback } from '@/services/ai-agents.service';
+import { AIAgentsService } from '@/services/ai-agents.service';
 
 function getSandboxBaseDir(): string {
   const parts = ["auth", "info", "sandbox"];
@@ -268,19 +268,21 @@ class DemoSandboxManager {
             const clinicName = currentProfile.clinicName || "our Clinic";
             const specialty = currentProfile.specialty || "Medical Consultation";
 
-            const prompt = `You are ${assistantName}, the friendly, professional 24/7 WhatsApp AI Receptionist for "${doctorName}" at "${clinicName}" (${specialty}).
-Rules:
-1. Speak concisely and warmly in Hinglish/English.
-2. If the user wants to book, offer available slots for tomorrow (10:30 AM, 5:30 PM, 6:45 PM).
-3. If asked for fees, mention consultation fee is ₹800.
-4. Never prescribe drugs or make diagnoses. Offer to schedule an appointment with ${doctorName}.
-5. Keep message under 3 short WhatsApp lines with polite emojis.
-
-Patient Message: "${text.trim()}"
-Reply:`;
-
-            const reply = await generateWithFallback(prompt).catch(() => 
-              `Namaste! 🙏 I am ${assistantName}, 24/7 AI Receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment today?`
+            const reply = await AIAgentsService.runDemoReceptionist(
+              text.trim(),
+              {
+                doctorName,
+                clinicName,
+                specialty,
+                assistantName,
+                consultationFee: 800,
+                allowTeleConsultation: true,
+                teleConsultationFee: 1000,
+                clinicTimings: "Mon-Sat: 10:00 AM - 1:00 PM & 5:00 PM - 8:30 PM",
+                clinicPhone: currentProfile.phone
+              }
+            ).catch(() => 
+              `Namaste! 🙏 I am ${assistantName}, 24/7 AI Receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment or visit today?`
             );
 
             await sock.sendMessage(senderJid, { text: reply });

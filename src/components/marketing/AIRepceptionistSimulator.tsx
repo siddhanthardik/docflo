@@ -279,9 +279,11 @@ export function AIRepceptionistSimulator() {
           specialty: specialty.name,
           doctorName: doctorName.startsWith("Dr.") ? doctorName : `Dr. ${doctorName}`,
           clinicName,
+          assistantName: assistantName || "Mona",
           consultationFee: specialty.fee,
           allowTeleConsultation: true,
-          teleConsultationFee: specialty.teleFee
+          teleConsultationFee: specialty.teleFee,
+          conversationHistory: messages.slice(-6).map(m => `${m.sender === "ai" ? (assistantName || "AI") : "Patient"}: ${m.text}`)
         })
       });
 

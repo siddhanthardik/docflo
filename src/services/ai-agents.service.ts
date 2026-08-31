@@ -822,6 +822,55 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
   }
 
   /**
+   * 1.2. DEMO & SANDBOX RECEPTIONIST AGENT
+   * Shares the exact same clinical logic, multi-lingual scripts, and guardrails as the Doctor's panel.
+   */
+  static async runDemoReceptionist(
+    incomingMessage: string,
+    doctorProfile: {
+      doctorName: string;
+      clinicName: string;
+      specialty: string;
+      assistantName: string;
+      consultationFee?: number | string;
+      allowTeleConsultation?: boolean;
+      teleConsultationFee?: number | string;
+      clinicTimings?: string;
+      clinicPhone?: string;
+    },
+    conversationHistory: string[] = []
+  ): Promise<string> {
+    const rawDocName = doctorProfile.doctorName || "Doctor";
+    const doctorName = formatDoctorDisplayName(rawDocName);
+    const clinicName = doctorProfile.clinicName || `${doctorName}'s Clinic`;
+    const specialty = doctorProfile.specialty || "Medical Specialist";
+    const assistantName = doctorProfile.assistantName || "Mona";
+    const fee = String(doctorProfile.consultationFee || 800);
+    const teleFee = String(doctorProfile.teleConsultationFee || 1000);
+    const allowTele = doctorProfile.allowTeleConsultation !== false;
+    const timings = doctorProfile.clinicTimings || "Mon-Sat: 10:00 AM - 1:00 PM & 5:00 PM - 8:30 PM";
+
+    return await this.runAppointmentAgent(
+      "demo_sandbox",
+      incomingMessage,
+      conversationHistory,
+      {
+        doctorName: rawDocName,
+        clinicName,
+        specialty,
+        assistantName,
+        consultationFee: fee,
+        teleConsultationFee: teleFee,
+        allowTeleConsultation: allowTele,
+        clinicTimings: timings,
+        trainingPrompt: `You are ${assistantName}, the dedicated 24/7 AI Receptionist for ${doctorName} at ${clinicName} (${specialty}).`,
+      },
+      doctorProfile.clinicPhone,
+      { doctorName: rawDocName, clinicName, specialty }
+    );
+  }
+
+  /**
    * 1.5. WHATSAPP INTERNAL STAFF ASSISTANT
    * Personal AI Assistant for the Clinic Doctor & Staff
    */
