@@ -1923,16 +1923,15 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
     // Initial sweep after 5 seconds
     setTimeout(runWatchdogSweep, 5000);
 
-    // Autonomous Background Automations Runner (24h/2h Reminders, Follow-ups, Review Surveys)
+    // Autonomous Background Automations Runner (24h/2h Reminders, 45-90m Review Surveys)
     const runAutonomousAutomations = async () => {
       try {
-        // 1. Evaluate and send 24h & 2h appointment reminders + post-consult follow-ups
+        // 1. Evaluate and send 24h & 2h pre-appointment reminders
         const { ReminderService } = await import("@/services/reminder.service");
         const reminderService = new ReminderService();
         await reminderService.sendAppointmentReminders().catch(e => console.error('[Autonomous Reminders Error]:', e));
-        await reminderService.sendFollowUpReminders().catch(e => console.error('[Autonomous Follow-up Error]:', e));
 
-        // 2. Evaluate completed consultations for feedback surveys & Google Reviews
+        // 2. Evaluate completed consultations for 45-90m feedback surveys & Google Reviews
         const { ReviewDispatcherService } = await import("@/services/review-dispatcher.service");
         await ReviewDispatcherService.evaluateAppointments().catch(e => console.error('[Autonomous Review Surveys Error]:', e));
       } catch (autoErr) {

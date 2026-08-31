@@ -12,14 +12,10 @@ export async function GET(req: Request) {
     // 1. Trigger 24-hour and 2-hour pre-appointment WhatsApp reminders
     const appointmentReminders = await reminderService.sendAppointmentReminders();
 
-    // 2. Trigger post-appointment follow-up WhatsApp check-ins
-    const followUpReminders = await reminderService.sendFollowUpReminders();
-
     return NextResponse.json({
       success: true,
       message: "Reminder CRON finished successfully",
       appointmentReminders,
-      followUpReminders,
     });
   } catch (error: any) {
     console.error("[CRON] Reminder error:", error);

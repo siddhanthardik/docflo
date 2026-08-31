@@ -99,7 +99,9 @@ export class ReviewDispatcherService {
           updatedAt: { lte: cutoffTime }
         },
         include: {
-          patient: true
+          patient: true,
+          practitioner: true,
+          doctor: { select: { name: true, clinicName: true } }
         }
       });
 
@@ -125,8 +127,26 @@ export class ReviewDispatcherService {
 
         // Send survey
         try {
-          const defaultMessage = `Hi ${patient.firstName}, thank you for trusting ${doctor.clinicName || "our clinic"}. We truly care about your well-being and hope you are feeling better after your visit.\n\nWere you happy with your care? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve your care.`;
-          const surveyMessage = doctor.reviewSurveyMessage || defaultMessage;
+          const rawDocName = appointment.practitioner?.name || appointment.doctor?.name || doctor.clinicName || "Doctor";
+          const docName = rawDocName.startsWith("Dr.") ? rawDocName : `Dr. ${rawDocName}`;
+          const clinicName = doctor.clinicName || `${docName}'s Clinic`;
+          const isTele = appointment.type === "TELE_CONSULTATION";
+
+          let defaultMessage = "";
+          if (isTele) {
+            defaultMessage = `Hi ${patient.firstName}, thank you for consulting with ${docName} at ${clinicName} online. We hope you had a smooth and helpful video consultation.\n\nWere you satisfied with your experience? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve.`;
+          } else {
+            defaultMessage = `Hi ${patient.firstName}, thank you for visiting ${clinicName} for your consultation with ${docName}. We hope you had a smooth and comfortable visit.\n\nWere you satisfied with your experience? Simply reply *YES*.\nIf there is anything we could have done better, please reply *NO* so we can improve.`;
+          }
+
+          let surveyMessage = defaultMessage;
+          if (doctor.reviewSurveyMessage && doctor.reviewSurveyMessage.trim().length > 0) {
+            surveyMessage = doctor.reviewSurveyMessage
+              .replace(/\{firstName\}/g, patient.firstName || "")
+              .replace(/\{doctorName\}/g, docName)
+              .replace(/\{clinicName\}/g, clinicName);
+          }
+
           const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
           const finalMessage = surveyMessage + optOutMsg;
 
