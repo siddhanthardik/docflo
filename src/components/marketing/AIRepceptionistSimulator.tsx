@@ -138,7 +138,7 @@ export function AIRepceptionistSimulator() {
       } catch (err) {
         console.warn("[QR Poll] Error:", err);
       }
-    }, 2500);
+    }, 1500);
 
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -627,9 +627,9 @@ export function AIRepceptionistSimulator() {
                         <Smartphone className="w-3.5 h-3.5 text-blue-600" />
                         4 Simple Steps to Link:
                       </div>
-                      <ol className="space-y-1 text-slate-600 text-[11px] list-decimal pl-4 leading-tight">
+                      <ol className="space-y-1.5 text-slate-600 text-[11px] list-decimal pl-4 leading-tight">
                         <li>Open <strong>WhatsApp</strong> on your phone.</li>
-                        <li>Tap <strong>Settings (⚙️)</strong> on iPhone or <strong>Menu (⋮)</strong> on Android.</li>
+                        <li>Tap <strong>Settings (⚙️)</strong> on iPhone or <strong>three dot (⋮) top right</strong> on Android.</li>
                         <li>Tap <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong>.</li>
                         <li>Point your phone camera at this QR code.</li>
                       </ol>

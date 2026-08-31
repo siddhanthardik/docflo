@@ -61,6 +61,7 @@ class DemoSandboxManager {
       try {
         sock.ev.removeAllListeners('connection.update');
         sock.ev.removeAllListeners('messages.upsert');
+        sock.ev.removeAllListeners('creds.update');
         sock.ws.close();
       } catch (e) {
         // Ignore socket close errors
@@ -108,6 +109,20 @@ class DemoSandboxManager {
   async startSession(profile: SandboxSessionProfile): Promise<string | null> {
     const { sessionId } = profile;
     
+    // Clean any prior dangling socket for this session ID
+    const existingSock = this.sockets.get(sessionId);
+    if (existingSock) {
+      try {
+        existingSock.ev.removeAllListeners('connection.update');
+        existingSock.ev.removeAllListeners('messages.upsert');
+        existingSock.ws.close();
+      } catch (e) {
+        // Ignore
+      }
+      this.sockets.delete(sessionId);
+    }
+    this.connectingSessions.delete(sessionId);
+
     // Set 10-minute expiry TTL
     const TTL_MS = 10 * 60 * 1000;
     profile.createdAt = Date.now();
@@ -124,43 +139,56 @@ class DemoSandboxManager {
     }, TTL_MS);
     this.expiryTimers.set(sessionId, timer);
 
-    // If already connected
-    if (this.activeConnections.has(sessionId)) {
-      return null;
-    }
-
-    // If QR code is already waiting
-    if (this.qrCodes.has(sessionId)) {
-      return this.qrCodes.get(sessionId)!;
-    }
-
-    if (this.connectingSessions.has(sessionId)) {
-      return null;
-    }
-
     this.connectingSessions.add(sessionId);
 
     try {
       const sessionDir = getSandboxSessionDir(sessionId);
-      if (!fs.existsSync(sessionDir)) {
-        fs.mkdirSync(sessionDir, { recursive: true });
+      
+      // If no valid creds exist, wipe cleanly so Baileys initializes fresh keypairs
+      if (fs.existsSync(sessionDir)) {
+        try {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+        } catch (e) {
+          // Ignore
+        }
       }
+      fs.mkdirSync(sessionDir, { recursive: true });
 
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-      const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] as [number, number, number] }));
+      
+      let version: [number, number, number] = [2, 3000, 1015901307];
+      try {
+        const vInfo = await fetchLatestBaileysVersion();
+        if (vInfo && Array.isArray(vInfo.version)) {
+          version = vInfo.version as [number, number, number];
+        }
+      } catch (vErr) {
+        // Fallback to stable version
+      }
 
       const sock = makeWASocket({
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
+        generateHighQualityLinkPreview: false,
         syncFullHistory: false,
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
+        keepAliveIntervalMs: 25000,
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        retryRequestDelayMs: 2000,
       });
 
       this.sockets.set(sessionId, sock);
 
-      sock.ev.on('creds.update', saveCreds);
+      sock.ev.on('creds.update', async () => {
+        try {
+          await saveCreds();
+        } catch (e) {
+          console.error(`[DemoSandboxManager] Error saving creds for ${sessionId}:`, e);
+        }
+      });
 
       sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
