@@ -355,16 +355,28 @@ function buildDeterministicReceptionistReply(
 
   // ════ 9. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
   if (isHindiOrHinglish) {
-    // 9.0 Biopsy / Lab Reports in Hindi/Hinglish
-    if (/biopsy|histopath|fnac|report|blood\s*test|sugar|lipid|thyroid|usg|ultrasound|x-ray|xray|जाँच|रिपोर्ट|बायोप्सी/i.test(textLower)) {
+    // 9.0 Biopsy / Genetic Testing / Lab Reports in Hindi/Hinglish
+    if (/biopsy|histopath|fnac|genetic|karyotype|nipt|exome|genome|dna|report|blood\s*test|sugar|lipid|thyroid|usg|ultrasound|x-ray|xray|जाँच|रिपोर्ट|बायोप्सी|जेनेटिक/i.test(textLower)) {
+      if (/genetic|karyotype|nipt|exome|genome|dna|जेनेटिक/i.test(textLower)) {
+        if (/nipt/i.test(textLower)) {
+          return `NIPT (Non-Invasive Prenatal Testing) report me lagbhag **5 se 7 working days** lagte hain.${phoneSuffix}`;
+        }
+        if (/karyotype/i.test(textLower)) {
+          return `Karyotyping (Chromosomal Analysis) report me lagbhag **10 se 14 working days** lagte hain kyunki isme cell culture zaroori hota hai.${phoneSuffix}`;
+        }
+        if (/exome|genome|wes|wgs/i.test(textLower)) {
+          return `Whole Exome / Genome Sequencing reports me comprehensive NGS analysis ke karan **2 se 4 weeks** ka samay lagta hai.${phoneSuffix}`;
+        }
+        return `Genetic test reports ka samay test ke type par nirbhar karta hai (NIPT: 5–7 din, Karyotyping: 10–14 din, Exome/Genome Panels: 2–4 weeks). Kripya specific test ka naam batayein taaki main exact timeline bata sakoon.${phoneSuffix}`;
+      }
       if (/biopsy|histopath|fnac|बायोप्सी/i.test(textLower)) {
-        return `Biopsy / Histopathology test reports me **7 se 10 working days** ka samay lagta hai kyunki isme tissue processing aur detailed pathologist verification ki zaroorat hoti hai.\n\nReport ready hote hi aapko WhatsApp aur Email par bhej di jaayegi.${phoneSuffix}`;
+        return `Biopsy / Histopathology test reports me **7 se 10 working days** ka samay lagta hai kyunki isme tissue processing aur detailed pathologist verification ki zaroorat hoti hai.${phoneSuffix}`;
       }
       if (/report|kab|ready|milegi|milega|status|रिपोर्ट/i.test(textLower)) {
-        return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) **same day sham 6:00 PM tak** WhatsApp par mil jaati hain. Specialized tests me 24–48 ghante aur Biopsy reports me 7–10 din lagte hain.${phoneSuffix}`;
+        return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) **same day sham 6:00 PM tak** ready ho jaati hain. Specialized tests me 24–48 ghante, Biopsy me 7–10 din, aur Genetic tests me 1–3 weeks lagte hain.${phoneSuffix}`;
       }
       if (/blood\s*test|sugar|lipid|fasting|ghar|home\s*sample/i.test(textLower)) {
-        return `Fasting Sugar aur Lipid Profile ke liye 10–12 ghante ki fasting zaroori hai. Hamare phlebotomist home blood sample collection ke liye bhi uplabdh hain.\n\nKya aap center visit karna chahenge ya home sample collection book karwana hai?${phoneSuffix}`;
+        return `Fasting Sugar aur Lipid Profile ke liye 10–12 ghante ki fasting zaroori hai. Hamare certified phlebotomist home blood sample collection ke liye bhi uplabdh hain.\n\nKya aap center visit karna chahenge ya home sample collection book karwana hai?${phoneSuffix}`;
       }
     }
 
@@ -425,16 +437,28 @@ function buildDeterministicReceptionistReply(
   }
 
   // ════ 10. ENGLISH (Professional, Warm & Human) ═══════════════════════════
-  // 10.0 Biopsy / Pathology / Test Report Turnaround
-  if (/biopsy|histopath|fnac|culture|blood\s*test|report|cbc|thyroid|tsh|lipid|sugar|usg|ultrasound|x-ray|xray|scan|mri|ct\s*scan/i.test(textLower)) {
+  // 10.0 Biopsy / Genetic Testing / Pathology / Test Report Turnaround
+  if (/biopsy|histopath|fnac|genetic|karyotype|nipt|exome|genome|dna|culture|blood\s*test|report|cbc|thyroid|tsh|lipid|sugar|usg|ultrasound|x-ray|xray|scan|mri|ct\s*scan/i.test(textLower)) {
+    if (/genetic|karyotype|nipt|exome|genome|dna/i.test(textLower)) {
+      if (/nipt/i.test(textLower)) {
+        return `NIPT (Non-Invasive Prenatal Testing) reports take **5 to 7 working days** as the sample undergoes advanced NGS sequencing.${phoneSuffix}`;
+      }
+      if (/karyotype/i.test(textLower)) {
+        return `Karyotyping (Chromosomal Analysis) reports take **10 to 14 working days** due to cell culture and metaphase banding requirements.${phoneSuffix}`;
+      }
+      if (/exome|genome|wes|wgs/i.test(textLower)) {
+        return `Clinical Exome and Whole Genome Sequencing reports take **2 to 4 weeks** due to extensive genomic bioinformatics curation.${phoneSuffix}`;
+      }
+      return `Genetic test turnaround times vary based on the prescribed test:\n• NIPT: 5–7 working days\n• Karyotyping: 10–14 working days\n• Exome / Gene Panels: 2–3 weeks\n• Whole Genome (WGS): 3–4 weeks\n\nPlease share the exact test name for specific timeline details.${phoneSuffix}`;
+    }
     if (/biopsy|histopath|fnac/i.test(textLower)) {
-      return `Biopsy and Histopathology test reports take **7 to 10 working days** due to specialized tissue processing and detailed pathologist examination.\n\nOnce ready, your report will be sent directly via WhatsApp and Email.${phoneSuffix}`;
+      return `Biopsy and Histopathology test reports take **7 to 10 working days** due to specialized tissue processing and detailed pathologist examination.${phoneSuffix}`;
     }
     if (/culture/i.test(textLower)) {
-      return `Culture & Sensitivity reports take **48 to 72 hours** for bacterial incubation. Reports will be shared on WhatsApp and Email as soon as ready.${phoneSuffix}`;
+      return `Culture & Sensitivity reports take **48 to 72 hours** for bacterial incubation.${phoneSuffix}`;
     }
     if (/report|when|ready|status/i.test(textLower)) {
-      return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) are generated **same-day by 6:00 PM – 7:00 PM** and sent via WhatsApp & Email. Specialized tests take 24–48 hours, while Biopsy reports take 7–10 days.${phoneSuffix}`;
+      return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) are generated **same-day by 6:00 PM – 7:00 PM**. Specialized tests take 24–48 hours, Biopsy reports take 7–10 days, and Genetic panels take 1–3 weeks.${phoneSuffix}`;
     }
     if (/blood\s*test|sugar|lipid|fasting|home\s*sample/i.test(textLower)) {
       return `For Fasting Blood Sugar and Lipid Profile tests, 10–12 hours overnight fasting is required (water is permitted). Certified phlebotomists are also available for home sample pickup.\n\nWould you like to book a center visit or request home blood sample pickup?${phoneSuffix}`;
@@ -699,17 +723,26 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
    - If the patient sends a simple greeting ("hi", "hello", "namaste", "hey"):
      * Respond with a warm, polite receptionist greeting in their language. NEVER say "Understood!" or jump abruptly into a booking pitch.
 
-10. **DIAGNOSTIC & PATHOLOGY LAB SERVICES & REPORT TURNAROUND GUIDELINES**:
+10. **DIAGNOSTIC, PATHOLOGY LAB & GENETIC TESTING GUIDELINES**:
    - **Biopsy / Histopathology / FNAC**:
-     * Strictly inform patients that **Biopsy and Histopathology reports take 7 to 10 working days** due to tissue fixation, slide preparation, and detailed pathologist analysis.
+     * Strictly inform patients that **Biopsy and Histopathology reports take 7 to 10 working days** due to specialized tissue fixation, slide preparation, and detailed pathologist analysis.
    - **Routine Blood & Urine Tests (CBC, Fasting/PP Sugar, Thyroid/TSH, Lipid Profile, LFT, KFT)**:
-     * Generated **Same Day by 6:00 PM – 7:00 PM** via WhatsApp & Email.
+     * Generated **Same Day by 6:00 PM – 7:00 PM**.
      * *Fasting Rule*: 10–12 hours overnight fasting (water permitted) for Fasting Blood Sugar & Lipid Profile.
      * *PP Sugar*: Sample collected exactly 2 hours after meal.
    - **Specialized Blood & Vitamin Tests (Vitamin D3, Vitamin B12, Hormones, AMH, Iron Studies)**:
      * Reports ready within **24 to 48 hours**.
    - **Culture & Sensitivity (Blood/Urine/Sputum Culture)**:
      * Reports take **48 to 72 hours** (required for microbial incubation).
+   - **Genetic Testing & Genomic Sequencing Turnaround Times**:
+     * **FISH / Rapid Aneuploidy**: **3 to 5 working days**.
+     * **NIPT (Non-Invasive Prenatal Testing / cfDNA)**: **5 to 7 working days**.
+     * **Single Gene / Targeted PCR (Thalassemia, Sickle Cell, HLA-B27, BRCA)**: **7 to 10 working days**.
+     * **Karyotyping (Chromosomal Analysis)**: **10 to 14 working days** (requires cell culture).
+     * **Clinical Exome / Targeted Gene Panels**: **2 to 3 weeks (14–21 days)**.
+     * **Whole Exome (WES) / Whole Genome (WGS)**: **3 to 4 weeks (21–30 days)**.
+     * *General Genetic Inquiries*: If the patient asks generally about genetic report timelines, explain that genetic reports range from 5–7 days (NIPT) up to 3–4 weeks (Exome/Genome) and ask for their specific prescribed test name.
+     * *Advisory*: Note that genetic tests require a doctor prescription and signed genetic informed consent.
    - **Ultrasound / USG & 2D Echo**:
      * Same-day reports within 1 to 2 hours. Remind patient to drink 4–5 glasses of water 1 hour before pelvic/abdominal USG.
    - **Digital X-Ray & ECG**:
