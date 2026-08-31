@@ -355,6 +355,19 @@ function buildDeterministicReceptionistReply(
 
   // ════ 9. HINDI / HINGLISH / MIXED LANGUAGE HANDLING ══════════════════════
   if (isHindiOrHinglish) {
+    // 9.0 Biopsy / Lab Reports in Hindi/Hinglish
+    if (/biopsy|histopath|fnac|report|blood\s*test|sugar|lipid|thyroid|usg|ultrasound|x-ray|xray|जाँच|रिपोर्ट|बायोप्सी/i.test(textLower)) {
+      if (/biopsy|histopath|fnac|बायोप्सी/i.test(textLower)) {
+        return `Biopsy / Histopathology test reports me **7 se 10 working days** ka samay lagta hai kyunki isme tissue processing aur detailed pathologist verification ki zaroorat hoti hai.\n\nReport ready hote hi aapko WhatsApp aur Email par bhej di jaayegi.${phoneSuffix}`;
+      }
+      if (/report|kab|ready|milegi|milega|status|रिपोर्ट/i.test(textLower)) {
+        return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) **same day sham 6:00 PM tak** WhatsApp par mil jaati hain. Specialized tests me 24–48 ghante aur Biopsy reports me 7–10 din lagte hain.${phoneSuffix}`;
+      }
+      if (/blood\s*test|sugar|lipid|fasting|ghar|home\s*sample/i.test(textLower)) {
+        return `Fasting Sugar aur Lipid Profile ke liye 10–12 ghante ki fasting zaroori hai. Hamare phlebotomist home blood sample collection ke liye bhi uplabdh hain.\n\nKya aap center visit karna chahenge ya home sample collection book karwana hai?${phoneSuffix}`;
+      }
+    }
+
     // 9.1 Late night / 24x7 question
     if (/itni\s*raat|raat\s*ko|raat\s*me|open|khula|24\/7/i.test(textLower) && /appointment|mil|hoga|book/i.test(textLower)) {
       return `Ji bilkul! Hamara 24/7 automated receptionist kisi bhi samay agle din ke OPD slot ke liye appointment book kar sakta hai 😊\n\n${docTitle} (${specialty}) OPD me *${clinicTimings}* uplabdh rahenge. Kripya patient ka **Naam** aur **Date (aaj ya kal)** share karein, main turant reserve kar deti hoon!${phoneSuffix}`;
@@ -412,6 +425,22 @@ function buildDeterministicReceptionistReply(
   }
 
   // ════ 10. ENGLISH (Professional, Warm & Human) ═══════════════════════════
+  // 10.0 Biopsy / Pathology / Test Report Turnaround
+  if (/biopsy|histopath|fnac|culture|blood\s*test|report|cbc|thyroid|tsh|lipid|sugar|usg|ultrasound|x-ray|xray|scan|mri|ct\s*scan/i.test(textLower)) {
+    if (/biopsy|histopath|fnac/i.test(textLower)) {
+      return `Biopsy and Histopathology test reports take **7 to 10 working days** due to specialized tissue processing and detailed pathologist examination.\n\nOnce ready, your report will be sent directly via WhatsApp and Email.${phoneSuffix}`;
+    }
+    if (/culture/i.test(textLower)) {
+      return `Culture & Sensitivity reports take **48 to 72 hours** for bacterial incubation. Reports will be shared on WhatsApp and Email as soon as ready.${phoneSuffix}`;
+    }
+    if (/report|when|ready|status/i.test(textLower)) {
+      return `Routine blood test reports (CBC, Sugar, Thyroid, LFT, KFT) are generated **same-day by 6:00 PM – 7:00 PM** and sent via WhatsApp & Email. Specialized tests take 24–48 hours, while Biopsy reports take 7–10 days.${phoneSuffix}`;
+    }
+    if (/blood\s*test|sugar|lipid|fasting|home\s*sample/i.test(textLower)) {
+      return `For Fasting Blood Sugar and Lipid Profile tests, 10–12 hours overnight fasting is required (water is permitted). Certified phlebotomists are also available for home sample pickup.\n\nWould you like to book a center visit or request home blood sample pickup?${phoneSuffix}`;
+    }
+  }
+
   // 10.1 Late night / 24x7 inquiry
   if (/late\s*night|night|open\s*now|24\/7|open\s*at\s*night/i.test(textLower)) {
     return `Yes! Our 24/7 digital assistant is always active to reserve your upcoming consultation slot. ${docTitle} is available during OPD hours (${clinicTimings}). Would you like to reserve a slot for today or tomorrow?${phoneSuffix}`;
@@ -669,6 +698,26 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
 9. **GREETINGS & CASUAL MESSAGES**:
    - If the patient sends a simple greeting ("hi", "hello", "namaste", "hey"):
      * Respond with a warm, polite receptionist greeting in their language. NEVER say "Understood!" or jump abruptly into a booking pitch.
+
+10. **DIAGNOSTIC & PATHOLOGY LAB SERVICES & REPORT TURNAROUND GUIDELINES**:
+   - **Biopsy / Histopathology / FNAC**:
+     * Strictly inform patients that **Biopsy and Histopathology reports take 7 to 10 working days** due to tissue fixation, slide preparation, and detailed pathologist analysis.
+   - **Routine Blood & Urine Tests (CBC, Fasting/PP Sugar, Thyroid/TSH, Lipid Profile, LFT, KFT)**:
+     * Generated **Same Day by 6:00 PM – 7:00 PM** via WhatsApp & Email.
+     * *Fasting Rule*: 10–12 hours overnight fasting (water permitted) for Fasting Blood Sugar & Lipid Profile.
+     * *PP Sugar*: Sample collected exactly 2 hours after meal.
+   - **Specialized Blood & Vitamin Tests (Vitamin D3, Vitamin B12, Hormones, AMH, Iron Studies)**:
+     * Reports ready within **24 to 48 hours**.
+   - **Culture & Sensitivity (Blood/Urine/Sputum Culture)**:
+     * Reports take **48 to 72 hours** (required for microbial incubation).
+   - **Ultrasound / USG & 2D Echo**:
+     * Same-day reports within 1 to 2 hours. Remind patient to drink 4–5 glasses of water 1 hour before pelvic/abdominal USG.
+   - **Digital X-Ray & ECG**:
+     * Same-day reports within 30 to 45 minutes.
+   - **CT Scan & MRI**:
+     * Same day or next morning with Radiologist film and detailed report.
+   - **Home Sample Pickup Requests**:
+     * Ask for **Test Name / Package**, **Patient Full Name**, **Address**, and preferred **Morning time slot** (e.g. 7:00 AM – 9:00 AM).
       `;
 
       const prompt = `
