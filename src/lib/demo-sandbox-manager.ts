@@ -34,7 +34,6 @@ class DemoSandboxManager {
   private expiryTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
-    // Ensure sandbox directory exists
     const baseDir = getSandboxBaseDir();
     if (!fs.existsSync(baseDir)) {
       try {
@@ -108,20 +107,6 @@ class DemoSandboxManager {
   // Initialize or get connection for sandbox
   async startSession(profile: SandboxSessionProfile): Promise<string | null> {
     const { sessionId } = profile;
-    
-    // Clean any prior dangling socket for this session ID
-    const existingSock = this.sockets.get(sessionId);
-    if (existingSock) {
-      try {
-        existingSock.ev.removeAllListeners('connection.update');
-        existingSock.ev.removeAllListeners('messages.upsert');
-        existingSock.ws.close();
-      } catch (e) {
-        // Ignore
-      }
-      this.sockets.delete(sessionId);
-    }
-    this.connectingSessions.delete(sessionId);
 
     // Set 10-minute expiry TTL
     const TTL_MS = 10 * 60 * 1000;
@@ -139,20 +124,51 @@ class DemoSandboxManager {
     }, TTL_MS);
     this.expiryTimers.set(sessionId, timer);
 
+    // If already connected
+    if (this.activeConnections.has(sessionId)) {
+      return null;
+    }
+
+    // Fresh start: Wipe sessionDir so Baileys generates clean new QR
+    const sessionDir = getSandboxSessionDir(sessionId);
+    if (fs.existsSync(sessionDir)) {
+      try {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    await this.connectSocket(sessionId);
+    return this.qrCodes.get(sessionId) || null;
+  }
+
+  // Internal socket connection engine with automatic Reason 515 restart handling
+  private async connectSocket(sessionId: string): Promise<void> {
+    const profile = this.profiles.get(sessionId);
+    if (!profile) return;
+
+    // Clean up any pre-existing dangling socket for this session
+    const existingSock = this.sockets.get(sessionId);
+    if (existingSock) {
+      try {
+        existingSock.ev.removeAllListeners('connection.update');
+        existingSock.ev.removeAllListeners('messages.upsert');
+        existingSock.ev.removeAllListeners('creds.update');
+        existingSock.ws.close();
+      } catch (e) {
+        // Ignore
+      }
+      this.sockets.delete(sessionId);
+    }
+
     this.connectingSessions.add(sessionId);
 
     try {
       const sessionDir = getSandboxSessionDir(sessionId);
-      
-      // If no valid creds exist, wipe cleanly so Baileys initializes fresh keypairs
-      if (fs.existsSync(sessionDir)) {
-        try {
-          fs.rmSync(sessionDir, { recursive: true, force: true });
-        } catch (e) {
-          // Ignore
-        }
+      if (!fs.existsSync(sessionDir)) {
+        fs.mkdirSync(sessionDir, { recursive: true });
       }
-      fs.mkdirSync(sessionDir, { recursive: true });
 
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
       
@@ -190,7 +206,7 @@ class DemoSandboxManager {
         }
       });
 
-      sock.ev.on('connection.update', (update) => {
+      sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
@@ -209,10 +225,24 @@ class DemoSandboxManager {
           const reason = (lastDisconnect?.error as Boom)?.output?.statusCode;
           console.log(`[DemoSandboxManager] Connection closed for ${sessionId}, reason:`, reason);
           
+          this.sockets.delete(sessionId);
           this.activeConnections.delete(sessionId);
           this.connectingSessions.delete(sessionId);
 
-          if (reason === DisconnectReason.loggedOut) {
+          const isPermanentLogout = reason === DisconnectReason.loggedOut;
+
+          // Crucial: When pairing finishes, WhatsApp sends Reason 515 (restartRequired)
+          // We MUST immediately reconnect using the saved creds.json without wiping!
+          if (!isPermanentLogout && this.profiles.has(sessionId)) {
+            const delay = reason === DisconnectReason.restartRequired ? 500 : 1500;
+            console.log(`[DemoSandboxManager] Auto-reconnecting sandbox ${sessionId} in ${delay}ms...`);
+            setTimeout(() => {
+              this.connectSocket(sessionId).catch(e => 
+                console.error(`[DemoSandboxManager] Auto-reconnect failed for ${sessionId}:`, e)
+              );
+            }, delay);
+          } else {
+            console.log(`[DemoSandboxManager] Permanent logout for ${sessionId}. Purging session.`);
             this.clearSession(sessionId);
           }
         }
@@ -260,12 +290,9 @@ Reply:`;
           console.error(`[DemoSandboxManager] Message reply error:`, msgErr);
         }
       });
-
-      return this.qrCodes.get(sessionId) || null;
     } catch (error) {
-      console.error(`[DemoSandboxManager] Failed to start sandbox session ${sessionId}:`, error);
+      console.error(`[DemoSandboxManager] Failed to connect sandbox socket ${sessionId}:`, error);
       this.connectingSessions.delete(sessionId);
-      return null;
     }
   }
 
