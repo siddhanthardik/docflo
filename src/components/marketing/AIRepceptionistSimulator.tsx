@@ -2,11 +2,10 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
-  Bot, Send, CheckCheck, Sparkles, Phone, Video, 
-  MoreVertical, ArrowLeft, RefreshCw, Zap, ShieldCheck, 
-  Globe, Stethoscope, ChevronRight, MessageSquare 
+  Send, CheckCheck, Phone, Video, 
+  MoreVertical, ArrowLeft, Stethoscope, ChevronRight 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,38 +133,29 @@ export function AIRepceptionistSimulator() {
   };
 
   return (
-    <section className="py-16 sm:py-24 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden" id="ai-simulator">
-      {/* Decorative Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-indigo-500/15 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[350px] h-[250px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-3.5 py-1 mb-4 text-xs tracking-wider uppercase">
-            ⚡ Interactive Live Simulator
-          </Badge>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
-            Test Your Clinic&apos;s AI Receptionist <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-300">
-              in 60 Seconds
-            </span>
+    <section className="py-16 sm:py-20 bg-slate-50 border-y border-slate-200/80 relative" id="ai-simulator">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Clean Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Test Your Clinic&apos;s AI Receptionist in 60 Seconds
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed">
-            Experience how Docflo captures after-hours appointments, quotes fees, handles video consults, and answers patient queries 24/7 on WhatsApp.
+          <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
+            Select your medical specialty and test live patient inquiries in English, Hindi, or Hinglish.
           </p>
         </div>
 
         {/* Simulator Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto">
           
-          {/* Left Controls & Value Props (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
+          {/* Left Controls & Preset Prompts (5 cols) */}
+          <div className="lg:col-span-5 space-y-5">
             
             {/* Specialty Selector Card */}
-            <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700/80 p-5 sm:p-6 shadow-xl">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3 flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-indigo-400" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-blue-600" />
                 Select Medical Specialty
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -175,10 +165,10 @@ export function AIRepceptionistSimulator() {
                     <button
                       key={spec.id}
                       onClick={() => handleSpecialtyChange(spec)}
-                      className={`text-xs font-semibold px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      className={`text-xs font-semibold px-3 py-2 rounded-xl border text-left transition-all ${
                         isSelected
-                          ? "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-600/30 scale-[1.02]"
-                          : "bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                          ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300"
                       }`}
                     >
                       {spec.name}
@@ -188,22 +178,21 @@ export function AIRepceptionistSimulator() {
               </div>
 
               {/* Active Profile Info */}
-              <div className="mt-5 pt-4 border-t border-slate-700/60 text-xs text-slate-300 flex items-center justify-between">
+              <div className="mt-4 pt-3.5 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-white text-sm">{selectedSpecialty.doctor}</div>
-                  <div className="text-slate-400">{selectedSpecialty.clinic}</div>
+                  <div className="font-bold text-slate-900 text-sm">{selectedSpecialty.doctor}</div>
+                  <div className="text-slate-500 text-[11px]">{selectedSpecialty.clinic}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-emerald-400 font-bold">₹{selectedSpecialty.fee} <span className="text-[10px] text-slate-400 font-normal">In-Clinic</span></div>
-                  <div className="text-indigo-300 font-bold">₹{selectedSpecialty.teleFee} <span className="text-[10px] text-slate-400 font-normal">Video</span></div>
+                  <div className="text-emerald-700 font-bold">₹{selectedSpecialty.fee} <span className="text-[10px] text-slate-400 font-normal">In-Clinic</span></div>
+                  <div className="text-blue-700 font-bold">₹{selectedSpecialty.teleFee} <span className="text-[10px] text-slate-400 font-normal">Video</span></div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Prompts to Click */}
-            <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700/80 p-5 sm:p-6 shadow-xl">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+            {/* Quick Prompts */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
                 Tap a Sample Patient Query to Test:
               </label>
               <div className="flex flex-wrap gap-2">
@@ -212,7 +201,7 @@ export function AIRepceptionistSimulator() {
                     key={idx}
                     disabled={isTyping}
                     onClick={() => handleSendMessage(p.text)}
-                    className="text-xs font-medium bg-slate-900/80 hover:bg-indigo-900/60 border border-slate-700 hover:border-indigo-500 text-slate-200 hover:text-white px-3 py-2 rounded-xl transition-all text-left flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                    className="text-xs font-medium bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-900 px-3 py-2 rounded-xl transition-all text-left shadow-2xs active:scale-95 disabled:opacity-50"
                   >
                     <span>{p.label}</span>
                   </button>
@@ -220,18 +209,17 @@ export function AIRepceptionistSimulator() {
               </div>
             </div>
 
-            {/* Value Highlights */}
-            <div className="bg-gradient-to-br from-indigo-950/80 to-slate-900/90 rounded-2xl border border-indigo-500/30 p-5 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                <ShieldCheck className="w-4 h-4" />
-                Zero Hallucinations Guarantee
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Docflo never prescribes medicines or guesses diagnoses. It strictly manages appointment scheduling, clinic policies, fees, and patient experience.
+            {/* Direct 14-Day Free Trial CTA Card */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-5 space-y-3">
+              <h4 className="font-bold text-slate-900 text-sm">
+                Ready to deploy this AI for your clinic?
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Connect your clinic WhatsApp in 2 minutes. No credit card required.
               </p>
-              <Link href="/register" className="block pt-2">
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 group">
-                  Start 14-Day Free Trial for Your Clinic
+              <Link href="/register" className="block pt-1">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 group h-11 rounded-xl">
+                  Start 14-Day Free Trial
                   <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
@@ -239,43 +227,43 @@ export function AIRepceptionistSimulator() {
 
           </div>
 
-          {/* Right Realistic WhatsApp Screen (7 cols) */}
+          {/* Right Clean WhatsApp Mobile Mockup (7 cols) */}
           <div className="lg:col-span-7 flex justify-center">
-            <div className="w-full max-w-[440px] bg-[#0b141a] rounded-[2.5rem] border-[8px] border-slate-800 shadow-2xl overflow-hidden flex flex-col h-[580px] sm:h-[620px] relative">
+            <div className="w-full max-w-[420px] bg-[#efeae2] rounded-[2.2rem] border-[7px] border-slate-900 shadow-xl overflow-hidden flex flex-col h-[560px] sm:h-[580px] relative">
               
-              {/* WhatsApp Header */}
-              <div className="bg-[#1f2c34] px-4 py-3 flex items-center justify-between text-white shrink-0 border-b border-slate-700/50">
+              {/* WhatsApp Official Clean Header */}
+              <div className="bg-[#008069] px-4 py-3 flex items-center justify-between text-white shrink-0 shadow-sm">
                 <div className="flex items-center gap-3 min-w-0">
-                  <ArrowLeft className="w-4 h-4 text-slate-400 cursor-pointer" />
+                  <ArrowLeft className="w-4 h-4 text-white/80 cursor-pointer" />
                   <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center font-bold text-sm text-white">
+                    <div className="w-9 h-9 rounded-full bg-emerald-800 flex items-center justify-center font-bold text-xs text-white">
                       {selectedSpecialty.doctor.replace("Dr. ", "").charAt(0)}
                     </div>
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#1f2c34] rounded-full" />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-300 border-2 border-[#008069] rounded-full" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                    <div className="font-bold text-sm truncate flex items-center gap-1.5 leading-tight">
                       <span>{selectedSpecialty.doctor}</span>
-                      <Badge className="bg-emerald-500/20 text-emerald-400 border-0 text-[9px] px-1 py-0 h-4 font-bold">
+                      <Badge className="bg-white/20 text-white border-0 text-[9px] px-1 py-0 h-4 font-bold">
                         AI
                       </Badge>
                     </div>
-                    <div className="text-[11px] text-emerald-400 leading-tight">online • 24/7 Receptionist</div>
+                    <div className="text-[11px] text-emerald-100 leading-tight">online • 24/7 Receptionist</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-slate-300">
+                <div className="flex items-center gap-3 text-white/90">
                   <Video className="w-4 h-4 cursor-pointer hover:text-white" />
                   <Phone className="w-4 h-4 cursor-pointer hover:text-white" />
                   <MoreVertical className="w-4 h-4 cursor-pointer hover:text-white" />
                 </div>
               </div>
 
-              {/* WhatsApp Chat Canvas */}
-              <div className="flex-1 bg-[#0b141a] p-4 overflow-y-auto space-y-3 bg-[radial-gradient(#1f2c34_1px,transparent_1px)] [background-size:16px_16px]">
+              {/* WhatsApp Light Chat Canvas */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
                 
-                {/* Encryption Badge */}
+                {/* Encryption Pill */}
                 <div className="text-center my-1">
-                  <span className="bg-[#182229] text-amber-200/80 text-[10px] px-3 py-1 rounded-lg border border-amber-500/20 inline-block font-medium">
+                  <span className="bg-[#ffeecd] text-[#54656f] text-[10px] px-3 py-1 rounded-md shadow-2xs inline-block font-medium">
                     🔒 Messages are end-to-end encrypted
                   </span>
                 </div>
@@ -285,21 +273,21 @@ export function AIRepceptionistSimulator() {
                   return (
                     <motion.div
                       key={msg.id}
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      initial={{ opacity: 0, y: 6, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       className={`flex ${isAi ? "justify-start" : "justify-end"}`}
                     >
                       <div
-                        className={`max-w-[82%] sm:max-w-[78%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow-md relative ${
+                        className={`max-w-[84%] sm:max-w-[80%] rounded-xl px-3.5 py-2 text-xs leading-relaxed shadow-xs relative ${
                           isAi
-                            ? "bg-[#202c33] text-slate-100 rounded-tl-none border border-slate-700/30"
-                            : "bg-[#005c4b] text-white rounded-tr-none"
+                            ? "bg-white text-slate-800 rounded-tl-none border border-slate-200/60"
+                            : "bg-[#d9fdd3] text-slate-900 rounded-tr-none"
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{msg.text}</p>
                         <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-slate-400">
                           <span>{msg.time}</span>
-                          {!isAi && <CheckCheck className="w-3.5 h-3.5 text-cyan-400" />}
+                          {!isAi && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
                         </div>
                       </div>
                     </motion.div>
@@ -313,13 +301,13 @@ export function AIRepceptionistSimulator() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="bg-[#202c33] border border-slate-700/30 text-slate-300 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs flex items-center gap-2">
+                    <div className="bg-white border border-slate-200/70 text-slate-600 rounded-xl rounded-tl-none px-3.5 py-2 text-xs flex items-center gap-2 shadow-xs">
                       <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" />
+                        <span className="w-1.5 h-1.5 bg-[#008069] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1.5 h-1.5 bg-[#008069] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1.5 h-1.5 bg-[#008069] rounded-full animate-bounce" />
                       </div>
-                      <span className="text-[11px] text-slate-400">AI is replying...</span>
+                      <span className="text-[11px] text-slate-400">AI is typing...</span>
                     </div>
                   </motion.div>
                 )}
@@ -327,8 +315,8 @@ export function AIRepceptionistSimulator() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* WhatsApp Input Bar */}
-              <div className="bg-[#1f2c34] p-2.5 flex items-center gap-2 shrink-0 border-t border-slate-700/50">
+              {/* WhatsApp Light Input Bar */}
+              <div className="bg-[#f0f2f5] p-2.5 flex items-center gap-2 shrink-0 border-t border-slate-200">
                 <input
                   type="text"
                   value={inputText}
@@ -336,14 +324,14 @@ export function AIRepceptionistSimulator() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSendMessage();
                   }}
-                  placeholder="Type a message (English, Hindi, Hinglish)..."
-                  className="flex-1 bg-[#2a3942] text-xs text-white placeholder-slate-400 rounded-full px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-transparent"
+                  placeholder="Type in English, Hindi, or Hinglish..."
+                  className="flex-1 bg-white text-xs text-slate-900 placeholder-slate-400 rounded-full px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#008069] border border-slate-200 shadow-2xs"
                 />
                 <Button
                   size="icon"
                   disabled={!inputText.trim() || isTyping}
                   onClick={() => handleSendMessage()}
-                  className="w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 shadow-md disabled:opacity-40"
+                  className="w-9 h-9 rounded-full bg-[#008069] hover:bg-[#006e5a] text-white shrink-0 shadow-xs disabled:opacity-40"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
