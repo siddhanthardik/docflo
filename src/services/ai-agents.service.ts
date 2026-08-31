@@ -4,15 +4,11 @@ import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { memoryCache } from "@/lib/memory-cache";
 
-// Valid Gemini models across Google GenAI APIs (Prioritizes 3.7 Flash)
+// Prioritized Gemini models: Primary gemini-3.7-flash (Low Thinking) -> Fallbacks: 3.6-flash -> 3.5-flash-lite
 const CANDIDATE_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gemini-2.0-flash-lite",
-  "gemini-flash-latest"
+  "gemini-3.7-flash",      // Primary Gemini model with LOW thinking effort
+  "gemini-3.6-flash",      // Fallback 1
+  "gemini-3.5-flash-lite"  // Fallback 2
 ];
 
 // Clean and format doctor display name without repetitive "Dr." prefixes
@@ -415,6 +411,11 @@ function buildDeterministicReceptionistReply(
       return `${docTitle} clinic me OPD consultations ke liye uplabdh hain:\n🕒 *${clinicTimings}*\n\nKya aap *aaj* ya *kal* ke liye appointment schedule karna chahenge?${phoneSuffix}`;
     }
 
+    // 9.55 Urgent Health Concern / Acute Symptoms (Fever, severe pain, emergency, acute illness)
+    if (/fever|bukhar|dard|pain|cough|khasi|cold|sardi|vomit|ult[ie]|tabiyat|kharab|headache|sar\s*dard|emergency|chot|injury|sick|ill|severe|jyada/i.test(textLower)) {
+      return `Aapki tabiyat jaldi theek ho 🙏 ${docTitle} (${specialty}) clinic me OPD hours (*${clinicTimings}*) me uplabdh rahenge. Agar bukhar/takleef bahut jyada hai to kripya direct clinic aakar emergency walk-in token le lijiye ya nearest hospital me dikhayein. Kya main aapka OPD slot reserve kar doon?${phoneSuffix}`;
+    }
+
     // 9.6.1 User explicitly states they already provided their name / details
     if (/abhi\s*to\s*naam|pehle\s*hi|already|naam\s*bataya|naam\s*to|de\s*diya/i.test(textLower)) {
       return `Ji mafi chahti hoon! Maine aapki details note kar li hain. ${docTitle} (${specialty}) ke OPD session ke liye aapki appointment request register ho gayi hai. Clinic reception se aapko WhatsApp confirmation mil jayegi.${phoneSuffix}`;
@@ -560,28 +561,61 @@ export interface DoctorScheduleContext {
   pacingStrategy?: string; // STAGGERED or CONTINUOUS
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout of ${timeoutMs}ms exceeded for ${label}`));
+    }, timeoutMs);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export async function generateWithFallback(prompt: string): Promise<string> {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   let lastError: any = null;
 
-  // 1. Primary: Try @google/genai SDK with valid models
+  // 1. Primary & Fallback Gemini Models (Strict per-model timeout: 4s max)
   if (geminiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       for (const modelName of CANDIDATE_MODELS) {
         try {
-          const response = await ai.models.generateContent({
+          const is37 = modelName.includes("3.7");
+          const configObj: any = {
+            temperature: 0.3,
+            maxOutputTokens: 350
+          };
+          if (is37) {
+            // Configure Low Thinking Effort for sub-second conversational latency
+            configObj.thinkingConfig = {
+              thinkingBudget: 0
+            };
+          }
+
+          const generatePromise = ai.models.generateContent({
             model: modelName,
             contents: prompt,
+            config: configObj
           });
+
+          const response = await withTimeout(generatePromise, 4000, modelName);
           if (response.text?.trim()) {
             return response.text.trim();
           }
         } catch (err: any) {
           lastError = err;
           const errText = err.message || err.toString() || "";
-          console.warn(`[AIAgentsService] Model ${modelName} failed (${errText}).`);
+          console.warn(`[AIAgentsService] Model ${modelName} failed/timed out (${errText}).`);
           
           // Fast failover immediately on 429 Quota Exceeded
           if (/429|quota|resourceexhausted|too many requests/i.test(errText)) {
@@ -596,22 +630,23 @@ export async function generateWithFallback(prompt: string): Promise<string> {
     }
   }
 
-  // 2. Secondary: Fast Fallback to OpenAI gpt-4o-mini
+  // 2. Secondary: Fast Fallback to OpenAI gpt-4o-mini (Strict 4s timeout)
   if (openaiKey) {
     try {
       console.log("[AIAgentsService] 🚀 Generating with OpenAI gpt-4o-mini fallback...");
       const openai = new OpenAI({ apiKey: openaiKey });
-      const completion = await openai.chat.completions.create({
+      const openaiPromise = openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 400,
         temperature: 0.3
       });
+      const completion = await withTimeout(openaiPromise, 4000, "OpenAI gpt-4o-mini");
       const text = completion.choices[0]?.message?.content?.trim();
       if (text) return text;
     } catch (oErr: any) {
       lastError = oErr;
-      console.warn(`[AIAgentsService] OpenAI fallback failed:`, oErr?.message || oErr);
+      console.warn(`[AIAgentsService] OpenAI fallback failed/timed out:`, oErr?.message || oErr);
     }
   }
 
@@ -842,9 +877,17 @@ ${allowTeleConsultation
 12. **CONVERSATION HISTORY & CONTEXT MEMORY (CRITICAL)**:
     - Review the Conversation History carefully.
     - If the patient has ALREADY provided their Name (e.g. "Rahul Kumar"), Date ("Kal", "Tomorrow"), or Time ("Subah", "10:30 AM") in earlier messages, DO NOT ask for it again.
-    - If the assistant previously asked for their name or details and the patient provides them (e.g. "Rahul Kumar" or "Kal Subah"), IMMEDIATELY acknowledge their name, confirm their appointment slot for ${doctorName}, and append [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name].
+    - If the assistant previously asked for their name or details and the patient provides them, IMMEDIATELY acknowledge their name, confirm their appointment slot for ${doctorName}, and append [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name].
     - NEVER reset the conversation or send an introductory greeting if you are already in an ongoing discussion.
     - If the patient requests home blood collection, ask for their address and preferred morning pickup time (7:00 AM – 9:30 AM).
+
+13. **CURRENT PATIENT INTENT TAKES ABSOLUTE HIGHEST PRIORITY (NEW INTENT OVERRIDES PREVIOUS LOOP)**:
+    - The patient's latest message is their IMMEDIATE CURRENT CONCERN and strictly takes precedence over previous unfinished appointment questions.
+    - If the patient mentions an acute health concern, fever, emergency, severe pain, or asks "Mujhe abhi bahut jyada fever hai, abhi appointment mil sakta hai?":
+      * Empathize immediately with clinical care and warmth.
+      * State the doctor's earliest OPD availability or clinic emergency walk-in option directly.
+      * DO NOT blindly repeat the previous name/date question! Address their acute condition/concern first.
+    - If the patient asks about clinic timings, fees, address, rescheduling, or cancellation, directly answer their new intent.
       `;
 
       const prompt = `
@@ -854,9 +897,9 @@ ${systemPrompt}
 Conversation History:
 ${conversationHistory.join("\n")}
 
-Patient's New Message: "${incomingMessage}"
+🚨 PATIENT'S LATEST MESSAGE (PRIMARY CURRENT INTENT): "${incomingMessage}"
 
-Write your direct, crisp, natural WhatsApp reply to the patient:
+Write your direct, crisp, natural WhatsApp reply directly addressing the patient's latest message:
       `;
 
       let aiReply = await generateWithFallback(prompt);

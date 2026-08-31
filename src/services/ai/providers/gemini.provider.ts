@@ -4,13 +4,27 @@ import OpenAI from 'openai';
 
 const CANDIDATE_MODELS = [
   'gemini-3.7-flash',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-2.0-flash-lite',
-  'gemini-flash-latest'
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite'
 ];
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout of ${timeoutMs}ms exceeded for ${label}`));
+    }, timeoutMs);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
 
 export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI;
@@ -80,11 +94,12 @@ export class GeminiProvider implements AIProvider {
     for (const modelName of CANDIDATE_MODELS) {
       try {
         const model = this.genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent({
+        const generatePromise = model.generateContent({
           contents: [{ role: 'user', parts }],
           generationConfig,
         });
 
+        const result = await withTimeout(generatePromise, 4000, modelName);
         const response = await result.response;
         const text = response.text();
         if (text && text.trim().length > 0) {
@@ -93,11 +108,13 @@ export class GeminiProvider implements AIProvider {
       } catch (err: any) {
         lastError = err;
         const errText = err.message || err.toString() || "";
-        console.warn(`[GeminiProvider] Model ${modelName} failed (${errText}). Downgrading to next candidate...`);
+        console.warn(`[GeminiProvider] Model ${modelName} failed/timed out (${errText}).`);
 
-        // Short 300ms backoff before trying next candidate model in downgrade order
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        continue;
+        // Fast failover immediately on 429 Quota Exceeded
+        if (/429|quota|resourceexhausted|too many requests/i.test(errText)) {
+          console.warn(`[GeminiProvider] ⚡ Gemini 429 Quota Limit detected. Triggering instant failover to OpenAI...`);
+          break;
+        }
       }
     }
 
@@ -107,16 +124,17 @@ export class GeminiProvider implements AIProvider {
       try {
         console.log("[GeminiProvider] Falling back to OpenAI gpt-4o-mini...");
         const openai = new OpenAI({ apiKey: openaiKey });
-        const completion = await openai.chat.completions.create({
+        const openaiPromise = openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [{ role: "user", content: finalPrompt }],
           max_tokens: options?.maxTokens ?? 1024,
           temperature: options?.temperature ?? 0.7,
         });
+        const completion = await withTimeout(openaiPromise, 4000, "OpenAI gpt-4o-mini");
         const content = completion.choices[0]?.message?.content?.trim();
         if (content) return content;
       } catch (oErr) {
-        console.error("[GeminiProvider] OpenAI fallback also failed:", oErr);
+        console.error("[GeminiProvider] OpenAI fallback also failed/timed out:", oErr);
       }
     }
 
