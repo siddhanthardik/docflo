@@ -60,6 +60,17 @@ export async function POST(req: NextRequest) {
         // Extract expiry date from current_end (timestamp)
         const expiryDate = new Date(subscription.current_end * 1000);
 
+        // Prevent double charging: Cancel previous subscription in Razorpay if doctor is switching/upgrading plans
+        const oldSubId = doctor.razorpaySubscriptionId;
+        if (oldSubId && oldSubId !== subscription.id) {
+          try {
+            await razorpay.subscriptions.cancel(oldSubId, false);
+            console.log(`[Razorpay Webhook] Auto-cancelled previous subscription ${oldSubId} on plan switch.`);
+          } catch (cancelErr: any) {
+            console.warn(`[Razorpay Webhook] Previous subscription auto-cancel notice:`, cancelErr?.message || cancelErr);
+          }
+        }
+
         await prisma.doctor.update({
           where: { id: doctor.id },
           data: {
