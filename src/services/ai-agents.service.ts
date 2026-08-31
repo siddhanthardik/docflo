@@ -4,13 +4,15 @@ import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { memoryCache } from "@/lib/memory-cache";
 
-// Valid Gemini models across Google GenAI APIs
+// Valid Gemini models across Google GenAI APIs (Prioritizes 3.7 Flash)
 const CANDIDATE_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-pro",
   "gemini-2.0-flash-lite",
-  "gemini-2.0-flash-exp"
+  "gemini-flash-latest"
 ];
 
 // Clean and format doctor display name without repetitive "Dr." prefixes
