@@ -1642,7 +1642,9 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             });
                           }
 
-                          // Create the Appointment in CRM
+                          // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
+                          const isTele = /tele|video|online|virtual|remote/i.test(sessionStr);
+                          const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
                           const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                           await prisma.appointment.create({
                             data: {
@@ -1654,11 +1656,11 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                               endTime: endTime,
                               status: "CONFIRMED",
                               notes: `Booked via WhatsApp AI Assistant (${sessionStr.trim()})`,
-                              type: "IN_CLINIC"
+                              type: appointmentType
                             }
                           });
 
-                          console.log(`[WhatsAppManager] Successfully agentic-booked appointment for ${patientPhone}`);
+                          console.log(`[WhatsAppManager] Successfully agentic-booked ${appointmentType} appointment for ${patientPhone}`);
                           finalAiReply = finalAiReply.replace(fullTag, "").trim();
 
                           // Notify doctor on their WhatsApp
@@ -1667,7 +1669,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
                             const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                             const cleanPtName = patientFullName.trim();
-                            const docAlert = `🔔 *New AI Appointment Booked*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\nThis appointment has been added to your Docflo calendar.`;
+                            const docAlert = `🔔 *New AI Appointment Booked (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\nThis appointment has been added to your Docflo calendar.`;
                             await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                           }
                         }

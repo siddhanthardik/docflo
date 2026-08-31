@@ -593,11 +593,58 @@ export default function AIAgentsHubPage() {
                   </div>
                 </div>
 
+                {/* 🌐 TELE-CONSULTATION & VIRTUAL CARE */}
+                <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-indigo-600" />
+                        3. Tele-Consultation & Online Video Care
+                      </h4>
+                      <p className="text-xs text-slate-500">Enable if the doctor offers private online video consultations in addition to in-person clinic visits.</p>
+                    </div>
+                    <Switch
+                      checked={!!configDraft.allowTeleConsultation}
+                      onCheckedChange={(checked) => setConfigDraft({ ...configDraft, allowTeleConsultation: checked })}
+                    />
+                  </div>
+
+                  {configDraft.allowTeleConsultation ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-700">Online Consultation Fee</Label>
+                        <Input 
+                          placeholder="e.g., ₹700"
+                          value={configDraft.teleConsultationFee || ""}
+                          onChange={(e) => setConfigDraft({...configDraft, teleConsultationFee: e.target.value})}
+                          className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                        <p className="text-[11px] text-slate-400">Shared when patients book private video consultations.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-700">Tele-Consultation Timing / Note</Label>
+                        <Input 
+                          placeholder="e.g., Daily 2:00 PM - 4:00 PM (or After OPD)"
+                          value={configDraft.teleConsultationHours || ""}
+                          onChange={(e) => setConfigDraft({...configDraft, teleConsultationHours: e.target.value})}
+                          className="h-10 text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                        <p className="text-[11px] text-slate-400">Available hours for video appointments.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2">
+                      <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <span><strong>In-Clinic Only Mode Active</strong>: The AI Receptionist will inform patients that consultations are strictly in-person at the clinic and will decline online calls or remote prescriptions.</span>
+                    </div>
+                  )}
+                </div>
+
                 {/* 🎟️ BOOKING CAPACITY & INVENTORY CONTROLS */}
                 <div className="space-y-4 p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                   <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-indigo-600" />
-                    3. AI Booking Capacity & Pacing Controls
+                    4. AI Booking Capacity & Pacing Controls
                   </h4>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

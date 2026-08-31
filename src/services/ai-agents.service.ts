@@ -65,7 +65,9 @@ function buildDeterministicReceptionistReply(
   morningOpd?: string,
   eveningOpd?: string,
   practitioners?: ClinicPractitionerInfo[],
-  websiteUrl?: string | null
+  websiteUrl?: string | null,
+  allowTeleConsultation: boolean = false,
+  teleConsultationFee?: string
 ): string {
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
@@ -586,6 +588,11 @@ export class AIAgentsService {
     const followUpDays = config?.followUpDays || "7 days";
     const advanceBookingNotice = config?.advanceBookingNotice || "Same day booking allowed";
     
+    // Tele-Consultation & Online Care Settings
+    const allowTeleConsultation = config?.allowTeleConsultation === true;
+    const teleConsultationFee = config?.teleConsultationFee || "";
+    const teleConsultationHours = config?.teleConsultationHours || "";
+
     // Services & Vaccination List
     const vaccinationsList = config?.vaccinationsList || "BCG, Polio, Hepatitis B, DTP, Rotavirus, MMR, Flu Shot";
     const servicesOffered = config?.servicesOffered || "General OPD Consultation, Health Checkup";
@@ -751,6 +758,17 @@ CRITICAL RECEPTIONIST INSTRUCTIONS:
      * Same day or next morning with Radiologist film and detailed report.
    - **Home Sample Pickup Requests**:
      * Ask for **Test Name / Package**, **Patient Full Name**, **Address**, and preferred **Morning time slot** (e.g. 7:00 AM – 9:00 AM).
+
+11. **TELE-CONSULTATION & VIRTUAL CARE POLICY**:
+${allowTeleConsultation 
+  ? `   - Tele-Consultation Status: ENABLED & ACTIVE.
+   - ${doctorName} offers both **In-Person Clinic Visits** and **Private Video / Tele-Consultations** ${teleConsultationFee ? `(Online Consultation Fee: ${teleConsultationFee})` : ''} ${teleConsultationHours ? `(Available: ${teleConsultationHours})` : ''}.
+   - Proactively offer both In-Clinic and Private Video Consultation options when patients inquire about appointments or remote care.
+   - When confirming a Tele-Consultation booking, append: [BOOK_APPOINTMENT: YYYY-MM-DD, Tele-Consultation, Patient Full Name].`
+  : `   - Tele-Consultation Status: DISABLED (IN-CLINIC ONLY).
+   - ${doctorName} provides consultations **EXCLUSIVELY IN-PERSON AT THE CLINIC** to ensure thorough physical examination and accurate clinical assessment.
+   - If a patient asks for an online/video call, WhatsApp prescription, or remote consultation, politely explain that online consultations and WhatsApp prescriptions are not provided, and warmly offer an in-clinic OPD appointment slot.`
+}
       `;
 
       const prompt = `
@@ -796,7 +814,9 @@ Write your direct, crisp, natural WhatsApp reply to the patient:
         morningOpd,
         eveningOpd,
         practitioners,
-        websiteUrl
+        websiteUrl,
+        allowTeleConsultation,
+        teleConsultationFee
       );
     }
   }
