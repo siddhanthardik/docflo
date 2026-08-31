@@ -469,6 +469,62 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
             })}
           </ul>
         </div>
+
+        <div>
+          <h4 className="text-xs font-bold uppercase text-gray-500 mb-3 tracking-wider">Key Offerings</h4>
+          <ul className="space-y-1.5 text-xs text-slate-700">
+            {(() => {
+              const nameUpper = (pkg.name || "").toUpperCase();
+              const slugUpper = (pkg.slug || "").toUpperCase();
+              let features: string[] = [];
+              if (nameUpper.includes("FREE") || slugUpper.includes("FREE")) {
+                features = [
+                  "Basic Clinic EMR & Patient Management (50 max)",
+                  "Manual OPD Appointment Calendar",
+                  "Digital Billing & Invoicing",
+                  "1 Staff Seat"
+                ];
+              } else if (nameUpper.includes("STARTER") || slugUpper.includes("STARTER")) {
+                features = [
+                  "5×5 Geo-Rank Google Maps Heatmaps",
+                  "Automated 5-Star WhatsApp Reviews",
+                  "AI Google Review Auto-Responder (50 Credits)",
+                  "Google Business Profile Optimizer",
+                  "Patient CRM & History (Unlimited)",
+                  "Direct QR WhatsApp Pairing"
+                ];
+              } else if (nameUpper.includes("GROWTH") || slugUpper.includes("GROWTH")) {
+                features = [
+                  "Everything in Starter, plus:",
+                  "Custom Specialty Website (20 Themes)",
+                  "Connect Custom Domain (drname.com)",
+                  "Web Appointment Booking Engine",
+                  "AI Google Business Post Generator (150 Credits)",
+                  "Digital Invoicing & WhatsApp Sharing",
+                  "Medical SEO Schema & Meta Tags",
+                  "WhatsApp Unified Inbox & Broadcasts"
+                ];
+              } else if (nameUpper.includes("PREMIUM") || slugUpper.includes("PREMIUM") || nameUpper.includes("AUTOPILOT")) {
+                features = [
+                  "Everything in Growth, plus:",
+                  "24/7 Multilingual WhatsApp AI Receptionist",
+                  "Doctor WhatsApp Delegation Assistant",
+                  "Multi-Doctor Scheduling & Smart Pacing",
+                  "24h & 2h Automated WhatsApp Reminders",
+                  "1-Day Post-Care WhatsApp Recovery Feedback",
+                  "Tele-Consultation & Online Video Care",
+                  "Unlimited AI Patient Conversations"
+                ];
+              }
+              return features.map((feat, idx) => (
+                <li key={idx} className="flex items-start gap-1.5">
+                  <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${feat.startsWith("Everything") ? "text-indigo-600 font-bold" : "text-emerald-600"}`} />
+                  <span className={feat.startsWith("Everything") ? "font-bold text-slate-900" : ""}>{feat}</span>
+                </li>
+              ));
+            })()}
+          </ul>
+        </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 bg-gray-50 border-t pt-4">
         <div className="w-full flex items-center justify-between text-sm text-gray-600 px-1 mb-2">
