@@ -160,9 +160,10 @@ export async function POST(req: Request) {
       dateStr = d.toLocaleDateString("en-CA", { timeZone: doctorTimezone });
     }
 
-    const appointmentDate = new Date(`${dateStr}T00:00:00.000Z`);
-    const startDateTime = new Date(`${dateStr}T${startTime}:00.000Z`);
-    const endDateTime = new Date(`${dateStr}T${endTime}:00.000Z`);
+    const tzOffset = "+05:30";
+    const appointmentDate = new Date(`${dateStr}T00:00:00${tzOffset}`);
+    const startDateTime = new Date(`${dateStr}T${startTime}:00${tzOffset}`);
+    const endDateTime = new Date(`${dateStr}T${endTime}:00${tzOffset}`);
 
     // 2. Validate past dates & times (in clinic timezone)
     const todayClinicStr = new Date().toLocaleDateString("en-CA", { timeZone: doctorTimezone });

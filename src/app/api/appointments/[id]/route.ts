@@ -91,16 +91,16 @@ export async function PUT(
     let newStartTime = body.startTime ? new Date(body.startTime) : existing.startTime;
     let newEndTime = body.endTime ? new Date(body.endTime) : existing.endTime;
 
-    // If only time strings sent (e.g., from form), construct full Date objects
+    // If only time strings sent (e.g., from form), construct full Date objects in clinic timezone
     if (body.startTime && typeof body.startTime === "string" && !body.startTime.includes("T")) {
       const [hours, minutes] = body.startTime.split(":");
-      newStartTime = new Date(newDate);
-      newStartTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const dateStr = newDate.toLocaleDateString("en-CA", { timeZone: timezone || "Asia/Kolkata" });
+      newStartTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00+05:30`);
     }
     if (body.endTime && typeof body.endTime === "string" && !body.endTime.includes("T")) {
       const [hours, minutes] = body.endTime.split(":");
-      newEndTime = new Date(newDate);
-      newEndTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const dateStr = newDate.toLocaleDateString("en-CA", { timeZone: timezone || "Asia/Kolkata" });
+      newEndTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00+05:30`);
     }
 
     // Validate future date (if appointment date changed)

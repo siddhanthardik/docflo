@@ -36,6 +36,30 @@ export async function GET(req: Request) {
       return new NextResponse("Doctor not found", { status: 404 });
     }
 
+    // ── Auto-Reset Stale OPD Status from Previous Days ──
+    const nowClinic = new Date();
+    const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const statusUpdatedDateStr = doctor.opdStatusUpdatedAt
+      ? new Date(doctor.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+      : null;
+
+    if (statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr && doctor.opdStatus !== "ACTIVE") {
+      await prisma.doctor.update({
+        where: { id: doctorId },
+        data: {
+          opdStatus: "ACTIVE",
+          opdDelayMinutes: 0,
+          opdStatusNote: null,
+          opdStatusUpdatedAt: new Date(),
+        },
+      });
+      doctor.opdStatus = "ACTIVE";
+      doctor.opdDelayMinutes = 0;
+      doctor.opdStatusNote = null;
+      doctor.opdStatusUpdatedAt = new Date();
+      console.log(`[OPD Status] Auto-reset yesterday's OPD delay/status to ACTIVE for doctor ${doctorId}`);
+    }
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(todayStart);

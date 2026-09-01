@@ -25,6 +25,20 @@ class WhatsAppManager {
   private activeConnections: Set<string> = new Set(); // Tracks fully opened connections
   private reconnectAttempts: Map<string, number> = new Map(); // Tracks retry backoff per doctor/superadmin
   private watchdogTimer: NodeJS.Timeout | null = null;
+  // Holds doctor-delegated tasks (patientPhone -> task)
+  private delegatedDoctorTasks: Map<string, {
+    id: string;
+    doctorId: string;
+    doctorPhone: string;
+    patientName: string;
+    patientPhone: string;
+    actionType: string;
+    instruction: string;
+    targetTime?: string;
+    status: 'IN_PROGRESS' | 'WAITING_FOR_PATIENT' | 'COMPLETED' | 'FAILED' | 'REQUIRES_DOCTOR_DECISION';
+    createdAt: number;
+  }> = new Map();
+
   // Holds mid-flight booking or schedule disruption intents (doctorPhone -> intent)
   private pendingIntents: Map<string, 
     | {
@@ -428,6 +442,7 @@ class WhatsAppManager {
                 opdStatus: true,
                 opdDelayMinutes: true,
                 opdStatusNote: true,
+                opdStatusUpdatedAt: true,
                 maxDailyAiBookings: true,
                 maxMorningAiBookings: true,
                 maxEveningAiBookings: true,
@@ -751,6 +766,35 @@ class WhatsAppManager {
                 });
 
                 return; // Don't pass to AI agent
+              }
+            }
+
+            // ── Check if patient is replying to a Delegated Doctor Task ────────
+            if (!isStaff) {
+              const activeDelegatedTask = this.delegatedDoctorTasks.get(patientPhone.slice(-10));
+              if (activeDelegatedTask && activeDelegatedTask.doctorId === doctorId) {
+                const cleanPtName = activeDelegatedTask.patientName;
+                const docPhone = activeDelegatedTask.doctorPhone.replace(/\D/g, '');
+                
+                const isPositiveResponse = /yes|haan|theek|fine|sure|confirm|agreed|ok|okay|aunga|ayenge|aa sakti/i.test(textMessage);
+                const hasTimeShift = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)|(kal|parso|evening|morning|shift|badal|nahi|cannot|cancel)/i.test(textMessage);
+
+                if (isPositiveResponse && !hasTimeShift) {
+                  activeDelegatedTask.status = 'COMPLETED';
+                  this.delegatedDoctorTasks.delete(patientPhone.slice(-10));
+                  
+                  // Notify Doctor on WhatsApp
+                  const docAlert = `🔔 *Task Completed, Doctor*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n💬 Response: "${textMessage.trim()}"\n✅ Action: Patient confirmed the requested instruction (${activeDelegatedTask.instruction}).`;
+                  await this.sendOutboundPatientMessage(sock, doctorId, docPhone, docAlert).catch(() => {});
+                  console.log(`[WhatsAppManager] 🔔 Delegated task completed for patient ${patientPhone}. Doctor alerted.`);
+                } else if (hasTimeShift) {
+                  activeDelegatedTask.status = 'REQUIRES_DOCTOR_DECISION';
+                  
+                  // Notify Doctor for decision
+                  const docAlert = `⚠️ *Patient Update (Requires Doctor Decision)*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n💬 Response: "${textMessage.trim()}"\n\nDoctor, how would you like me to proceed with ${cleanPtName}?`;
+                  await this.sendOutboundPatientMessage(sock, doctorId, docPhone, docAlert).catch(() => {});
+                  console.log(`[WhatsAppManager] ⚠️ Delegated task requires doctor decision for patient ${patientPhone}. Doctor alerted.`);
+                }
               }
             }
 
@@ -1250,10 +1294,29 @@ class WhatsAppManager {
                   .filter(a => a.startTime)
                   .map(a => a.startTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
 
+                // ── Auto-Reset Stale OPD Status from Previous Days ──
+                const nowClinic = new Date();
+                const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+                const statusUpdatedDateStr = doctorInfo?.opdStatusUpdatedAt
+                  ? new Date(doctorInfo.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+                  : null;
+
+                const isStaleOpdStatus = statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr;
+                const effectiveOpdStatus = (isStaleOpdStatus || !doctorInfo?.opdStatus) ? "ACTIVE" : doctorInfo.opdStatus;
+                const effectiveOpdDelay = isStaleOpdStatus ? 0 : (doctorInfo?.opdDelayMinutes || 0);
+                const effectiveOpdNote = isStaleOpdStatus ? null : (doctorInfo?.opdStatusNote || null);
+
+                if (isStaleOpdStatus && doctorInfo?.opdStatus !== "ACTIVE") {
+                  prisma.doctor.update({
+                    where: { id: doctorId },
+                    data: { opdStatus: "ACTIVE", opdDelayMinutes: 0, opdStatusNote: null, opdStatusUpdatedAt: new Date() }
+                  }).catch(e => console.warn(`[WhatsAppManager] Failed to background auto-reset stale OPD status:`, e));
+                }
+
                 const scheduleContext = {
-                  opdStatus: doctorInfo?.opdStatus || "ACTIVE",
-                  opdDelayMinutes: doctorInfo?.opdDelayMinutes || 0,
-                  opdStatusNote: doctorInfo?.opdStatusNote || null,
+                  opdStatus: effectiveOpdStatus,
+                  opdDelayMinutes: effectiveOpdDelay,
+                  opdStatusNote: effectiveOpdNote,
                   maxDailyAiBookings: maxDaily,
                   todayAiCount,
                   isTodayQuotaFull,
@@ -1283,7 +1346,76 @@ class WhatsAppManager {
               let finalAiReply = aiReply;
 
               if (aiReply) {
-                // 1. Intercept Staff Modification Tags
+                // 1. Intercept Delegated Patient Task Tag
+                const delegateTaskRegex = /\[DELEGATE_PATIENT_TASK:\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
+                const delegateMatch = aiReply.match(delegateTaskRegex);
+
+                if (delegateMatch && isStaff) {
+                  const [fullTag, targetIdentifier, actionType, targetTime, instruction] = delegateMatch;
+                  try {
+                    const cleanId = targetIdentifier.trim();
+                    const cleanDigits = cleanId.replace(/\D/g, '');
+                    
+                    let targetPatient = null;
+                    if (cleanDigits.length >= 10) {
+                      targetPatient = await prisma.patient.findFirst({
+                        where: { doctorId, phone: { endsWith: cleanDigits.slice(-10) } }
+                      });
+                    }
+                    if (!targetPatient) {
+                      const nameParts = cleanId.split(/\s+/);
+                      targetPatient = await prisma.patient.findFirst({
+                        where: {
+                          doctorId,
+                          firstName: { equals: nameParts[0], mode: 'insensitive' }
+                        }
+                      });
+                    }
+
+                    if (!targetPatient || !targetPatient.phone) {
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply += `\n\n*(Doctor, I couldn't find "${cleanId}" in your patient database. Please provide their mobile number so I can contact them.)*`;
+                    } else {
+                      const ptPhone = targetPatient.phone.replace(/\D/g, '');
+                      const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
+                      
+                      // Construct polite message to patient
+                      const patientOutbound = `Namaste ${targetPatient.firstName}! 🙏\n${docName}'s clinic here. ${instruction.trim()}\n\nPlease reply here to let us know.`;
+                      
+                      await this.sendOutboundPatientMessage(
+                        sock,
+                        doctorId,
+                        ptPhone,
+                        patientOutbound,
+                        targetPatient.id,
+                        `${targetPatient.firstName} ${targetPatient.lastName}`.trim()
+                      );
+
+                      // Register delegated task in memory
+                      this.delegatedDoctorTasks.set(ptPhone.slice(-10), {
+                        id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                        doctorId,
+                        doctorPhone: patientPhone,
+                        patientName: `${targetPatient.firstName} ${targetPatient.lastName}`.trim(),
+                        patientPhone: ptPhone,
+                        actionType: actionType.trim(),
+                        instruction: instruction.trim(),
+                        targetTime: targetTime.trim(),
+                        status: 'WAITING_FOR_PATIENT',
+                        createdAt: Date.now()
+                      });
+
+                      console.log(`[WhatsAppManager] 📋 Registered delegated task for patient ${ptPhone}: ${actionType} - "${instruction}"`);
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                    }
+                  } catch (dErr) {
+                    console.error("[WhatsAppManager] Delegated Task Error:", dErr);
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                    finalAiReply += `\n\n*(Doctor, I couldn't send the message to the patient due to a temporary WhatsApp connection issue. Task not completed.)*`;
+                  }
+                }
+
+                // 2. Intercept Staff Cancellation Tags
                 const cancelRegex = /\[CANCEL_APPOINTMENT:\s*([^\]]+)\]/i;
                 const cancelMatch = aiReply.match(cancelRegex);
 
@@ -1309,10 +1441,14 @@ class WhatsAppManager {
 We sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
                           await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
                         }
+                    } else if (!apt) {
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply += `\n\n*(Doctor, appointment ID "${appointmentId.trim()}" was not found in the database.)*`;
                     }
                   } catch (e) {
                     console.error("[WhatsAppManager] Cancel Error:", e);
                     finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                    finalAiReply += `\n\n*(Doctor, could not cancel the appointment due to a database error.)*`;
                   }
                 }
 
@@ -1394,6 +1530,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                   } catch (e) {
                     console.error("[WhatsAppManager] Message Relay Error:", e);
                     finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                    finalAiReply += "\n\n*(Doctor, I couldn't deliver the WhatsApp message to the patient due to a delivery error.)*";
                   }
                 }
 
@@ -1642,33 +1779,91 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                   }
                 }
 
-                // 3. Intercept Patient Booking Tag
-                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]/i;
+                // 3. Intercept Patient Booking Tag (with Name, Age, Gender support)
+                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^,\]]+)(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?\]/i;
                 const match = aiReply.match(bookingRegex);
                 
                 if (match && !isStaff) {
-                  const [fullTag, dateStr, sessionStr, patientFullName] = match;
+                  const [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr] = match;
                   
                   try {
-                    let targetPatient = patient;
+                    const nameParts = (patientFullName || "Patient").trim().split(/\s+/);
+                    const candidateFirstName = nameParts[0] || "Patient";
+                    const candidateLastName = nameParts.slice(1).join(" ") || "";
 
-                    // If patient record is missing, create it
-                    if (!targetPatient) {
-                      const nameParts = (patientFullName || "Patient").trim().split(" ");
-                      const firstName = nameParts[0] || "Patient";
-                      const lastName = nameParts.slice(1).join(" ") || "";
-                      targetPatient = await prisma.patient.create({
-                        data: {
-                          doctorId,
-                          firstName,
-                          lastName,
-                          phone: patientPhone,
-                          patientType: "ACTIVE"
-                        }
-                      });
+                    // Clean age & calculate approximate DOB
+                    let parsedAge: number | null = null;
+                    if (rawAgeStr) {
+                      const ageMatch = rawAgeStr.match(/\d+/);
+                      if (ageMatch) parsedAge = parseInt(ageMatch[0], 10);
                     }
 
-                    // 1. Check if patient already has an active appointment
+                    // Clean gender
+                    let parsedGender: string | null = null;
+                    if (rawGenderStr) {
+                      const gUpper = rawGenderStr.trim().toUpperCase();
+                      if (gUpper.startsWith("M") || gUpper.includes("BOY") || gUpper.includes("MALE")) parsedGender = "MALE";
+                      else if (gUpper.startsWith("F") || gUpper.includes("GIRL") || gUpper.includes("FEMALE")) parsedGender = "FEMALE";
+                      else if (gUpper.startsWith("O")) parsedGender = "OTHER";
+                    }
+
+                    let approximateDob: Date | null = null;
+                    if (parsedAge && parsedAge > 0 && parsedAge < 125) {
+                      approximateDob = new Date(new Date().getFullYear() - parsedAge, 0, 1);
+                    }
+
+                    // 1. Resolve Family Member Identity: Check for existing patient with this FIRST NAME under this phone
+                    let targetPatient = await prisma.patient.findFirst({
+                      where: {
+                        doctorId,
+                        phone: patientPhone,
+                        firstName: { equals: candidateFirstName, mode: "insensitive" }
+                      }
+                    });
+
+                    if (!targetPatient) {
+                      // If existing patient on this phone is a temporary placeholder, update it
+                      if (patient && (patient.firstName === "Patient" || patient.lastName.startsWith("+") || !patient.lastName)) {
+                        targetPatient = await prisma.patient.update({
+                          where: { id: patient.id },
+                          data: {
+                            firstName: candidateFirstName,
+                            lastName: candidateLastName,
+                            ...(parsedGender ? { gender: parsedGender } : {}),
+                            ...(approximateDob ? { dateOfBirth: approximateDob } : {})
+                          }
+                        });
+                      } else {
+                        // A distinct family member is booking from this shared mobile number! Create a separate profile
+                        targetPatient = await prisma.patient.create({
+                          data: {
+                            doctorId,
+                            firstName: candidateFirstName,
+                            lastName: candidateLastName,
+                            phone: patientPhone,
+                            gender: parsedGender,
+                            dateOfBirth: approximateDob,
+                            patientType: "ACTIVE",
+                            tags: ["WhatsApp", "Family Member"]
+                          }
+                        });
+                        console.log(`[WhatsAppManager] 👨‍👩‍👧 Created separate Family Member profile: "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
+                      }
+                    } else {
+                      // Update missing demographic fields if provided now
+                      const updates: any = {};
+                      if (!targetPatient.gender && parsedGender) updates.gender = parsedGender;
+                      if (!targetPatient.dateOfBirth && approximateDob) updates.dateOfBirth = approximateDob;
+                      if (candidateLastName && (!targetPatient.lastName || targetPatient.lastName.startsWith("+"))) updates.lastName = candidateLastName;
+                      if (Object.keys(updates).length > 0) {
+                        targetPatient = await prisma.patient.update({
+                          where: { id: targetPatient.id },
+                          data: updates
+                        });
+                      }
+                    }
+
+                    // 2. Check if this specific family member already has an upcoming appointment
                     const activeAppointment = await prisma.appointment.findFirst({
                       where: {
                         patientId: targetPatient.id,
@@ -1679,11 +1874,10 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     });
 
                     if (activeAppointment) {
-                      // Prevent spam/double booking
                       finalAiReply = finalAiReply.replace(fullTag, "").trim();
                       finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
                     } else {
-                      // 2. Parse Date with intelligent fallback
+                      // 3. Parse Date with intelligent fallback
                       let appointmentDate = new Date(dateStr.trim());
                       const now = new Date();
                       const today = new Date(now);
@@ -1724,7 +1918,6 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in tokens are available at the clinic reception.)*`;
                         } else {
                           const isMorning = sessionStr.toLowerCase().includes("morning");
-                          const startTime = new Date(appointmentDate);
                           
                           // Intelligent hour & minute extraction
                           const timeMatch = sessionStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
@@ -1738,21 +1931,17 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             if (mer === 'am' && parsedHour === 12) parsedHour = 0;
                             if (parsedHour >= 0 && parsedHour <= 23) hour = parsedHour;
                           }
-                          startTime.setHours(hour, minute, 0, 0);
-                          
-                          const endTime = new Date(startTime);
-                          endTime.setHours(startTime.getHours() + 1);
 
-                          // Update Patient Profile Name if it's default
-                          if (targetPatient.firstName === "Patient" && (targetPatient.lastName.startsWith("+") || !targetPatient.lastName)) {
-                            const nameParts = patientFullName.trim().split(" ");
-                            const firstName = nameParts[0];
-                            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-                            await prisma.patient.update({
-                              where: { id: targetPatient.id },
-                              data: { firstName, lastName }
-                            });
-                          }
+                          // 4. Construct Exact Clinic Timezone Timestamps (+05:30 IST)
+                          const tzOffset = "+05:30";
+                          const dateOnlyStr = appointmentDate.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+                          const hourStr = String(hour).padStart(2, "0");
+                          const minStr = String(minute).padStart(2, "0");
+                          const endHourStr = String((hour + 1) % 24).padStart(2, "0");
+
+                          const startTime = new Date(`${dateOnlyStr}T${hourStr}:${minStr}:00${tzOffset}`);
+                          const endTime = new Date(`${dateOnlyStr}T${endHourStr}:${minStr}:00${tzOffset}`);
+                          const dbAppointmentDate = new Date(`${dateOnlyStr}T00:00:00${tzOffset}`);
 
                           // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
                           const isTele = /tele|video|online|virtual|remote/i.test(sessionStr);
@@ -1763,7 +1952,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                               patientId: targetPatient.id,
                               doctorId: doctorId,
                               practitionerId: defaultPractitioner?.id || null,
-                              date: appointmentDate,
+                              date: dbAppointmentDate,
                               startTime: startTime,
                               endTime: endTime,
                               status: "CONFIRMED",
@@ -1772,21 +1961,33 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             }
                           });
 
-                          console.log(`[WhatsAppManager] Successfully agentic-booked ${appointmentType} appointment for ${patientPhone}`);
+                          console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} (${patientPhone}) at ${dateOnlyStr} ${hourStr}:${minStr} IST`);
                           finalAiReply = finalAiReply.replace(fullTag, "").trim();
 
-                          // Notify doctor on their WhatsApp
+                          // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
                           if (doctorInfo?.phone) {
+                            const aiConfig = await prisma.aIAgentConfig.findUnique({
+                              where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
+                            });
+                            const rawCfg = (aiConfig?.config as any) || {};
+                            const assistantName = rawCfg.assistantName || "Riya";
+
+                            const ageLabel = parsedAge ? `Age: ${parsedAge}` : "";
+                            const genderLabel = parsedGender ? (parsedGender === "MALE" ? "Male" : (parsedGender === "FEMALE" ? "Female" : parsedGender)) : "";
+                            const demoBadgeParts = [ageLabel, genderLabel].filter(Boolean).join(", ");
+                            const demoBadge = demoBadgeParts ? ` (${demoBadgeParts})` : "";
+
                             const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
-                            const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-                            const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                            const cleanPtName = patientFullName.trim();
-                            const docAlert = `🔔 *New AI Appointment Booked (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\nThis appointment has been added to your Docflo calendar.`;
+                            const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' });
+                            const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+                            const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
+                            
+                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Docflo calendar.`;
                             await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                           }
                         }
                       } else {
-                        // Invalid date hallucinated by AI
+                        // Invalid date
                         finalAiReply = finalAiReply.replace(fullTag, "").trim();
                         finalAiReply += "\n\n*(Note: There was an issue processing the requested date. Please call the clinic to finalize your slot.)*";
                       }
