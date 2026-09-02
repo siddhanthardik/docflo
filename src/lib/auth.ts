@@ -43,7 +43,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Invalid credentials");
         }
         
-        const email = credentials.email as string;
+        const rawEmail = credentials.email as string;
+        const cleanEmail = rawEmail.trim().toLowerCase();
         const password = credentials.password as string;
 
         // Retrieve IP and UserAgent
@@ -112,8 +113,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
 
         // 0. Try to find a Platform User first (SaaS Staff)
-        const platformUser = await prisma.platformUser.findUnique({
-          where: { email },
+        const platformUser = await prisma.platformUser.findFirst({
+          where: { email: { equals: cleanEmail, mode: "insensitive" } },
           select: {
             id: true,
             email: true,
@@ -150,8 +151,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // 1. Try to find a Doctor next
-        const doctor = await prisma.doctor.findUnique({
-          where: { email },
+        const doctor = await prisma.doctor.findFirst({
+          where: { email: { equals: cleanEmail, mode: "insensitive" } },
           select: {
             id: true,
             email: true,
@@ -188,7 +189,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // 2. If not a doctor, try to find a Staff member
         const staff = await prisma.staffMember.findFirst({
-          where: { email, isActive: true },
+          where: { email: { equals: cleanEmail, mode: "insensitive" }, isActive: true },
           select: {
             id: true,
             email: true,
@@ -226,7 +227,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // If nothing matched
-        await logActivity({ userId: email, userType: "UNKNOWN", action: "LOGIN_FAILED_NOT_FOUND", ipAddress, userAgent });
+        await logActivity({ userId: cleanEmail, userType: "UNKNOWN", action: "LOGIN_FAILED_NOT_FOUND", ipAddress, userAgent });
         throw new Error("Invalid credentials");
       },
     }),
