@@ -66,14 +66,19 @@ export function AIRepceptionistSimulator() {
     }
   ]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
   sessionIdRef.current = sessionId;
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   };
 
   useEffect(() => {
@@ -685,7 +690,7 @@ export function AIRepceptionistSimulator() {
                 </div>
 
                 {/* WhatsApp Light Chat Canvas */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-3">
                   
                   {/* Encryption Pill */}
                   <div className="text-center my-1">
@@ -737,8 +742,6 @@ export function AIRepceptionistSimulator() {
                       </div>
                     </motion.div>
                   )}
-
-                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* WhatsApp Light Input Bar */}
@@ -748,7 +751,10 @@ export function AIRepceptionistSimulator() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSendMessage();
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
                     }}
                     placeholder="Type patient question in English/Hindi/Hinglish..."
                     className="flex-1 bg-white text-xs text-slate-900 placeholder-slate-400 rounded-full px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#008069] border border-slate-200 shadow-2xs"

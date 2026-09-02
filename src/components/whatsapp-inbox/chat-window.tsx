@@ -35,10 +35,15 @@ export function ChatWindow({
 }) {
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      })
+    }
   }, [messages])
 
   const handleSend = async () => {
@@ -124,7 +129,7 @@ export function ChatWindow({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-xs text-gray-400">No messages yet. Start the conversation below.</p>
@@ -159,7 +164,6 @@ export function ChatWindow({
             </div>
           )
         })}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input Bar */}
