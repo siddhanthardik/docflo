@@ -9,7 +9,7 @@ import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const isValidEmail = (v: string) =>
-  /^[^s@]+@[^s@]+.[^s@]{2,}$/.test(v.trim());
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 
 type FieldErrors = {
   name?: string;
