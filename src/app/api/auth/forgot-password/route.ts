@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { hash } from "bcryptjs";
 import { logActivity } from "@/lib/audit";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -15,13 +15,16 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check if user exists (Platform, Doctor, or Staff)
-    const platformUser = await prisma.platformUser.findUnique({ where: { email } });
-    const doctor = await prisma.doctor.findUnique({ where: { email } });
-    const staff = await prisma.staffMember.findUnique({ where: { email } });
+    const platformUser = await prisma.platformUser.findUnique({ where: { email: cleanEmail } });
+    const doctor = await prisma.doctor.findUnique({ where: { email: cleanEmail } });
+    const staff = await prisma.staffMember.findUnique({ where: { email: cleanEmail } });
 
     const userType = platformUser ? "PLATFORM" : doctor ? "CLINIC" : staff ? "STAFF" : "UNKNOWN";
-    const userId = platformUser?.id || doctor?.id || staff?.id || email;
+    const userId = platformUser?.id || doctor?.id || staff?.id || cleanEmail;
+    const userName = platformUser?.name || doctor?.name || staff?.name;
 
     // To prevent user enumeration, we always return a success message
     // even if the user is not found.
@@ -30,7 +33,7 @@ export async function POST(req: Request) {
         userId,
         userType,
         action: "PASSWORD_RESET_REQUESTED_NOT_FOUND",
-        details: { email }
+        details: { email: cleanEmail }
       });
       return NextResponse.json(
         { message: "If an account with that email exists, we sent a password reset link." },
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
 
     await prisma.passwordResetToken.create({
       data: {
-        email,
+        email: cleanEmail,
         token: hashedToken,
         expiresAt,
       },
@@ -55,11 +58,11 @@ export async function POST(req: Request) {
       userId,
       userType,
       action: "PASSWORD_RESET_TOKEN_GENERATED",
-      details: { email }
+      details: { email: cleanEmail }
     });
 
-    // In a real application, send the email here using rawToken
-    console.log(`[DEV MODE] Password reset link for ${email}: http://localhost:3000/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`);
+    // Send the password reset email via Resend
+    await sendPasswordResetEmail(cleanEmail, rawToken, userName);
 
     return NextResponse.json(
       { message: "If an account with that email exists, we sent a password reset link." },

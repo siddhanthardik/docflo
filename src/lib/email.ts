@@ -118,6 +118,71 @@ export async function sendVerificationEmail(email: string, rawToken: string, nam
 }
 
 /**
+ * Send Password Reset Email with Gyrex Branding & Resend API
+ */
+export async function sendPasswordResetEmail(email: string, rawToken: string, name?: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+  const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+
+  const firstName = name ? name.trim().split(" ")[0] : "Doctor";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reset your Gyrex Password</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 0; }
+        .container { max-width: 580px; margin: 40px auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .header { padding: 40px 32px 24px; text-align: center; border-bottom: 1px solid #f1f5f9; background: #ffffff; }
+        .content { padding: 32px; }
+        .content p { font-size: 15px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
+        .btn-container { text-align: center; margin: 32px 0; }
+        .btn { display: inline-block; background-color: #4f46e5; color: #ffffff !important; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
+        .footer { padding: 24px 32px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8; }
+        .link-alt { word-break: break-all; font-size: 12px; color: #4f46e5; }
+        .warning-box { background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 8px; font-size: 13px; color: #92400e; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${baseUrl}/logo.svg" alt="Gyrex Logo" height="36" style="display: block; margin: 0 auto; height: 36px; width: auto;" />
+        </div>
+        <div class="content">
+          <p>Hello <strong>${firstName}</strong>,</p>
+          <p>We received a request to reset the password for your Gyrex account. Click the button below to set a new password:</p>
+          
+          <div class="btn-container">
+            <a href="${resetUrl}" target="_blank" class="btn">Reset Password</a>
+          </div>
+
+          <div class="warning-box">
+            <strong>Security Notice:</strong> This password reset link will expire in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email and your password will remain unchanged.
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #64748b;">If the button above doesn't work, copy and paste this link into your browser:<br>
+          <a href="${resetUrl}" class="link-alt">${resetUrl}</a></p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Gyrex Healthcare Platform. All rights reserved.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Reset your Gyrex Password",
+    html,
+  });
+}
+
+/**
  * Send Subscription Payment Success Email
  */
 export async function sendPaymentSuccessEmail(email: string, name: string, planName: string, amount: string, invoiceUrl?: string) {
