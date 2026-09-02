@@ -30,6 +30,7 @@ export interface SectionDesignConfig {
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
   overlayDarkness?: "none" | "subtle" | "medium" | "dark";
   heroHeight?: "compact" | "normal" | "tall" | "fullscreen";
+  sliderType?: "fade" | "slide" | "ambient";
 }
 
 export interface PageSection {

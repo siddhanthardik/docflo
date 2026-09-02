@@ -636,15 +636,17 @@ export default function ElementorComposerPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
-      {/* ── TOP CLEAN ELEMENTOR STUDIO HEADER ── */}
-      <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <span className="font-black text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
-            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black">E</span>
-            Elementor Composer
+      {/* ── TOP CLEAN WEBSITE STUDIO HEADER ── */}
+      <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5 shrink-0">
+            <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <Globe className="w-4 h-4" />
+            </span>
+            <span className="hidden sm:inline">Website Studio</span>
           </span>
 
-          <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200">
+          <div className="flex items-center gap-1.5 pl-2.5 border-l border-slate-200 min-w-0">
             <select
               value={siteData.themeId}
               onChange={(e) => {
@@ -697,10 +699,11 @@ export default function ElementorComposerPage() {
                   description: `Loaded ${preset.category} hero, services, trust metrics, and FAQs.`,
                 });
               }}
-              className="h-8 px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer"
+              className="h-8 max-w-[140px] sm:max-w-[200px] px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer truncate"
+              title="Select specialty theme preset"
             >
               {THEME_OPTIONS.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
             <button
@@ -743,10 +746,10 @@ export default function ElementorComposerPage() {
                 });
               }}
               title="Reset and reload default services, FAQs, trust badges, and hero for this specialty theme"
-              className="h-8 px-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 cursor-pointer"
+              className="h-8 px-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 cursor-pointer shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Reload Presets</span>
+              <span className="hidden xl:inline">Reload</span>
             </button>
           </div>
         </div>
@@ -1337,7 +1340,12 @@ export default function ElementorComposerPage() {
 
                         {/* Hero Height */}
                         <div className="space-y-1.5 pt-1">
-                          <label className="text-[11px] font-bold text-slate-700">Hero Section Height</label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-slate-700">Hero Section Height</label>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                              {(selectedSection.design?.heroHeight || "normal") === "fullscreen" ? "Full Screen (100vh)" : (selectedSection.design?.heroHeight || "normal").toUpperCase()}
+                            </span>
+                          </div>
                           <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
                             {[
                               { id: "compact", label: "440px" },
@@ -1351,13 +1359,40 @@ export default function ElementorComposerPage() {
                                 onClick={() => {
                                   updateSelectedSectionDesign({ heroHeight: ht.id as any });
                                 }}
-                                className={`py-1.5 rounded-lg border transition-all ${
+                                className={`py-2 rounded-xl border transition-all cursor-pointer font-bold ${
                                   (selectedSection.design?.heroHeight || "normal") === ht.id
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                                 }`}
                               >
                                 {ht.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Slider Style & Transition */}
+                        <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                          <label className="text-[11px] font-bold text-slate-700">Slider Style &amp; Transition</label>
+                          <div className="grid grid-cols-3 gap-1 text-[10px] font-bold">
+                            {[
+                              { id: "fade", label: "Smooth Fade" },
+                              { id: "slide", label: "Slide & Dots" },
+                              { id: "ambient", label: "Ambient Zoom" },
+                            ].map((st) => (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSectionDesign({ sliderType: st.id as any });
+                                }}
+                                className={`py-1.5 rounded-lg border transition-all cursor-pointer ${
+                                  (selectedSection.design?.sliderType || "fade") === st.id
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                {st.label}
                               </button>
                             ))}
                           </div>

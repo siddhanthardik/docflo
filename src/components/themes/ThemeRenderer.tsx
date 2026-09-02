@@ -500,6 +500,24 @@ export function ThemeRenderer({
                       <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
                     </button>
                   </div>
+
+                  {sliderImages.length > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-4">
+                      {sliderImages.map((_, dotIdx) => (
+                        <button
+                          key={dotIdx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlide(dotIdx);
+                          }}
+                          className={`h-2 rounded-full transition-all cursor-pointer ${
+                            activeSlide === dotIdx ? "w-7 bg-white shadow-md" : "w-2 bg-white/40 hover:bg-white/70"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>,
               index
@@ -507,11 +525,20 @@ export function ThemeRenderer({
           }
 
           // HERO VARIANT 2: ASYMMETRIC / SPLIT
+          const splitHeroHeightClass =
+            d.heroHeight === "compact"
+              ? "min-h-[440px] py-10"
+              : d.heroHeight === "tall"
+              ? "min-h-[700px] py-20"
+              : d.heroHeight === "fullscreen"
+              ? "min-h-[calc(100vh-70px)] sm:min-h-screen py-24 flex flex-col justify-center"
+              : "min-h-[580px] py-14 flex flex-col justify-center";
+
           return renderSectionContainer(
             section,
             <section
               style={customBg ? { backgroundColor: customBg } : undefined}
-              className={`relative overflow-hidden pt-12 pb-20 border-b border-slate-100 ${
+              className={`relative overflow-hidden ${splitHeroHeightClass} border-b border-slate-100 ${
                 !customBg
                   ? themeId === "serene-glow"
                     ? "bg-[#FAF8F5]"
@@ -529,7 +556,7 @@ export function ThemeRenderer({
                   : ""
               }`}
             >
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                     {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
@@ -652,28 +679,47 @@ export function ThemeRenderer({
                         ))}
 
                         {sliderImages.length > 1 && (
-                          <div className="absolute inset-0 z-20 flex items-center justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveSlide((prev) => (prev === 0 ? sliderImages.length - 1 : prev - 1));
-                              }}
-                              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white"
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveSlide((prev) => (prev + 1) % sliderImages.length);
-                              }}
-                              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white"
-                            >
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
+                          <>
+                            <div className="absolute inset-0 z-20 flex items-center justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveSlide((prev) => (prev === 0 ? sliderImages.length - 1 : prev - 1));
+                                }}
+                                className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white transition-transform hover:scale-105"
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveSlide((prev) => (prev + 1) % sliderImages.length);
+                                }}
+                                className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md text-slate-800 flex items-center justify-center pointer-events-auto hover:bg-white transition-transform hover:scale-105"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Dots */}
+                            <div className="absolute bottom-2.5 inset-x-0 z-20 flex items-center justify-center gap-1.5 pointer-events-auto">
+                              {sliderImages.map((_, dotIdx) => (
+                                <button
+                                  key={dotIdx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveSlide(dotIdx);
+                                  }}
+                                  className={`h-1.5 rounded-full transition-all ${
+                                    activeSlide === dotIdx ? "w-5 bg-white shadow-sm" : "w-1.5 bg-white/60 hover:bg-white"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </>
                         )}
                       </div>
                     )}
