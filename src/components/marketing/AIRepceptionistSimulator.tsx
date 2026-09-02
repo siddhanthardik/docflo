@@ -293,7 +293,10 @@ export function AIRepceptionistSimulator() {
       });
 
       const data = await res.json();
-      const aiReplyText = data.reply || `Namaste! Thank you for contacting ${clinicName}. ${doctorName} is available for appointments. What time suits you best?`;
+      const rawText = data.reply || `Namaste! Thank you for contacting ${clinicName}. ${doctorName} is available for appointments. What time suits you best?`;
+      const aiReplyText = rawText
+        .replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|DELEGATE_PATIENT_TASK|CLARIFY_TASK)(?::.*?)?\]/gi, "")
+        .trim();
 
       setTimeout(() => {
         setIsTyping(false);

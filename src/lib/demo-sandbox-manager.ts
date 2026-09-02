@@ -279,7 +279,7 @@ class DemoSandboxManager {
             const historyKey = `${sessionId}:${senderJid}`;
             const history = this.conversationHistories.get(historyKey) || [];
 
-            const reply = await AIAgentsService.runDemoReceptionist(
+            const rawReply = await AIAgentsService.runDemoReceptionist(
               text.trim(),
               {
                 doctorName,
@@ -296,6 +296,10 @@ class DemoSandboxManager {
             ).catch(() => 
               `Namaste! 🙏 I am ${assistantName}, 24/7 AI Receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment or visit today?`
             );
+
+            const reply = (rawReply || "")
+              .replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|DELEGATE_PATIENT_TASK|CLARIFY_TASK)(?::.*?)?\]/gi, "")
+              .trim();
 
             // Record turn in history
             history.push(`Patient: ${text.trim()}`);
