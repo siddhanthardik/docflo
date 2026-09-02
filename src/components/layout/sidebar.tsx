@@ -27,6 +27,7 @@ import {
   PanelLeft,
   Download,
   Globe,
+  LifeBuoy,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
@@ -165,6 +166,21 @@ export function Sidebar() {
           <Download className="h-4 w-4 shrink-0 text-slate-400" />
           {!isCollapsed && <span>Download App</span>}
         </a>
+
+        <Link
+          href="/support"
+          className={cn(
+            "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
+            isCollapsed ? "justify-center" : "gap-3",
+            pathname.startsWith("/support")
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
+          )}
+          title="Help & Support"
+        >
+          <LifeBuoy className={cn("h-4 w-4 shrink-0", pathname.startsWith("/support") ? "text-white" : "text-slate-400")} />
+          {!isCollapsed && <span>Help & Support</span>}
+        </Link>
 
         <Link
           href="/settings"

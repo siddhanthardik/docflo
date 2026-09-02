@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
-import { Bell } from "lucide-react";
+import { Bell, LifeBuoy } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { OPDStatusControl } from "@/components/dashboard/OPDStatusControl";
 import { useEffect, useState } from "react";
@@ -48,6 +48,15 @@ export function Header() {
         {session?.user?.role !== "SUPERADMIN" && session?.user?.role !== "ADMIN" && (
           <OPDStatusControl />
         )}
+
+        <Link
+          href="/support"
+          className="w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-colors shadow-2xs"
+          title="Help & Support"
+        >
+          <LifeBuoy className="w-4 h-4" />
+        </Link>
+
         <NotificationBell />
 
         <div className="flex items-center gap-2 pl-2.5 border-l border-slate-200/60">

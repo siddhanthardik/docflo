@@ -43,15 +43,15 @@ export async function sendEmail({ to, subject, html, apiKey, fromEmail, attachme
 
     const data = await res.json();
     if (!res.ok) {
-      console.error("Resend API error:", data);
-      throw new Error(data.message || "Failed to send email via Resend");
+      console.warn("[Resend Email Service] Resend API responded with error:", data?.message || data);
+      return { success: false, error: data?.message || "Failed to send email via Resend" };
     }
 
     console.log(`[RESEND SUCCESS] Email sent to ${to}, ID: ${data.id}`);
     return { success: true, id: data.id };
-  } catch (error) {
-    console.error("Error in sendEmail:", error);
-    throw error;
+  } catch (error: any) {
+    console.warn("[Resend Email Service] Error in sendEmail:", error?.message || error);
+    return { success: false, error: error?.message || "Failed to send email" };
   }
 }
 
@@ -204,4 +204,261 @@ export async function sendPlanExpiryEmail(email: string, name: string, daysLeft:
     </html>
   `;
   return sendEmail({ to: email, subject: "Subscription Expiring Soon - Gyrex", html });
+}
+
+/**
+ * 4. Send Support Ticket Alert to Admin / Support Team
+ */
+export async function sendSupportTicketAlertToAdmin({
+  ticketNumber,
+  doctorName,
+  clinicName,
+  doctorEmail,
+  doctorPhone,
+  category,
+  priority,
+  subject,
+  description,
+  packageTier,
+}: {
+  ticketNumber: string;
+  doctorName: string;
+  clinicName: string;
+  doctorEmail: string;
+  doctorPhone?: string;
+  category: string;
+  priority: string;
+  subject: string;
+  description: string;
+  packageTier?: string;
+}) {
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.ADMIN_EMAIL || "support@gyrex.in";
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+  const ticketUrl = `${baseUrl}/admin/tickets`;
+
+  const priorityColor =
+    priority === "URGENT"
+      ? "#e11d48"
+      : priority === "HIGH"
+      ? "#ea580c"
+      : priority === "MEDIUM"
+      ? "#d97706"
+      : "#2563eb";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { background: #0f172a; padding: 24px; color: #ffffff; }
+        .header h2 { margin: 0; font-size: 18px; font-weight: 700; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #ffffff; margin-top: 8px; }
+        .content { padding: 28px; }
+        .doctor-card { background: #f1f5f9; border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+        .detail-row { margin-bottom: 6px; }
+        .detail-row strong { color: #334155; }
+        .problem-box { background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 18px 0; }
+        .btn { display: inline-block; background-color: #4f46e5; color: #ffffff !important; font-weight: 700; font-size: 14px; text-decoration: none; padding: 12px 24px; border-radius: 8px; }
+        .footer { padding: 16px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 11px; color: #94a3b8; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>🎫 New Support Ticket Raised</h2>
+          <span class="badge" style="background-color: ${priorityColor};">${priority} PRIORITY</span>
+          <span class="badge" style="background-color: #334155;">#${ticketNumber}</span>
+        </div>
+        <div class="content">
+          <div class="doctor-card">
+            <div class="detail-row"><strong>Doctor:</strong> ${doctorName}</div>
+            <div class="detail-row"><strong>Clinic:</strong> ${clinicName}</div>
+            <div class="detail-row"><strong>Email:</strong> <a href="mailto:${doctorEmail}">${doctorEmail}</a></div>
+            <div class="detail-row"><strong>Phone:</strong> ${doctorPhone || "N/A"}</div>
+            <div class="detail-row"><strong>Plan / Tier:</strong> ${packageTier || "Trial / Standard"}</div>
+            <div class="detail-row"><strong>Category:</strong> ${category}</div>
+          </div>
+
+          <h3 style="margin: 0 0 8px; font-size: 16px; color: #0f172a;">${subject}</h3>
+          <div class="problem-box">
+            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">${description}</p>
+          </div>
+
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="${ticketUrl}" class="btn">Open Ticket in Admin Dashboard &rarr;</a>
+          </div>
+        </div>
+        <div class="footer">
+          Gyrex Practice Growth Platform &bull; Automated Support Router
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: supportEmail,
+    subject: `[${priority}] Support Ticket #${ticketNumber}: ${subject} (${clinicName})`,
+    html,
+  });
+}
+
+/**
+ * 5. Send Acknowledgment Email to Doctor
+ */
+export async function sendSupportTicketAcknowledgmentToDoctor({
+  ticketNumber,
+  doctorName,
+  doctorEmail,
+  subject,
+  description,
+  category,
+}: {
+  ticketNumber: string;
+  doctorName: string;
+  doctorEmail: string;
+  subject: string;
+  description: string;
+  category: string;
+}) {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+  const supportPortalUrl = `${baseUrl}/support`;
+  const firstName = doctorName.trim().split(" ")[0] || "Doctor";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { background: #4f46e5; padding: 28px 24px; text-align: center; color: #ffffff; }
+        .header h2 { margin: 0; font-size: 20px; font-weight: 700; }
+        .content { padding: 32px 24px; }
+        .content p { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 18px; }
+        .ticket-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin: 20px 0; font-size: 13px; }
+        .ticket-number { font-size: 16px; font-weight: 800; color: #4f46e5; margin-bottom: 8px; }
+        .btn { display: inline-block; background-color: #4f46e5; color: #ffffff !important; font-weight: 700; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 8px; }
+        .footer { padding: 20px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>We've Received Your Support Request</h2>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${firstName}</strong>,</p>
+          <p>Thank you for reaching out to Gyrex Support. Your ticket has been logged in our system and assigned to a dedicated specialist.</p>
+
+          <div class="ticket-box">
+            <div class="ticket-number">Ticket #${ticketNumber}</div>
+            <p style="margin: 4px 0; color: #64748b;"><strong>Subject:</strong> ${subject}</p>
+            <p style="margin: 4px 0; color: #64748b;"><strong>Category:</strong> ${category}</p>
+            <p style="margin: 8px 0 0; color: #334155; font-style: italic;">"${description}"</p>
+          </div>
+
+          <p><strong>Estimated Response Time:</strong> Our support engineers typically review and respond within <strong>1 to 2 business hours</strong>.</p>
+          <p>You can track updates or reply directly from your doctor dashboard:</p>
+
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${supportPortalUrl}" class="btn">View & Track Support Ticket &rarr;</a>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; margin-top: 24px;">Best regards,<br><strong>Gyrex Support & Practice Growth Team</strong></p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Gyrex &bull; Built for Healthcare Growth
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: doctorEmail,
+    subject: `[Received] Support Ticket #${ticketNumber}: ${subject}`,
+    html,
+  });
+}
+
+/**
+ * 6. Send Support Reply / Resolution Email to Doctor
+ */
+export async function sendSupportTicketReplyToDoctor({
+  ticketNumber,
+  doctorName,
+  doctorEmail,
+  subject,
+  replyMessage,
+  isResolved,
+}: {
+  ticketNumber: string;
+  doctorName: string;
+  doctorEmail: string;
+  subject: string;
+  replyMessage: string;
+  isResolved?: boolean;
+}) {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+  const supportPortalUrl = `${baseUrl}/support`;
+  const firstName = doctorName.trim().split(" ")[0] || "Doctor";
+
+  const statusTitle = isResolved ? "Your Support Ticket Has Been Resolved" : "New Reply on Your Support Ticket";
+  const headerBg = isResolved ? "#059669" : "#4f46e5";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { background: ${headerBg}; padding: 28px 24px; text-align: center; color: #ffffff; }
+        .header h2 { margin: 0; font-size: 20px; font-weight: 700; }
+        .content { padding: 32px 24px; }
+        .content p { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 18px; }
+        .reply-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #10b981; padding: 18px; border-radius: 8px; margin: 20px 0; font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-wrap; }
+        .btn { display: inline-block; background-color: #4f46e5; color: #ffffff !important; font-weight: 700; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 8px; }
+        .footer { padding: 20px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>${statusTitle}</h2>
+          <div style="font-size: 13px; opacity: 0.9; margin-top: 6px;">Ticket #${ticketNumber} &bull; ${subject}</div>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${firstName}</strong>,</p>
+          <p>Our support team has updated your ticket:</p>
+
+          <div class="reply-box">${replyMessage}</div>
+
+          <p>You can view the full thread, add attachments, or respond directly anytime from your dashboard:</p>
+
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${supportPortalUrl}" class="btn">Open Support Portal &rarr;</a>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; margin-top: 24px;">Best regards,<br><strong>Gyrex Support Team</strong></p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Gyrex &bull; Practice Growth Platform
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: doctorEmail,
+    subject: `[${isResolved ? "Resolved" : "Update"}] Support Ticket #${ticketNumber}: ${subject}`,
+    html,
+  });
 }

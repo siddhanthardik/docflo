@@ -73,6 +73,7 @@ model Doctor {
   aiAgentFeedbacks       AIAgentFeedback[]
   website                ClinicWebsite?
   aiTokenLogs            AiTokenLog[]
+  supportTickets         SupportTicket[]
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -1548,6 +1549,42 @@ model AiTokenLog {
   @@index([createdAt])
   @@index([feature])
   @@map("ai_token_logs")
+}
+
+model SupportTicket {
+  id              String                 @id @default(cuid())
+  ticketNumber    String                 @unique // e.g. TKT-20260902-8491
+  doctorId        String
+  doctor          Doctor                 @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  category        String                 // "WHATSAPP_AI", "APPOINTMENTS", "GOOGLE_BUSINESS_SEO", "BILLING", "WEBSITE", "OTHER"
+  priority        String                 @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
+  subject         String
+  description     String                 @db.Text
+  status          String                 @default("OPEN") // "OPEN", "IN_PROGRESS", "WAITING_ON_DOCTOR", "RESOLVED", "CLOSED"
+  resolutionNote  String?                @db.Text
+  attachments     Json?                  // Array of uploaded attachment URLs
+  messages        SupportTicketMessage[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([doctorId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderType  String        // "DOCTOR" | "SUPPORT_ADMIN"
+  senderName  String
+  senderEmail String
+  message     String        @db.Text
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId])
+  @@map("support_ticket_messages")
 }
 
 
