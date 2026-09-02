@@ -58,7 +58,6 @@ interface AdminTicket {
 }
 
 export default function AdminTicketsPage() {
-  const { data: session } = useSession();
   const { toast } = useToast();
 
   const [tickets, setTickets] = useState<AdminTicket[]>([]);

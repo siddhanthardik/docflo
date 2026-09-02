@@ -7,15 +7,19 @@ import { X, Sparkles, Send, MessageCircle, Calendar, HelpCircle, ShieldCheck } f
 
 export function FloatingWhatsAppWidget() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const sessionContext = useSession();
+  const session = sessionContext?.data;
+  const status = sessionContext?.status;
+
+  const [mounted, setMounted] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState("919717228528");
   const [isOpen, setIsOpen] = useState(false);
   const [hasDismissedPrompt, setHasDismissedPrompt] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
   const [isDoctorDomain, setIsDoctorDomain] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       const host = window.location.hostname.toLowerCase();
       // If accessed via a subdomain like dr-vinay.gyrex.in or a custom domain, mark as doctor site
@@ -79,7 +83,7 @@ export function FloatingWhatsAppWidget() {
     fetchNumber();
   }, []);
 
-  if (isInternalApp || !isLoaded) {
+  if (!mounted || isInternalApp || !isLoaded) {
     return null;
   }
 

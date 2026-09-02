@@ -62,7 +62,6 @@ const CATEGORIES = [
 ];
 
 export default function SupportPage() {
-  const { data: session } = useSession();
   const { toast } = useToast();
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
