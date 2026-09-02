@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { X, Sparkles, Send, MessageCircle, Calendar, HelpCircle, ShieldCheck } from "lucide-react";
 
 export function FloatingWhatsAppWidget() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [whatsappNumber, setWhatsappNumber] = useState("919717228528");
   const [isOpen, setIsOpen] = useState(false);
   const [hasDismissedPrompt, setHasDismissedPrompt] = useState(false);
@@ -25,16 +27,37 @@ export function FloatingWhatsAppWidget() {
     }
   }, []);
 
-  // Exclude SaaS platform widget on doctor sites, dashboard, admin, and editor
-  const isInternalApp =
-    isDoctorDomain ||
-    pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/website") ||
-    pathname?.startsWith("/sites") ||
-    pathname?.startsWith("/admin") ||
-    pathname?.startsWith("/affiliates") ||
-    pathname?.startsWith("/login") ||
-    pathname?.startsWith("/signup");
+  const DASHBOARD_ROUTES = [
+    "/dashboard",
+    "/gbp",
+    "/appointments",
+    "/billing",
+    "/campaigns",
+    "/chatbot",
+    "/leads",
+    "/local-seo",
+    "/patients",
+    "/reports",
+    "/reviews",
+    "/settings",
+    "/staff",
+    "/subscription",
+    "/website",
+    "/whatsapp",
+    "/ai-agents",
+    "/admin",
+    "/sites",
+    "/affiliates",
+    "/login",
+    "/signup",
+    "/ai-receptionist-demo"
+  ];
+
+  const isAuthenticated = status === "authenticated" || Boolean(session);
+  const isDashboardRoute = DASHBOARD_ROUTES.some((route) => pathname?.startsWith(route));
+
+  // Exclude SaaS marketing widget when authenticated or on internal dashboard routes or doctor custom domains
+  const isInternalApp = isDoctorDomain || isAuthenticated || isDashboardRoute;
 
   useEffect(() => {
     // Fetch active platform WhatsApp number configured in SuperAdmin settings
