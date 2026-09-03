@@ -13,8 +13,11 @@ export async function POST(req: Request) {
 
     const validatedData = registerSchema.parse(body);
 
+    const normalizedEmail = validatedData.email.trim().toLowerCase();
+    const normalizedPassword = validatedData.password.trim();
+
     // Hash password
-    const hashedPassword = await hash(validatedData.password, 12);
+    const hashedPassword = await hash(normalizedPassword, 12);
 
     try {
       // Find affiliate if ref code provided
@@ -46,8 +49,8 @@ export async function POST(req: Request) {
       // Create doctor atomically
       const doctor = await prisma.doctor.create({
         data: {
-          name: validatedData.name,
-          email: validatedData.email,
+          name: validatedData.name.trim(),
+          email: normalizedEmail,
           password: hashedPassword,
           phone: validatedData.phone,
           specialty: validatedData.specialty,
@@ -59,8 +62,8 @@ export async function POST(req: Request) {
           subscriptionExpiry: trialExpiry,
           practitioners: {
             create: {
-              name: validatedData.name,
-              email: validatedData.email,
+              name: validatedData.name.trim(),
+              email: normalizedEmail,
               phone: validatedData.phone,
               specialty: validatedData.specialty,
               isOwner: true,
@@ -81,14 +84,14 @@ export async function POST(req: Request) {
 
       await prisma.emailVerificationToken.create({
         data: {
-          email: validatedData.email,
+          email: normalizedEmail,
           token: hashedToken,
           expiresAt,
         },
       });
 
       // Send Verification Email via Resend asynchronously
-      sendVerificationEmail(validatedData.email, rawToken, validatedData.name).catch((err) =>
+      sendVerificationEmail(normalizedEmail, rawToken, validatedData.name.trim()).catch((err) =>
         console.error("Failed to send verification email on register:", err)
       );
 

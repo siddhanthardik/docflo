@@ -52,9 +52,14 @@ function LoginContent() {
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: searchParams.get("email") || "",
+    password: ""
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [touched, setTouched] = useState<Touched>({});
+  const [touched, setTouched] = useState<Touched>(
+    searchParams.get("email") ? { email: true } : {}
+  );
 
   // ── Validators ──────────────────────────────────────────────────────────────
   const validateEmail = (v: string): string | undefined => {
@@ -108,9 +113,12 @@ function LoginContent() {
 
     setLoading(true);
     try {
+      const cleanEmail = formData.email.trim().toLowerCase();
+      const cleanPassword = formData.password.trim();
+
       const result = await signIn("credentials", {
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
+        email: cleanEmail,
+        password: cleanPassword,
         redirect: false,
       });
 
@@ -121,19 +129,22 @@ function LoginContent() {
           variant: "destructive",
         });
       } else {
-        const res = await fetch("/api/auth/session");
-        const session = await res.json();
-        const role = session?.user?.role;
-        if (isSetup) {
-          window.location.href = "/settings?welcome=1";
-        } else if (
-          role === "SUPERADMIN" || role === "ADMIN" || role === "SALES" ||
-          role === "ACCOUNTS" || role === "MARKETING"
-        ) {
-          window.location.href = "/admin";
-        } else {
-          window.location.href = "/dashboard";
-        }
+        let redirectTarget = isSetup ? "/settings?welcome=1" : "/dashboard";
+        try {
+          const res = await fetch("/api/auth/session");
+          if (res.ok) {
+            const session = await res.json();
+            const role = session?.user?.role;
+            if (
+              role === "SUPERADMIN" || role === "ADMIN" || role === "SALES" ||
+              role === "ACCOUNTS" || role === "MARKETING"
+            ) {
+              redirectTarget = "/admin";
+            }
+          }
+        } catch (_) {}
+
+        window.location.assign(redirectTarget);
       }
     } catch {
       toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });

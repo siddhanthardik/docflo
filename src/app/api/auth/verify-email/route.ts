@@ -20,7 +20,9 @@ export async function POST(req: Request) {
       where: { token: hashedToken },
     });
 
-    if (!verificationRecord || verificationRecord.email !== email || verificationRecord.expiresAt < new Date()) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!verificationRecord || verificationRecord.email.trim().toLowerCase() !== cleanEmail || verificationRecord.expiresAt < new Date()) {
       return NextResponse.json(
         { error: "Invalid or expired verification token" },
         { status: 400 }
@@ -29,9 +31,9 @@ export async function POST(req: Request) {
 
     const now = new Date();
     await Promise.all([
-      prisma.doctor.updateMany({ where: { email }, data: { emailVerified: now } }),
-      prisma.staffMember.updateMany({ where: { email }, data: { emailVerified: now } }),
-      prisma.platformUser.updateMany({ where: { email }, data: { emailVerified: now } })
+      prisma.doctor.updateMany({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, data: { emailVerified: now } }),
+      prisma.staffMember.updateMany({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, data: { emailVerified: now } }),
+      prisma.platformUser.updateMany({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, data: { emailVerified: now } })
     ]);
 
     // Delete used verification token

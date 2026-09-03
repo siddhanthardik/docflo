@@ -112,6 +112,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         };
 
+        let userFound = false;
+
         // 0. Try to find a Platform User first (SaaS Staff)
         const platformUser = await prisma.platformUser.findFirst({
           where: { email: { equals: cleanEmail, mode: "insensitive" } },
@@ -124,13 +126,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             isActive: true,
             createdAt: true,
             emailVerified: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
           },
         });
 
         if (platformUser && platformUser.isActive) {
+          userFound = true;
           await checkLockout(platformUser, "PLATFORM");
           if (platformUser.password) {
-            const isValid = await compare(password, platformUser.password);
+            let isValid = await compare(password, platformUser.password);
+            if (!isValid && password.trim() !== password) {
+              isValid = await compare(password.trim(), platformUser.password);
+            }
             if (isValid) {
               try {
                 await prisma.platformUser.update({ where: { id: platformUser.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
@@ -161,13 +169,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: true,
             createdAt: true,
             emailVerified: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
           },
         });
 
         if (doctor) {
+          userFound = true;
           await checkLockout(doctor, "CLINIC");
           if (doctor.password) {
-            const isValid = await compare(password, doctor.password);
+            let isValid = await compare(password, doctor.password);
+            if (!isValid && password.trim() !== password) {
+              isValid = await compare(password.trim(), doctor.password);
+            }
             if (isValid) {
               try {
                 await prisma.doctor.update({ where: { id: doctor.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
@@ -199,13 +213,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             doctorId: true,
             createdAt: true,
             emailVerified: true,
+            failedLoginAttempts: true,
+            lockedUntil: true,
           },
         });
 
         if (staff) {
+          userFound = true;
           await checkLockout(staff, "STAFF");
           if (staff.password) {
-            const isValid = await compare(password, staff.password);
+            let isValid = await compare(password, staff.password);
+            if (!isValid && password.trim() !== password) {
+              isValid = await compare(password.trim(), staff.password);
+            }
             if (isValid) {
               try {
                 await prisma.staffMember.update({ where: { id: staff.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
@@ -226,8 +246,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await handleFailedLogin(staff, prisma.staffMember, "STAFF");
         }
 
-        // If nothing matched
-        await logActivity({ userId: cleanEmail, userType: "UNKNOWN", action: "LOGIN_FAILED_NOT_FOUND", ipAddress, userAgent });
+        // If user was not found at all, log NOT_FOUND
+        if (!userFound) {
+          await logActivity({ userId: cleanEmail, userType: "UNKNOWN", action: "LOGIN_FAILED_NOT_FOUND", ipAddress, userAgent });
+        }
         throw new Error("Invalid credentials");
       },
     }),

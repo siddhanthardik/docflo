@@ -24,7 +24,9 @@ export async function POST(req: Request) {
       where: { token: hashedToken },
     });
 
-    if (!resetRecord || resetRecord.email !== email || resetRecord.used || resetRecord.expiresAt < new Date()) {
+    const cleanEmail = (email || "").trim().toLowerCase();
+
+    if (!resetRecord || resetRecord.email.trim().toLowerCase() !== cleanEmail || resetRecord.used || resetRecord.expiresAt < new Date()) {
       return NextResponse.json(
         { error: "Invalid or expired reset token" },
         { status: 400 }
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const hashedPassword = await hash(password, 12);
+    const hashedPassword = await hash(password.trim(), 12);
 
     // Update user password and mark token as used
     // Try PlatformUser, Doctor, StaffMember
@@ -48,21 +50,21 @@ export async function POST(req: Request) {
     let userId = "";
     let userType: "PLATFORM" | "CLINIC" | "STAFF" | "UNKNOWN" = "UNKNOWN";
 
-    const platformUser = await prisma.platformUser.findUnique({ where: { email } });
+    const platformUser = await prisma.platformUser.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
     if (platformUser) {
       await prisma.platformUser.update({ where: { id: platformUser.id }, data: { password: hashedPassword, failedLoginAttempts: 0, lockedUntil: null } });
       updated = true;
       userId = platformUser.id;
       userType = "PLATFORM";
     } else {
-      const doctor = await prisma.doctor.findUnique({ where: { email } });
+      const doctor = await prisma.doctor.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
       if (doctor) {
         await prisma.doctor.update({ where: { id: doctor.id }, data: { password: hashedPassword, failedLoginAttempts: 0, lockedUntil: null } });
         updated = true;
         userId = doctor.id;
         userType = "CLINIC";
       } else {
-        const staff = await prisma.staffMember.findUnique({ where: { email } });
+        const staff = await prisma.staffMember.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
         if (staff) {
           await prisma.staffMember.update({ where: { id: staff.id }, data: { password: hashedPassword, failedLoginAttempts: 0, lockedUntil: null } });
           updated = true;

@@ -17,10 +17,10 @@ export async function POST(req: Request) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if user exists (Platform, Doctor, or Staff)
-    const platformUser = await prisma.platformUser.findUnique({ where: { email: cleanEmail } });
-    const doctor = await prisma.doctor.findUnique({ where: { email: cleanEmail } });
-    const staff = await prisma.staffMember.findUnique({ where: { email: cleanEmail } });
+    // Check if user exists (Platform, Doctor, or Staff) with case-insensitivity
+    const platformUser = await prisma.platformUser.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
+    const doctor = await prisma.doctor.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
+    const staff = await prisma.staffMember.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } } });
 
     const userType = platformUser ? "PLATFORM" : doctor ? "CLINIC" : staff ? "STAFF" : "UNKNOWN";
     const userId = platformUser?.id || doctor?.id || staff?.id || cleanEmail;

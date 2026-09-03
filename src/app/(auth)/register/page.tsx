@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Activity, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2, Check, X, Mail, Send, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -204,6 +205,7 @@ export function RegisterPage() {
 
     setLoading(true);
     const targetEmail = formData.email.trim().toLowerCase();
+    const targetPassword = formData.password.trim();
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -211,13 +213,33 @@ export function RegisterPage() {
         body: JSON.stringify({
           name: formData.name.trim(),
           email: targetEmail,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
+          password: targetPassword,
+          confirmPassword: formData.confirmPassword.trim(),
           affiliateCode: searchParams.get("ref") || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
+
+      // Auto-login newly registered doctor directly into dashboard
+      try {
+        const loginRes = await signIn("credentials", {
+          email: targetEmail,
+          password: targetPassword,
+          redirect: false,
+        });
+
+        if (loginRes?.ok && !loginRes?.error) {
+          toast({
+            title: "Welcome to Gyrex! 🎉",
+            description: "Account created successfully. Loading your dashboard...",
+          });
+          window.location.assign("/dashboard");
+          return;
+        }
+      } catch (autoLoginErr) {
+        console.warn("Auto-login failed after registration, falling back to verification view:", autoLoginErr);
+      }
 
       setRegisteredEmail(targetEmail);
       setIsSubmitted(true);

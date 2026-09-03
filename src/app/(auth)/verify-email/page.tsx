@@ -11,7 +11,7 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
-  const { update } = useSession();
+  const { data: session, update } = useSession();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -34,11 +34,16 @@ function VerifyEmailContent() {
         const data = await res.json();
         if (res.ok) {
           setStatus("success");
-          // Trigger JWT callback to re-read emailVerified from DB (secure, works cross-device)
-          await update();
-          // Hard redirect — bypasses App Router cache so the fresh JWT cookie is read immediately
+          try {
+            await update();
+          } catch (_) {}
+
           setTimeout(() => {
-            window.location.href = "/dashboard";
+            if (session?.user?.id) {
+              window.location.assign("/dashboard");
+            } else {
+              window.location.assign(`/login?verified=1&email=${encodeURIComponent(email || "")}`);
+            }
           }, 2000);
         } else {
           setStatus("error");
@@ -52,7 +57,7 @@ function VerifyEmailContent() {
     }
 
     verify();
-  }, [token, email]);
+  }, [token, email, session]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -82,13 +87,15 @@ function VerifyEmailContent() {
               </p>
               <div className="pt-4">
                 <Link
-                  href="/dashboard"
+                  href={session?.user?.id ? "/dashboard" : `/login?verified=1&email=${encodeURIComponent(email || "")}`}
                   className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 inline-flex items-center justify-center gap-2 transition-all"
                 >
-                  Go to Dashboard <ArrowRight className="w-4 h-4" />
+                  {session?.user?.id ? "Go to Dashboard" : "Sign In Now"} <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-              <p className="text-[11px] text-slate-400">Redirecting automatically in 3 seconds...</p>
+              <p className="text-[11px] text-slate-400">
+                {session?.user?.id ? "Redirecting automatically to Dashboard in 2 seconds..." : "Redirecting to Sign In..."}
+              </p>
             </div>
           )}
 
