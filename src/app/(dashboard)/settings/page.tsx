@@ -6,25 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
-
-const specialtiesList = [
-  "General Medicine",
-  "Pediatrics",
-  "Cardiology",
-  "Dermatology",
-  "Orthopedics",
-  "Neurology",
-  "Psychiatry",
-  "Oncology",
-  "Gastroenterology",
-  "Endocrinology",
-  "Ophthalmology",
-  "ENT (Otolaryngology)",
-  "Urology",
-  "Gynecology & Obstetrics",
-  "Dentistry",
-  "Other"
-];
+import { SPECIALTIES } from "@/lib/specialties";
 
 const getPhoneParts = (fullPhone: string) => {
   for (const c of COUNTRIES) {
@@ -181,7 +163,7 @@ export default function SettingsProfilePage() {
                     <SelectValue placeholder="Select specialty" />
                   </SelectTrigger>
                   <SelectContent>
-                    {specialtiesList.map(s => (
+                    {SPECIALTIES.map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>

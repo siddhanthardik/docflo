@@ -301,29 +301,69 @@ class WhatsAppManager {
 
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isSuperAdmin = doctorId === 'PLATFORM_SUPERADMIN';
+          const isRegistered = Boolean(state.creds?.registered || state.creds?.me);
 
-          // Critical Rule: Never purge SuperAdmin credentials automatically on transient disconnects!
-          // Only true explicit logout (user unlinked device from their phone) should ever drop non-superadmin sessions.
+          // 1. Check if disconnection was due to QR pairing timeout (unscanned QR code)
+          const isQrTimeout =
+            statusCode === DisconnectReason.timedOut ||
+            statusCode === 408 ||
+            Boolean((lastDisconnect?.error as Error)?.message?.includes('QR refs attempts ended'));
+
+          // If session was never paired/registered, DO NOT auto-reconnect on QR timeout!
+          if (!isRegistered) {
+            console.log(`[WhatsAppManager] QR pairing session closed for ${doctorId} (code ${statusCode}, qrTimeout: ${isQrTimeout}). Halting auto-reconnect until user requests fresh QR.`);
+            this.qrCodes.delete(doctorId);
+            this.reconnectAttempts.delete(doctorId);
+            return;
+          }
+
+          // 2. For registered accounts that dropped connection:
           const isPermanentLogout = !isSuperAdmin && statusCode === DisconnectReason.loggedOut;
           const shouldReconnect = isSuperAdmin || !isPermanentLogout;
           
-          console.log(`[WhatsAppManager] Connection closed for ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect} (isSuperAdmin: ${isSuperAdmin})`);
+          console.log(`[WhatsAppManager] Connection closed for verified session ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect} (isSuperAdmin: ${isSuperAdmin})`);
           
           if (shouldReconnect) {
             const currentAttempts = (this.reconnectAttempts.get(doctorId) || 0) + 1;
+
+            // Cap retries at 10 attempts to avoid runaway background loops
+            if (currentAttempts > 10) {
+              console.warn(`[WhatsAppManager] Maximum reconnection attempts (10) reached for ${doctorId}. Pausing auto-reconnect.`);
+              this.reconnectAttempts.delete(doctorId);
+
+              logSystemError(new Error(`WhatsApp max reconnection attempts reached for ${doctorId}`), {
+                path: 'whatsapp-manager:reconnect',
+                method: 'MAX_RECONNECT_EXCEEDED',
+                metadata: { doctorId, statusCode }
+              });
+
+              if (!isSuperAdmin) {
+                prisma.notification.create({
+                  data: {
+                    doctorId,
+                    title: "WhatsApp Reconnect Paused ⚠️",
+                    message: "Unable to reconnect to WhatsApp after multiple attempts. Please check your phone internet connection or re-link via Settings.",
+                    type: "WARNING",
+                    actionUrl: "/settings/whatsapp",
+                  }
+                }).catch(() => {});
+              }
+              return;
+            }
+
             this.reconnectAttempts.set(doctorId, currentAttempts);
 
             // Exponential backoff: 2s, 3s, 5s, 8s, 12s, max 25s
             const baseDelay = statusCode === DisconnectReason.restartRequired ? 1500 : 2500;
             const delay = Math.min(baseDelay * Math.pow(1.3, Math.min(currentAttempts, 8)), 25000);
 
-            console.log(`[WhatsAppManager] Scheduling auto-reconnect for ${doctorId} (attempt #${currentAttempts}) in ${Math.round(delay)}ms...`);
+            console.log(`[WhatsAppManager] Scheduling auto-reconnect for ${doctorId} (attempt #${currentAttempts}/10) in ${Math.round(delay)}ms...`);
             
             setTimeout(() => {
               this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e));
             }, delay);
           } else {
-            // Terminal failure for clinic doctor: Wipe session files on disk so next attempt generates fresh QR
+            // Terminal failure for clinic doctor (explicitly logged out on mobile phone)
             console.log(`[WhatsAppManager] Terminal auth failure for ${doctorId} (code ${statusCode}). Purging session on disk.`);
             this.clearSession(doctorId);
             
@@ -2054,7 +2094,14 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
   hasSavedSession(doctorId: string): boolean {
     const sessionDir = getDoctorSessionDir(doctorId);
     const credsPath = path.join(sessionDir, 'creds.json');
-    return fs.existsSync(credsPath);
+    if (!fs.existsSync(credsPath)) return false;
+    try {
+      const credsRaw = fs.readFileSync(credsPath, 'utf8');
+      const parsed = JSON.parse(credsRaw);
+      return Boolean(parsed?.registered || parsed?.me);
+    } catch (_) {
+      return false;
+    }
   }
 
   async logout(doctorId: string) {
@@ -2216,11 +2263,25 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
             const credsPath = path.join(authDir, doctorId, 'creds.json');
 
             if (fs.existsSync(credsPath)) {
+              // Only auto-revive verified, registered sessions — NEVER revive uncompleted QR pairing attempts
+              try {
+                const credsRaw = fs.readFileSync(credsPath, "utf8");
+                const parsedCreds = JSON.parse(credsRaw);
+                const isRegistered = Boolean(parsedCreds?.registered || parsedCreds?.me);
+                if (!isRegistered) {
+                  // Unfinished QR pairing left on disk, do not auto-revive
+                  continue;
+                }
+              } catch (_) {
+                // Unreadable or corrupted creds, skip
+                continue;
+              }
+
               const isConnected = this.isConnected(doctorId);
               const isConnecting = this.connectingDoctors.has(doctorId);
 
               if (!isConnected && !isConnecting) {
-                console.log(`[WhatsAppManager Watchdog] Session exists for ${doctorId} but socket is inactive. Reviving connection...`);
+                console.log(`[WhatsAppManager Watchdog] Verified session exists for ${doctorId} but socket is inactive. Reviving connection...`);
                 this.connect(doctorId).catch(e => console.error(`[WhatsAppManager Watchdog] Failed to auto-revive ${doctorId}:`, e));
               }
             }

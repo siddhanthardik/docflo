@@ -50,6 +50,36 @@ const LOCATION_READ_MASK = [
   "profile"
 ].join(",");
 
+export function sanitizeGbpPostSummary(summary: string): { cleanSummary: string; hadPhone: boolean } {
+  if (!summary) return { cleanSummary: "", hadPhone: false };
+
+  // Google strictly bans phone numbers in post description (phone-stuffing policy).
+  // Detect contact patterns with phone labels or 10+ digit phone numbers
+  const phonePatternWithLabels = /(?:📞|☎️|📱|Tel|Phone|Call|Mobile|Contact)(?:\s*(?:us|today|now)?)?(?:\s*(?:at|on|:))?\s*(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,5}/gi;
+  const rawPhonePattern = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{4,5}/g;
+
+  let hadPhone = false;
+  let clean = summary;
+
+  if (phonePatternWithLabels.test(clean)) {
+    hadPhone = true;
+    clean = clean.replace(phonePatternWithLabels, "Tap 'Call Now' below to reach our team.");
+  } else if (rawPhonePattern.test(clean)) {
+    const matches = clean.match(rawPhonePattern);
+    if (matches && matches.some((m) => m.replace(/\D/g, "").length >= 10)) {
+      hadPhone = true;
+      clean = clean.replace(rawPhonePattern, "");
+    }
+  }
+
+  clean = clean
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n\s*\n/g, "\n\n")
+    .trim();
+
+  return { cleanSummary: clean, hadPhone };
+}
+
 export class GBPService {
   private accessToken: string;
   private doctorId: string;
@@ -575,25 +605,30 @@ export class GBPService {
         throw new Error("Posts can only be created for OAuth-connected GBP locations");
       }
 
+      // Pre-flight sanitize summary to prevent Google content filter rejections
+      const { cleanSummary, hadPhone } = sanitizeGbpPostSummary(summary);
+      let effectiveCtaType = ctaType;
+
+      // If user included a phone number in text and had no action button, auto-attach "Call Now"
+      if (hadPhone && (!effectiveCtaType || effectiveCtaType === "NONE")) {
+        effectiveCtaType = "CALL";
+      }
+
       // Build the request body for GBP API
       const body: any = {
-        summary,
+        summary: cleanSummary || summary,
         languageCode,
         topicType: topicType || "STANDARD",
       };
 
       // Add Media (Image)
-      // Note: Google requires a public URL. Localhost URLs will fail on the Google side,
-      // but we send it anyway so it works when deployed.
       if (imageUrl) {
-        // GBP API requires absolute public URLs
         let fullUrl = imageUrl;
         if (imageUrl.startsWith("/")) {
-           // We prepend the app URL if it's a relative path from our own upload API
-           const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
-           fullUrl = `${baseUrl}${imageUrl}`;
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+          fullUrl = `${baseUrl}${imageUrl}`;
         }
-        
+
         body.media = [
           {
             mediaFormat: "PHOTO",
@@ -603,11 +638,17 @@ export class GBPService {
       }
 
       // Add Call to Action
-      if (ctaType && ctaType !== "NONE" && ctaLink) {
-        body.callToAction = {
-          actionType: ctaType,
-          url: ctaLink,
-        };
+      if (effectiveCtaType && effectiveCtaType !== "NONE") {
+        if (effectiveCtaType === "CALL") {
+          body.callToAction = {
+            actionType: "CALL",
+          };
+        } else if (ctaLink) {
+          body.callToAction = {
+            actionType: effectiveCtaType,
+            url: ctaLink,
+          };
+        }
       }
 
       const response = await fetch(
@@ -624,7 +665,18 @@ export class GBPService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("GBP createPost error:", response.status, errorText);
-        throw new Error(`Failed to create post on Google Business Profile: ${errorText}`);
+
+        let friendlyMessage = `Failed to create post on Google Business Profile: ${errorText}`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed?.error?.code === 500 || parsed?.error?.status === "INTERNAL") {
+            friendlyMessage = "Google rejected this post (Google Content Policy Error). Google does not allow phone numbers or unverified links in the post text body. Please remove any phone numbers from the text and use the 'Call Now' button instead.";
+          } else if (parsed?.error?.message) {
+            friendlyMessage = `Google Business Profile error: ${parsed.error.message}`;
+          }
+        } catch (_) {}
+
+        throw new Error(friendlyMessage);
       }
       return await response.json();
     } catch (error) {

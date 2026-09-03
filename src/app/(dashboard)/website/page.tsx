@@ -73,6 +73,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SPECIALTIES } from "@/lib/specialties";
 import { useToast } from "@/components/ui/use-toast";
 
 const THEME_OPTIONS = [
@@ -1966,14 +1967,20 @@ export default function ElementorComposerPage() {
                         <div className="space-y-1.5">
                           <label className="font-bold text-slate-700">Specialty</label>
                           <Input
+                            list="doctor-specialties-datalist"
                             value={siteData.doctor?.specialty || ""}
                             onChange={(e) => {
                               const updatedDoc = { ...(siteData.doctor || { name: "" }), specialty: e.target.value };
                               setSiteData({ ...siteData, doctor: updatedDoc });
                             }}
-                            placeholder="e.g. Pediatrician"
+                            placeholder="Select or type specialty"
                             className="h-9 text-xs rounded-xl bg-white"
                           />
+                          <datalist id="doctor-specialties-datalist">
+                            {SPECIALTIES.filter(s => s !== "Other").map((s) => (
+                              <option key={s} value={s} />
+                            ))}
+                          </datalist>
                         </div>
                         <div className="space-y-1.5">
                           <label className="font-bold text-slate-700">Degrees &amp; Certifications</label>

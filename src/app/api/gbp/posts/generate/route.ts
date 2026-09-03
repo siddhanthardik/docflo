@@ -44,14 +44,16 @@ VERIFIED CLINIC PROFILE (MANDATORY STRICT GROUNDING):
 - Doctor Name: ${doctorNameStr || "Our Doctor"}
 - Clinic Name: ${clinicNameStr}
 - Specialty / Focus: ${specialtyStr || "Healthcare Services"}
-${phoneStr ? `- Verified Booking Phone Number: ${phoneStr}` : ""}
 ${locationStr ? `- Verified Clinic Location: ${locationStr}` : ""}
 
-STRICT ANTI-HALLUCINATION RULES:
+STRICT ANTI-HALLUCINATION & GOOGLE POLICY RULES:
 1. You MUST ONLY write on behalf of ${doctorNameStr ? doctorNameStr + " and " : ""}${clinicNameStr}.
-2. ZERO THIRD-PARTY HALLUCINATIONS: NEVER invent or mention external/third-party clinic names (e.g. Krystal Clinic, Sri Sai Children Clinic, etc.), fake phone numbers, or unverified external websites.
-3. If an image is provided: Read text on the image carefully. Align with visual themes and text. Do NOT replace the doctor's name or clinic details with any other external business name.
-4. Call to Action: If adding a contact line, ONLY use the verified phone (${phoneStr || "our front desk"}) or state "Visit us at ${clinicNameStr}". Never invent external URLs or numbers.
+2. ZERO THIRD-PARTY HALLUCINATIONS: NEVER invent or mention external/third-party clinic names (e.g. Krystal Clinic, Sri Sai Children Clinic, etc.) or fake information.
+3. GOOGLE CONTENT POLICY COMPLIANCE (MANDATORY):
+   - NEVER include raw phone numbers (e.g., +91..., 9876543210, etc.) in the text of the post. Google strictly prohibits phone numbers in post text and will reject the post for "phone stuffing".
+   - NEVER include raw website URLs in the post text.
+   - For the Call to Action, encourage patients to use the button, for example: "Tap 'Call Now' below to book your appointment with ${doctorNameStr || "our clinic"}" or "Visit us at ${clinicNameStr} or connect with us today!".
+4. If an image is provided: Read text on the image carefully. Align with visual themes and text. Do NOT replace the doctor's name or clinic details with any other external business name.
 `;
 
     let prompt = "";
@@ -62,7 +64,7 @@ User Request / Topic: ${topic || "Analyze the image content and write an engagin
 Tone: ${tone}
 ${keywordsStr}
 
-Write an engaging, warm, professional post (1-2 paragraphs, max 1200 characters) accurately representing the attached image. Include a clear call to action (like 'Call us today' or 'Book a consultation'). Do not use placeholders or third-party clinic names.`;
+Write an engaging, warm, professional post (1-2 paragraphs, max 1000 characters) accurately representing the attached image. Include a clear call to action (e.g., 'Tap Call Now to speak with our team' or 'Visit us today'). REMEMBER: DO NOT write any phone numbers in the text.`;
     } else {
       if (!topic) {
         return NextResponse.json({ error: "Topic or image is required for AI generation" }, { status: 400 });
@@ -73,7 +75,7 @@ Topic: ${topic}
 Tone: ${tone}
 ${keywordsStr}
 
-Write an engaging, warm, professional post (1-2 paragraphs, max 1200 characters). Include a clear call to action (like 'Call us today' or 'Book a consultation'). Do not use placeholders or third-party clinic names.`;
+Write an engaging, warm, professional post (1-2 paragraphs, max 1000 characters). Include a clear call to action (e.g., 'Tap Call Now to book your consultation' or 'Visit our clinic today'). REMEMBER: DO NOT write any phone numbers in the text.`;
     }
 
     let aiResult;

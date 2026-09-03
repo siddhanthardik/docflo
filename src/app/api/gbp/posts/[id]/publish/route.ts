@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { GBPService } from "@/services/gbp.service";
+import { GBPService, sanitizeGbpPostSummary } from "@/services/gbp.service";
 import { EntitlementService } from "@/services/entitlement.service";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import crypto from "crypto";
@@ -73,14 +73,22 @@ export async function POST(
       fullLocationName = `${insights.accountName}/${locPart}`;
     }
 
+    // Pre-flight sanitize content to ensure Google policy compliance
+    const { cleanSummary, hadPhone } = sanitizeGbpPostSummary(post.content);
+    let effectiveCtaType = post.ctaType || "NONE";
+    if (hadPhone && effectiveCtaType === "NONE") {
+      effectiveCtaType = "CALL";
+    }
+    const finalContent = cleanSummary || post.content;
+
     // 3. Publish to Google Business Profile via API
     const gbpService = new GBPService(accessToken, doctorId);
     const res = await gbpService.createPost(
       fullLocationName,
-      post.content,
+      finalContent,
       post.postType || "STANDARD",
       post.imageUrl || undefined,
-      post.ctaType || undefined,
+      effectiveCtaType,
       post.ctaLink || undefined
     );
 
@@ -88,6 +96,8 @@ export async function POST(
     const updatedPost = await prisma.gBPPost.update({
       where: { id: post.id },
       data: {
+        content: finalContent,
+        ctaType: effectiveCtaType as any,
         status: "PUBLISHED",
         publishedAt: new Date(),
         gbpPostId: res.name,

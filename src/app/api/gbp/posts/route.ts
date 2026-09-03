@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { GBPService } from "@/services/gbp.service";
+import { GBPService, sanitizeGbpPostSummary } from "@/services/gbp.service";
 import { EntitlementService } from "@/services/entitlement.service";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import crypto from "crypto";
@@ -39,6 +39,14 @@ export async function POST(req: Request) {
     let status: "DRAFT" | "SCHEDULED" | "PUBLISHED" = scheduledDate ? "SCHEDULED" : "PUBLISHED";
     let publishedAt: Date | null = scheduledDate ? null : new Date();
 
+    // Pre-flight sanitize content to ensure Google policy compliance
+    const { cleanSummary, hadPhone } = sanitizeGbpPostSummary(content);
+    let effectiveCtaType = ctaType || "NONE";
+    if (hadPhone && effectiveCtaType === "NONE") {
+      effectiveCtaType = "CALL";
+    }
+    const finalContent = cleanSummary || content;
+
     // If publishing live right now, call Google Business Profile API
     if (!scheduledDate) {
       if (!authResult || !authResult.account || !authResult.accessToken) {
@@ -68,10 +76,10 @@ export async function POST(req: Request) {
         const gbpService = new GBPService(accessToken, doctorId);
         const res = await gbpService.createPost(
           fullLocationName,
-          content,
+          finalContent,
           postType || "STANDARD",
           imageUrl,
-          ctaType,
+          effectiveCtaType,
           ctaLink
         );
         gbpPostId = res.name;
@@ -91,10 +99,10 @@ export async function POST(req: Request) {
         doctorId,
         gbpAccountId: authResult?.account?.id,
         title,
-        content,
+        content: finalContent,
         postType: postType || "STANDARD",
         imageUrl,
-        ctaType: ctaType || "NONE",
+        ctaType: effectiveCtaType as any,
         ctaLink,
         scheduledFor: scheduledDate ? new Date(scheduledDate) : null,
         publishedAt,

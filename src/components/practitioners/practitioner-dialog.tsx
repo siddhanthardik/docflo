@@ -17,12 +17,7 @@ interface PractitionerDialogProps {
   onSuccess: () => void;
 }
 
-const specialtiesList = [
-  "General Medicine", "Pediatrics", "Cardiology", "Dermatology", "Orthopedics",
-  "Neurology", "Psychiatry", "Oncology", "Gastroenterology", "Endocrinology",
-  "Ophthalmology", "ENT (Otolaryngology)", "Urology", "Gynecology & Obstetrics",
-  "Dentistry", "Other"
-];
+import { SPECIALTIES, isStandardSpecialty } from "@/lib/specialties";
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -50,8 +45,8 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         name: practitioner.name || "",
         email: practitioner.email || "",
         phone: practitioner.phone || "",
-        specialty: specialtiesList.includes(practitioner.specialty) ? practitioner.specialty : (practitioner.specialty ? "Other" : ""),
-        otherSpecialty: !specialtiesList.includes(practitioner.specialty) ? practitioner.specialty : "",
+        specialty: isStandardSpecialty(practitioner.specialty) ? practitioner.specialty : (practitioner.specialty ? "Other" : ""),
+        otherSpecialty: !isStandardSpecialty(practitioner.specialty) ? practitioner.specialty : "",
         qualification: practitioner.qualification || "",
         registrationNumber: practitioner.registrationNumber || "",
         consultationFee: practitioner.consultationFee !== null && practitioner.consultationFee !== undefined ? practitioner.consultationFee.toString() : "",
@@ -187,7 +182,7 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                 >
                   <SelectTrigger className={inputClass}><SelectValue placeholder="Select specialty" /></SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {specialtiesList.map(s => (
+                    {SPECIALTIES.map(s => (
                       <SelectItem key={s} value={s} className="text-xs sm:text-sm">{s}</SelectItem>
                     ))}
                   </SelectContent>
