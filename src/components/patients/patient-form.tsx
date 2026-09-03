@@ -30,6 +30,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 
 interface PatientFormProps {
@@ -158,21 +159,21 @@ export function PatientForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-[95vw] sm:w-full max-w-[780px] p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
+        className="w-[95vw] sm:max-w-2xl md:max-w-3xl p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
       >
-        {/* Compact Aesthetic Header */}
-        <div className="px-5 sm:px-6 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 flex items-center justify-between">
+        {/* Aesthetic Header */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-indigo-500/25 shrink-0">
-              <UserPlus className="w-4 h-4 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+              <UserPlus className="w-5 h-5 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
                 {mode === "create" ? "Add New Patient" : "Edit Patient Profile"}
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 font-normal leading-tight">
+              <DialogDescription className="text-xs text-slate-500 font-normal leading-tight mt-0.5">
                 {mode === "create"
-                  ? "Register a patient into your clinic CRM"
+                  ? "Register a patient into your clinic CRM records"
                   : "Update and manage demographic records"}
               </DialogDescription>
             </div>
@@ -181,14 +182,14 @@ export function PatientForm({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* 2-Column Balanced Grid - Fits on screen with ZERO vertical scroll */}
+        {/* Spacious Balanced 2-Column Form */}
         <form
           id="patient-form"
           onSubmit={(e) => {
@@ -196,19 +197,19 @@ export function PatientForm({
             e.stopPropagation();
             handleSubmit(e);
           }}
-          className="px-5 sm:px-6 py-4 max-h-[80vh] sm:max-h-none overflow-y-auto sm:overflow-visible"
+          className="px-6 py-5 max-h-[80vh] sm:max-h-none overflow-y-auto sm:overflow-visible"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3.5">
-            {/* ════════════ LEFT COLUMN: CONTACT & IDENTITY ════════════ */}
-            <div className="space-y-3.5">
-              {/* Row 1: Name Fields */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <Label htmlFor="firstName" className="text-[11px] font-semibold text-slate-700 flex items-center gap-0.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-7 gap-y-4">
+            {/* ════════════ LEFT COLUMN: IDENTITY & CONTACT ════════════ */}
+            <div className="space-y-4">
+              {/* Row 1: First & Last Name */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName" className="text-xs font-semibold text-slate-700 flex items-center gap-0.5">
                     First Name <span className="text-rose-500">*</span>
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       id="firstName"
                       value={formData.firstName}
@@ -217,17 +218,17 @@ export function PatientForm({
                       }
                       placeholder="Rahul"
                       required
-                      className="pl-8 h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                      className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="lastName" className="text-[11px] font-semibold text-slate-700 flex items-center gap-0.5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName" className="text-xs font-semibold text-slate-700 flex items-center gap-0.5">
                     Last Name <span className="text-rose-500">*</span>
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       id="lastName"
                       value={formData.lastName}
@@ -236,25 +237,25 @@ export function PatientForm({
                       }
                       placeholder="Sharma"
                       required
-                      className="pl-8 h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                      className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Row 2: Mobile Number (Full width of left column, spacious & uncrowded) */}
-              <div className="space-y-1">
+              {/* Row 2: Mobile Number */}
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="phone" className="text-[11px] font-semibold text-slate-700 flex items-center gap-0.5">
+                  <Label htmlFor="phone" className="text-xs font-semibold text-slate-700 flex items-center gap-0.5">
                     Mobile Number <span className="text-rose-500">*</span>
                   </Label>
-                  <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
                     WhatsApp
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <Select value={countryCode} onValueChange={setCountryCode}>
-                    <SelectTrigger className="w-[105px] h-9.5 text-xs font-semibold text-slate-700 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500 shrink-0">
+                    <SelectTrigger className="w-[115px] h-10 text-xs font-semibold text-slate-700 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500 shrink-0">
                       <SelectValue placeholder="Code" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
@@ -267,7 +268,7 @@ export function PatientForm({
                   </Select>
 
                   <div className="relative flex-1">
-                    <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       id="phone"
                       type="tel"
@@ -277,19 +278,19 @@ export function PatientForm({
                       }
                       placeholder="98765 43210 (10 digits)"
                       required
-                      className="pl-8 h-9.5 text-xs font-semibold tracking-wide text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:font-normal placeholder:tracking-normal"
+                      className="pl-9 h-10 text-sm font-semibold tracking-wide text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:font-normal placeholder:tracking-normal"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Row 3: Email Address */}
-              <div className="space-y-1">
-                <Label htmlFor="email" className="text-[11px] font-semibold text-slate-700">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-700">
                   Email Address <span className="text-slate-400 font-normal">(Optional)</span>
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   <Input
                     id="email"
                     type="email"
@@ -298,15 +299,15 @@ export function PatientForm({
                       setFormData({ ...formData, email: e.target.value })
                     }
                     placeholder="rahul.sharma@example.com"
-                    className="pl-8 h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                    className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                   />
                 </div>
               </div>
 
               {/* Row 4: Primary Practitioner Assignment */}
-              <div className="space-y-1">
-                <Label htmlFor="primaryPractitioner" className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                  <Stethoscope className="w-3.5 h-3.5 text-indigo-500" /> Primary Practitioner
+              <div className="space-y-1.5">
+                <Label htmlFor="primaryPractitioner" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Stethoscope className="w-4 h-4 text-indigo-500" /> Primary Practitioner
                 </Label>
                 <Select
                   value={formData.primaryPractitionerId || "NONE"}
@@ -317,7 +318,7 @@ export function PatientForm({
                     })
                   }
                 >
-                  <SelectTrigger className="h-9.5 text-xs font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
+                  <SelectTrigger className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
                     <SelectValue placeholder="Select Practitioner" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200 shadow-xl">
@@ -333,12 +334,12 @@ export function PatientForm({
             </div>
 
             {/* ════════════ RIGHT COLUMN: DEMOGRAPHICS & CLINICAL ════════════ */}
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               {/* Row 1: DOB & Gender */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <Label htmlFor="dateOfBirth" className="text-[11px] font-semibold text-slate-700">
-                    Date of Birth
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dateOfBirth" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> Date of Birth
                   </Label>
                   <Input
                     id="dateOfBirth"
@@ -347,12 +348,12 @@ export function PatientForm({
                     onChange={(e) =>
                       setFormData({ ...formData, dateOfBirth: e.target.value })
                     }
-                    className="h-9.5 text-xs font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                    className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="gender" className="text-[11px] font-semibold text-slate-700">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gender" className="text-xs font-semibold text-slate-700">
                     Gender
                   </Label>
                   <Select
@@ -361,7 +362,7 @@ export function PatientForm({
                       setFormData({ ...formData, gender: value })
                     }
                   >
-                    <SelectTrigger className="h-9.5 text-xs font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
+                    <SelectTrigger className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
@@ -376,9 +377,9 @@ export function PatientForm({
               </div>
 
               {/* Row 2: Blood Group & Category */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <Label htmlFor="bloodGroup" className="text-[11px] font-semibold text-slate-700">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bloodGroup" className="text-xs font-semibold text-slate-700">
                     Blood Group
                   </Label>
                   <Select
@@ -387,7 +388,7 @@ export function PatientForm({
                       setFormData({ ...formData, bloodGroup: value })
                     }
                   >
-                    <SelectTrigger className="h-9.5 text-xs font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
+                    <SelectTrigger className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
@@ -400,9 +401,9 @@ export function PatientForm({
                   </Select>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="patientType" className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                    <HeartPulse className="w-3 h-3 text-rose-500" /> Category
+                <div className="space-y-1.5">
+                  <Label htmlFor="patientType" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <HeartPulse className="w-3.5 h-3.5 text-rose-500" /> Category
                   </Label>
                   <Select
                     value={formData.patientType || "ACTIVE"}
@@ -410,7 +411,7 @@ export function PatientForm({
                       setFormData({ ...formData, patientType: value })
                     }
                   >
-                    <SelectTrigger className="h-9.5 text-xs font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
+                    <SelectTrigger className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
                       <SelectValue placeholder="Active" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 shadow-xl">
@@ -424,24 +425,26 @@ export function PatientForm({
               </div>
 
               {/* Row 3: Address & City */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <div className="col-span-2 space-y-1">
-                  <Label htmlFor="address" className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-400" /> Address
+              <div className="grid grid-cols-5 gap-3">
+                <div className="col-span-3 space-y-1.5">
+                  <Label htmlFor="address" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Street Address
                   </Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    placeholder="123 Main Road, Block B"
-                    className="h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      placeholder="123 Main Road, Block B"
+                      className="h-10 text-xs sm:text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                    />
+                  </div>
                 </div>
 
-                <div className="col-span-1 space-y-1">
-                  <Label htmlFor="city" className="text-[11px] font-semibold text-slate-700">
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="city" className="text-xs font-semibold text-slate-700">
                     City
                   </Label>
                   <Input
@@ -451,15 +454,15 @@ export function PatientForm({
                       setFormData({ ...formData, city: e.target.value })
                     }
                     placeholder="Delhi"
-                    className="h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                    className="h-10 text-xs sm:text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                   />
                 </div>
               </div>
 
               {/* Row 4: Medical Notes */}
-              <div className="space-y-1">
-                <Label htmlFor="medicalNotes" className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                  <FileText className="w-3 h-3 text-slate-400" /> Medical Notes / Allergies
+              <div className="space-y-1.5">
+                <Label htmlFor="medicalNotes" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" /> Medical Notes / Allergies
                 </Label>
                 <Input
                   id="medicalNotes"
@@ -467,21 +470,21 @@ export function PatientForm({
                   onChange={(e) =>
                     setFormData({ ...formData, medicalNotes: e.target.value })
                   }
-                  placeholder="Known allergies, conditions, or history..."
-                  className="h-9.5 text-xs font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                  placeholder="Known allergies, medical conditions, or notes..."
+                  className="h-10 text-xs sm:text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
             </div>
           </div>
         </form>
 
-        {/* Compact Footer */}
-        <div className="px-5 sm:px-6 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5">
+        {/* Spacious Footer */}
+        <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="h-9 px-4 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 font-semibold text-xs transition-all"
+            className="h-10 px-5 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 font-semibold text-xs sm:text-sm transition-all"
           >
             Cancel
           </Button>
@@ -489,21 +492,21 @@ export function PatientForm({
             type="submit"
             form="patient-form"
             disabled={loading}
-            className="h-9 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.99] text-white font-semibold text-xs shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5"
+            className="h-10 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.99] text-white font-semibold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 Saving...
               </>
             ) : mode === "create" ? (
               <>
-                <UserPlus className="w-3.5 h-3.5 text-white" />
+                <UserPlus className="w-4 h-4 text-white" />
                 Add Patient
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                <CheckCircle2 className="w-4 h-4 text-white" />
                 Save Changes
               </>
             )}
