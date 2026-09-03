@@ -74,6 +74,50 @@ function formatPractitionerTimings(p: ClinicPractitionerInfo): string {
   return `${days}: ${s12} - ${e12}`;
 }
 
+/**
+ * Differentiates acute clinical red flags from everyday conversational speech
+ * (e.g. "mjhe Sunday ko emergency kahi jana hai", "family emergency", "emergency kaam", "shift kar do").
+ */
+export function isClinicalMedicalEmergency(message: string, customTriggers?: string): boolean {
+  if (!message || typeof message !== "string") return false;
+  const lowerMsg = message.toLowerCase();
+
+  // 1. Check for colloquial, personal, family, or travel emergency phrases
+  const isColloquialOrPersonal =
+    /\b(family|personal|office|work|travel|flight|train|home|ghar)\s*emergency\b/i.test(lowerMsg) ||
+    /emergency\s*(kahi|kahin|jana|jaana|aana|kaam|aa\s*gaya|pad\s*gaya|pad\s*gayi|tha|hai\s*jana|bahar|out\s*of\s*station|meeting|trip|call|leave)\b/i.test(lowerMsg) ||
+    /\b(kisi|koyi|koi)\s*emergency\b/i.test(lowerMsg);
+
+  // 2. Check for rescheduling, postponing, shifting, or cancellation intent
+  const isRescheduleOrCancelIntent =
+    /\b(shift|reschedule|postpone|cancel|badalna|change\s*date|change\s*time|kal\s*ka|parso|next\s*week|nahi\s*aa\s*pa|can'?t\s*make\s*it|cannot\s*come)\b/i.test(lowerMsg);
+
+  // True acute clinical red-flag symptoms
+  const hasAcuteClinicalSymptoms =
+    /\b(chest\s*pain|heart\s*attack|saans\s*nahi|breathless|difficulty\s*breathing|unconscious|behosh|heavy\s*bleeding|khoon\s*behta|khoon\s*nikal|stroke|paralysis|seizure|fits|daura|poison|zehar|severe\s*burn|head\s*injury|profuse\s*bleeding)\b/i.test(lowerMsg);
+
+  // If colloquial errand or rescheduling request, ONLY trigger if true acute clinical symptoms exist
+  if (isColloquialOrPersonal || isRescheduleOrCancelIntent) {
+    return hasAcuteClinicalSymptoms;
+  }
+
+  // 3. Explicit clinical medical emergency phrases
+  const hasExplicitMedicalEmergency =
+    /\b(medical\s*emergency|health\s*emergency|hospital\s*emergency|emergency\s*room|emergency\s*admit|emergency\s*patient|casualty|icu|critical\s*condition)\b/i.test(lowerMsg);
+
+  // 4. Custom clinic triggers (filter out bare "emergency" to prevent false positives)
+  if (customTriggers) {
+    const list = customTriggers.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+    const hasCustomTrigger = list.some(t => {
+      if (t === "emergency") return false;
+      return lowerMsg.includes(t);
+    });
+    if (hasCustomTrigger) return true;
+  }
+
+  return hasAcuteClinicalSymptoms || hasExplicitMedicalEmergency;
+}
+
 function buildDeterministicReceptionistReply(
   incomingMessage: string,
   rawDoctorName: string,
@@ -387,7 +431,7 @@ function buildDeterministicReceptionistReply(
   // ════ 8.5 ENGLISH LANGUAGE HANDLING ════════════════════════════════════════
   if (isEnglish) {
     // 8.5.0 Critical Red-Flag Emergency Triage
-    if (/chest\s*pain|heart\s*attack|breathless|unconscious|heavy\s*bleeding|stroke|paralysis|poison|severe\s*burn|head\s*injury|emergency/i.test(textLower)) {
+    if (isClinicalMedicalEmergency(textLower)) {
       return `⚠️ *Emergency Alert*: These symptoms appear potentially serious and require urgent medical care. Please proceed immediately to the nearest hospital emergency room (ICU/Casualty) or call emergency ambulance services (108/112). Clinic outpatient appointments are not suited for medical emergencies.`;
     }
 
@@ -809,10 +853,8 @@ export class AIAgentsService {
     try {
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
-      // Emergency Trigger Check
-      const lowerMsg = incomingMessage.toLowerCase();
-      const triggers = emergencyTriggers.split(",").map((t: string) => t.trim().toLowerCase()).filter(Boolean);
-      const isEmergency = triggers.some((t: string) => lowerMsg.includes(t));
+      // Emergency Trigger Check (Clinically context-aware — ignores personal errands and colloquial uses)
+      const isEmergency = isClinicalMedicalEmergency(incomingMessage, emergencyTriggers);
 
       if (isEmergency) {
         return `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency medical services.`;
@@ -926,6 +968,13 @@ You are ${assistantName}, the compassionate, highly experienced, professional Se
     IMMEDIATELY advise emergency care:
     - English: "⚠️ *Emergency Alert*: The symptoms you describe appear potentially serious and require urgent medical attention. Please do not wait for an outpatient appointment and proceed immediately to the nearest hospital emergency room (ICU/Casualty) or call emergency ambulance services (108/112)."
     - Hinglish: "⚠️ *Emergency Notice*: Jo symptoms aap bata rahe hain woh potentially serious ho sakte hain. Kripya appointment ka wait na karein aur turant nearest hospital emergency room (ICU/Casualty) pahuchein ya Ambulance (108/112) ko call karein."
+  * **Colloquial "Emergency" vs Medical Emergency (CRITICAL DIRECTIVE)**:
+    - When a patient says "emergency kahi jana hai", "family emergency", "emergency kaam aa gaya", or "emergency hai isliye kal shift kardo":
+      This is a normal personal scheduling reason, NOT a medical crisis.
+      NEVER send an emergency disclaimer for personal errands or schedule shifts.
+      Acknowledge politely and proceed directly to reschedule or shift their appointment:
+      • English: "No problem at all! I would be happy to help you reschedule your appointment to tomorrow. Which session (Morning or Evening) works best for you? 🙏"
+      • Hinglish: "Ji bilkul koi baat nahi! Main aapka appointment kal ke liye shift kar deti hoon. Kal aap Morning ya Evening kis session mein aana pasand karenge? 🙏"
 
 ==================================================
 6. PATIENT DETAILS, AGE, GENDER & MULTI-FAMILY PROFILES
