@@ -1867,12 +1867,12 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                   }
                 }
 
-                // 3. Intercept Patient Booking Tag (with Name, Age, Gender support)
-                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^,\]]+)(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?\]/i;
+                // 3. Intercept Patient Booking Tag (with Name, Age, Gender, and Doctor support)
+                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^,\]]+)(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?\]/i;
                 const match = aiReply.match(bookingRegex);
                 
                 if (match && !isStaff) {
-                  const [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr] = match;
+                  const [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr, rawDoctorName] = match;
                   
                   try {
                     const nameParts = (patientFullName || "Patient").trim().split(/\s+/);
@@ -2041,11 +2041,25 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           const isTele = /tele|video|online|virtual|remote/i.test(sessionStr);
                           const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
                           const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+                          let chosenPractitioner = defaultPractitioner;
+
+                          if (rawDoctorName && rawDoctorName.trim()) {
+                            const cleanDocTarget = rawDoctorName.trim().toLowerCase();
+                            const matched = practitioners.find(p => {
+                              const pName = p.name.toLowerCase();
+                              const pBare = pName.replace(/^dr\.?\s*/i, '');
+                              return pName.includes(cleanDocTarget) || cleanDocTarget.includes(pBare);
+                            });
+                            if (matched) {
+                              chosenPractitioner = matched;
+                            }
+                          }
+
                           await prisma.appointment.create({
                             data: {
                               patientId: targetPatient.id,
                               doctorId: doctorId,
-                              practitionerId: defaultPractitioner?.id || null,
+                              practitionerId: chosenPractitioner?.id || null,
                               date: dbAppointmentDate,
                               startTime: startTime,
                               endTime: endTime,
@@ -2055,7 +2069,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             }
                           });
 
-                          console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} (${patientPhone}) at ${dateOnlyStr} ${hourStr}:${minStr} IST`);
+                          console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hourStr}:${minStr} IST`);
                           finalAiReply = finalAiReply.replace(fullTag, "").trim();
 
                           // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
@@ -2075,8 +2089,9 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' });
                             const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
                             const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
+                            const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
                             
-                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Docflo calendar.`;
+                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Docflo calendar.`;
                             await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                           }
                         }
