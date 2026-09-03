@@ -18,8 +18,14 @@ function isWithinWorkingHours(
   startTimeStr: string,
   endTimeStr: string
 ): boolean {
-  // Simple string comparison for HH:mm works because it's zero-padded (e.g., "09:00" < "17:30")
-  // This avoids timezone issues since the user is booking in their local clinic time.
+  if (workingHoursStart.includes(",") || workingHoursEnd.includes(",")) {
+    const starts = workingHoursStart.split(",");
+    const ends = workingHoursEnd.split(",");
+    return starts.some((s, idx) => {
+      const e = ends[idx] || "";
+      return startTimeStr >= s && endTimeStr <= e && startTimeStr < endTimeStr;
+    });
+  }
   return startTimeStr >= workingHoursStart && endTimeStr <= workingHoursEnd && startTimeStr < endTimeStr;
 }
 

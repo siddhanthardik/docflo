@@ -7,8 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Stethoscope, Calendar, Clock, DollarSign, Phone, Mail, Award, ShieldCheck, Palette, X, Sparkles } from "lucide-react";
+import { GoogleTimePicker } from "@/components/ui/google-time-picker";
+import {
+  Stethoscope,
+  Calendar,
+  DollarSign,
+  Phone,
+  Mail,
+  Award,
+  ShieldCheck,
+  Palette,
+  X,
+  Sparkles,
+  Sun,
+  Moon,
+  Coffee,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 interface PractitionerDialogProps {
   isOpen: boolean;
@@ -35,9 +51,13 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
     duration: "15",
     calendarColor: "#6366f1",
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    workingHoursStart: "09:00",
-    workingHoursEnd: "17:00",
   });
+
+  // Multi-Session OPD Slots
+  const [morningSlot, setMorningSlot] = useState({ enabled: true, start: "10:00", end: "13:30" });
+  const [eveningSlot, setEveningSlot] = useState({ enabled: true, start: "17:30", end: "20:30" });
+  const [afternoonSlot, setAfternoonSlot] = useState({ enabled: false, start: "14:30", end: "16:30" });
+  const [showAfternoon, setShowAfternoon] = useState(false);
 
   useEffect(() => {
     if (practitioner && isOpen) {
@@ -53,19 +73,89 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         duration: practitioner.duration ? practitioner.duration.toString() : "15",
         calendarColor: practitioner.calendarColor || "#6366f1",
         workingDays: practitioner.workingDays && practitioner.workingDays.length > 0 ? practitioner.workingDays : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        workingHoursStart: practitioner.workingHoursStart || "09:00",
-        workingHoursEnd: practitioner.workingHoursEnd || "17:00",
       });
+
+      // Parse multi-slot working hours
+      const startStr = practitioner.workingHoursStart || "09:00";
+      const endStr = practitioner.workingHoursEnd || "17:00";
+
+      if (startStr.includes(",") || endStr.includes(",")) {
+        const starts = startStr.split(",");
+        const ends = endStr.split(",");
+        if (starts.length >= 1) {
+          setMorningSlot({ enabled: true, start: starts[0], end: ends[0] || "13:30" });
+        }
+        if (starts.length >= 2) {
+          setEveningSlot({ enabled: true, start: starts[1], end: ends[1] || "20:30" });
+        } else {
+          setEveningSlot({ enabled: false, start: "17:30", end: "20:30" });
+        }
+        if (starts.length >= 3) {
+          setAfternoonSlot({ enabled: true, start: starts[2], end: ends[2] || "16:30" });
+          setShowAfternoon(true);
+        } else {
+          setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+          setShowAfternoon(false);
+        }
+      } else {
+        const startH = parseInt(startStr.split(":")[0], 10);
+        if (startH >= 15) {
+          // Evening only (e.g. 17:00 to 20:30)
+          setMorningSlot({ enabled: false, start: "10:00", end: "13:30" });
+          setEveningSlot({ enabled: true, start: startStr, end: endStr });
+          setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+          setShowAfternoon(false);
+        } else if (parseInt(endStr.split(":")[0], 10) <= 15) {
+          // Morning only
+          setMorningSlot({ enabled: true, start: startStr, end: endStr });
+          setEveningSlot({ enabled: false, start: "17:30", end: "20:30" });
+          setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+          setShowAfternoon(false);
+        } else {
+          // Full day
+          setMorningSlot({ enabled: true, start: startStr, end: "13:30" });
+          setEveningSlot({ enabled: true, start: "17:30", end: endStr });
+          setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+          setShowAfternoon(false);
+        }
+      }
     } else if (isOpen) {
       setFormData({
         name: "", email: "", phone: "", specialty: "", otherSpecialty: "",
         qualification: "", registrationNumber: "", consultationFee: "", duration: "15",
         calendarColor: "#6366f1",
         workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        workingHoursStart: "09:00", workingHoursEnd: "17:00",
       });
+      setMorningSlot({ enabled: true, start: "10:00", end: "13:30" });
+      setEveningSlot({ enabled: true, start: "17:30", end: "20:30" });
+      setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+      setShowAfternoon(false);
     }
   }, [practitioner, isOpen]);
+
+  const applyPreset = (preset: "BOTH" | "EVENING" | "MORNING" | "FULL_DAY") => {
+    if (preset === "BOTH") {
+      setMorningSlot({ enabled: true, start: "10:00", end: "13:30" });
+      setEveningSlot({ enabled: true, start: "17:30", end: "20:30" });
+      setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+      setShowAfternoon(false);
+    } else if (preset === "EVENING") {
+      setMorningSlot({ enabled: false, start: "10:00", end: "13:30" });
+      setEveningSlot({ enabled: true, start: "17:00", end: "21:00" });
+      setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+      setShowAfternoon(false);
+    } else if (preset === "MORNING") {
+      setMorningSlot({ enabled: true, start: "09:00", end: "14:00" });
+      setEveningSlot({ enabled: false, start: "17:30", end: "20:30" });
+      setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+      setShowAfternoon(false);
+    } else if (preset === "FULL_DAY") {
+      setMorningSlot({ enabled: true, start: "10:00", end: "19:00" });
+      setEveningSlot({ enabled: false, start: "17:30", end: "20:30" });
+      setAfternoonSlot({ enabled: false, start: "14:30", end: "16:30" });
+      setShowAfternoon(false);
+    }
+  };
 
   const toggleDay = (day: string) => {
     setFormData(prev => {
@@ -88,6 +178,26 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
       const feeNum = formData.consultationFee.trim() !== "" ? parseFloat(formData.consultationFee) : null;
       const durationNum = parseInt(formData.duration) || 15;
 
+      // Compile active session slots
+      const activeStarts: string[] = [];
+      const activeEnds: string[] = [];
+
+      if (morningSlot.enabled) {
+        activeStarts.push(morningSlot.start);
+        activeEnds.push(morningSlot.end);
+      }
+      if (showAfternoon && afternoonSlot.enabled) {
+        activeStarts.push(afternoonSlot.start);
+        activeEnds.push(afternoonSlot.end);
+      }
+      if (eveningSlot.enabled) {
+        activeStarts.push(eveningSlot.start);
+        activeEnds.push(eveningSlot.end);
+      }
+
+      const workingHoursStart = activeStarts.length > 0 ? activeStarts.join(",") : "09:00";
+      const workingHoursEnd = activeEnds.length > 0 ? activeEnds.join(",") : "17:00";
+
       const payload = {
         name: formData.name.trim(),
         email: formData.email.trim() || null,
@@ -100,8 +210,8 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         duration: durationNum,
         calendarColor: formData.calendarColor,
         workingDays: formData.workingDays,
-        workingHoursStart: formData.workingHoursStart || "09:00",
-        workingHoursEnd: formData.workingHoursEnd || "17:00",
+        workingHoursStart,
+        workingHoursEnd,
       };
 
       const url = practitioner ? `/api/practitioners/${practitioner.id}` : "/api/practitioners";
@@ -113,10 +223,9 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         body: JSON.stringify(payload),
       });
 
-      const resData = await res.json();
-
+      const data = await res.json();
       if (!res.ok) {
-        throw new Error(resData.error || "Failed to save doctor details.");
+        throw new Error(data.error || "Failed to save practitioner");
       }
 
       toast.success(practitioner ? "Doctor updated successfully" : "Doctor added successfully");
@@ -138,24 +247,24 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         
         {/* Modal Header */}
         <DialogHeader className="pb-3 border-b border-slate-100 space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-black text-slate-900">
-                {practitioner ? "Edit Doctor Profile" : "Add Practicing Doctor"}
+              <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
+                {practitioner ? "Edit Doctor Profile" : "Add New Doctor"}
               </DialogTitle>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-slate-500 font-normal">
                 Configure doctor credentials, WhatsApp phone for AI reception, fees &amp; OPD schedule.
               </p>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-6 pt-3">
           
-          {/* SECTION 1: CREDENTIALS & CONTACT */}
+          {/* SECTION 1: BASIC & CREDENTIALS */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
               <Award className="w-4 h-4 text-indigo-600" />
@@ -168,49 +277,51 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                 <Input 
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})} 
+                  placeholder="e.g. Dr. Jane Doe" 
                   required 
-                  placeholder="e.g. Dr. Vikash Kumar"
-                  className={inputClass}
+                  className={inputClass} 
                 />
               </div>
 
               <div className="space-y-1">
                 <label className={labelClass}>Medical Specialty</label>
-                <Select 
-                  value={formData.specialty} 
-                  onValueChange={v => setFormData({...formData, specialty: v})}
-                >
+                <Select value={formData.specialty} onValueChange={v => setFormData({...formData, specialty: v})}>
                   <SelectTrigger className={inputClass}><SelectValue placeholder="Select specialty" /></SelectTrigger>
-                  <SelectContent className="max-h-60">
+                  <SelectContent className="max-h-56">
                     {SPECIALTIES.map(s => (
-                      <SelectItem key={s} value={s} className="text-xs sm:text-sm">{s}</SelectItem>
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              {formData.specialty === "Other" && (
-                <div className="space-y-1 sm:col-span-2">
-                  <label className={labelClass}>Custom Specialty Name</label>
-                  <Input 
-                    value={formData.otherSpecialty} 
-                    onChange={e => setFormData({...formData, otherSpecialty: e.target.value})} 
-                    placeholder="e.g. Pediatric Neurologist"
-                    className={inputClass}
-                  />
-                </div>
-              )}
-
+            {formData.specialty === "Other" && (
               <div className="space-y-1">
-                <label className={labelClass}>Doctor WhatsApp Mobile Number</label>
+                <label className={labelClass}>Specify Custom Specialty</label>
                 <Input 
-                  type="tel" 
-                  value={formData.phone} 
-                  onChange={e => setFormData({...formData, phone: e.target.value})} 
-                  placeholder="e.g. 9876543210" 
+                  value={formData.otherSpecialty} 
+                  onChange={e => setFormData({...formData, otherSpecialty: e.target.value})} 
+                  placeholder="e.g. Trichology / Hair Specialist" 
                   className={inputClass} 
                 />
-                <p className="text-[11px] text-slate-500 leading-tight">Used by the 24/7 AI Receptionist to recognize you for delegated booking &amp; cancellations.</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className={labelClass}>Doctor WhatsApp Mobile Number</label>
+                </div>
+                <Input 
+                  value={formData.phone} 
+                  onChange={e => setFormData({...formData, phone: e.target.value})} 
+                  placeholder="e.g. +919876543210" 
+                  className={inputClass} 
+                />
+                <span className="text-[10px] text-slate-500">
+                  Used by the 24/7 AI Receptionist to recognize you for delegated booking &amp; cancellations.
+                </span>
               </div>
 
               <div className="space-y-1">
@@ -223,7 +334,9 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                   className={inputClass} 
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className={labelClass}>Qualification (e.g. MBBS, MD, MS)</label>
                 <Input 
@@ -233,7 +346,6 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                   className={inputClass} 
                 />
               </div>
-
               <div className="space-y-1">
                 <label className={labelClass}>Medical Registration Number</label>
                 <Input 
@@ -246,7 +358,7 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
           </div>
 
-          {/* SECTION 2: FEES & APPOINTMENTS */}
+          {/* SECTION 2: FEES & DURATION */}
           <div className="space-y-4 pt-3 border-t border-slate-100">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
               <DollarSign className="w-4 h-4 text-emerald-600" />
@@ -284,36 +396,219 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
           </div>
 
-          {/* SECTION 3: CALENDAR & TIMINGS */}
+          {/* SECTION 3: CALENDAR & TIMINGS (GOOGLE-STYLE MULTI-SLOT) */}
           <div className="space-y-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-purple-600" />
-              <span>OPD Schedule &amp; Working Days</span>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className={labelClass}>OPD Start Time</label>
-                <Input 
-                  type="time" 
-                  value={formData.workingHoursStart} 
-                  onChange={e => setFormData({...formData, workingHoursStart: e.target.value})} 
-                  className={inputClass} 
-                />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <Calendar className="w-4 h-4 text-purple-600" />
+                <span>OPD Sessions &amp; Working Timings</span>
               </div>
-              <div className="space-y-1">
-                <label className={labelClass}>OPD End Time</label>
-                <Input 
-                  type="time" 
-                  value={formData.workingHoursEnd} 
-                  onChange={e => setFormData({...formData, workingHoursEnd: e.target.value})} 
-                  className={inputClass} 
-                />
+              <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                12-Hour AM/PM
+              </span>
+            </div>
+
+            {/* 1-Click Quick Presets */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Quick Presets:</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyPreset("BOTH")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    morningSlot.enabled && eveningSlot.enabled && !showAfternoon
+                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-xs ring-1 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  ⚡ Morning &amp; Evening
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("EVENING")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    !morningSlot.enabled && eveningSlot.enabled
+                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-xs ring-1 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  🌙 Evening Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("MORNING")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    morningSlot.enabled && !eveningSlot.enabled
+                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-xs ring-1 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  ☀️ Morning Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("FULL_DAY")}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  🏢 Full Day (Continuous)
+                </button>
               </div>
             </div>
 
+            {/* Session Cards */}
+            <div className="space-y-3">
+              {/* 1. Morning Session Card */}
+              <div className={`p-4 rounded-2xl border transition-all ${morningSlot.enabled ? 'bg-amber-50/40 border-amber-200/80 shadow-xs' : 'bg-slate-50/60 border-slate-200/60 opacity-60'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${morningSlot.enabled ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30' : 'bg-slate-200 text-slate-500'}`}>
+                      <Sun className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800">Morning OPD Session</span>
+                      <span className="text-[10px] text-slate-500 block">General morning consultation window</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={morningSlot.enabled}
+                      onChange={e => setMorningSlot({ ...morningSlot, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {morningSlot.enabled ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">From (Start Time)</label>
+                      <GoogleTimePicker
+                        value={morningSlot.start}
+                        onChange={val => setMorningSlot({ ...morningSlot, start: val })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">To (End Time)</label>
+                      <GoogleTimePicker
+                        value={morningSlot.end}
+                        minTime={morningSlot.start}
+                        onChange={val => setMorningSlot({ ...morningSlot, end: val })}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Doctor is closed / not available for morning OPD.</p>
+                )}
+              </div>
+
+              {/* 2. Evening Session Card */}
+              <div className={`p-4 rounded-2xl border transition-all ${eveningSlot.enabled ? 'bg-indigo-50/40 border-indigo-200/80 shadow-xs' : 'bg-slate-50/60 border-slate-200/60 opacity-60'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${eveningSlot.enabled ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30' : 'bg-slate-200 text-slate-500'}`}>
+                      <Moon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800">Evening OPD Session</span>
+                      <span className="text-[10px] text-slate-500 block">Peak evening clinic consultation hours</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={eveningSlot.enabled}
+                      onChange={e => setEveningSlot({ ...eveningSlot, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {eveningSlot.enabled ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">From (Start Time)</label>
+                      <GoogleTimePicker
+                        value={eveningSlot.start}
+                        onChange={val => setEveningSlot({ ...eveningSlot, start: val })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">To (End Time)</label>
+                      <GoogleTimePicker
+                        value={eveningSlot.end}
+                        minTime={eveningSlot.start}
+                        onChange={val => setEveningSlot({ ...eveningSlot, end: val })}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Doctor is closed / not available for evening OPD.</p>
+                )}
+              </div>
+
+              {/* 3. Optional Afternoon Session Card */}
+              {showAfternoon ? (
+                <div className="p-4 rounded-2xl border bg-emerald-50/40 border-emerald-200/80 shadow-xs transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/30">
+                        <Coffee className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800">Afternoon OPD Session</span>
+                        <span className="text-[10px] text-slate-500 block">Mid-day procedures or consultation</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAfternoon(false);
+                        setAfternoonSlot(prev => ({ ...prev, enabled: false }));
+                      }}
+                      className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">From (Start Time)</label>
+                      <GoogleTimePicker
+                        value={afternoonSlot.start}
+                        onChange={val => setAfternoonSlot({ ...afternoonSlot, start: val, enabled: true })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600">To (End Time)</label>
+                      <GoogleTimePicker
+                        value={afternoonSlot.end}
+                        minTime={afternoonSlot.start}
+                        onChange={val => setAfternoonSlot({ ...afternoonSlot, end: val, enabled: true })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAfternoon(true);
+                    setAfternoonSlot(prev => ({ ...prev, enabled: true }));
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl border border-dashed border-slate-300 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all bg-white"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add Afternoon / Mid-Day Session</span>
+                </button>
+              )}
+            </div>
+
             {/* Calendar Color */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2">
               <label className={labelClass}>Calendar Highlight Color</label>
               <div className="flex items-center gap-3 pt-1">
                 {["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6"].map(color => (
@@ -329,7 +624,7 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
 
             {/* Working Days */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-1">
               <label className={labelClass}>Available Working Days</label>
               <div className="flex flex-wrap gap-2">
                 {daysOfWeek.map((day) => {

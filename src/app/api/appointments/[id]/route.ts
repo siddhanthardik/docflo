@@ -18,12 +18,22 @@ function isWithinWorkingHours(
   workingHoursEnd: string,
   timezone: string
 ): boolean {
-  // For simplicity, we compare UTC hours. In production, use a library like luxon.
+  if (workingHoursStart.includes(",") || workingHoursEnd.includes(",")) {
+    const starts = workingHoursStart.split(",");
+    const ends = workingHoursEnd.split(",");
+    const startUtcHour = startDateTime.getUTCHours();
+    const endUtcHour = endDateTime.getUTCHours();
+    return starts.some((s, idx) => {
+      const e = ends[idx] || "";
+      const startHour = parseInt(s.split(":")[0]);
+      const endHour = parseInt(e.split(":")[0]);
+      return startUtcHour >= startHour && endUtcHour <= endHour && startUtcHour <= endUtcHour;
+    });
+  }
   const startHour = parseInt(workingHoursStart.split(":")[0]);
   const endHour = parseInt(workingHoursEnd.split(":")[0]);
   const startUtcHour = startDateTime.getUTCHours();
   const endUtcHour = endDateTime.getUTCHours();
-  // Very basic check – assumes timezone offset is not considered. You can improve.
   return startUtcHour >= startHour && endUtcHour <= endHour && startUtcHour <= endUtcHour;
 }
 

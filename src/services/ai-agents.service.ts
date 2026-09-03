@@ -37,13 +37,41 @@ export interface ClinicPractitionerInfo {
   isOwner?: boolean;
 }
 
+function formatTo12HourTime(time24: string): string {
+  if (!time24 || !time24.includes(":")) return time24 || "";
+  const parts = time24.split(":");
+  const hours = parseInt(parts[0], 10);
+  const minutes = parts[1] || "00";
+  if (isNaN(hours)) return time24;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${minutes} ${ampm}`;
+}
+
 function formatPractitionerTimings(p: ClinicPractitionerInfo): string {
   const days = (p.workingDays && p.workingDays.length > 0)
     ? p.workingDays.map(d => d.slice(0, 3)).join(", ")
     : "Mon-Sat";
-  const start = p.workingHoursStart || "10:00 AM";
-  const end = p.workingHoursEnd || "7:00 PM";
-  return `${days}: ${start} - ${end}`;
+  const startStr = p.workingHoursStart || "10:00";
+  const endStr = p.workingHoursEnd || "19:00";
+
+  if (startStr.includes(",") || endStr.includes(",")) {
+    const starts = startStr.split(",");
+    const ends = endStr.split(",");
+    const slots = starts.map((s, idx) => {
+      const e = ends[idx] || "";
+      const s12 = formatTo12HourTime(s);
+      const e12 = formatTo12HourTime(e);
+      const hourNum = parseInt(s.split(":")[0], 10);
+      const prefix = hourNum < 12 ? "Morning" : (hourNum < 16 ? "Afternoon" : "Evening");
+      return `${prefix} (${s12} - ${e12})`;
+    });
+    return `${days}: ${slots.join(" & ")}`;
+  }
+
+  const s12 = formatTo12HourTime(startStr);
+  const e12 = formatTo12HourTime(endStr);
+  return `${days}: ${s12} - ${e12}`;
 }
 
 function buildDeterministicReceptionistReply(
