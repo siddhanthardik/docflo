@@ -211,8 +211,16 @@ export function PostScheduler() {
       const data = await res.json();
 
       if (res.ok) {
-        setForm(prev => ({ ...prev, content: data.content }));
-        toast({ title: "Post drafted with AI! ✨", description: "Content generated successfully based on your request." });
+        const autoCta = data.suggestedCtaType || "CALL";
+        setForm(prev => ({ 
+          ...prev, 
+          content: data.content,
+          ctaType: autoCta
+        }));
+        toast({ 
+          title: "Post drafted with AI! ✨", 
+          description: `Content generated and button set to "${autoCta === "CALL" ? "Call now" : autoCta === "BOOK" ? "Book" : "Learn more"}".` 
+        });
         setShowAIDialog(false);
         setAiTopic("");
       } else {

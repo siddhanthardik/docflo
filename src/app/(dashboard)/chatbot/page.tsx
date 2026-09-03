@@ -893,15 +893,46 @@ export default function AIAgentsHubPage() {
               </div>
             )}
 
-            {/* 3. PROFILE UPDATER AGENT CONFIG */}
-            {activeAgent?.type === "PROFILE" && (
+            {/* 3. AI CONTENT & POST CREATOR AGENT CONFIG */}
+            {(activeAgent?.type === "POST_CREATION" || activeAgent?.type === "PROFILE") && (
               <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <Megaphone className="w-4 h-4 text-purple-600 shrink-0" />
-                  Google Post Creation Rules
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-purple-600 shrink-0" />
+                    Google Post Creation & Clinical Brain Rules
+                  </h4>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Google Policy Compliant
+                  </span>
+                </div>
+
+                <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-slate-700 text-xs space-y-1">
+                  <p className="font-bold text-indigo-950 flex items-center gap-1.5 text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    Trained Post Brain Guardrails:
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Posts are automatically formatted in 100% clean plain text (no markdown asterisks), with zero phone number stuffing and zero street address repetition to ensure Google Business Profile approval.
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 min-w-0">
+                    <Label className="text-xs font-bold text-slate-700">Preferred Action Button</Label>
+                    <Select 
+                      value={configDraft.ctaType || "CALL"} 
+                      onValueChange={(v) => setConfigDraft({...configDraft, ctaType: v})}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0"><SelectValue className="truncate" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CALL">Call Now (Recommended for clinics)</SelectItem>
+                        <SelectItem value="BOOK">Book Online</SelectItem>
+                        <SelectItem value="LEARN_MORE">Learn More</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-slate-400">Pre-selected on all AI generated posts to avoid policy issues.</p>
+                  </div>
+
                   <div className="space-y-1.5 min-w-0">
                     <Label className="text-xs font-bold text-slate-700">Posting Frequency</Label>
                     <Select 
@@ -915,44 +946,43 @@ export default function AIAgentsHubPage() {
                         <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-1.5 min-w-0">
-                    <Label className="text-xs font-bold text-slate-700">Call To Action (CTA) Preference</Label>
-                    <Select 
-                      value={configDraft.ctaType || "LEARN_MORE"} 
-                      onValueChange={(v) => setConfigDraft({...configDraft, ctaType: v})}
-                    >
-                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0"><SelectValue className="truncate" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="LEARN_MORE">Learn More</SelectItem>
-                        <SelectItem value="BOOK">Book Online</SelectItem>
-                        <SelectItem value="CALL">Call Now</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <p className="text-[11px] text-slate-400">Cadence for autonomous draft suggestions.</p>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 min-w-0">
                   <Label className="text-xs font-bold text-slate-700">Focus Specialties & Treatments</Label>
                   <Textarea 
-                    placeholder="E.g., Dental Implants, Teeth Whitening, Emergency Dental Care, Invisalign"
+                    placeholder="E.g., Spine Rehabilitation, Chronic Back & Neck Pain, Post-Op Joint Rehab, Sports Injury Recovery, Dry Needling"
                     value={configDraft.focusAreas || ""}
                     onChange={(e) => setConfigDraft({...configDraft, focusAreas: e.target.value})}
                     className="resize-none text-xs sm:text-sm bg-white border-slate-200"
-                    rows={3}
+                    rows={2}
                   />
-                  <p className="text-[11px] sm:text-xs text-slate-500">The agent generates Google Posts highlighting these specific treatments.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500">The agent generates posts emphasizing these specific treatments and patient care benefits.</p>
                 </div>
 
                 <div className="space-y-1.5 min-w-0">
-                  <Label className="text-xs font-bold text-slate-700">Brand Style Guidelines</Label>
+                  <Label className="text-xs font-bold text-slate-700">Brand Voice & Clinical Persona</Label>
                   <Input 
-                    placeholder="Informative healthcare tone, max 2 emojis, end with booking phone number."
+                    placeholder="E.g., Empathetic, warm, educational healthcare tone; highlight patient mobility and recovery"
                     value={configDraft.brandVoice || ""}
                     onChange={(e) => setConfigDraft({...configDraft, brandVoice: e.target.value})}
                     className="h-10 text-xs sm:text-sm bg-white border-slate-200"
                   />
+                  <p className="text-[11px] sm:text-xs text-slate-400">Sets the emotional tone and communication style of your clinic's public posts.</p>
+                </div>
+
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs font-bold text-slate-700">Doctor Custom Rules & Constraints</Label>
+                  <Textarea 
+                    placeholder="E.g., Never mention surgery. Emphasize personalized exercise programs. Mention home visit availability for elderly patients."
+                    value={configDraft.customRules || configDraft.instructions || ""}
+                    onChange={(e) => setConfigDraft({...configDraft, customRules: e.target.value, instructions: e.target.value})}
+                    className="resize-none text-xs sm:text-sm bg-white border-slate-200"
+                    rows={3}
+                  />
+                  <p className="text-[11px] sm:text-xs text-slate-500">Custom clinic guidelines the AI must always follow when generating posts.</p>
                 </div>
               </div>
             )}

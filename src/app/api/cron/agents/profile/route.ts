@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
       // In a real app, you would check the 'frequency' and when the last post was made.
       // For demonstration, we just generate a post.
-      const postData = await AIAgentsService.runProfileAgent(config.config);
+      const postData = await AIAgentsService.runProfileAgent(config.config, config.doctorId);
       
       if (postData && postData.title) {
         await prisma.gBPPost.create({

@@ -1124,47 +1124,97 @@ Write your professional, direct, concise administrative response directly to Doc
   /**
    * 3. PROFILE UPDATER AGENT
    */
-  static async runProfileAgent(config: any) {
+  static async runProfileAgent(config: any, doctorId?: string) {
     try {
-      const focusAreas = config?.focusAreas || "General Care, Preventive Health, Clinic Updates";
-      const brandVoice = config?.brandVoice || "Informative healthcare tone, max 2 emojis, end with booking phone number.";
-      const ctaType = config?.ctaType || "LEARN_MORE";
+      let doctorName = "Our Specialist Doctor";
+      let clinicName = "Our Clinic";
+      let specialty = "Healthcare Services";
+
+      if (doctorId) {
+        try {
+          const doc = await prisma.doctor.findUnique({
+            where: { id: doctorId },
+            select: { name: true, clinicName: true, specialty: true }
+          });
+          if (doc) {
+            doctorName = formatDoctorDisplayName(doc.name);
+            clinicName = doc.clinicName || clinicName;
+            specialty = doc.specialty || specialty;
+          }
+        } catch (_) {}
+      }
+
+      const focusAreas = config?.focusAreas || `${specialty}, Preventive Care, Rehabilitation`;
+      const brandVoice = config?.brandVoice || "Warm, empathetic, patient-centric healthcare advice";
+      const customRules = config?.customRules || config?.instructions || "";
+      const ctaType = config?.ctaType || "CALL";
       
+      const ctaInstruction = ctaType === "CALL" 
+        ? "Tap Call Now below to schedule your consultation" 
+        : ctaType === "BOOK" 
+          ? "Tap Book below to reserve your appointment" 
+          : "Tap Learn More below for full treatment details";
+
       const prompt = `
-        You are a Google Business Profile Content Strategist.
-        Create an engaging GBP Update Post for a healthcare clinic.
-        Focus Areas: ${focusAreas}
-        Brand Voice: ${brandVoice}
-        CTA Button: ${ctaType}
+        You are the "AI Content & Post Creator" agent for Google Business Profile.
+        Generate an engaging, clinically sound Google Business Profile update post for:
+        Doctor: ${doctorName}
+        Clinic: ${clinicName}
+        Medical Specialty: ${specialty}
+        Clinical Focus: ${focusAreas}
+        Brand Tone: ${brandVoice}
+        ${customRules ? `Doctor Custom Guidelines: ${customRules}` : ""}
+        Target Action Button: ${ctaType}
+        
+        CRITICAL GOOGLE POST COMPLIANCE & FORMATTING RULES:
+        1. STRICTLY PLAIN TEXT ONLY: Absolutely DO NOT use markdown bolding (no **asterisks**), no headings (#), and no markdown bullet symbols. Everything must be pure readable text.
+        2. ZERO PHONE NUMBERS: NEVER write any phone number in the body text (Google rejects posts for phone stuffing).
+        3. ZERO STREET ADDRESSES: Do not type out the street address in the body text (Google Maps already displays the clinic location card).
+        4. ETHICAL HEALTHCARE CONTENT: Share practical wellness insights, treatment benefits, or recovery tips. Never make absolute guarantees or miracle cure claims.
+        5. CALL TO ACTION: Conclude the post by inviting the patient to take action: "${ctaInstruction}".
         
         Output JSON format only:
         {
-          "title": "Short Catchy Post Headline",
-          "content": "Full post content body (100-150 words)",
+          "title": "Short Clean Headline (under 60 chars)",
+          "content": "Clean plain-text post body (100-140 words, NO asterisks, NO phone numbers)",
           "postType": "STANDARD",
           "ctaType": "${ctaType}"
         }
       `;
 
       const text = await generateWithFallback(prompt);
+      let parsedResult: any = null;
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) return JSON.parse(jsonMatch[0]);
+        if (jsonMatch) parsedResult = JSON.parse(jsonMatch[0]);
       } catch (e) {}
 
+      let content = parsedResult?.content || "";
+      if (!content) {
+        content = `Are you dealing with persistent discomfort or seeking personalized medical guidance? At ${clinicName}, ${doctorName} provides compassionate, evidence-based care tailored to your specific wellness needs.\n\n${ctaInstruction}!`;
+      }
+
+      // Final sanity clean: strip markdown asterisks and phone numbers
+      content = content
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{4,5}/g, "")
+        .replace(/[ \t]+/g, " ")
+        .trim();
+
       return {
-        title: "Schedule Your Regular Health Checkup",
-        content: "Stay proactive about your health! Visit our clinic for comprehensive health checkups and personalized care. Book your appointment today.",
+        title: (parsedResult?.title || "Specialist Healthcare Consultation").replace(/\*\*/g, "").trim(),
+        content,
         postType: "STANDARD",
-        ctaType: ctaType || "LEARN_MORE"
+        ctaType: parsedResult?.ctaType || ctaType || "CALL"
       };
     } catch (error) {
       console.error("Error in Profile Agent:", error);
       return {
-        title: "Health & Wellness Consultation",
-        content: "Schedule your consultation with our specialist doctors today.",
+        title: "Specialist Healthcare Consultation",
+        content: "Schedule your consultation with our specialist doctors today to begin your personalized care journey.",
         postType: "STANDARD",
-        ctaType: "LEARN_MORE"
+        ctaType: "CALL"
       };
     }
   }
