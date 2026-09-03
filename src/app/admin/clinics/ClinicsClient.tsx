@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, Search, ArrowRight, Ban, Edit, LogIn, Filter } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,10 @@ export function ClinicsClient({ initialClinics, packages }: { initialClinics: an
   const { toast } = useToast();
   const router = useRouter();
   const [clinics, setClinics] = useState<any[]>(initialClinics);
+
+  useEffect(() => {
+    setClinics(initialClinics);
+  }, [initialClinics]);
   
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

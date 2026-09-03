@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -22,6 +25,9 @@ export default async function ClinicDetailsPage({ params }: { params: Promise<{ 
       },
       featureOverrides: {
         include: { feature: true }
+      },
+      subscriptionHistories: {
+        orderBy: { createdAt: "desc" }
       }
     }
   });
@@ -35,6 +41,10 @@ export default async function ClinicDetailsPage({ params }: { params: Promise<{ 
     orderBy: { priceMonthly: "asc" }
   });
 
+  const allPackages = await prisma.package.findMany({
+    select: { id: true, name: true }
+  });
+
   const featureFlags = await prisma.featureFlag.findMany({
     orderBy: { name: "asc" }
   });
@@ -44,6 +54,7 @@ export default async function ClinicDetailsPage({ params }: { params: Promise<{ 
       <ClinicDetailsClient 
         initialClinic={clinic} 
         packages={packages} 
+        allPackages={allPackages}
         featureFlags={featureFlags}
       />
     </div>
