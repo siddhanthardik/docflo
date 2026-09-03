@@ -6,20 +6,32 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { firstName, lastName, phone, email, serviceId, date, time, doctorId } = body
 
-    // Find or create patient
+    const cleanPhone = (phone || "").replace(/\D/g, "");
+    const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+    const normalizedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : (phone.startsWith("+") ? phone : `+${cleanPhone}`);
+
+    // Find or create patient with resilient 10-digit matching
     let patient = await prisma.patient.findFirst({
-      where: { doctorId, phone },
-    })
+      where: {
+        doctorId,
+        OR: [
+          { phone },
+          { phone: cleanPhone },
+          { phone: `+${cleanPhone}` },
+          ...(last10.length >= 10 ? [{ phone: { endsWith: last10 } }] : [])
+        ]
+      },
+    });
     if (!patient) {
       patient = await prisma.patient.create({
         data: {
           doctorId,
           firstName,
           lastName,
-          phone,
+          phone: normalizedPhone,
           email,
         },
-      })
+      });
     }
 
     const service = await prisma.serviceType.findUnique({ where: { id: serviceId } })

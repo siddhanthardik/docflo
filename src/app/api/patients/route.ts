@@ -115,16 +115,45 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = patientSchema.parse(body);
 
+    const cleanPhone = (validatedData.phone || "").replace(/\D/g, "");
+    const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+
+    // Check if patient with this 10-digit phone already exists for this clinic
+    if (last10.length >= 10) {
+      const existingPatient = await prisma.patient.findFirst({
+        where: {
+          doctorId,
+          OR: [
+            { phone: validatedData.phone },
+            { phone: cleanPhone },
+            { phone: `+${cleanPhone}` },
+            { phone: { endsWith: last10 } }
+          ]
+        },
+        select: { id: true, firstName: true, lastName: true, phone: true }
+      });
+
+      if (existingPatient) {
+        return NextResponse.json(
+          {
+            error: `A patient with this mobile number already exists (${existingPatient.firstName} ${existingPatient.lastName}, ${existingPatient.phone}).`,
+            existingPatient
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    const normalizedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : (validatedData.phone.startsWith("+") ? validatedData.phone : `+${cleanPhone}`);
+
     const patient = await prisma.$transaction(async (tx) => {
       // 1. Lock the Doctor row to prevent concurrent creations from exceeding limits
-      // Using an update instead of raw SQL to avoid relation not found errors
       await tx.doctor.update({
         where: { id: doctorId },
         data: { updatedAt: new Date() }
       });
 
       // 2. Enforce MAX_PATIENTS under CLINIC_CORE
-      // (This uses global prisma inside, which is safe because the lock ensures serialized execution)
       const block = await entitlementGuard(doctorId, req, { module: "CLINIC_CORE", limit: "MAX_PATIENTS" });
       if (block) {
         throw block;
@@ -134,6 +163,7 @@ export async function POST(req: Request) {
       return await tx.patient.create({
         data: {
           ...validatedData,
+          phone: normalizedPhone,
           dateOfBirth: validatedData.dateOfBirth
             ? new Date(validatedData.dateOfBirth)
             : null,

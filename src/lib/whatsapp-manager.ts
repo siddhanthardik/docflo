@@ -554,9 +554,18 @@ class WhatsAppManager {
 
             let patient = null;
             if (!isStaff) {
-              // Find patient
+              // Find patient with resilient 10-digit matching across formats (+91, 91, 10-digit)
+              const cleanPtDigits = patientPhone.replace(/\D/g, '');
+              const last10Digits = cleanPtDigits.length >= 10 ? cleanPtDigits.slice(-10) : cleanPtDigits;
               patient = await prisma.patient.findFirst({
-                where: { phone: patientPhone, doctorId },
+                where: {
+                  doctorId,
+                  OR: [
+                    { phone: patientPhone },
+                    { phone: `+${patientPhone}` },
+                    ...(last10Digits.length >= 10 ? [{ phone: { endsWith: last10Digits } }] : [])
+                  ]
+                },
               });
 
               // If no patient exists, auto-create as a Patient or with WhatsApp pushName
@@ -931,15 +940,28 @@ class WhatsAppManager {
                       try {
                         const { patientName, dateStr, timeStr } = pendingIntent;
                         const nameParts = patientName.split(' ');
-                        const newPatient = await prisma.patient.create({
-                          data: {
+                        const last10 = phoneDigits.slice(-10);
+                        let newPatient = await prisma.patient.findFirst({
+                          where: {
                             doctorId,
-                            firstName: nameParts[0],
-                            lastName: nameParts.slice(1).join(' ') || '',
-                            phone: phoneDigits,
-                            patientType: 'ACTIVE'
+                            OR: [
+                              { phone: phoneDigits },
+                              { phone: `+${phoneDigits}` },
+                              { phone: { endsWith: last10 } }
+                            ]
                           }
                         });
+                        if (!newPatient) {
+                          newPatient = await prisma.patient.create({
+                            data: {
+                              doctorId,
+                              firstName: nameParts[0],
+                              lastName: nameParts.slice(1).join(' ') || '',
+                              phone: phoneDigits,
+                              patientType: 'ACTIVE'
+                            }
+                          });
+                        }
 
                         const appointmentDate = new Date(dateStr);
                         const timeMatchP = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
@@ -1027,15 +1049,28 @@ class WhatsAppManager {
                       try {
                         const { patientName, dateStr, timeStr } = pendingIntent;
                         const nameParts = patientName.split(' ');
-                        const newPatient = await prisma.patient.create({
-                          data: {
+                        const last10_4 = phoneDigits4.slice(-10);
+                        let newPatient = await prisma.patient.findFirst({
+                          where: {
                             doctorId,
-                            firstName: nameParts[0],
-                            lastName: nameParts.slice(1).join(' ') || '',
-                            phone: phoneDigits4,
-                            patientType: 'ACTIVE'
+                            OR: [
+                              { phone: phoneDigits4 },
+                              { phone: `+${phoneDigits4}` },
+                              { phone: { endsWith: last10_4 } }
+                            ]
                           }
                         });
+                        if (!newPatient) {
+                          newPatient = await prisma.patient.create({
+                            data: {
+                              doctorId,
+                              firstName: nameParts[0],
+                              lastName: nameParts.slice(1).join(' ') || '',
+                              phone: phoneDigits4,
+                              patientType: 'ACTIVE'
+                            }
+                          });
+                        }
                         const appointmentDate = new Date(dateStr);
                         const timeMatchN = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
                         let hour = 18;
@@ -1605,18 +1640,31 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
                     finalAiReply = finalAiReply.replace(fullTag, '').trim();
 
-                    // If the doctor already provided a phone number → create new patient immediately, no disambiguation
+                    // If the doctor already provided a phone number → check if patient exists before creating
                     if (prefilledPhone.length >= 10) {
                       const nameParts = cleanName.split(' ');
-                      const newPatient = await prisma.patient.create({
-                        data: {
+                      const last10_pref = prefilledPhone.slice(-10);
+                      let newPatient = await prisma.patient.findFirst({
+                        where: {
                           doctorId,
-                          firstName: nameParts[0],
-                          lastName: nameParts.slice(1).join(' ') || '',
-                          phone: prefilledPhone,
-                          patientType: 'ACTIVE'
+                          OR: [
+                            { phone: prefilledPhone },
+                            { phone: `+${prefilledPhone}` },
+                            { phone: { endsWith: last10_pref } }
+                          ]
                         }
                       });
+                      if (!newPatient) {
+                        newPatient = await prisma.patient.create({
+                          data: {
+                            doctorId,
+                            firstName: nameParts[0],
+                            lastName: nameParts.slice(1).join(' ') || '',
+                            phone: prefilledPhone,
+                            patientType: 'ACTIVE'
+                          }
+                        });
+                      }
                       await prisma.appointment.create({
                         data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
@@ -1852,11 +1900,17 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       approximateDob = new Date(new Date().getFullYear() - parsedAge, 0, 1);
                     }
 
-                    // 1. Resolve Family Member Identity: Check for existing patient with this FIRST NAME under this phone
+                    // 1. Resolve Family Member Identity: Check for existing patient with this FIRST NAME under this phone (matching any phone variation)
+                    const cleanPtDigitsBk = patientPhone.replace(/\D/g, '');
+                    const last10Bk = cleanPtDigitsBk.length >= 10 ? cleanPtDigitsBk.slice(-10) : cleanPtDigitsBk;
                     let targetPatient = await prisma.patient.findFirst({
                       where: {
                         doctorId,
-                        phone: patientPhone,
+                        OR: [
+                          { phone: patientPhone },
+                          { phone: `+${patientPhone}` },
+                          ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                        ],
                         firstName: { equals: candidateFirstName, mode: "insensitive" }
                       }
                     });
@@ -2161,7 +2215,14 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
       if (!conversation) {
         const pt = await prisma.patient.findFirst({
-          where: { doctorId, phone: { in: [cleanPhone, `+${cleanPhone}`, cleanPhone.slice(-10)] } }
+          where: {
+            doctorId,
+            OR: [
+              { phone: cleanPhone },
+              { phone: `+${cleanPhone}` },
+              { phone: { endsWith: cleanPhone.slice(-10) } }
+            ]
+          }
         });
         const ptName = pt ? `${pt.firstName} ${pt.lastName}`.trim() : `Patient +${cleanPhone}`;
 
