@@ -72,6 +72,9 @@ export function sanitizeGbpPostSummary(summary: string): { cleanSummary: string;
     }
   }
 
+  // Strip markdown asterisks (e.g. **bold**) as Google expects plain text
+  clean = clean.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1");
+
   clean = clean
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n\s*\n/g, "\n\n")
@@ -88,6 +91,7 @@ export class GBPService {
     this.accessToken = accessToken;
     this.doctorId = doctorId;
   }
+
 
   private async googleFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
     const response = await fetch(url, {
@@ -598,7 +602,7 @@ export class GBPService {
     imageUrl?: string,
     ctaType?: string,
     ctaLink?: string,
-    languageCode: string = "en"
+    languageCode: string = "en-US"
   ) {
     try {
       if (!locationName.startsWith("accounts/")) {
@@ -651,8 +655,11 @@ export class GBPService {
         }
       }
 
+      const targetUrl = `${LEGACY_GBP_BASE}/${locationName}/localPosts`;
+      console.log(`[GBP createPost] Sending payload to ${targetUrl}:`, JSON.stringify(body));
+
       const response = await fetch(
-        `${LEGACY_GBP_BASE}/${locationName}/localPosts`,
+        targetUrl,
         {
           method: "POST",
           headers: {
@@ -670,7 +677,7 @@ export class GBPService {
         try {
           const parsed = JSON.parse(errorText);
           if (parsed?.error?.code === 500 || parsed?.error?.status === "INTERNAL") {
-            friendlyMessage = "Google rejected this post (Google Content Policy Error). Google does not allow phone numbers or unverified links in the post text body. Please remove any phone numbers from the text and use the 'Call Now' button instead.";
+            friendlyMessage = "Google returned an internal error (HTTP 500). This occurs when Google requires API approval for publishing posts on this Cloud project, if the profile has unverified status, or if Google experienced a temporary service glitch. You can also copy and publish this update directly on Google Maps/Search.";
           } else if (parsed?.error?.message) {
             friendlyMessage = `Google Business Profile error: ${parsed.error.message}`;
           }
