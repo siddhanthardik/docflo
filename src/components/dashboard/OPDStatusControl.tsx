@@ -317,7 +317,7 @@ export function OPDStatusControl() {
                   ⚠️ This will cancel all {todayTotalCount} scheduled consultation(s) for today.
                 </p>
                 <p className="text-rose-800 text-[11px]">
-                  All appointments will be marked as Cancelled in Docflo and new WhatsApp bookings will be stopped for today.
+                  All appointments will be marked as Cancelled in Gyrex and new WhatsApp bookings will be stopped for today.
                 </p>
               </div>
 

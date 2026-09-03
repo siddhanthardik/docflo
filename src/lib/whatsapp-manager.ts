@@ -1145,7 +1145,7 @@ class WhatsAppManager {
                             }
                           }
 
-                          const confirmMsg = `✅ Confirmed, Doctor! Your OPD schedule has been delayed by *${delay} minutes* in Docflo, and WhatsApp delay notifications have been dispatched to *${count} booked patients*.`;
+                          const confirmMsg = `✅ Confirmed, Doctor! Your OPD schedule has been delayed by *${delay} minutes* in Gyrex, and WhatsApp delay notifications have been dispatched to *${count} booked patients*.`;
                           await sock.sendMessage(remoteJid, { text: confirmMsg });
                           await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
                           await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1179,7 +1179,7 @@ class WhatsAppManager {
                             }
                           }
 
-                          const confirmMsg = `✅ Confirmed, Doctor! Today's OPD is marked as *Emergency Cancelled* in Docflo. Cancellation notices have been sent to *${count} booked patients*, and new WhatsApp bookings for today are paused.`;
+                          const confirmMsg = `✅ Confirmed, Doctor! Today's OPD is marked as *Emergency Cancelled* in Gyrex. Cancellation notices have been sent to *${count} booked patients*, and new WhatsApp bookings for today are paused.`;
                           await sock.sendMessage(remoteJid, { text: confirmMsg });
                           await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant' } });
                           await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1206,7 +1206,7 @@ class WhatsAppManager {
                     } else if (isNo) {
                       this.pendingIntents.delete(patientPhone);
                       handled = true;
-                      const abortMsg = `Understood, Doctor! I have cancelled this request. No changes were made to your Docflo schedule or patient appointments.`;
+                      const abortMsg = `Understood, Doctor! I have cancelled this request. No changes were made to your Gyrex schedule or patient appointments.`;
                       await sock.sendMessage(remoteJid, { text: abortMsg });
                       await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: abortMsg, senderName: 'AI Assistant' } });
                       await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1270,7 +1270,7 @@ class WhatsAppManager {
                       impactedAptIds: todayApts.map(a => a.id)
                     });
 
-                    const msg = `Doctor, I detected an OPD Schedule Delay request:\n\n⏱️ *Delay*: *${mins} Minutes* for Today's OPD.\n👥 *Impacted Booked Patients* (${todayApts.length}):\n${summaryLines.length > 0 ? summaryLines.join('\n') : '  (No appointments booked yet)'}\n\nShould I shift their appointment times in Docflo and send polite WhatsApp delay notices to them?\n\n👉 Reply *1* or *CONFIRM* to apply & notify patients.\n👉 Reply *2* or *NO* to cancel.`;
+                    const msg = `Doctor, I detected an OPD Schedule Delay request:\n\n⏱️ *Delay*: *${mins} Minutes* for Today's OPD.\n👥 *Impacted Booked Patients* (${todayApts.length}):\n${summaryLines.length > 0 ? summaryLines.join('\n') : '  (No appointments booked yet)'}\n\nShould I shift their appointment times in Gyrex and send polite WhatsApp delay notices to them?\n\n👉 Reply *1* or *CONFIRM* to apply & notify patients.\n👉 Reply *2* or *NO* to cancel.`;
                     await sock.sendMessage(remoteJid, { text: msg });
                     await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
                     await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1282,7 +1282,7 @@ class WhatsAppManager {
                       impactedAptIds: todayApts.map(a => a.id)
                     });
 
-                    const msg = `⚠️ *Emergency OPD Cancellation Request*\n\nDoctor, you have *${todayApts.length} confirmed appointments* booked for today.\n\nShould I mark today's OPD as Emergency Cancelled, update their status in Docflo, and send polite cancellation/reschedule messages to all ${todayApts.length} patients?\n\n👉 Reply *1* or *CONFIRM* to proceed.\n👉 Reply *2* or *NO* to keep appointments unchanged.`;
+                    const msg = `⚠️ *Emergency OPD Cancellation Request*\n\nDoctor, you have *${todayApts.length} confirmed appointments* booked for today.\n\nShould I mark today's OPD as Emergency Cancelled, update their status in Gyrex, and send polite cancellation/reschedule messages to all ${todayApts.length} patients?\n\n👉 Reply *1* or *CONFIRM* to proceed.\n👉 Reply *2* or *NO* to keep appointments unchanged.`;
                     await sock.sendMessage(remoteJid, { text: msg });
                     await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
                     await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1802,7 +1802,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         const timeLabel = activeApt.startTime ? activeApt.startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time';
                         const cleanPtName = activeApt.patient ? `${activeApt.patient.firstName} ${activeApt.patient.lastName}`.trim() : (patient ? `${patient.firstName} ${patient.lastName}`.trim() : 'Patient');
                         
-                        const docAlert = `🔔 *Patient Appointment Cancelled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Cancelled Slot: *${dateLabel} at ${timeLabel}*\n\n✨ This slot is now *OPEN & Available* for new bookings in your Docflo calendar.`;
+                        const docAlert = `🔔 *Patient Appointment Cancelled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Cancelled Slot: *${dateLabel} at ${timeLabel}*\n\n✨ This slot is now *OPEN & Available* for new bookings in your Gyrex calendar.`;
                         await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                       }
                     }
@@ -2091,7 +2091,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
                             const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
                             
-                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Docflo calendar.`;
+                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Gyrex calendar.`;
                             await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                           }
                         }
