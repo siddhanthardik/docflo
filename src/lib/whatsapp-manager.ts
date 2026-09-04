@@ -5,7 +5,7 @@ import * as path from 'path';
 import { prisma } from '@/lib/prisma';
 import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-concierge.service';
-import { formatDoctorDisplayName } from '@/services/ai-agents.service';
+import { formatDoctorDisplayName, type MediaAttachment } from '@/services/ai-agents.service';
 import { logSystemError } from '@/lib/logger';
 import {
   createClinicAppointmentDateTimes,
@@ -443,6 +443,45 @@ class WhatsAppManager {
         const remoteJid = msg.key.remoteJid;
         let textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
+        // Diagnostic Document or Image Media Ingestion (Multimodal OCR & Receptionist Triage)
+        const docMsg = msg.message.documentMessage || msg.message.documentWithCaptionMessage?.message?.documentMessage;
+        const imgMsg = msg.message.imageMessage;
+        let mediaAttachment: MediaAttachment | undefined = undefined;
+
+        if (docMsg || imgMsg) {
+          const isDoc = Boolean(docMsg);
+          const rawCaption = isDoc ? docMsg?.caption : imgMsg?.caption;
+          const fileName = docMsg?.fileName || (isDoc ? "medical_report.pdf" : "medical_image.jpg");
+          const mime = (isDoc ? docMsg?.mimetype : imgMsg?.mimetype) || (isDoc ? "application/pdf" : "image/jpeg");
+          const cleanMime = mime.split(";")[0].trim();
+
+          // Set textMessage so message processing is not skipped
+          if (rawCaption && rawCaption.trim()) {
+            textMessage = rawCaption.trim();
+          } else if (!textMessage) {
+            textMessage = isDoc
+              ? `[Patient shared diagnostic document: ${fileName}]`
+              : `[Patient shared a medical image/photo]`;
+          }
+
+          // Ingest media buffer (up to 15MB) for Multimodal OCR
+          try {
+            const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+            const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
+            if (mediaBuffer && mediaBuffer.length > 0 && mediaBuffer.length <= 15 * 1024 * 1024) {
+              mediaAttachment = {
+                mimeType: cleanMime,
+                base64Data: mediaBuffer.toString("base64"),
+                fileName,
+                type: isDoc ? "DOCUMENT" : "IMAGE"
+              };
+              console.log(`[WhatsAppManager] 📎 Ingested media attachment (${mediaAttachment.type}): ${fileName} (${mediaBuffer.length} bytes, ${cleanMime})`);
+            }
+          } catch (mediaErr) {
+            console.warn(`[WhatsAppManager] Failed to download media attachment for ${remoteJid}:`, mediaErr);
+          }
+        }
+
         // Voice Note Transcription (Audio Message Fallback via OpenAI Whisper)
         if (!textMessage && msg.message.audioMessage && process.env.OPENAI_API_KEY) {
           try {
@@ -706,12 +745,17 @@ class WhatsAppManager {
               });
             }
 
+            // Determine message type for CRM display
+            const chatMessageType = mediaAttachment
+              ? (mediaAttachment.type === "DOCUMENT" ? "document" : "image")
+              : (msg.message.audioMessage ? "audio" : "text");
+
             // Create ChatMessage
             await prisma.chatMessage.create({
               data: {
                 conversationId: conversation.id,
                 direction: "INCOMING",
-                messageType: "text",
+                messageType: chatMessageType,
                 content: textMessage,
                 senderName: patientName,
               }
@@ -1493,7 +1537,8 @@ class WhatsAppManager {
                   clinicMapsUri,
                   practitioners,
                   websiteUrl,
-                  scheduleContext
+                  scheduleContext,
+                  mediaAttachment
                 );
               }
 

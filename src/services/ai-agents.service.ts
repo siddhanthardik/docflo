@@ -521,8 +521,13 @@ function buildDeterministicReceptionistReply(
       return `Medical illness ya fitness certificate kanooni roop se bina doctor ke samne aaye nahi diya ja sakta. Certificate ke liye kripya valid ID ke sath ${docTitle} (${specialty}) ke OPD me physical consultation ke liye padharein.${phoneSuffix}`;
     }
 
-    // 9.04 Follow-up & Report Review Policy
-    if (/report\s*dikhana|report\s*check|follow\s*up|dikhaya\s*tha|pehle\s*aaye\s*the|dubara\s*dikhana/i.test(textLower)) {
+    // 9.04 Shared Diagnostic Report / Medical Image Acknowledgment
+    if (/\[patient shared (?:diagnostic document|a medical image\/photo|an attachment)\]|report\s*(?:dikhana|check|bheji|dekho|dekhna)|x-?ray|ct\s*scan|mri|ultrasound|sonography|ecg|blood\s*report/i.test(textLower)) {
+      return `Ji, report share karne ke liye shukriya 🙏 Hamare doctor consultation ke dauran aapki poori report physically review karenge aur aage ka treatment guide karenge.\n\nKya aap ${docTitle} (${activeSpecialty}) ke sath apna consultation slot schedule karna chahenge? Kripya apna preferred **Date (aaj ya kal)** share karein.${phoneSuffix}`;
+    }
+
+    // 9.045 Follow-up & Report Review Policy
+    if (/follow\s*up|dikhaya\s*tha|pehle\s*aaye\s*the|dubara\s*dikhana/i.test(textLower)) {
       return `Ji bilkul! Agar aapne pichle 7 dino ke andar ${docTitle} (${specialty}) ko consult kiya tha, to test report review ka koi alag se consultation fee nahi lagta. Kripya clinic ke OPD hours (*${clinicTimings}*) me apni physical report ke sath aaiye.${phoneSuffix}`;
     }
 
@@ -694,6 +699,11 @@ function buildDeterministicReceptionistReply(
     }
   }
 
+  // 10.65 Shared Diagnostic Report / Medical Image Acknowledgment
+  if (/\[patient shared (?:diagnostic document|a medical image\/photo|an attachment)\]|report|scan|x-?ray|ct\s*scan|mri|ultrasound|sonography|ecg|blood\s*report|lab\s*report/i.test(textLower)) {
+    return `Thank you for sharing your report 🙏 The doctor will physically examine your investigation findings in detail during your in-clinic consultation to guide the appropriate care.\n\nWould you like to schedule an appointment with ${docTitle} (${activeSpecialty}) to review the report? Please share your preferred **Date (Today or Tomorrow)** and session.${phoneSuffix}`;
+  }
+
   // 10.7 Symptoms / Health Concern
   if (/fever|cough|pain|cold|vomit|headache|fracture|knee|baby|child|skin|teeth|allergy|injury|treatment|sick|ill/i.test(textLower)) {
     return `Thank you for sharing your concern. For proper clinical assessment and personalized care, we recommend an in-person OPD consultation with ${docTitle} (${specialty}).\n\nOPD Timings: *${clinicTimings}*\nWould you like to book a slot for today or tomorrow?${phoneSuffix}`;
@@ -743,6 +753,13 @@ export interface DoctorScheduleContext {
   clinicTimezone?: string;
 }
 
+export interface MediaAttachment {
+  mimeType: string;
+  base64Data: string;
+  fileName?: string;
+  type: "DOCUMENT" | "IMAGE";
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -761,12 +778,16 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
-export async function generateWithFallback(prompt: string): Promise<string> {
+export async function generateWithFallback(prompt: string, attachment?: MediaAttachment): Promise<string> {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   let lastError: any = null;
 
-  // 1. Primary & Fallback Gemini Models (Strict per-model timeout: 4s max)
+  const hasAttachment = Boolean(attachment && attachment.base64Data);
+  // Give multimodal media analysis sufficient time (7500ms for media vs 4000ms for text)
+  const timeoutMs = hasAttachment ? 7500 : 4000;
+
+  // 1. Primary & Fallback Gemini Models (Strict per-model timeout: 4s for text, 7.5s for media)
   if (geminiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
@@ -784,13 +805,31 @@ export async function generateWithFallback(prompt: string): Promise<string> {
             };
           }
 
+          let contents: any = prompt;
+          if (hasAttachment && attachment) {
+            contents = [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: attachment.mimeType,
+                      data: attachment.base64Data
+                    }
+                  }
+                ]
+              }
+            ];
+          }
+
           const generatePromise = ai.models.generateContent({
             model: modelName,
-            contents: prompt,
+            contents,
             config: configObj
           });
 
-          const response = await withTimeout(generatePromise, 4000, modelName);
+          const response = await withTimeout(generatePromise, timeoutMs, modelName);
           if (response.text?.trim()) {
             return response.text.trim();
           }
@@ -812,18 +851,37 @@ export async function generateWithFallback(prompt: string): Promise<string> {
     }
   }
 
-  // 2. Secondary: Fast Fallback to OpenAI gpt-4o-mini (Strict 4s timeout)
+  // 2. Secondary: Fast Fallback to OpenAI gpt-4o-mini
   if (openaiKey) {
     try {
       console.log("[AIAgentsService] 🚀 Generating with OpenAI gpt-4o-mini fallback...");
       const openai = new OpenAI({ apiKey: openaiKey });
+
+      let messages: any[] = [{ role: "user", content: prompt }];
+      if (hasAttachment && attachment && (attachment.type === "IMAGE" || attachment.mimeType.startsWith("image/"))) {
+        messages = [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${attachment.mimeType};base64,${attachment.base64Data}`
+                }
+              }
+            ]
+          }
+        ];
+      }
+
       const openaiPromise = openai.chat.completions.create({
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 400,
+        messages,
+        max_tokens: 450,
         temperature: 0.3
       });
-      const completion = await withTimeout(openaiPromise, 4000, "OpenAI gpt-4o-mini");
+      const completion = await withTimeout(openaiPromise, timeoutMs, "OpenAI gpt-4o-mini");
       const text = completion.choices[0]?.message?.content?.trim();
       if (text) return text;
     } catch (oErr: any) {
@@ -851,7 +909,8 @@ export class AIAgentsService {
     clinicMapsUri?: string | null,
     practitioners?: ClinicPractitionerInfo[],
     websiteUrl?: string | null,
-    scheduleContext?: DoctorScheduleContext
+    scheduleContext?: DoctorScheduleContext,
+    mediaAttachment?: MediaAttachment
   ) {
     const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
     const doctorName = formatDoctorDisplayName(rawDocName);
@@ -1134,7 +1193,44 @@ CUSTOM GUIDELINES & RULES (HIGHEST PRIORITY OVERRIDES):
 ` : ""}
 
 ==================================================
-${isMultiDoctor ? '9' : '8'}. BOOKING & RESCHEDULING TAGS
+${isMultiDoctor ? '9' : '8'}. DIAGNOSTIC REPORTS, INVESTIGATION SCANS & MEDICAL IMAGE TRIAGE (MULTIMODAL OCR)
+==================================================
+- **Absolute Rule: NEVER STAY SILENT OR IGNORE ATTACHMENTS**:
+  * When a patient shares a document (PDF, lab report, blood test, prescription, biopsy, discharge summary) or an image (X-ray film, CT scan, MRI scan, ultrasound sonography sheet, ECG strip, clinical body photo, skin rash, wound, dental/oral picture):
+    You MUST acknowledge the receipt of the file warmly, respectfully, and without delay.
+    NEVER output an empty message, never ignore the report, and never claim you cannot view it.
+- **Multimodal Visual & Text Extraction (OCR Triage)**:
+  * Read and analyze the attached document or image thoroughly:
+    - Identify the investigation type (e.g. Complete Blood Count / CBC, Thyroid Panel, Blood Glucose, Lipid Profile, Chest X-ray, Ultrasound Sonography, MRI Brain, Dental Radiograph, Skin Rash / Lesion).
+    - Note the patient's name if printed on the diagnostic report (e.g. "Mrs. Yashoda Sharma") to confirm you have identified their record accurately.
+    - Provide a warm, calm, high-level layperson observation in 1–2 sentences (e.g., "I see you've shared your recent Thyroid Profile and Complete Blood Count report").
+- **Receptionist Scope Boundary & Medical Guardrails**:
+  * Emphasize the receptionist scope clearly:
+    - English: "Our doctor will physically examine your complete diagnostic findings in detail during your in-clinic consultation."
+    - Hinglish: "Doctor consultation ke dauran aapki poori report aur test values ko physically check karke aage ka ilaj guide karenge."
+  * **Strict Safety Shield**:
+    - DO NOT prescribe medicines or adjust dosages (mg/ml) over WhatsApp.
+    - DO NOT declare fatal or alarming diagnoses (e.g. NEVER declare "cancer", "organ failure", or definitive disease over chat). Reassure the patient calmly.
+- **Specialist & Doctor Routing**:
+  * Check the clinic's doctors roster:
+    ${practitioners && practitioners.length > 0 ? practitioners.map(p => `${formatDoctorDisplayName(p.name)} (${p.specialty || 'General'})`).join(', ') : `${doctorName} (${specialty})`}
+  * Route the patient to the matching specialist:
+    - Skin lesions, acne, hair fall, rashes -> Dermatology / Cosmetology doctor.
+    - Teeth, gums, dental X-rays -> Dental Surgeon / Dentist.
+    - Pregnancy scans, pelvic ultrasounds, gynecological tests -> Gynecologist / Obstetrician.
+    - Bone, joints, fracture, spinal X-rays -> Orthopedic specialist.
+    - Child/infant reports -> Pediatrician.
+    - Routine blood panels, fever, diabetes, thyroid, general health -> General Physician / Internal Medicine.
+  * **When Matching Specialist is NOT on Staff**:
+    - If the exact sub-specialty is not present, DO NOT turn the patient away.
+    - Politely match to the clinic's Senior Doctor / Chief Physician (${doctorName}) to conduct the initial clinical assessment and coordinate further referral if necessary.
+- **Proactive Next Step: Offer Consultation Slot**:
+  * Conclude with a warm invitation to book an appointment with the matched doctor:
+    - English: "Would you like me to schedule a consultation with ${doctorName} for today or tomorrow to review your report? Please share your preferred date and time. 😊"
+    - Hinglish: "Kya aap ${doctorName} ke sath aaj ya kal ka consultation slot book karna chahenge taaki doctor report dekh kar aage guide kar sakein? Kripya apni preferred date aur session batayein. 😊"
+
+==================================================
+${isMultiDoctor ? '10' : '9'}. BOOKING & RESCHEDULING TAGS
 ==================================================
 - To confirm a booking once details are finalized, append this exact tag at the very end of your confirmation message:
   ${isMultiDoctor ? `[BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender, Doctor Name]` : `[BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender]`}
@@ -1156,12 +1252,13 @@ Conversation History:
 ${conversationHistory.join("\n")}
 
 🚨 PATIENT'S LATEST MESSAGE (PRIMARY CURRENT INTENT): "${incomingMessage}"
+${mediaAttachment ? `\n📎 ATTACHED PATIENT FILE: ${mediaAttachment.type} (${mediaAttachment.fileName || mediaAttachment.mimeType})\n(Note: Read the attached diagnostic report / scan / image thoroughly using your multimodal OCR capabilities to identify the investigation type, key observations, and route to the best matching doctor).` : ''}
 
 OUTPUT REQUIREMENT:
 Respond with ONLY the exact, final WhatsApp message text for the patient. Do NOT include internal reasoning, headers, labels, or formatting markers. Output only the receptionist's warm, direct reply:
       `;
 
-      let aiReply = await generateWithFallback(prompt);
+      let aiReply = await generateWithFallback(prompt, mediaAttachment);
 
       const latency = Date.now() - startTime;
       console.log(`[AIAgentsService] 💬 Receptionist Response generated in ${latency}ms`);
