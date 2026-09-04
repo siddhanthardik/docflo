@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { resolveClinicTimezone, createClinicAppointmentDateTimes } from "@/lib/timezone"
 
 export async function POST(req: Request) {
   try {
@@ -39,17 +40,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid service" }, { status: 400 })
     }
 
-    // Create appointment
-    const [hours, minutes] = time.split(":").map(Number)
-    const startTime = new Date(date)
-    startTime.setHours(hours, minutes, 0, 0)
-    const endTime = new Date(startTime.getTime() + service.duration * 60000)
+    // Fetch doctor's clinic timezone
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { timezone: true }
+    });
+    const clinicTz = resolveClinicTimezone(doctor?.timezone);
+
+    // Create appointment with strict clinic timezone
+    const [hours, minutes] = time.split(":").map(Number);
+    const { startTime, endTime, dbAppointmentDate } = createClinicAppointmentDateTimes({
+      dateStr: date,
+      hour: hours,
+      minute: minutes || 0,
+      durationMinutes: service.duration,
+      timezone: clinicTz
+    });
 
     const appointment = await prisma.appointment.create({
       data: {
         patientId: patient.id,
         doctorId,
-        date: new Date(date),
+        date: dbAppointmentDate,
         startTime,
         endTime,
         reason: service.name,

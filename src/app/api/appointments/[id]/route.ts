@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData, isDoctor } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString } from "@/lib/timezone";
 
 // Helper to check if a date is in the past (using clinic timezone)
 function isPast(date: Date, timezone: string): boolean {
@@ -102,15 +103,18 @@ export async function PUT(
     let newEndTime = body.endTime ? new Date(body.endTime) : existing.endTime;
 
     // If only time strings sent (e.g., from form), construct full Date objects in clinic timezone
+    const clinicTz = resolveClinicTimezone(timezone);
     if (body.startTime && typeof body.startTime === "string" && !body.startTime.includes("T")) {
       const [hours, minutes] = body.startTime.split(":");
-      const dateStr = newDate.toLocaleDateString("en-CA", { timeZone: timezone || "Asia/Kolkata" });
-      newStartTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00+05:30`);
+      const dateStr = getClinicDateOnlyString(newDate, clinicTz);
+      const tzOffset = getClinicTimezoneOffset(clinicTz, new Date(`${dateStr}T12:00:00Z`));
+      newStartTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00${tzOffset}`);
     }
     if (body.endTime && typeof body.endTime === "string" && !body.endTime.includes("T")) {
       const [hours, minutes] = body.endTime.split(":");
-      const dateStr = newDate.toLocaleDateString("en-CA", { timeZone: timezone || "Asia/Kolkata" });
-      newEndTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00+05:30`);
+      const dateStr = getClinicDateOnlyString(newDate, clinicTz);
+      const tzOffset = getClinicTimezoneOffset(clinicTz, new Date(`${dateStr}T12:00:00Z`));
+      newEndTime = new Date(`${dateStr}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00${tzOffset}`);
     }
 
     // Validate future date (if appointment date changed)

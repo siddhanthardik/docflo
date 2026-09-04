@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatDoctorDisplayName } from "@/services/ai-agents.service";
+import { resolveClinicTimezone, getClinicDayBounds } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export async function GET(req: Request) {
         aiSlotPacing: true,
         workingHoursStart: true,
         workingHoursEnd: true,
+        timezone: true,
       },
     });
 
@@ -36,11 +38,13 @@ export async function GET(req: Request) {
       return new NextResponse("Doctor not found", { status: 404 });
     }
 
+    const clinicTz = resolveClinicTimezone(doctor.timezone);
+
     // ── Auto-Reset Stale OPD Status from Previous Days ──
     const nowClinic = new Date();
-    const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: clinicTz });
     const statusUpdatedDateStr = doctor.opdStatusUpdatedAt
-      ? new Date(doctor.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+      ? new Date(doctor.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: clinicTz })
       : null;
 
     if (statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr && doctor.opdStatus !== "ACTIVE") {
@@ -60,10 +64,7 @@ export async function GET(req: Request) {
       console.log(`[OPD Status] Auto-reset yesterday's OPD delay/status to ACTIVE for doctor ${doctorId}`);
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setHours(23, 59, 59, 999);
+    const { startOfDay: todayStart, endOfDay: todayEnd } = getClinicDayBounds(nowClinic, clinicTz);
 
     // Fetch today's appointments
     const appointmentsToday = await prisma.appointment.findMany({
@@ -109,17 +110,15 @@ export async function POST(req: Request) {
 
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      select: { id: true, name: true, clinicName: true },
+      select: { id: true, name: true, clinicName: true, timezone: true },
     });
 
     if (!doctor) {
       return new NextResponse("Doctor not found", { status: 404 });
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setHours(23, 59, 59, 999);
+    const clinicTz = resolveClinicTimezone(doctor.timezone);
+    const { startOfDay: todayStart, endOfDay: todayEnd } = getClinicDayBounds(new Date(), clinicTz);
 
     const docName = formatDoctorDisplayName(doctor.name);
 

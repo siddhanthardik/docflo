@@ -7,6 +7,15 @@ import { resolveGoogleReviewLink } from '@/services/review-dispatcher.service';
 import { PlatformWhatsAppConciergeService } from '@/services/platform-whatsapp-concierge.service';
 import { formatDoctorDisplayName } from '@/services/ai-agents.service';
 import { logSystemError } from '@/lib/logger';
+import {
+  createClinicAppointmentDateTimes,
+  getClinicDayBounds,
+  parseSessionOrTimeToHourMinute,
+  resolveClinicTimezone,
+  formatInClinicTime,
+  formatInClinicDate,
+  getClinicDateOnlyString
+} from '@/lib/timezone';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -472,6 +481,7 @@ class WhatsAppManager {
               where: { id: doctorId },
               select: { 
                 enableAIAutoResponder: true,
+                timezone: true,
                 phone: true,
                 name: true,
                 clinicName: true,
@@ -963,25 +973,21 @@ class WhatsAppManager {
                           });
                         }
 
-                        const appointmentDate = new Date(dateStr);
-                        const timeMatchP = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-                        let hour = 18;
-                        if (timeMatchP) {
-                          hour = parseInt(timeMatchP[1]);
-                          const mer = (timeMatchP[3] || '').toLowerCase();
-                          if (mer === 'pm' && hour < 12) hour += 12;
-                          if (mer === 'am' && hour === 12) hour = 0;
-                        }
-                        const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
-                        const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
+                        const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                        const { hour, minute } = parseSessionOrTimeToHourMinute(timeStr, 18);
+                        const { startTime, endTime, dbAppointmentDate, timeLabel, dateLabel } = createClinicAppointmentDateTimes({
+                          dateStr,
+                          hour,
+                          minute,
+                          durationMinutes: 60,
+                          timezone: clinicTz
+                        });
 
                         await prisma.appointment.create({
-                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
+                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: dbAppointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
 
                         const docName = formatDoctorDisplayName(doctorInfo?.name);
-                        const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                        const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                         const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
                         await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits, ptMsg, newPatient.id, patientName);
 
@@ -1011,25 +1017,21 @@ class WhatsAppManager {
                        handled = true;
                        try {
                          const { dateStr, timeStr } = pendingIntent;
-                         const appointmentDate = new Date(dateStr);
-                         const timeMatchS = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-                         let hour = 18;
-                         if (timeMatchS) {
-                           hour = parseInt(timeMatchS[1]);
-                           const mer = (timeMatchS[3] || '').toLowerCase();
-                           if (mer === 'pm' && hour < 12) hour += 12;
-                           if (mer === 'am' && hour === 12) hour = 0;
-                         }
-                         const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
-                         const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
+                         const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                         const { hour, minute } = parseSessionOrTimeToHourMinute(timeStr, 18);
+                         const { startTime, endTime, dbAppointmentDate, timeLabel, dateLabel } = createClinicAppointmentDateTimes({
+                           dateStr,
+                           hour,
+                           minute,
+                           durationMinutes: 60,
+                           timezone: clinicTz
+                         });
 
                          await prisma.appointment.create({
-                           data: { patientId: selectedPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
+                           data: { patientId: selectedPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: dbAppointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                          });
 
                          const docName = formatDoctorDisplayName(doctorInfo?.name);
-                         const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                         const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                          if (selectedPatient.phone) {
                             const ptMsg = `Hi ${selectedPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
                             await this.sendOutboundPatientMessage(sock, doctorId, selectedPatient.phone, ptMsg, selectedPatient.id, `${selectedPatient.firstName} ${selectedPatient.lastName}`.trim());
@@ -1071,23 +1073,19 @@ class WhatsAppManager {
                             }
                           });
                         }
-                        const appointmentDate = new Date(dateStr);
-                        const timeMatchN = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-                        let hour = 18;
-                        if (timeMatchN) {
-                          hour = parseInt(timeMatchN[1]);
-                          const mer = (timeMatchN[3] || '').toLowerCase();
-                          if (mer === 'pm' && hour < 12) hour += 12;
-                          if (mer === 'am' && hour === 12) hour = 0;
-                        }
-                        const startTime = new Date(appointmentDate); startTime.setHours(hour, 0, 0, 0);
-                        const endTime = new Date(startTime); endTime.setHours(hour + 1, 0, 0, 0);
+                        const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                        const { hour, minute } = parseSessionOrTimeToHourMinute(timeStr, 18);
+                        const { startTime, endTime, dbAppointmentDate, timeLabel, dateLabel } = createClinicAppointmentDateTimes({
+                          dateStr,
+                          hour,
+                          minute,
+                          durationMinutes: 60,
+                          timezone: clinicTz
+                        });
                         await prisma.appointment.create({
-                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
+                          data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: dbAppointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant (new patient)' }
                         });
                         const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
-                        const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                        const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                         const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
                         await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits4, ptMsg, newPatient.id, patientName);
                         const confirmMsg = `Done, Doctor! I have created a new profile for *${patientName}* (Phone: ${phoneDigits4}) and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent.`;
@@ -1539,25 +1537,25 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     });
                     
                     if (apt) {
-                      const newDate = new Date(dateStr.trim());
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      
-                      if (!isNaN(newDate.getTime()) && newDate >= today) {
-                        const isMorning = sessionStr.toLowerCase().includes("morning");
-                        const startTime = new Date(newDate);
-                        startTime.setHours(isMorning ? 10 : 17, 0, 0, 0); 
-                        
-                        const endTime = new Date(startTime);
-                        endTime.setHours(startTime.getHours() + 1);
+                      const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                      const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
+                      const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, sessionStr.toLowerCase().includes("morning") ? 10 : 17);
+                      const { startTime, endTime, dbAppointmentDate, timeLabel, dateLabel } = createClinicAppointmentDateTimes({
+                        dateStr,
+                        hour,
+                        minute,
+                        durationMinutes: 60,
+                        timezone: clinicTz
+                      });
 
+                      if (dbAppointmentDate >= todayStart) {
                         await prisma.appointment.update({ 
                           where: { id: apt.id }, 
                           data: { 
                             status: "CONFIRMED",
-                            date: newDate,
-                            startTime: startTime,
-                            endTime: endTime,
+                            date: dbAppointmentDate,
+                            startTime,
+                            endTime,
                             notes: `Rescheduled via AI Assistant (${sessionStr.trim()})`
                           }
                         });
@@ -1567,7 +1565,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         // Notify patient via WhatsApp
                         if (apt.patient?.phone) {
                           const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                          const msg = `🔄 *Appointment Rescheduled*\n\nHi ${apt.patient.firstName}, the clinic has rescheduled your appointment to *${newDate.toDateString()} (${sessionStr.trim()})*. Reply here if this time does not work for you.`;
+                          const msg = `🔄 *Appointment Rescheduled*\n\nHi ${apt.patient.firstName}, the clinic has rescheduled your appointment to *${dateLabel} at ${timeLabel}*. Reply here if this time does not work for you.`;
                           await sock.sendMessage(patientJid, { text: msg });
                           console.log(`[WhatsAppManager] Sent reschedule to ${patientJid}`);
                         }
@@ -1623,20 +1621,16 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
                   try {
                     // Parse appointment date & time
-                    const appointmentDate = new Date(cleanDate);
-                    let hour = 18;
-                    const timeMatch = cleanTime.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-                    if (timeMatch) {
-                      hour = parseInt(timeMatch[1]);
-                      const meridiem = (timeMatch[3] || '').toLowerCase();
-                      if (meridiem === 'pm' && hour < 12) hour += 12;
-                      if (meridiem === 'am' && hour === 12) hour = 0;
-                    }
-
-                    const startTime = new Date(appointmentDate);
-                    startTime.setHours(hour, 0, 0, 0);
-                    const endTime = new Date(startTime);
-                    endTime.setHours(hour + 1, 0, 0, 0);
+                    const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                    const { hour, minute } = parseSessionOrTimeToHourMinute(cleanTime, 18);
+                    const { startTime, endTime, dbAppointmentDate, timeLabel, dateLabel } = createClinicAppointmentDateTimes({
+                      dateStr: cleanDate,
+                      hour,
+                      minute,
+                      durationMinutes: 60,
+                      timezone: clinicTz
+                    });
+                    const appointmentDate = dbAppointmentDate;
 
                     finalAiReply = finalAiReply.replace(fullTag, '').trim();
 
@@ -1669,8 +1663,6 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
                       const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
-                      const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                      const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                       const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
                       await this.sendOutboundPatientMessage(sock, doctorId, prefilledPhone, ptMsg, newPatient.id, `${newPatient.firstName} ${newPatient.lastName}`.trim());
                       finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
@@ -1818,8 +1810,8 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                 if (resMatch && !isStaff) {
                   const [, resDateStr, resSessionStr] = resMatch;
                   try {
-                    const todayDate = new Date();
-                    todayDate.setHours(0, 0, 0, 0);
+                    const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                    const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
 
                     const existingActiveApt = await prisma.appointment.findFirst({
                       where: {
@@ -1828,38 +1820,45 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           ...(patient ? [{ patientId: patient.id }] : []),
                           { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
                         ],
-                        date: { gte: todayDate },
+                        date: { gte: todayStart },
                         status: { in: ["SCHEDULED", "CONFIRMED"] }
                       },
                       orderBy: { date: 'asc' }
                     });
 
                     if (existingActiveApt) {
-                      let newDate = new Date(resDateStr.trim());
-                      if (isNaN(newDate.getTime())) {
-                        const cleanStr = resDateStr.trim().toLowerCase();
-                        if (cleanStr.includes("today") || cleanStr.includes("aaj")) newDate = new Date(todayDate);
-                        else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
-                          newDate = new Date(todayDate);
-                          newDate.setDate(newDate.getDate() + 1);
-                        }
+                      let targetDateStr = resDateStr.trim();
+                      const cleanStr = targetDateStr.toLowerCase();
+                      const nowInClinic = new Date();
+                      if (cleanStr.includes("today") || cleanStr.includes("aaj")) {
+                        targetDateStr = getClinicDateOnlyString(nowInClinic, clinicTz);
+                      } else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
+                        const tmrw = new Date(nowInClinic.getTime() + 24 * 60 * 60 * 1000);
+                        targetDateStr = getClinicDateOnlyString(tmrw, clinicTz);
+                      } else {
+                        targetDateStr = getClinicDateOnlyString(targetDateStr, clinicTz);
                       }
+
                       const isMorning = resSessionStr.toLowerCase().includes("morning");
-                      const newStart = new Date(newDate);
-                      newStart.setHours(isMorning ? 10 : 17, 0, 0, 0);
-                      const newEnd = new Date(newStart);
-                      newEnd.setHours(newStart.getHours() + 1);
+                      const { hour, minute } = parseSessionOrTimeToHourMinute(resSessionStr, isMorning ? 10 : 17);
+                      const { startTime, endTime, dbAppointmentDate } = createClinicAppointmentDateTimes({
+                        dateStr: targetDateStr,
+                        hour,
+                        minute,
+                        durationMinutes: 60,
+                        timezone: clinicTz
+                      });
 
                       await prisma.appointment.update({
                         where: { id: existingActiveApt.id },
                         data: {
-                          date: newDate,
-                          startTime: newStart,
-                          endTime: newEnd,
+                          date: dbAppointmentDate,
+                          startTime,
+                          endTime,
                           notes: `${existingActiveApt.notes || ""} [Rescheduled via WhatsApp to ${resSessionStr.trim()}]`.trim()
                         }
                       });
-                      console.log(`[WhatsAppManager] Atomically rescheduled appointment ${existingActiveApt.id} for ${patientPhone}`);
+                      console.log(`[WhatsAppManager] Atomically rescheduled appointment ${existingActiveApt.id} for ${patientPhone} to ${targetDateStr} ${hour}:${minute} in ${clinicTz}`);
                     }
                     finalAiReply = finalAiReply.replace(patientRescheduleRegex, "").trim();
                   } catch (resErr) {
@@ -1972,10 +1971,9 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
                     } else {
                       // 3. Parse Date with intelligent fallback
+                      const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                      const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
                       let appointmentDate = new Date(dateStr.trim());
-                      const now = new Date();
-                      const today = new Date(now);
-                      today.setHours(0, 0, 0, 0);
 
                       if (isNaN(appointmentDate.getTime())) {
                         const cleanStr = dateStr.trim().toLowerCase();
@@ -1991,11 +1989,8 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       }
                       
                       if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
-                        // Check daily quota for that date
-                        const startOfBookingDay = new Date(appointmentDate);
-                        startOfBookingDay.setHours(0, 0, 0, 0);
-                        const endOfBookingDay = new Date(appointmentDate);
-                        endOfBookingDay.setHours(23, 59, 59, 999);
+                        // Check daily quota for that date in clinic timezone
+                        const { startOfDay: startOfBookingDay, endOfDay: endOfBookingDay } = getClinicDayBounds(appointmentDate, clinicTz);
 
                         const existingAiBookings = await prisma.appointment.count({
                           where: {
@@ -2012,30 +2007,16 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in tokens are available at the clinic reception.)*`;
                         } else {
                           const isMorning = sessionStr.toLowerCase().includes("morning");
-                          
-                          // Intelligent hour & minute extraction
-                          const timeMatch = sessionStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-                          let hour = isMorning ? 10 : 17;
-                          let minute = 0;
-                          if (timeMatch) {
-                            let parsedHour = parseInt(timeMatch[1]);
-                            if (timeMatch[2]) minute = parseInt(timeMatch[2]);
-                            const mer = (timeMatch[3] || '').toLowerCase();
-                            if (mer === 'pm' && parsedHour < 12) parsedHour += 12;
-                            if (mer === 'am' && parsedHour === 12) parsedHour = 0;
-                            if (parsedHour >= 0 && parsedHour <= 23) hour = parsedHour;
-                          }
+                          const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17);
 
-                          // 4. Construct Exact Clinic Timezone Timestamps (+05:30 IST)
-                          const tzOffset = "+05:30";
-                          const dateOnlyStr = appointmentDate.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-                          const hourStr = String(hour).padStart(2, "0");
-                          const minStr = String(minute).padStart(2, "0");
-                          const endHourStr = String((hour + 1) % 24).padStart(2, "0");
-
-                          const startTime = new Date(`${dateOnlyStr}T${hourStr}:${minStr}:00${tzOffset}`);
-                          const endTime = new Date(`${dateOnlyStr}T${endHourStr}:${minStr}:00${tzOffset}`);
-                          const dbAppointmentDate = new Date(`${dateOnlyStr}T00:00:00${tzOffset}`);
+                          // 4. Construct Exact Clinic Timezone Timestamps
+                          const { startTime, endTime, dbAppointmentDate, dateOnlyStr } = createClinicAppointmentDateTimes({
+                            dateStr: appointmentDate,
+                            hour,
+                            minute,
+                            durationMinutes: 60,
+                            timezone: clinicTz
+                          });
 
                           // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
                           const isTele = /tele|video|online|virtual|remote/i.test(sessionStr);
@@ -2069,7 +2050,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             }
                           });
 
-                          console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hourStr}:${minStr} IST`);
+                          console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hour}:${minute} in ${clinicTz}`);
                           finalAiReply = finalAiReply.replace(fullTag, "").trim();
 
                           // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics

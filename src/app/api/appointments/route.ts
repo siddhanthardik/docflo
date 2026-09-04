@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
+import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString } from "@/lib/timezone";
 
 // ---------- Helper functions ----------
 
@@ -152,21 +153,14 @@ export async function POST(req: Request) {
       },
     });
 
-    const doctorTimezone = doctor?.timezone || "Asia/Kolkata";
+    const doctorTimezone = resolveClinicTimezone(doctor?.timezone);
     const daysOff = doctor?.daysOff || [];
     const workingStart = doctor?.workingHoursStart || "09:00";
     const workingEnd = doctor?.workingHoursEnd || "17:00";
 
     // Extract exact YYYY-MM-DD date string in clinic timezone
-    let dateStr: string;
-    if (typeof date === "string" && !date.includes("T")) {
-      dateStr = date;
-    } else {
-      const d = new Date(date);
-      dateStr = d.toLocaleDateString("en-CA", { timeZone: doctorTimezone });
-    }
-
-    const tzOffset = "+05:30";
+    const dateStr = getClinicDateOnlyString(date, doctorTimezone);
+    const tzOffset = getClinicTimezoneOffset(doctorTimezone, new Date(`${dateStr}T12:00:00Z`));
     const appointmentDate = new Date(`${dateStr}T00:00:00${tzOffset}`);
     const startDateTime = new Date(`${dateStr}T${startTime}:00${tzOffset}`);
     const endDateTime = new Date(`${dateStr}T${endTime}:00${tzOffset}`);

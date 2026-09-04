@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { formatDoctorDisplayName } from "@/services/ai-agents.service";
+import { resolveClinicTimezone } from "@/lib/timezone";
 
 export class ReminderService {
   /**
@@ -46,14 +47,15 @@ export class ReminderService {
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
             if (hoursUntilAppointment <= 24 && hoursUntilAppointment > 2) {
+              const clinicTz = resolveClinicTimezone(doctor.timezone);
               const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
-                timeZone: "Asia/Kolkata",
+                timeZone: clinicTz,
                 hour: "numeric",
                 minute: "2-digit",
                 hour12: true,
               });
               const dateStr = appointmentTime.toLocaleDateString("en-IN", {
-                timeZone: "Asia/Kolkata",
+                timeZone: clinicTz,
                 weekday: "short",
                 day: "numeric",
                 month: "short",
@@ -109,8 +111,9 @@ export class ReminderService {
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
             if (hoursUntilAppointment > 0 && hoursUntilAppointment <= 2.2) {
+              const clinicTz = resolveClinicTimezone(doctor.timezone);
               const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
-                timeZone: "Asia/Kolkata",
+                timeZone: clinicTz,
                 hour: "numeric",
                 minute: "2-digit",
                 hour12: true,
