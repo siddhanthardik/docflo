@@ -359,9 +359,10 @@ export default function InvoiceDetailsPage() {
                     required
                     min="1"
                     max={balanceDue}
-                    step="0.01"
+                    placeholder="0.00"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value))}
+                    onChange={(e) => setPaymentAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
+                    onFocus={(e) => e.target.select()}
                     className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   />
                   <p className="text-xs text-indigo-600 mt-1 cursor-pointer" onClick={() => setPaymentAmount(balanceDue)}>

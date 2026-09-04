@@ -20,12 +20,12 @@ function CreateInvoiceForm() {
     appointmentId: appointmentId || "",
     practitionerId: "",
     discountType: "FLAT",
-    discountValue: 0,
-    taxAmount: 0,
+    discountValue: "" as number | string,
+    taxAmount: "" as number | string,
   });
 
-  const [items, setItems] = useState([
-    { description: "", quantity: 1, unitPrice: 0 }
+  const [items, setItems] = useState<{ description: string; quantity: number | string; unitPrice: number | string }[]>([
+    { description: "", quantity: 1, unitPrice: "" }
   ]);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ function CreateInvoiceForm() {
   }, [appointmentId]);
 
   const handleAddItem = () => {
-    setItems([...items, { description: "", quantity: 1, unitPrice: 0 }]);
+    setItems([...items, { description: "", quantity: 1, unitPrice: "" }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -87,17 +87,24 @@ function CreateInvoiceForm() {
     setItems(newItems);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const subtotal = items.reduce((sum, item) => {
+    const qty = Number(item.quantity) || 0;
+    const price = Number(item.unitPrice) || 0;
+    return sum + (qty * price);
+  }, 0);
   
+  const discountNum = Number(formData.discountValue) || 0;
+  const taxNum = Number(formData.taxAmount) || 0;
+
   let calculatedDiscount = 0;
   if (formData.discountType === "PERCENTAGE") {
-    calculatedDiscount = (subtotal * Math.min(100, formData.discountValue)) / 100;
+    calculatedDiscount = (subtotal * Math.min(100, discountNum)) / 100;
   } else {
-    calculatedDiscount = formData.discountValue;
+    calculatedDiscount = discountNum;
   }
   calculatedDiscount = Math.min(subtotal, calculatedDiscount);
   
-  const totalAmount = Math.max(0, subtotal - calculatedDiscount + formData.taxAmount);
+  const totalAmount = Math.max(0, subtotal - calculatedDiscount + taxNum);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,12 +117,25 @@ function CreateInvoiceForm() {
       return;
     }
 
+    const sanitizedItems = items.map(item => ({
+      description: item.description,
+      quantity: Math.max(1, Number(item.quantity) || 1),
+      unitPrice: Math.max(0, Number(item.unitPrice) || 0)
+    }));
+
+    const sanitizedPayload = {
+      ...formData,
+      discountValue: Math.max(0, Number(formData.discountValue) || 0),
+      taxAmount: Math.max(0, Number(formData.taxAmount) || 0),
+      items: sanitizedItems
+    };
+
     setLoading(true);
     try {
       const res = await fetch("/api/billing/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, items })
+        body: JSON.stringify(sanitizedPayload)
       });
 
       if (res.ok) {
@@ -210,7 +230,8 @@ function CreateInvoiceForm() {
                     required
                     className={inputClass}
                     value={item.quantity}
-                    onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                    onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-3 relative">
@@ -220,10 +241,12 @@ function CreateInvoiceForm() {
                     type="number"
                     min="0"
                     step="0.01"
+                    placeholder="0.00"
                     required
                     className={`${inputClass} pl-9`}
                     value={item.unitPrice}
-                    onChange={(e) => handleItemChange(index, "unitPrice", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => handleItemChange(index, "unitPrice", e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 </div>
                 <div className="col-span-1 text-right">
@@ -266,9 +289,11 @@ function CreateInvoiceForm() {
                   type="number"
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className={`${inputClass} py-1.5 px-3 w-2/3 text-right`}
                   value={formData.discountValue}
-                  onChange={(e) => setFormData({ ...formData, discountValue: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                  onFocus={(e) => e.target.select()}
                 />
               </div>
             </div>
@@ -281,9 +306,11 @@ function CreateInvoiceForm() {
                   type="number"
                   min="0"
                   step="0.01"
+                  placeholder="0.00"
                   className={`${inputClass} py-1.5 pl-8 text-right`}
                   value={formData.taxAmount}
-                  onChange={(e) => setFormData({ ...formData, taxAmount: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, taxAmount: e.target.value })}
+                  onFocus={(e) => e.target.select()}
                 />
               </div>
             </div>
