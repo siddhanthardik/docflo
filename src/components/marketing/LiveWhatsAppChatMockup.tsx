@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   CheckCheck, Phone, Video, MoreVertical, ArrowLeft, 
   MapPin, Calendar, Clock, CreditCard, Sparkles, Star, 
-  Play, Pause, RotateCcw, ExternalLink, ShieldCheck, ChevronRight,
-  Stethoscope, Building2, User, FileText, Navigation
+  Play, Pause, RotateCcw, Stethoscope, Building2, User, 
+  Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ interface ChatStep {
   sender: "patient" | "ai";
   time: string;
   text?: string;
-  isCard?: "confirmation" | "location" | "receipt" | "teleconsult" | "review";
+  isCard?: "confirmation" | "location" | "review";
   cardData?: any;
 }
 
@@ -51,7 +51,7 @@ const SCENARIOS: Scenario[] = [
         id: "step-2",
         sender: "ai",
         time: "10:42 AM",
-        text: "Namaste! 🙏 Yes, Dr. Rajesh Sharma (General Physician) has 2 OPD slots available tomorrow evening at City Health Clinic:\n\n1️⃣ 05:30 PM\n2️⃣ 06:45 PM\n\nConsultation Fee: ₹800\nWhich slot works best for you?"
+        text: "Namaste! 🙏 Dr. Rajesh Sharma (General Physician) kal shaam ko City Health Clinic par available hain.\n\n🕒 Available Timings: 05:00 PM – 08:30 PM\n💰 Consultation Fee: ₹800\n\nPatient ka full name aur preferred time share karein?"
       },
       {
         id: "step-3",
@@ -65,13 +65,13 @@ const SCENARIOS: Scenario[] = [
         time: "10:43 AM",
         isCard: "confirmation",
         cardData: {
-          token: "Token #07",
-          status: "CONFIRMED",
+          status: "APPOINTMENT CONFIRMED",
           date: "Tomorrow, 06:45 PM",
-          doctor: "Dr. Rajesh Sharma, MD",
-          patient: "Rahul Verma (32/M)",
-          mode: "In-Clinic OPD",
-          fee: "₹800 (Pay at Counter / UPI)"
+          doctor: "Dr. Rajesh Sharma",
+          specialty: "General Physician",
+          clinic: "City Health Clinic",
+          patient: "Rahul Verma (Age 32)",
+          fee: "₹800 (Pay at Clinic)"
         }
       },
       {
@@ -89,21 +89,16 @@ const SCENARIOS: Scenario[] = [
       {
         id: "step-6",
         sender: "ai",
-        time: "10:43 AM",
-        isCard: "receipt",
-        cardData: {
-          tokenNo: "OPD-8492",
-          fee: "₹800",
-          reminder: "Auto-reminder will be sent 2 hours before your slot with queue status."
-        }
+        time: "10:44 AM",
+        text: "Aapka appointment schedule ho gaya hai 🙏 Visit se pehle aapko WhatsApp reminder mil jayega. Koi sawal ho toh aap yahan pooch sakte hain!"
       }
     ]
   },
   {
-    id: "video-consult",
-    name: "Video Consultation",
-    badge: "Telehealth",
-    clinicName: "Aura Skin & Laser Studio",
+    id: "timings-booking",
+    name: "Doctor Inquiries (English)",
+    badge: "24/7 Response",
+    clinicName: "Aura Skin & Laser Clinic",
     doctorName: "Dr. Ananya Rao",
     specialty: "Consultant Dermatologist",
     steps: [
@@ -111,31 +106,45 @@ const SCENARIOS: Scenario[] = [
         id: "step-v1",
         sender: "patient",
         time: "03:15 PM",
-        text: "Hi! Can I book an urgent video consultation with Dermatologist Dr. Ananya today for severe skin allergy?"
+        text: "Hi! Can I book an appointment with Dermatologist Dr. Ananya today for a severe skin allergy?"
       },
       {
         id: "step-v2",
         sender: "ai",
         time: "03:15 PM",
-        text: "Hello! 👋 Dr. Ananya Rao has a teleconsultation slot open today at 04:30 PM.\n\nVideo Fee: ₹1,100 (Includes HD Google Meet link & digital prescription).\nWould you like to confirm this?"
+        text: "Hello! 👋 Dr. Ananya Rao has consultation slots available at Aura Skin Clinic today:\n\n🕒 Evening OPD: 04:30 PM – 07:30 PM\n💰 Consultation Fee: ₹900\n\nWould you like to reserve a slot?"
       },
       {
         id: "step-v3",
         sender: "patient",
         time: "03:16 PM",
-        text: "Yes please, confirm for Sunita Patel."
+        text: "Yes please, 05:00 PM for Sunita Patel."
       },
       {
         id: "step-v4",
         sender: "ai",
-        time: "03:16 AM",
-        isCard: "teleconsult",
+        time: "03:16 PM",
+        isCard: "confirmation",
         cardData: {
-          meetLink: "https://meet.google.com/gyx-tele-care",
-          slot: "Today, 04:30 PM",
+          status: "APPOINTMENT CONFIRMED",
+          date: "Today, 05:00 PM",
+          doctor: "Dr. Ananya Rao",
+          specialty: "Consultant Dermatologist",
+          clinic: "Aura Skin & Laser Clinic",
           patient: "Sunita Patel",
-          doctor: "Dr. Ananya Rao (Dermatology)",
-          upiId: "cityclinic@icici"
+          fee: "₹900 (Pay at Clinic)"
+        }
+      },
+      {
+        id: "step-v5",
+        sender: "ai",
+        time: "03:16 PM",
+        isCard: "location",
+        cardData: {
+          clinicName: "Aura Skin & Laser Clinic",
+          address: "Shop 12, 1st Floor, Galleria Market, DLF Phase 4, Gurugram",
+          landmark: "Near Central Plaza",
+          mapsUrl: "https://maps.google.com"
         }
       }
     ]
@@ -152,7 +161,7 @@ const SCENARIOS: Scenario[] = [
         id: "step-r1",
         sender: "ai",
         time: "02:30 PM",
-        text: "Namaste Vikas ji! 🙏 Hope your root canal treatment with Dr. Rohan Kapoor went comfortably today. Your smile is our top priority."
+        text: "Namaste Vikas ji! 🙏 Hope your consultation with Dr. Rohan Kapoor went comfortably today at Apex Dental. Your health is our top priority."
       },
       {
         id: "step-r2",
@@ -160,9 +169,9 @@ const SCENARIOS: Scenario[] = [
         time: "02:30 PM",
         isCard: "review",
         cardData: {
-          clinic: "Apex Dental Studio",
+          clinic: "Apex Dental & Implant Studio",
           stars: 5,
-          ratingPrompt: "Could you take 10 seconds to share your experience on Google? It helps local patients find verified dental care."
+          ratingPrompt: "Could you take 10 seconds to share your experience on Google? It helps local patients discover trusted dental care."
         }
       },
       {
@@ -175,7 +184,7 @@ const SCENARIOS: Scenario[] = [
         id: "step-r4",
         sender: "ai",
         time: "02:34 PM",
-        text: "Thank you so much Vikas ji! 🙏 Wishing you a fast recovery. Feel free to message here anytime if you need your digital prescription or medicines."
+        text: "Thank you so much Vikas ji! 🙏 Wishing you great oral health. Feel free to message here whenever you need to schedule your next visit."
       }
     ]
   }
@@ -372,30 +381,34 @@ export function LiveWhatsAppChatMockup() {
                       </div>
                     )}
 
-                    {/* Rich Confirmation Card */}
+                    {/* Rich Confirmation Card (NO token, NO digital OPD slip) */}
                     {msg.isCard === "confirmation" && (
                       <div className="max-w-[92%] bg-white rounded-2xl border border-emerald-200 shadow-md p-3 space-y-2 text-left my-1">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
                           <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
                             ✓ {msg.cardData.status}
                           </span>
-                          <span className="text-xs font-black text-slate-900">{msg.cardData.token}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">Gyrex WhatsApp</span>
                         </div>
-                        <div className="space-y-1 text-xs">
+                        <div className="space-y-1.5 text-xs">
                           <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                            <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                            <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{msg.cardData.date}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-700 font-medium">
-                            <Stethoscope className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{msg.cardData.doctor}</span>
+                            <Stethoscope className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{msg.cardData.doctor} • <span className="text-slate-500 font-normal">{msg.cardData.specialty}</span></span>
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-600">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{msg.cardData.patient}</span>
+                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{msg.cardData.clinic}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>Patient: <strong className="text-slate-800">{msg.cardData.patient}</strong></span>
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-600 text-[11px] pt-1 border-t border-slate-100">
-                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                            <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span className="font-bold text-emerald-700">{msg.cardData.fee}</span>
                           </div>
                         </div>
@@ -421,43 +434,6 @@ export function LiveWhatsAppChatMockup() {
                           <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg flex items-center justify-center gap-1 border border-blue-100">
                             <Navigation className="w-3 h-3" /> Turn-by-Turn Directions
                           </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Rich Receipt Card */}
-                    {msg.isCard === "receipt" && (
-                      <div className="max-w-[92%] bg-white rounded-2xl border border-slate-200 shadow-md p-3 space-y-2 text-left my-1">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                          <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-slate-500" />
-                            Digital OPD Slip
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">{msg.cardData.tokenNo}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed">
-                          {msg.cardData.reminder}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Rich Teleconsult Card */}
-                    {msg.isCard === "teleconsult" && (
-                      <div className="max-w-[92%] bg-white rounded-2xl border border-purple-200 shadow-md p-3 space-y-2 text-left my-1">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                          <span className="text-[10px] font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100 flex items-center gap-1">
-                            ✓ Video Confirmed
-                          </span>
-                          <span className="text-xs font-black text-purple-950">{msg.cardData.slot}</span>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-800">
-                          {msg.cardData.doctor}
-                        </p>
-                        <div className="p-2 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between text-xs">
-                          <span className="font-mono text-[11px] text-purple-800 truncate">
-                            {msg.cardData.meetLink}
-                          </span>
-                          <ExternalLink className="w-3.5 h-3.5 text-purple-700 shrink-0 ml-1" />
                         </div>
                       </div>
                     )}
@@ -503,7 +479,7 @@ export function LiveWhatsAppChatMockup() {
               {/* Simulated WhatsApp Input Footer */}
               <div className="bg-[#F0F2F5] px-3 py-2 border-t border-slate-200/60 flex items-center gap-2 shrink-0">
                 <div className="flex-1 bg-white rounded-full h-8 px-3 text-xs text-slate-400 flex items-center border border-slate-200/60">
-                  Message City Health Clinic...
+                  Message {scenario.clinicName}...
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#00A884] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Clock className="w-4 h-4" />
@@ -550,7 +526,7 @@ export function LiveWhatsAppChatMockup() {
                 ✓
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900">Instant Clinical Response in &lt; 3s</p>
+                <p className="text-xs font-bold text-slate-900">Instant Patient Response in &lt; 3s</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                   Never lose a patient inquiry to a busy telephone line, lunchtime break, or after-hours closure.
                 </p>
@@ -576,7 +552,7 @@ export function LiveWhatsAppChatMockup() {
               <div>
                 <p className="text-xs font-bold text-slate-900">Automated Google 5-Star Reviews</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Automatically requests positive patient feedback 2 hours after the visit, rapidly boosting your Google 3-Pack ranking.
+                  Automatically requests positive patient feedback after the visit, rapidly boosting your Google 3-Pack ranking.
                 </p>
               </div>
             </div>

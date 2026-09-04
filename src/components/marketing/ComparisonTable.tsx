@@ -216,7 +216,7 @@ const COMPARISON_DATA: ComparisonItem[] = [
     feature: "Monthly Investment & Pricing Model",
     category: "Cost & ROI",
     gyrex: {
-      text: "Flat ₹3,900 / month (Zero Commission)",
+      text: "Flat ₹3,999 / month (Zero Commission)",
       positive: true,
       subtext: "Unlimited patient bookings, zero commission per consultation, full AI capability."
     },
@@ -273,17 +273,16 @@ export function ComparisonTable() {
                   </th>
                   
                   {/* Gyrex Column Header (Highlighted) */}
-                  <th className="p-5 w-1/4 bg-emerald-50/80 border-x-2 border-t-2 border-emerald-500 relative">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow-md shadow-emerald-600/30">
-                      Recommended
-                    </div>
-                    <div className="space-y-1 text-center">
+                  <th className="p-5 w-1/4 bg-emerald-50/80 border-x-2 border-t-2 border-emerald-500 align-top">
+                    <div className="flex flex-col items-center justify-center text-center space-y-1">
+                      <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow-xs mb-0.5">
+                        <Sparkles className="w-3 h-3 text-amber-300" /> Recommended
+                      </span>
                       <span className="text-base font-black text-slate-900 flex items-center justify-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-emerald-600" />
                         Gyrex AI Practice
                       </span>
                       <p className="text-xs font-extrabold text-emerald-700">
-                        Flat ₹3,900 / mo
+                        Flat ₹3,999 / mo
                       </p>
                     </div>
                   </th>
@@ -478,7 +477,7 @@ export function ComparisonTable() {
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                       <span className="text-xs font-extrabold text-emerald-950">
-                        Gyrex AI Practice Engine (₹3,900/mo)
+                        Gyrex AI Practice Engine (₹3,999/mo)
                       </span>
                     </div>
                     <p className="text-xs font-bold text-slate-900 pl-6">
@@ -524,7 +523,7 @@ export function ComparisonTable() {
               Ready to Upgrade Your Clinic Front Desk?
             </h4>
             <p className="text-xs text-slate-500">
-              Flat ₹3,900 / month with zero patient commissions.
+              Flat ₹3,999 / month with zero patient commissions.
             </p>
             <div className="flex flex-col gap-2 pt-1">
               <Link href="/ai-receptionist-demo">
