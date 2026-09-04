@@ -130,12 +130,20 @@ export default function ReportsPage() {
     if (!reportData || !reportData.financials) return null;
     const { financials } = reportData;
 
+    const paidSubtitle = (financials.partiallyPaidInvoicesCount || 0) > 0
+      ? `${financials.paidInvoicesCount} Paid + ${financials.partiallyPaidInvoicesCount} Partial`
+      : `${financials.paidInvoicesCount} Invoices Paid`;
+
+    const unpaidSubtitle = (financials.partiallyPaidInvoicesCount || 0) > 0
+      ? `${financials.unpaidInvoicesCount} Unpaid (${financials.partiallyPaidInvoicesCount} Partial)`
+      : `${financials.unpaidInvoicesCount} Invoices Unpaid`;
+
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={DollarSign} color="emerald" title="Revenue Summary" value={formatCurrency(financials.revenueSummary, reportData.metadata?.currency)} subtitle="Total Amount Billed" />
-          <StatCard icon={CreditCard} color="indigo" title="Paid Invoices" value={formatCurrency(financials.paidInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.paidInvoicesCount} Invoices Paid`} />
-          <StatCard icon={ShieldAlert} color="yellow" title="Unpaid Invoices" value={formatCurrency(financials.unpaidInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.unpaidInvoicesCount} Invoices Unpaid`} />
+          <StatCard icon={CreditCard} color="indigo" title="Paid Invoices" value={formatCurrency(financials.paidInvoicesTotal, reportData.metadata?.currency)} subtitle={paidSubtitle} />
+          <StatCard icon={ShieldAlert} color="yellow" title="Unpaid Invoices" value={formatCurrency(financials.unpaidInvoicesTotal, reportData.metadata?.currency)} subtitle={unpaidSubtitle} />
           <StatCard icon={ShieldAlert} color="red" title="Overdue Invoices" value={formatCurrency(financials.overdueInvoicesTotal, reportData.metadata?.currency)} subtitle={`${financials.overdueInvoicesCount} Invoices Overdue`} />
         </div>
         
@@ -144,7 +152,14 @@ export default function ReportsPage() {
             <DollarSign className="h-5 w-5 text-indigo-500" /> Collection Summary
           </h3>
           <div className="prose prose-sm max-w-none text-gray-600">
-            <p>You have a total of <strong>{formatCurrency(financials.outstandingAmount, reportData.metadata?.currency)}</strong> in outstanding payments for this period.</p>
+            <p>
+              You have collected <strong>{formatCurrency(financials.paidInvoicesTotal, reportData.metadata?.currency)}</strong> and have a remaining total of <strong>{formatCurrency(financials.outstandingAmount, reportData.metadata?.currency)}</strong> in outstanding payments for this period.
+              {(financials.partiallyPaidInvoicesCount || 0) > 0 && (
+                <span className="block text-xs text-slate-500 mt-1">
+                  (Includes {financials.partiallyPaidInvoicesCount} partially paid invoice{financials.partiallyPaidInvoicesCount > 1 ? "s" : ""})
+                </span>
+              )}
+            </p>
           </div>
         </div>
       </div>

@@ -13,18 +13,64 @@ type InvoiceWithDetails = Invoice & {
   payments?: PatientPayment[];
 };
 
-export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<Buffer> {
-  let logoBuffer: Buffer | null = null;
-  if (invoice.doctor.image) {
+/**
+ * Robust logo buffer loader supporting local filesystem, base64 data URIs, and remote URLs.
+ */
+async function loadLogoBuffer(imageStr?: string | null): Promise<Buffer | null> {
+  if (!imageStr || !imageStr.trim()) return null;
+  const img = imageStr.trim();
+
+  // 1. Base64 Data URI
+  if (img.startsWith('data:')) {
     try {
-      const imgRes = await fetch(invoice.doctor.image);
-      if (imgRes.ok) {
-        logoBuffer = Buffer.from(await imgRes.arrayBuffer());
-      }
+      const base64Data = img.split(',')[1];
+      if (base64Data) return Buffer.from(base64Data, 'base64');
     } catch (e) {
-      console.error('Failed to fetch invoice logo:', e);
+      console.error('Failed to parse base64 logo:', e);
     }
   }
+
+  // 2. Relative upload URL (e.g. /api/uploads/logos/... or /uploads/...)
+  if (img.startsWith('/')) {
+    try {
+      let relativePath = img;
+      if (relativePath.startsWith('/api/uploads/')) {
+        relativePath = relativePath.replace('/api/uploads/', '/uploads/');
+      }
+      const localPath = path.join(process.cwd(), 'public', relativePath);
+      if (fs.existsSync(localPath)) {
+        return fs.readFileSync(localPath);
+      }
+
+      // Try fetching using app URL
+      const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://gyrex.in';
+      const fullUrl = `${appUrl.replace(/\/$/, '')}${img}`;
+      const res = await fetch(fullUrl);
+      if (res.ok) {
+        return Buffer.from(await res.arrayBuffer());
+      }
+    } catch (e) {
+      console.error('Failed to load local logo file:', e);
+    }
+  }
+
+  // 3. Absolute remote URL (http / https)
+  if (img.startsWith('http://') || img.startsWith('https://')) {
+    try {
+      const res = await fetch(img);
+      if (res.ok) {
+        return Buffer.from(await res.arrayBuffer());
+      }
+    } catch (e) {
+      console.error('Failed to fetch remote logo:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<Buffer> {
+  const logoBuffer = await loadLogoBuffer(invoice.doctor.image);
 
   return new Promise((resolve, reject) => {
     try {
@@ -45,7 +91,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       try {
         const fontPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf');
         const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'Roboto-Bold.ttf');
-        
+
         if (fs.existsSync(fontPath)) {
           doc.registerFont('Roboto', new Uint8Array(fs.readFileSync(fontPath)));
         }
@@ -58,140 +104,207 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
 
       const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
 
-      // Clinic Info (Header)
+      // ════════════ HEADER SECTION (LEFT: CLINIC INFO, RIGHT: INVOICE DETAILS) ════════════
       const clinicName = invoice.doctor.clinicName || invoice.doctor.name || 'Clinic';
-      
+      let leftY = 45;
+
+      // 1. Clinic Info (Left Column: bounded to width 270 to prevent colliding with right column)
       if (logoBuffer) {
-        doc.image(logoBuffer, 50, 45, { height: 40 });
-        doc.fontSize(20).text(clinicName, 100, 50);
+        try {
+          doc.image(logoBuffer, 50, 45, { fit: [55, 45] });
+          doc.fontSize(16).font('Roboto-Bold').fillColor('#0F172A').text(clinicName, 115, 45, { width: 205 });
+          leftY = Math.max(doc.y, 95);
+        } catch (imgErr) {
+          doc.fontSize(16).font('Roboto-Bold').fillColor('#0F172A').text(clinicName, 50, 45, { width: 270 });
+          leftY = doc.y + 4;
+        }
       } else {
-        doc.fontSize(20).text(clinicName, 50, 50);
+        doc.fontSize(16).font('Roboto-Bold').fillColor('#0F172A').text(clinicName, 50, 45, { width: 270 });
+        leftY = doc.y + 4;
       }
-        
-      doc.fontSize(10)
-         .text(invoice.doctor.address || '', 50, 75)
-         .text([invoice.doctor.city, invoice.doctor.state, invoice.doctor.country].filter(Boolean).join(', '), 50, 90)
-         .text(`Phone: ${invoice.doctor.phone || ''}`, 50, 105)
-         .text(`Email: ${invoice.doctor.email || ''}`, 50, 120);
+
+      doc.fontSize(9).font('Roboto').fillColor('#475569');
+      if (invoice.doctor.address) {
+        doc.text(invoice.doctor.address, 50, leftY, { width: 270 });
+        leftY = doc.y + 2;
+      }
+
+      const cityStateCountry = [invoice.doctor.city, invoice.doctor.state, invoice.doctor.country].filter(Boolean).join(', ');
+      if (cityStateCountry) {
+        doc.text(cityStateCountry, 50, leftY, { width: 270 });
+        leftY = doc.y + 2;
+      }
+
+      if (invoice.doctor.phone) {
+        doc.text(`Phone: ${invoice.doctor.phone}`, 50, leftY, { width: 270 });
+        leftY = doc.y + 2;
+      }
+
+      if (invoice.doctor.email) {
+        doc.text(`Email: ${invoice.doctor.email}`, 50, leftY, { width: 270 });
+        leftY = doc.y + 2;
+      }
 
       if (invoice.doctor.taxGstNumber) {
-         doc.text(`GST No: ${invoice.doctor.taxGstNumber}`, 50, 135);
+        doc.text(`GSTIN: ${invoice.doctor.taxGstNumber}`, 50, leftY, { width: 270 });
+        leftY = doc.y + 2;
       }
 
-      // Invoice Details
-      doc.fontSize(20).text(invoice.status === 'PAID' ? 'RECEIPT' : 'INVOICE', 350, 50, { align: 'right', width: 200 });
-      doc.fontSize(10)
-         .text(`Invoice Number: ${invoice.invoiceNumber}`, 350, 75, { align: 'right', width: 200 })
-         .text(`Date: ${invoice.issueDate.toLocaleDateString()}`, 350, 90, { align: 'right', width: 200 })
-         .text(`Status: ${invoice.status}`, 350, 105, { align: 'right', width: 200 });
-      
+      // 2. Invoice Details (Right Column: positioned at x: 340, width: 210, right aligned)
+      const isPaid = invoice.status === 'PAID';
+      const docTypeTitle = isPaid ? 'RECEIPT' : 'INVOICE';
+
+      doc.fontSize(22).font('Roboto-Bold').fillColor('#0F172A').text(docTypeTitle, 340, 45, { align: 'right', width: 210 });
+      doc.fontSize(9).font('Roboto').fillColor('#64748B')
+         .text(`Invoice Number: ${invoice.invoiceNumber}`, 340, 72, { align: 'right', width: 210 })
+         .text(`Date: ${new Date(invoice.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`, 340, 86, { align: 'right', width: 210 });
+
+      // Clean formatted status badge
+      const statusConfig: Record<string, { label: string; color: string }> = {
+        PAID: { label: 'Paid', color: '#16A34A' },
+        PARTIALLY_PAID: { label: 'Partially Paid', color: '#2563EB' },
+        UNPAID: { label: 'Unpaid', color: '#D97706' },
+        OVERDUE: { label: 'Overdue', color: '#DC2626' },
+        DRAFT: { label: 'Draft', color: '#64748B' },
+        CANCELLED: { label: 'Cancelled', color: '#94A3B8' },
+      };
+      const currentStatus = statusConfig[invoice.status] || {
+        label: invoice.status.replace(/_/g, ' '),
+        color: '#64748B',
+      };
+
+      doc.font('Roboto-Bold').fillColor(currentStatus.color).text(`Status: ${currentStatus.label}`, 340, 100, { align: 'right', width: 210 });
+
+      let rightY = 114;
       if (invoice.dueDate) {
-         doc.text(`Due Date: ${invoice.dueDate.toLocaleDateString()}`, 350, 120, { align: 'right', width: 200 });
+        doc.font('Roboto').fillColor('#64748B').text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`, 340, rightY, { align: 'right', width: 210 });
+        rightY += 14;
       }
 
-      doc.moveTo(50, 160).lineTo(550, 160).stroke();
+      // Safe separation divider: dynamically calculates max height
+      const headerDividerY = Math.max(leftY, rightY) + 12;
+      doc.strokeColor('#E2E8F0').lineWidth(1).moveTo(50, headerDividerY).lineTo(550, headerDividerY).stroke();
 
-      // Bill To
+      // ════════════ BILL TO SECTION ════════════
+      const billToY = headerDividerY + 14;
       const patientCode = `PAT-${invoice.patient.id.slice(-6).toUpperCase()}`;
-      doc.fontSize(12).font('Roboto-Bold').text('Bill To:', 50, 180);
-      doc.fontSize(10).font('Roboto')
-         .text(`Name: ${invoice.patient.firstName} ${invoice.patient.lastName}`, 50, 195)
-         .text(`Patient ID: ${patientCode}`, 50, 210)
-         .text(`Phone: ${invoice.patient.phone}`, 50, 225);
-      
+
+      // Deduplicate patient name if firstName and lastName are identical (e.g. Reshma Reshma)
+      const pFirst = (invoice.patient.firstName || '').trim();
+      const pLast = (invoice.patient.lastName || '').trim();
+      const cleanPatientName = (pLast && pLast.toLowerCase() !== pFirst.toLowerCase())
+        ? `${pFirst} ${pLast}`
+        : pFirst;
+
+      doc.fontSize(10).font('Roboto-Bold').fillColor('#0F172A').text('Bill To:', 50, billToY);
+      doc.fontSize(9).font('Roboto').fillColor('#334155')
+         .text(`Name: ${cleanPatientName}`, 50, billToY + 15, { width: 270 })
+         .text(`Patient ID: ${patientCode}`, 50, billToY + 28, { width: 270 })
+         .text(`Phone: ${invoice.patient.phone}`, 50, billToY + 41, { width: 270 });
+
+      let ptBottomY = billToY + 54;
       if (invoice.patient.email) {
-         doc.text(`Email: ${invoice.patient.email}`, 50, 240);
+        doc.text(`Email: ${invoice.patient.email}`, 50, billToY + 54, { width: 270 });
+        ptBottomY += 13;
       }
 
-      doc.moveTo(50, 260).lineTo(550, 260).stroke();
+      const tableDividerY = ptBottomY + 8;
+      doc.strokeColor('#E2E8F0').moveTo(50, tableDividerY).lineTo(550, tableDividerY).stroke();
 
-      // Table Header
-      let y = 280;
-      doc.fontSize(10).font('Roboto-Bold');
-      doc.text('Description', 50, y);
-      doc.text('Qty', 350, y, { width: 50, align: 'right' });
-      doc.text('Unit Price', 400, y, { width: 70, align: 'right' });
+      // ════════════ ITEMS TABLE ════════════
+      let y = tableDividerY + 14;
+      doc.fontSize(9).font('Roboto-Bold').fillColor('#475569');
+      doc.text('Description', 50, y, { width: 290 });
+      doc.text('Qty', 340, y, { width: 40, align: 'right' });
+      doc.text('Unit Price', 390, y, { width: 70, align: 'right' });
       doc.text('Total', 470, y, { width: 80, align: 'right' });
-      
-      doc.moveTo(50, y + 15).lineTo(550, y + 15).stroke();
-      doc.font('Roboto');
-      y += 25;
 
-      // Table Rows
+      doc.strokeColor('#E2E8F0').moveTo(50, y + 14).lineTo(550, y + 14).stroke();
+      doc.font('Roboto').fillColor('#0F172A');
+      y += 22;
+
       for (const item of invoice.items) {
-        doc.text(item.description, 50, y, { width: 300 });
-        doc.text(item.quantity.toString(), 350, y, { width: 50, align: 'right' });
-        doc.text(`${sym}${item.unitPrice.toFixed(2)}`, 400, y, { width: 70, align: 'right' });
+        doc.text(item.description, 50, y, { width: 290 });
+        doc.text(item.quantity.toString(), 340, y, { width: 40, align: 'right' });
+        doc.text(`${sym}${item.unitPrice.toFixed(2)}`, 390, y, { width: 70, align: 'right' });
         doc.text(`${sym}${item.total.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-        y += 20;
+        y += 18;
       }
 
-      doc.moveTo(50, y + 10).lineTo(550, y + 10).stroke();
-      y += 25;
+      doc.strokeColor('#E2E8F0').moveTo(50, y + 6).lineTo(550, y + 6).stroke();
+      y += 16;
 
-      // Totals
-      doc.font('Roboto-Bold');
-      doc.text('Subtotal:', 350, y, { width: 120, align: 'right' });
+      // ════════════ TOTALS & FINANCIAL SUMMARY ════════════
+      doc.font('Roboto-Bold').fillColor('#334155');
+      doc.text('Subtotal:', 340, y, { width: 120, align: 'right' });
       doc.text(`${sym}${invoice.subtotal.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-      y += 20;
+      y += 16;
 
       if (invoice.discountAmount > 0) {
-        doc.font('Roboto');
-        doc.text('Discount:', 350, y, { width: 120, align: 'right' });
+        doc.font('Roboto').fillColor('#16A34A');
+        doc.text('Discount:', 340, y, { width: 120, align: 'right' });
         doc.text(`-${sym}${invoice.discountAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-        y += 20;
+        y += 16;
       }
 
       if ((invoice as any).taxAmount > 0) {
-        doc.font('Roboto');
-        doc.text('Tax:', 350, y, { width: 120, align: 'right' });
+        doc.font('Roboto').fillColor('#64748B');
+        doc.text('Tax:', 340, y, { width: 120, align: 'right' });
         doc.text(`${sym}${(invoice as any).taxAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-        y += 20;
+        y += 16;
       }
 
-      doc.moveTo(350, y).lineTo(550, y).stroke();
-      y += 10;
+      doc.strokeColor('#E2E8F0').moveTo(340, y).lineTo(550, y).stroke();
+      y += 8;
 
-      doc.fontSize(12).font('Roboto-Bold');
-      doc.text('Grand Total:', 350, y, { width: 120, align: 'right' });
+      // Grand Total
+      doc.fontSize(11).font('Roboto-Bold').fillColor('#0F172A');
+      doc.text('Grand Total:', 340, y, { width: 120, align: 'right' });
       doc.text(`${sym}${invoice.totalAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-      y += 20;
-      
+      y += 18;
+
+      // Amount Paid
       const amountPaid = invoice.payments ? invoice.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
       const balanceDue = Math.max(0, invoice.totalAmount - amountPaid);
-      
-      doc.fontSize(10).font('Roboto');
-      doc.text('Amount Paid:', 350, y, { width: 120, align: 'right' });
-      doc.text(`${sym}${amountPaid.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-      y += 20;
 
-      doc.font('Roboto-Bold');
-      doc.text('Balance Due:', 350, y, { width: 120, align: 'right' });
-      doc.text(`${sym}${balanceDue.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
-      y += 30;
+      doc.fontSize(9).font('Roboto').fillColor('#475569');
+      doc.text('Amount Paid:', 340, y, { width: 120, align: 'right' });
+      doc.text(`${sym}${amountPaid.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
+      y += 18;
+
+      // BALANCE DUE IN BOLD RED COLOR
+      if (balanceDue > 0.01) {
+        doc.fontSize(11).font('Roboto-Bold').fillColor('#DC2626'); // Red color for outstanding due!
+        doc.text('Balance Due:', 340, y, { width: 120, align: 'right' });
+        doc.text(`${sym}${balanceDue.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
+      } else {
+        doc.fontSize(10).font('Roboto-Bold').fillColor('#16A34A'); // Green for fully paid!
+        doc.text('Balance Due:', 340, y, { width: 120, align: 'right' });
+        doc.text(`${sym}0.00 (Fully Paid)`, 440, y, { width: 110, align: 'right' });
+      }
+      doc.fillColor('black'); // Reset back
+      y += 28;
 
       // Amount in Words
-      doc.fontSize(10).font('Roboto-Bold').text('Amount in Words:', 50, y);
-      doc.font('Roboto').text(numberToWords(invoice.totalAmount, invoice.currencyCode), 50, y + 15, { width: 500 });
-      y += 35;
+      doc.fontSize(9).font('Roboto-Bold').fillColor('#0F172A').text('Amount in Words:', 50, y);
+      doc.font('Roboto').fillColor('#475569').text(numberToWords(invoice.totalAmount, invoice.currencyCode), 50, y + 14, { width: 500 });
+      y += 32;
 
-      // Footer
-      let footerY = 700;
+      // ════════════ FOOTER ════════════
+      let footerY = 710;
       if (invoice.notes) {
-        doc.fontSize(10).font('Roboto-Bold');
-        doc.text('Notes:', 50, footerY);
-        doc.font('Roboto');
-        doc.text(invoice.notes, 50, footerY + 15, { width: 500 });
-        footerY += 40;
+        doc.fontSize(9).font('Roboto-Bold').fillColor('#0F172A').text('Notes:', 50, footerY);
+        doc.font('Roboto').fillColor('#475569').text(invoice.notes, 50, footerY + 12, { width: 500 });
+        footerY += 35;
       }
-      
+
       if (invoice.doctor.invoiceFooter) {
-        doc.fontSize(9).font('Roboto').fillColor('gray');
+        doc.fontSize(8).font('Roboto').fillColor('#64748B');
         doc.text(invoice.doctor.invoiceFooter, 50, footerY, { width: 500, align: 'center' });
-        footerY += 20;
+        footerY += 16;
       }
-      
-      doc.fontSize(8).font('Roboto').fillColor('gray');
+
+      doc.fontSize(8).font('Roboto').fillColor('#94A3B8');
       doc.text('Generated by Gyrex', 50, footerY, { width: 500, align: 'center' });
 
       doc.end();

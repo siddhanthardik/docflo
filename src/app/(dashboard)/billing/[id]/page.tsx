@@ -212,7 +212,7 @@ export default function InvoiceDetailsPage() {
               <p className="text-sm font-semibold text-gray-500">#{invoice.invoiceNumber}</p>
               <div className="mt-4">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Amount Due</p>
-                <p className="text-3xl font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</p>
+                <p className={`text-3xl font-black ${balanceDue > 0.01 ? "text-rose-600" : "text-emerald-600"} print:text-black`}>{sym}{balanceDue.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -220,7 +220,11 @@ export default function InvoiceDetailsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 text-sm">
             <div>
               <p className="font-semibold text-gray-500 uppercase tracking-wider mb-2 text-xs">Billed To</p>
-              <p className="font-bold text-gray-900 text-base">{invoice.patient.firstName} {invoice.patient.lastName}</p>
+              <p className="font-bold text-gray-900 text-base">
+                {(invoice.patient.lastName && invoice.patient.lastName.trim().toLowerCase() !== invoice.patient.firstName.trim().toLowerCase())
+                  ? `${invoice.patient.firstName} ${invoice.patient.lastName}`
+                  : invoice.patient.firstName}
+              </p>
               <p className="text-gray-600 mt-1">{invoice.patient.phone}</p>
             </div>
             <div className="text-left sm:text-right">
