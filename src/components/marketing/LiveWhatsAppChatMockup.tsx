@@ -7,7 +7,7 @@ import {
   CheckCheck, Phone, Video, MoreVertical, ArrowLeft, 
   MapPin, Calendar, Clock, CreditCard, Sparkles, Star, 
   Play, Pause, RotateCcw, Stethoscope, Building2, User, 
-  Navigation
+  Navigation, Globe, Bot, UserCheck, BellRing, MessageSquareText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 interface ChatStep {
   id: string;
   sender: "patient" | "ai";
+  senderLabel?: string;
   time: string;
   text?: string;
-  isCard?: "confirmation" | "location" | "review";
+  isCard?: "confirmation" | "location" | "review" | "delegation-status";
   cardData?: any;
 }
 
@@ -29,6 +30,7 @@ interface Scenario {
   clinicName: string;
   doctorName: string;
   specialty: string;
+  modeType?: "patient" | "doctor-delegation";
   steps: ChatStep[];
 }
 
@@ -36,10 +38,11 @@ const SCENARIOS: Scenario[] = [
   {
     id: "opd-booking",
     name: "In-Clinic OPD (Hinglish)",
-    badge: "Most Popular",
+    badge: "Patient Mode",
     clinicName: "City Health Clinic",
     doctorName: "Dr. Rajesh Sharma",
     specialty: "General Physician & Diabetologist",
+    modeType: "patient",
     steps: [
       {
         id: "step-1",
@@ -90,17 +93,68 @@ const SCENARIOS: Scenario[] = [
         id: "step-6",
         sender: "ai",
         time: "10:44 AM",
-        text: "Aapka appointment schedule ho gaya hai 🙏 Visit se pehle aapko WhatsApp reminder mil jayega. Koi sawal ho toh aap yahan pooch sakte hain!"
+        text: "Aapka appointment schedule ho gaya hai 🙏 Visit se 2 ghante pehle aapko WhatsApp reminder mil jayega. Koi query ho toh aap yahan pooch sakte hain!"
+      }
+    ]
+  },
+  {
+    id: "doctor-delegation",
+    name: "Doctor Delegation (Staff Command)",
+    badge: "Doctor ↔ AI",
+    clinicName: "Riya • AI Clinic Assistant",
+    doctorName: "Dr. Rajesh Sharma",
+    specialty: "Internal Doctor Copilot & Delegation Mode",
+    modeType: "doctor-delegation",
+    steps: [
+      {
+        id: "step-d1",
+        sender: "patient",
+        senderLabel: "Dr. Rajesh Sharma (Owner)",
+        time: "04:15 PM",
+        text: "Riya, I'm held up in an emergency surgery. Please reschedule all patient appointments after 6 PM today to tomorrow evening and inform them on WhatsApp."
+      },
+      {
+        id: "step-d2",
+        sender: "ai",
+        time: "04:15 PM",
+        text: "Understood, Doctor. Rescheduling 3 evening consultations (Rahul Verma, Neha Gupta, Anil Sharma) to tomorrow after 5:00 PM and notifying patients via WhatsApp immediately."
+      },
+      {
+        id: "step-d3",
+        sender: "ai",
+        time: "04:16 PM",
+        isCard: "delegation-status",
+        cardData: {
+          task: "Emergency Reschedule Action",
+          status: "ACTION EXECUTED",
+          affected: "3 Patients Rescheduled & Notified",
+          details: "Shifted to Tomorrow Evening (05:00 PM – 07:30 PM)",
+          note: "WhatsApp notifications dispatched to all 3 patients."
+        }
+      },
+      {
+        id: "step-d4",
+        sender: "patient",
+        senderLabel: "Dr. Rajesh Sharma (Owner)",
+        time: "04:17 PM",
+        text: "Also send Mrs. Sunita Sharma that her fasting blood sugar report is normal and to continue current medicine."
+      },
+      {
+        id: "step-d5",
+        sender: "ai",
+        time: "04:17 PM",
+        text: "Message sent to Mrs. Sunita Sharma (+91 98112 XXXXX):\n\n'Namaste Mrs. Sharma, Dr. Rajesh Sharma has reviewed your blood sugar report. Results are completely normal. Please continue your current regimen as advised.'\n\nLogged in clinic audit trail, Doctor."
       }
     ]
   },
   {
     id: "timings-booking",
-    name: "Doctor Inquiries (English)",
-    badge: "24/7 Response",
+    name: "Doctor Inquiries (12+ Languages)",
+    badge: "Multilingual",
     clinicName: "Aura Skin & Laser Clinic",
     doctorName: "Dr. Ananya Rao",
     specialty: "Consultant Dermatologist",
+    modeType: "patient",
     steps: [
       {
         id: "step-v1",
@@ -151,11 +205,12 @@ const SCENARIOS: Scenario[] = [
   },
   {
     id: "review-autopilot",
-    name: "5★ Google Review",
+    name: "5★ Google Review Autopilot",
     badge: "Reputation Engine",
     clinicName: "Apex Dental & Implant Studio",
     doctorName: "Dr. Rohan Kapoor",
     specialty: "Implantologist & Dentist",
+    modeType: "patient",
     steps: [
       {
         id: "step-r1",
@@ -198,6 +253,7 @@ export function LiveWhatsAppChatMockup() {
 
   const scenario = SCENARIOS[activeScenarioIdx];
   const totalSteps = scenario.steps.length;
+  const isDoctorDelegation = scenario.modeType === "doctor-delegation";
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Reset steps when scenario changes
@@ -244,21 +300,32 @@ export function LiveWhatsAppChatMockup() {
   }, [visibleStepCount, isTyping]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-10 px-4">
-      {/* Header & Scenario Switcher */}
-      <div className="text-center max-w-2xl mx-auto mb-8 space-y-3">
-        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 px-3 py-1 text-xs font-bold uppercase tracking-wider">
-          Interactive Patient Experience
+    <div className="w-full max-w-6xl mx-auto py-12 px-4 sm:px-6">
+      {/* Header & Multilingual Banner */}
+      <div className="text-center max-w-3xl mx-auto mb-8 space-y-3">
+        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 px-3.5 py-1 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+          Interactive Patient & Doctor Experience
         </Badge>
-        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Watch Gyrex AI Handle Patient Bookings Live
+        
+        <h3 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Watch Gyrex AI Handle Patient Bookings & Doctor Delegation Live
         </h3>
-        <p className="text-xs sm:text-sm text-slate-600">
-          From first greeting in Hinglish to instant slot booking, Google Maps directions, and 5-star review collection.
+        
+        <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          From conversational slot booking in Hinglish to 1-click Google Maps directions, automated Google 5-star reviews, and direct WhatsApp task delegation from the doctor.
         </p>
 
+        {/* 12+ Languages Pill */}
+        <div className="pt-1 flex items-center justify-center">
+          <span className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 border border-indigo-200/80 px-3 py-1 rounded-full text-[11px] font-bold shadow-2xs">
+            <Globe className="w-3.5 h-3.5 text-indigo-600" />
+            Fluently Speaks 12+ Languages: English, Hindi, Hinglish, Tamil, Telugu, Kannada, Malayalam, Marathi, Gujarati, Bengali, Punjabi & more
+          </span>
+        </div>
+
         {/* Scenario Pill Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-3">
           {SCENARIOS.map((sc, idx) => (
             <button
               key={sc.id}
@@ -267,7 +334,7 @@ export function LiveWhatsAppChatMockup() {
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs",
                 activeScenarioIdx === idx
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20 scale-[1.02]"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
@@ -284,11 +351,11 @@ export function LiveWhatsAppChatMockup() {
       </div>
 
       {/* Main Showcase Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
         
         {/* Left Side: Live Smartphone Frame (7 cols) */}
         <div className="lg:col-span-7 flex justify-center">
-          <div className="relative w-full max-w-[340px] sm:max-w-[370px] bg-slate-900 rounded-[44px] p-3 shadow-2xl shadow-slate-900/40 border-4 border-slate-800 ring-1 ring-slate-700/50">
+          <div className="relative w-full max-w-[340px] sm:max-w-[380px] bg-slate-900 rounded-[44px] p-3 shadow-2xl shadow-slate-900/40 border-4 border-slate-800 ring-1 ring-slate-700/50">
             
             {/* Top Dynamic Island / Speaker Pill */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-4 bg-slate-950 rounded-full z-30 flex items-center justify-center">
@@ -297,16 +364,21 @@ export function LiveWhatsAppChatMockup() {
             </div>
 
             {/* Inner Phone Screen */}
-            <div className="relative w-full h-[580px] bg-[#EFEAE2] rounded-[34px] overflow-hidden flex flex-col font-sans border border-slate-300/40">
+            <div className="relative w-full h-[600px] bg-[#EFEAE2] rounded-[34px] overflow-hidden flex flex-col font-sans border border-slate-300/40">
               
               {/* WhatsApp Header Bar */}
               <div className="bg-[#075E54] text-white px-3 py-2.5 pt-7 flex items-center justify-between shrink-0 shadow-sm z-20">
                 <div className="flex items-center gap-2 truncate">
                   <ArrowLeft className="w-4 h-4 text-white/90 shrink-0 cursor-pointer" />
                   
-                  {/* Clinic Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shrink-0 text-white font-black text-xs shadow-xs">
-                    {scenario.clinicName.charAt(0)}
+                  {/* Avatar */}
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-black text-xs shadow-xs border",
+                    isDoctorDelegation 
+                      ? "bg-amber-500 text-slate-950 border-amber-300"
+                      : "bg-white/20 text-white border-white/40"
+                  )}>
+                    {isDoctorDelegation ? <Bot className="w-5 h-5 text-slate-950" /> : scenario.clinicName.charAt(0)}
                   </div>
                   
                   {/* Name & Online Status */}
@@ -321,7 +393,11 @@ export function LiveWhatsAppChatMockup() {
                       </span>
                     </div>
                     <span className="text-[10px] text-emerald-200 block truncate">
-                      {isTyping ? "typing..." : "Online • 24/7 AI Receptionist"}
+                      {isTyping 
+                        ? "typing..." 
+                        : isDoctorDelegation 
+                        ? "Doctor Copilot • Action Ready" 
+                        : "Online • 24/7 AI Receptionist"}
                     </span>
                   </div>
                 </div>
@@ -345,7 +421,7 @@ export function LiveWhatsAppChatMockup() {
                 {/* Date Chip */}
                 <div className="flex justify-center my-1">
                   <span className="bg-white/80 backdrop-blur-xs text-[10px] font-bold text-slate-600 px-2.5 py-0.5 rounded-md shadow-2xs border border-slate-200/60 uppercase">
-                    Today
+                    {isDoctorDelegation ? "Internal Doctor Staff Line" : "Today"}
                   </span>
                 </div>
 
@@ -361,6 +437,13 @@ export function LiveWhatsAppChatMockup() {
                       msg.sender === "patient" ? "items-end" : "items-start"
                     )}
                   >
+                    {/* Optional Doctor Sender Label in Delegation Mode */}
+                    {msg.sender === "patient" && msg.senderLabel && (
+                      <span className="text-[9px] font-bold text-slate-500 mr-2 mb-0.5">
+                        {msg.senderLabel}
+                      </span>
+                    )}
+
                     {/* Standard Text Bubble */}
                     {msg.text && (
                       <div
@@ -457,6 +540,30 @@ export function LiveWhatsAppChatMockup() {
                         </div>
                       </div>
                     )}
+
+                    {/* Rich Doctor Delegation Card */}
+                    {msg.isCard === "delegation-status" && (
+                      <div className="max-w-[92%] bg-white rounded-2xl border border-indigo-200 shadow-md p-3 space-y-2 text-left my-1">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                          <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 flex items-center gap-1">
+                            ✓ {msg.cardData.status}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold">Backend Automation</span>
+                        </div>
+                        <div className="space-y-1 text-xs">
+                          <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                            {msg.cardData.affected}
+                          </p>
+                          <p className="text-slate-600 text-[11px]">
+                            {msg.cardData.details}
+                          </p>
+                          <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                            {msg.cardData.note}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 ))}
 
@@ -478,8 +585,8 @@ export function LiveWhatsAppChatMockup() {
 
               {/* Simulated WhatsApp Input Footer */}
               <div className="bg-[#F0F2F5] px-3 py-2 border-t border-slate-200/60 flex items-center gap-2 shrink-0">
-                <div className="flex-1 bg-white rounded-full h-8 px-3 text-xs text-slate-400 flex items-center border border-slate-200/60">
-                  Message {scenario.clinicName}...
+                <div className="flex-1 bg-white rounded-full h-8 px-3 text-xs text-slate-400 flex items-center border border-slate-200/60 truncate">
+                  {isDoctorDelegation ? "Delegate task to Riya..." : `Message ${scenario.clinicName}...`}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#00A884] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Clock className="w-4 h-4" />
@@ -490,8 +597,8 @@ export function LiveWhatsAppChatMockup() {
           </div>
         </div>
 
-        {/* Right Side: Key Doctor Takeaways & Controls (5 cols) */}
-        <div className="lg:col-span-5 space-y-6 text-left">
+        {/* Right Side: All 5 Capabilities & Mode Differentiation (5 cols) */}
+        <div className="lg:col-span-5 space-y-5 text-left">
           
           {/* Active Flow Indicator */}
           <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
@@ -519,43 +626,88 @@ export function LiveWhatsAppChatMockup() {
             </div>
           </div>
 
-          {/* Core Healthcare Advantages Checklist */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+          {/* Patient Mode vs Doctor Delegation: Why the difference? */}
+          <div className="p-3.5 bg-indigo-50/70 rounded-2xl border border-indigo-100 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Two Specialized Operational Modes:</span>
+            </div>
+            <p className="text-[11px] text-indigo-950/80 leading-relaxed">
+              <strong>Patient Mode:</strong> Courteous, warm, multilingual guide answering patient questions, quoting fees, and booking slots 24/7.
+            </p>
+            <p className="text-[11px] text-indigo-950/80 leading-relaxed">
+              <strong>Doctor Delegation Mode:</strong> Direct, concise executive copilot. The doctor can text simple instructions (mass rescheduling, notifying patients, report updates) and the AI executes backend actions in seconds.
+            </p>
+          </div>
+
+          {/* ALL 5 Core Built Capabilities */}
+          <div className="space-y-2.5">
+            
+            {/* 1. Conversational OPD Booking */}
+            <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0 font-black text-xs">
-                ✓
+                1
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900">Instant Patient Response in &lt; 3s</p>
+                <p className="text-xs font-bold text-slate-900">Conversational OPD Booking</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Never lose a patient inquiry to a busy telephone line, lunchtime break, or after-hours closure.
+                  24/7 slot inquiry with doctor timings and consultation fee quotation in 12+ Indian and global languages.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+            {/* 2. Clean Appointment Confirmation */}
+            <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+              <div className="w-7 h-7 rounded-xl bg-teal-100 flex items-center justify-center text-teal-700 shrink-0 font-black text-xs">
+                2
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900">Clean Appointment Confirmation</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  Instant card sharing Doctor, Specialty, Clinic, Patient Name, Date & Time, and Consultation Fee without false EMR claims.
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Google Maps Location Sharing */}
+            <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="w-7 h-7 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 shrink-0 font-black text-xs">
-                ✓
+                3
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900">Google Maps 1-Click Directions</p>
+                <p className="text-xs font-bold text-slate-900">Google Maps Location Sharing</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Shares your precise clinic coordinates and metro landmarks so patients arrive on time without calling for directions.
+                  1-click turn-by-turn navigation card and landmark directions so patients arrive punctually without calling reception.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 font-black text-xs">
-                ✓
+            {/* 4. Automated Visit Reminder Notice */}
+            <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+              <div className="w-7 h-7 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700 shrink-0 font-black text-xs">
+                4
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900">Automated Google 5-Star Reviews</p>
+                <p className="text-xs font-bold text-slate-900">Automated Visit Reminder Notice</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Automatically requests positive patient feedback after the visit, rapidly boosting your Google 3-Pack ranking.
+                  Pre-visit reminder notification via WhatsApp to eliminate clinic no-shows and prepare patients before their slot.
                 </p>
               </div>
             </div>
+
+            {/* 5. Google 5-Star Review Autopilot */}
+            <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+              <div className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 font-black text-xs">
+                5
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900">Google 5-Star Review Autopilot</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  Automated review collection on your Google Business Profile after visits to dominate the local Google Maps 3-Pack.
+                </p>
+              </div>
+            </div>
+
           </div>
 
           {/* Animation Controls & CTAs */}
@@ -587,7 +739,7 @@ export function LiveWhatsAppChatMockup() {
 
             <Link href="/ai-receptionist-demo" className="w-full sm:flex-1">
               <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-4 rounded-xl shadow-md shadow-emerald-600/20">
-                Try on Your WhatsApp
+                Try Live Simulator
               </Button>
             </Link>
           </div>
