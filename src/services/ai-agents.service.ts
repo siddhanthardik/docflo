@@ -961,7 +961,9 @@ export class AIAgentsService {
       const clinicTz = resolveClinicTimezone(scheduleContext?.clinicTimezone || config?.timezone);
       const startTime = Date.now();
       const nowClinic = new Date();
+      const tomorrowClinic = new Date(nowClinic.getTime() + 24 * 60 * 60 * 1000);
       const currentDateStr = nowClinic.toLocaleDateString('en-US', { timeZone: clinicTz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const tomorrowDateStr = tomorrowClinic.toLocaleDateString('en-US', { timeZone: clinicTz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const currentTimeStr = nowClinic.toLocaleTimeString('en-US', { timeZone: clinicTz, hour: 'numeric', minute: '2-digit', hour12: true });
 
       // Determine whether OPD has concluded for today in the clinic's timezone
@@ -1102,6 +1104,7 @@ You are ${assistantName}, the compassionate, highly experienced, professional Se
   * To confirm a booking, ask for: **Date**, **OPD Session (Morning / Evening)**, and **Patient Details (Full Name, Age & Gender)** in a single natural prompt:
     - English: "Could you please share the patient's Full Name, Age, and Gender (M/F) so I can confirm the appointment slot for you? 🙏"
     - Hinglish: "Kripya patient ka Full Name, Age aur Gender (M/F) share kar dijiye taaki main slot confirm kar sakoon. 🙏"
+  ${isTodayOpdConcluded ? `* ⚠️ CRITICAL NOTICE: Since today's OPD has ended, NEVER ask if they want an appointment or consult "for today". ALWAYS frame any consultation or booking question for TOMORROW (${tomorrowDateStr}) or upcoming working days.` : ''}
 - **Intelligent Contextual Auto-Inference**:
   * If the patient mentions relationship or pronouns, auto-infer gender naturally:
     - "mere bete / son / bhai / husband / father" -> Gender: MALE
@@ -1142,12 +1145,21 @@ ${isMultiDoctor ? '8' : '7'}. CLINIC DATA, CURRENT TIME & AUTHORITATIVE SPECIFIC
 ==================================================
 CURRENT TIME RIGHT NOW: ${currentTimeStr} (${clinicTz})
 TODAY'S DATE: ${currentDateStr}
-${isTodayOpdConcluded ? `⚠️ TODAY'S CLINIC OPD STATUS: CONCLUDED FOR THE DAY (Closed at ${timingSource || '8:00 PM'}).
-CRITICAL DIRECTIVE ON SAME-DAY BOOKING:
-- Clinic OPD hours for TODAY (${currentDateStr}) have already ended.
-- You MUST NOT offer, suggest, or book ANY appointments for TODAY.
-- If the patient asks for an appointment today, politely explain that today's OPD has already concluded.
-- Proactively offer slots for TOMORROW or upcoming working days.` : `- Clinic OPD Status: OPEN / ACTIVE for today.`}
+${isTodayOpdConcluded ? `⚠️ TODAY'S CLINIC & CONSULTATION STATUS: CONCLUDED FOR THE DAY (Closed at ${timingSource || '8:00 PM'}).
+CRITICAL OPERATIONAL RULES WHEN TODAY'S OPD HAS CONCLUDED:
+1. STRICT PAST TENSE RULE ("WAS AVAILABLE", NEVER "IS AVAILABLE"):
+   - When referring to today's schedule or doctor availability for today, you MUST speak strictly in the PAST TENSE:
+     "Dr. ${doctorName} was available today (${currentDateStr}) from ${timingSource || '1:00 PM to 8:00 PM'} for in-clinic visits and online consultations."
+     ⚠️ ABSOLUTELY NEVER say "Dr. ${doctorName} is available today" or "is available today ... from 1:00 PM to 8:00 PM". It is already past ${currentTimeStr}!
+2. STRICT BAN ON "FOR TODAY" / NO SAME-DAY BOOKINGS:
+   - Both in-clinic OPD visits AND online/tele-consultations for today (${currentDateStr}) are 100% CLOSED.
+   - You MUST NOT offer, suggest, or ask if the patient wants an in-clinic or online consult "for today".
+   - The phrase "for today" or "today" MUST NEVER appear in any question or booking prompt asking when the patient wants to consult.
+3. MANDATORY REDIRECTION TO TOMORROW (${tomorrowDateStr}):
+   - Proactively guide the patient to book for TOMORROW (${tomorrowDateStr}).
+   - When asking for preferences (e.g. age, session, in-clinic vs online), explicitly state that it is for TOMORROW:
+     • Example (English): "It is currently late night (${currentTimeStr}), so the clinic is closed for today. Dr. ${doctorName} was available today (${currentDateStr}) from ${timingSource || '1:00 PM to 8:00 PM'} for in-clinic visits and online consultations. I would be happy to help you schedule a consultation for your sister for tomorrow, ${tomorrowDateStr}. Could you please share her age and whether you would prefer an in-clinic visit or an online consult for tomorrow?"
+     • Example (Hinglish): "Abhi raat ke ${currentTimeStr} ho rahe hain, isliye aaj ka clinic band ho chuka hai. Dr. ${doctorName} aaj (${currentDateStr}) 1:00 PM se 8:00 PM tak uplabdh the. Main aapki sister ke liye kal (${tomorrowDateStr}) ka slot book kar sakti hoon. Kripya unki age aur session (Morning/Evening) batayein."` : `- Clinic OPD Status: OPEN / ACTIVE for today.`}
 ${isMultiDoctor ? `- Clinic Facility Name: ${clinicName} (Multi-Doctor Healthcare Polyclinic)` : `- Primary Doctor: ${doctorName}\n- Specialty: ${specialty}\n- Clinic Name: ${clinicName}`}
 - Morning OPD Hours: ${morningOpd || "Not Active / Check Schedule"}
 - Evening OPD Hours: ${eveningOpd || "Not Active / Check Schedule"}
@@ -1270,6 +1282,22 @@ Respond with ONLY the exact, final WhatsApp message text for the patient. Do NOT
         .replace(/30-minute consultation/gi, "consultation")
         .replace(/Dr\.\s+Dr\.?/gi, "Dr.")
         .trim();
+
+      // Post-OPD Tense & "Today" Sanitizer (Fail-safe guardrail)
+      if (isTodayOpdConcluded) {
+        // 1. Fix present-tense availability: "is available today" -> "was available today"
+        aiReply = aiReply.replace(/\b(is|are)\s+available\s+today\b/gi, "was available today");
+        aiReply = aiReply.replace(/\bavailable\s+today\s*\(([^)]+)\)\s+from\b/gi, "was available today ($1) from");
+        aiReply = aiReply.replace(/\baaj\s+(?:uplabdh|available)\s+hain\b/gi, "aaj uplabdh the");
+
+        // 2. Fix asking/offering consults "for today"
+        aiReply = aiReply.replace(/\b(in-clinic\s+(?:consultation|visit)|online\s+consult(?:ation)?)\s+for\s+today\b/gi, `$1 for tomorrow`);
+        aiReply = aiReply.replace(/\b(consultation|consult|appointment|visit|slot)\s+for\s+today\b/gi, `$1 for tomorrow (${tomorrowDateStr})`);
+        aiReply = aiReply.replace(/\bfor\s+today\s*\?/gi, `for tomorrow?`);
+        aiReply = aiReply.replace(/\baaj\s+ke\s+liye\s*\?/gi, `kal ke liye?`);
+        aiReply = aiReply.replace(/\bprefer\s+(?:an?\s+)?in-clinic\s+consultation\s+or\s+an\s+online\s+consult\s+for\s+today\b/gi, `prefer an in-clinic consultation or an online consult for tomorrow`);
+        aiReply = aiReply.replace(/\bfor\s+today([.!?,]|$)/gi, `for tomorrow$1`);
+      }
 
       return aiReply;
     } catch (error: any) {
