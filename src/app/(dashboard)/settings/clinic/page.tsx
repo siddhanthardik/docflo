@@ -394,7 +394,7 @@ export default function SettingsClinicPage() {
 
                 {/* Clinic Phone */}
                 <div className="sm:col-span-2">
-                  <label htmlFor="clinicPhone" className={labelClass}>Clinic Contact / Admin Phone</label>
+                  <label htmlFor="clinicPhone" className={labelClass}>Clinic Reception / Front Desk Phone</label>
                   <input
                     id="clinicPhone"
                     type="tel"
@@ -403,7 +403,7 @@ export default function SettingsClinicPage() {
                     onChange={(e) => setClinic({ ...clinic, phone: e.target.value })}
                     placeholder="e.g. +91 9876543210"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Official clinic contact number displayed on patient invoices, receipts, and clinic notifications.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Official clinic reception number printed on patient invoices, receipts, and appointment confirmations.</p>
                 </div>
 
                 {/* Street Address */}

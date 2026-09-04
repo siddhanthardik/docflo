@@ -35,13 +35,6 @@ export function SettingsTabs() {
 
   const tabs: TabItem[] = [
     {
-      key: "profile",
-      label: "My Profile",
-      description: "Doctor profile, contact info & medical specialty",
-      icon: User,
-      href: "/settings",
-    },
-    {
       key: "clinic",
       label: "Clinic Profile",
       description: "Clinic branding, address, timings & currency",
@@ -50,8 +43,8 @@ export function SettingsTabs() {
     },
     {
       key: "doctors",
-      label: "Doctors",
-      description: "Practitioners, specialties & consult fees",
+      label: "Doctors & OPD",
+      description: "Practitioners, clinical specialties, OPD timings & fees",
       icon: Stethoscope,
       href: "/settings/practitioners",
     },
@@ -91,11 +84,11 @@ export function SettingsTabs() {
       href: "/settings/reviews",
     },
     {
-      key: "security",
-      label: "Security",
-      description: "Password change & account session protection",
+      key: "account",
+      label: "Account & Security",
+      description: "Login credentials, recovery phone, password & sessions",
       icon: Shield,
-      href: "/settings/security",
+      href: "/settings",
     },
   ];
 
@@ -321,7 +314,7 @@ export function SettingsTabs() {
       )}
 
       {/* ── DESKTOP & TABLET GRID (≥ 768px) ── */}
-      <div className="hidden md:grid grid-cols-5 gap-2 bg-white border border-slate-200/80 rounded-2xl p-3 shadow-xs">
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-2 bg-white border border-slate-200/80 rounded-2xl p-3 shadow-xs">
         {tabs.map(({ key, label, icon: Icon, href }) => {
           const isActive =
             href === "/settings"
