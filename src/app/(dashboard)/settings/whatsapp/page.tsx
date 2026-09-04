@@ -10,17 +10,21 @@ export default function WhatsAppSettingsPage() {
   const [waStatus, setWaStatus] = useState<"CONNECTING" | "SCAN_QR" | "CONNECTED" | "DISCONNECTED">("DISCONNECTED");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
 
+  const [retryCount, setRetryCount] = useState(0);
+
   useEffect(() => {
-    fetchWhatsAppConfig();
+    // Initial fetch triggers connect if not already connected
+    fetchWhatsAppConfig(true);
   }, []);
 
-  const fetchWhatsAppConfig = async () => {
+  const fetchWhatsAppConfig = async (initiateIfDisconnected: boolean = false) => {
     try {
-      setWhatsappLoading(true);
-      const response = await fetch("/api/whatsapp/qr");
+      const url = initiateIfDisconnected ? "/api/whatsapp/qr?action=connect" : "/api/whatsapp/qr";
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setWaStatus(data.status);
+        setRetryCount(data.retryCount || 0);
         if (data.status === "SCAN_QR" && data.qr) {
           setQrCodeDataUrl(data.qr);
         } else {
@@ -34,13 +38,26 @@ export default function WhatsAppSettingsPage() {
     }
   };
 
-  // Poll status continuously every 5 seconds to detect real-time disconnections
+  // Poll status non-destructively: every 5s during setup/connecting, slow down to 25s when connected
   useEffect(() => {
+    const pollInterval = waStatus === "CONNECTED" ? 25000 : 5000;
     const interval = setInterval(() => {
-      fetchWhatsAppConfig();
-    }, 5000);
+      fetchWhatsAppConfig(false);
+    }, pollInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [waStatus]);
+
+  const handleInitiateConnect = async () => {
+    try {
+      setWhatsappLoading(true);
+      await fetch("/api/whatsapp/qr", { method: "POST" });
+      fetchWhatsAppConfig(false);
+    } catch (err) {
+      console.error("Connect trigger error:", err);
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
 
   const handleDisconnectWhatsApp = async () => {
     if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
@@ -50,7 +67,7 @@ export default function WhatsAppSettingsPage() {
       setWaStatus("DISCONNECTED");
       setQrCodeDataUrl(null);
       toast({ title: "WhatsApp Disconnected" });
-      fetchWhatsAppConfig();
+      fetchWhatsAppConfig(false);
     } catch (error) {
       console.error(error);
     } finally {
@@ -134,6 +151,17 @@ export default function WhatsAppSettingsPage() {
                     <li>3. Tap <strong>Link a Device</strong></li>
                     <li>4. Point your phone to this screen to capture the QR code</li>
                   </ol>
+
+                  {!qrCodeDataUrl && waStatus === "DISCONNECTED" && (
+                    <div className="mt-4">
+                      <button
+                        onClick={handleInitiateConnect}
+                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
+                      >
+                        Generate QR Code / Reconnect
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -12,19 +12,22 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1. Check if Platform SuperAdmin WhatsApp is already connected
-    if (whatsappManager.isConnected(SUPERADMIN_DOCTOR_ID)) {
+    const state = whatsappManager.getConnectionStatus(SUPERADMIN_DOCTOR_ID);
+
+    if (state.status === "CONNECTED") {
       return NextResponse.json({ status: "CONNECTED", qr: null }, { status: 200 });
     }
 
-    // 2. Check if a QR code is currently waiting to be scanned
-    const qrStr = whatsappManager.getQR(SUPERADMIN_DOCTOR_ID);
-    if (qrStr) {
-      const qrDataUrl = await QRCode.toDataURL(qrStr);
+    if (state.status === "SCAN_QR" && state.qr) {
+      const qrDataUrl = await QRCode.toDataURL(state.qr);
       return NextResponse.json({ status: "SCAN_QR", qr: qrDataUrl }, { status: 200 });
     }
 
-    // 3. Initiate new Baileys connection for PLATFORM_SUPERADMIN if not already connecting
+    if (state.status === "CONNECTING") {
+      return NextResponse.json({ status: "CONNECTING", qr: null }, { status: 200 });
+    }
+
+    // Auto connect only if not recently attempted (enforced by connect internal cooldown)
     whatsappManager.connect(SUPERADMIN_DOCTOR_ID).catch((e) => {
       console.error("[SuperAdmin WhatsApp QR] Auto connect error:", e);
     });
@@ -32,6 +35,25 @@ export async function GET() {
     return NextResponse.json({ status: "DISCONNECTED", qr: null }, { status: 200 });
   } catch (error: any) {
     console.error("[SuperAdmin WhatsApp QR] GET error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function POST() {
+  try {
+    const session = await auth();
+    if (!session || !["SUPERADMIN", "ADMIN"].includes(session.user?.role || "")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    whatsappManager.connect(SUPERADMIN_DOCTOR_ID, { force: true }).catch((e) => {
+      console.error("[SuperAdmin WhatsApp QR] Connect error:", e);
+    });
+
+    const state = whatsappManager.getConnectionStatus(SUPERADMIN_DOCTOR_ID);
+    return NextResponse.json({ success: true, status: state.status });
+  } catch (error: any) {
+    console.error("[SuperAdmin WhatsApp QR] POST error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

@@ -33,6 +33,9 @@ class WhatsAppManager {
   private connectingDoctors: Set<string> = new Set(); // Guard against duplicate connect attempts
   private activeConnections: Set<string> = new Set(); // Tracks fully opened connections
   private reconnectAttempts: Map<string, number> = new Map(); // Tracks retry backoff per doctor/superadmin
+  private lastConnectAttempt: Map<string, number> = new Map(); // doctorId -> timestamp of last connection attempt
+  private connectionOpenAt: Map<string, number> = new Map(); // doctorId -> timestamp when connection opened (for warm-up)
+  private lastMessageSentAt: Map<string, number> = new Map(); // doctorId -> timestamp of last outbound message (for pacing)
   private watchdogTimer: NodeJS.Timeout | null = null;
   // Holds doctor-delegated tasks (patientPhone -> task)
   private delegatedDoctorTasks: Map<string, {
@@ -98,6 +101,9 @@ class WhatsAppManager {
     this.connectingDoctors.delete(doctorId);
     this.activeConnections.delete(doctorId);
     this.reconnectAttempts.delete(doctorId);
+    this.lastConnectAttempt.delete(doctorId);
+    this.connectionOpenAt.delete(doctorId);
+    this.lastMessageSentAt.delete(doctorId);
 
     const sessionDir = getDoctorSessionDir(doctorId);
     if (fs.existsSync(sessionDir)) {
@@ -160,6 +166,21 @@ class WhatsAppManager {
         return false;
       }
 
+      // 1. Anti-Ban Guard: Enforce 10s quiet warm-up period after connection opens
+      if (this.isWarmingUp(doctorId)) {
+        console.log(`[WhatsAppManager] Device for ${doctorId} is in 10s post-connect warm-up. Pausing outbound message briefly.`);
+        await new Promise(res => setTimeout(res, 4000));
+      }
+
+      // 2. Anti-Ban Guard: Human jitter and pacing (minimum 3s between messages per doctor)
+      const now = Date.now();
+      const lastSent = this.lastMessageSentAt.get(doctorId) || 0;
+      if (now - lastSent < 3000) {
+        const jitter = Math.floor(Math.random() * 2000) + 1500; // 1.5s - 3.5s jitter
+        await new Promise(res => setTimeout(res, jitter));
+      }
+      this.lastMessageSentAt.set(doctorId, Date.now());
+
       const patientJid = `${normalizedPhone}@s.whatsapp.net`;
       await sock.sendMessage(patientJid, { text });
       console.log(`[WhatsAppManager] 📤 Outbound WhatsApp sent to ${patientJid}`);
@@ -219,17 +240,34 @@ class WhatsAppManager {
   }
 
   // Connects or reconnects a doctor's WhatsApp session
-  async connect(doctorId: string) {
+  async connect(doctorId: string, options: { force?: boolean } = {}) {
+    // 1. Guard against in-flight connection attempts
     if (this.connectingDoctors.has(doctorId)) {
       console.log(`[WhatsAppManager] Connection already in progress for ${doctorId}, skipping duplicate request.`);
       return;
     }
 
+    // 2. Guard: If already connected and not forced, do not reconnect
+    if (!options.force && this.isConnected(doctorId)) {
+      console.log(`[WhatsAppManager] Doctor ${doctorId} is already connected, skipping connect request.`);
+      return;
+    }
+
+    // 3. Rate-limit connect calls: Cooldown of 30 seconds between fresh connection requests (unless forced)
+    const now = Date.now();
+    const lastAttempt = this.lastConnectAttempt.get(doctorId) || 0;
+    if (!options.force && now - lastAttempt < 30000) {
+      const waitRemaining = Math.ceil((30000 - (now - lastAttempt)) / 1000);
+      console.log(`[WhatsAppManager] Connection rate-limit active for ${doctorId}. Must wait ${waitRemaining}s before next attempt.`);
+      return;
+    }
+
+    this.lastConnectAttempt.set(doctorId, now);
     this.connectingDoctors.add(doctorId);
     console.log(`[WhatsAppManager] Starting connection for session: ${doctorId}`);
     
     try {
-      // Clean up any pre-existing dangling socket
+      // Clean up any pre-existing dangling socket safely
       const existingSock = this.sockets.get(doctorId);
       if (existingSock) {
         try {
@@ -273,18 +311,19 @@ class WhatsAppManager {
         console.warn(`[WhatsAppManager] Failed to fetch latest WA version, using stable fallback:`, vErr);
       }
 
+      // Baileys configuration with realistic browser fingerprint and anti-ban safeguards
       const sock = makeWASocket({
         version: version as any,
         auth: state,
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
-        browser: Browsers.macOS('Desktop'),
-        markOnlineOnConnect: true,
+        browser: Browsers.appropriate('Chrome'),
+        markOnlineOnConnect: false, // Do not instantly broadcast presence on connect (anti-bot safeguard)
         syncFullHistory: false,
-        keepAliveIntervalMs: 25000,
+        keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
-        retryRequestDelayMs: 2000,
+        retryRequestDelayMs: 3000,
       });
 
       sock.ev.on('creds.update', async () => {
@@ -307,6 +346,7 @@ class WhatsAppManager {
           this.sockets.delete(doctorId);
           this.connectingDoctors.delete(doctorId);
           this.activeConnections.delete(doctorId);
+          this.connectionOpenAt.delete(doctorId);
 
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isSuperAdmin = doctorId === 'PLATFORM_SUPERADMIN';
@@ -335,9 +375,10 @@ class WhatsAppManager {
           if (shouldReconnect) {
             const currentAttempts = (this.reconnectAttempts.get(doctorId) || 0) + 1;
 
-            // Cap retries at 10 attempts to avoid runaway background loops
-            if (currentAttempts > 10) {
-              console.warn(`[WhatsAppManager] Maximum reconnection attempts (10) reached for ${doctorId}. Pausing auto-reconnect.`);
+            // Strict Anti-Ban Cap: Max 3 retries (down from 10) to protect account from Meta bot detection
+            const MAX_RETRIES = 3;
+            if (currentAttempts > MAX_RETRIES) {
+              console.warn(`[WhatsAppManager] Maximum reconnection attempts (${MAX_RETRIES}) reached for ${doctorId}. Halting auto-reconnect to protect account.`);
               this.reconnectAttempts.delete(doctorId);
 
               logSystemError(new Error(`WhatsApp max reconnection attempts reached for ${doctorId}`), {
@@ -350,8 +391,8 @@ class WhatsAppManager {
                 prisma.notification.create({
                   data: {
                     doctorId,
-                    title: "WhatsApp Reconnect Paused ⚠️",
-                    message: "Unable to reconnect to WhatsApp after multiple attempts. Please check your phone internet connection or re-link via Settings.",
+                    title: "WhatsApp Connection Paused ⚠️",
+                    message: "Unable to reach WhatsApp after 3 attempts. Auto-reconnection paused to protect your account. Please verify phone internet and click Reconnect in Settings.",
                     type: "WARNING",
                     actionUrl: "/settings/whatsapp",
                   }
@@ -362,14 +403,14 @@ class WhatsAppManager {
 
             this.reconnectAttempts.set(doctorId, currentAttempts);
 
-            // Exponential backoff: 2s, 3s, 5s, 8s, 12s, max 25s
-            const baseDelay = statusCode === DisconnectReason.restartRequired ? 1500 : 2500;
-            const delay = Math.min(baseDelay * Math.pow(1.3, Math.min(currentAttempts, 8)), 25000);
+            // Humane Anti-Ban Backoff: Attempt 1: 15s | Attempt 2: 45s | Attempt 3: 90s
+            const backoffSchedule = [15000, 45000, 90000];
+            const delay = backoffSchedule[currentAttempts - 1] || 90000;
 
-            console.log(`[WhatsAppManager] Scheduling auto-reconnect for ${doctorId} (attempt #${currentAttempts}/10) in ${Math.round(delay)}ms...`);
+            console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RETRIES}) in ${Math.round(delay / 1000)}s...`);
             
             setTimeout(() => {
-              this.connect(doctorId).catch(e => console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e));
+              this.connect(doctorId, { force: true }).catch(e => console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e));
             }, delay);
           } else {
             // Terminal failure for clinic doctor (explicitly logged out on mobile phone)
@@ -399,6 +440,7 @@ class WhatsAppManager {
           this.connectingDoctors.delete(doctorId);
           this.activeConnections.add(doctorId);
           this.reconnectAttempts.delete(doctorId);
+          this.connectionOpenAt.set(doctorId, Date.now()); // Start 10s warm-up timer
         }
       });
 
@@ -2141,6 +2183,49 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
     return !!sock && this.activeConnections.has(doctorId) && !this.qrCodes.has(doctorId);
   }
 
+  isConnecting(doctorId: string): boolean {
+    return this.connectingDoctors.has(doctorId);
+  }
+
+  isWarmingUp(doctorId: string): boolean {
+    const opened = this.connectionOpenAt.get(doctorId);
+    if (!opened) return false;
+    return Date.now() - opened < 10000; // 10s quiet period
+  }
+
+  getConnectionStatus(doctorId: string): {
+    status: 'CONNECTED' | 'SCAN_QR' | 'CONNECTING' | 'DISCONNECTED';
+    qr: string | null;
+    hasSavedSession: boolean;
+    retryCount: number;
+  } {
+    const isConn = this.isConnected(doctorId);
+    if (isConn) {
+      return { status: 'CONNECTED', qr: null, hasSavedSession: true, retryCount: 0 };
+    }
+
+    const qrStr = this.getQR(doctorId);
+    if (qrStr) {
+      return { status: 'SCAN_QR', qr: qrStr, hasSavedSession: false, retryCount: this.reconnectAttempts.get(doctorId) || 0 };
+    }
+
+    if (this.connectingDoctors.has(doctorId)) {
+      return {
+        status: 'CONNECTING',
+        qr: null,
+        hasSavedSession: this.hasSavedSession(doctorId),
+        retryCount: this.reconnectAttempts.get(doctorId) || 0,
+      };
+    }
+
+    return {
+      status: 'DISCONNECTED',
+      qr: null,
+      hasSavedSession: this.hasSavedSession(doctorId),
+      retryCount: this.reconnectAttempts.get(doctorId) || 0,
+    };
+  }
+
   hasSavedSession(doctorId: string): boolean {
     const sessionDir = getDoctorSessionDir(doctorId);
     const credsPath = path.join(sessionDir, 'creds.json');
@@ -2184,7 +2269,22 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
       console.warn(`[WhatsAppManager] onWhatsApp verification warning for ${cleanPhone}:`, e);
     }
 
-        const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
+    // 1. Anti-Ban Guard: Enforce 10s quiet warm-up period after connection opens
+    if (this.isWarmingUp(doctorId)) {
+      console.log(`[WhatsAppManager] Device for ${doctorId} is in 10s post-connect warm-up. Pausing outbound message briefly.`);
+      await new Promise(res => setTimeout(res, 4000));
+    }
+
+    // 2. Anti-Ban Guard: Human jitter and pacing (minimum 3s between messages per doctor)
+    const now = Date.now();
+    const lastSent = this.lastMessageSentAt.get(doctorId) || 0;
+    if (now - lastSent < 3000) {
+      const jitter = Math.floor(Math.random() * 2000) + 1500; // 1.5s - 3.5s jitter
+      await new Promise(res => setTimeout(res, jitter));
+    }
+    this.lastMessageSentAt.set(doctorId, Date.now());
+
+    const sent = await sock.sendMessage(jid, { text, linkPreview: null } as any);
     if (!sent) {
       const err = new Error("Failed to deliver message via WhatsApp. Please check WhatsApp connection status.");
       logSystemError(err, {
