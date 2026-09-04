@@ -26,7 +26,7 @@ export const loginSchema = z.object({
 
 export const patientSchema = z.object({
   firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().min(2, "Last name is required"),
+  lastName: z.string().optional().default(""),
   phone: z.string().min(10, "Valid phone number is required"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   dateOfBirth: z.string().optional(),

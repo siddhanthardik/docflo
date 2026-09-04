@@ -194,6 +194,8 @@ export async function POST(req: Request) {
       return await tx.patient.create({
         data: {
           ...validatedData,
+          firstName: validatedData.firstName.trim(),
+          lastName: (validatedData.lastName || "").trim(),
           phone: normalizedPhone,
           dateOfBirth: validatedData.dateOfBirth
             ? new Date(validatedData.dateOfBirth)

@@ -224,8 +224,8 @@ export function PatientForm({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName" className="text-xs font-semibold text-slate-700 flex items-center gap-0.5">
-                    Last Name <span className="text-rose-500">*</span>
+                  <Label htmlFor="lastName" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    Last Name <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -235,8 +235,7 @@ export function PatientForm({
                       onChange={(e) =>
                         setFormData({ ...formData, lastName: e.target.value })
                       }
-                      placeholder="Sharma"
-                      required
+                      placeholder="Sharma (or leave blank)"
                       className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
