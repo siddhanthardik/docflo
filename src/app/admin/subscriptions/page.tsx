@@ -17,6 +17,7 @@ export default async function SubscriptionsPage() {
     select: {
       id: true,
       name: true,
+      clinicName: true,
       email: true,
       phone: true,
       country: true,

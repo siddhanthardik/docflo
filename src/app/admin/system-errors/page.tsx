@@ -1,4 +1,5 @@
 import { prisma as db } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { format } from "date-fns";
 import { 
   AlertCircle, 
@@ -13,6 +14,11 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function SystemErrorsPage() {
+  const session = await auth();
+  if (!session || !["SUPERADMIN", "ADMIN"].includes(session.user?.role || "")) {
+    redirect("/login");
+  }
+
   // Fetch latest 100 errors, unresolved first
   const logs = await db.systemErrorLog.findMany({
     orderBy: [

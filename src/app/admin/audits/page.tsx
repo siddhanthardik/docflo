@@ -1,8 +1,15 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Users, TrendingUp, DollarSign } from "lucide-react";
 
 export default async function AdminAuditsPage() {
+  const session = await auth();
+  if (!session || !["SUPERADMIN", "ADMIN", "SALES", "MARKETING"].includes(session.user?.role || "")) {
+    redirect("/login");
+  }
+
   const leads = await prisma.auditLead.findMany({
     orderBy: { createdAt: "desc" },
     include: {

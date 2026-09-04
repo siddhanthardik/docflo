@@ -11,8 +11,17 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const aiUsage = await prisma.aIAgentConfig.count({
-      where: { enabled: true }
+    // 1. Distinct clinics with at least one enabled AI assistant
+    const activeAiClinics = await prisma.aIAgentConfig.findMany({
+      where: { enabled: true },
+      select: { doctorId: true },
+      distinct: ["doctorId"],
+    });
+    const activeClinicsWithAi = activeAiClinics.length;
+
+    // 2. Total active AI assistant configurations
+    const totalAiConfigs = await prisma.aIAgentConfig.count({
+      where: { enabled: true },
     });
 
     const googleProfileUsage = await prisma.gbpAccount.count();
@@ -21,7 +30,9 @@ export async function GET() {
     const whatsappTemplates = await prisma.whatsAppTemplate.count();
 
     return NextResponse.json({
-      aiUsage,
+      aiUsage: activeClinicsWithAi,
+      activeClinicsWithAi,
+      totalAiConfigs,
       googleProfileUsage,
       whatsappTemplates
     });

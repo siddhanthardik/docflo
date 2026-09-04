@@ -20,6 +20,8 @@ import {
   Megaphone,
   Newspaper,
   Cpu,
+  LifeBuoy,
+  FileSpreadsheet,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -34,6 +36,8 @@ const navigation = [
   { name: "Clinics", href: "/admin/clinics", icon: Building },
   { name: "Leads", href: "/admin/leads", icon: UserPlus },
   { name: "Sales Prospector", href: "/admin/prospector", icon: Megaphone },
+  { name: "SEO Audits", href: "/admin/audits", icon: FileSpreadsheet },
+  { name: "Support Tickets", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Blog Publishing", href: "/admin/blogs", icon: Newspaper },
   { name: "Team", href: "/admin/team", icon: Users },
   { name: "Affiliates", href: "/admin/affiliates", icon: DollarSign },

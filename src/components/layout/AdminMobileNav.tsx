@@ -21,7 +21,9 @@ import {
   X,
   ChevronRight,
   ShieldAlert,
-  Cpu
+  Cpu,
+  LifeBuoy,
+  FileSpreadsheet,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -38,10 +40,13 @@ const secondaryMobileMenu = [
   { name: "Features", href: "/admin/features", icon: Layers },
   { name: "AI Analytics", href: "/admin/ai-analytics", icon: Cpu },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
-  { name: "AI Sales Agent", href: "/admin/prospector", icon: Bot },
+  { name: "SEO Audits", href: "/admin/audits", icon: FileSpreadsheet },
+  { name: "Support Tickets", href: "/admin/tickets", icon: LifeBuoy },
+  { name: "Sales Prospector", href: "/admin/prospector", icon: Bot },
   { name: "Team", href: "/admin/team", icon: Users },
-  { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
+  { name: "Affiliates", href: "/admin/affiliates", icon: DollarSign },
   { name: "Settings", href: "/admin/settings", icon: Settings },
+  { name: "System Errors", href: "/admin/system-errors", icon: ShieldAlert },
 ];
 
 export function AdminMobileNav() {

@@ -12,6 +12,7 @@ export function SubscriptionsClient({ initialDoctors }: { initialDoctors: any[] 
   const filteredDoctors = initialDoctors.filter(doc => {
     const matchesSearch = 
       (doc.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (doc.clinicName || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
       (doc.email || "").toLowerCase().includes(searchQuery.toLowerCase());
       
     const matchesStatus = statusFilter === "ALL" || doc.subscriptionStatus === statusFilter;
@@ -83,8 +84,8 @@ export function SubscriptionsClient({ initialDoctors }: { initialDoctors: any[] 
                 filteredDoctors.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{doc.name || "Unnamed"}</div>
-                      <div className="text-gray-500 text-xs">{doc.email}</div>
+                      <div className="font-semibold text-gray-900">{doc.clinicName || doc.name || "Unnamed Clinic"}</div>
+                      <div className="text-gray-500 text-xs">{doc.clinicName ? `${doc.name} • ${doc.email}` : doc.email}</div>
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-bold">{doc.country || "IN"}</span>

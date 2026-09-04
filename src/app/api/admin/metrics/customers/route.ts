@@ -33,35 +33,32 @@ export async function GET() {
       }
     });
 
-    // Acquisition chart (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    sixMonthsAgo.setDate(1);
+    // Acquisition chart (last 6 months) with safe UTC date boundaries
+    const now = new Date();
+    const monthsList: { key: string; start: Date; end: Date; name: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth() - i;
+      const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+      const end = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+      const name = start.toLocaleDateString("en-US", { month: "short" });
+      monthsList.push({ key: `${start.getUTCFullYear()}-${start.getUTCMonth()}`, start, end, name });
+    }
+
+    const sixMonthsAgo = monthsList[0].start;
 
     const users = await prisma.doctor.findMany({
       where: { createdAt: { gte: sixMonthsAgo } },
       select: { createdAt: true }
     });
 
-    const monthlyData: Record<string, number> = {};
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const key = d.toLocaleString('default', { month: 'short' });
-      monthlyData[key] = 0;
-    }
-
-    users.forEach(u => {
-      const key = u.createdAt.toLocaleString('default', { month: 'short' });
-      if (monthlyData[key] !== undefined) {
-        monthlyData[key]++;
-      }
+    const acquisitionChart = monthsList.map(m => {
+      const count = users.filter(u => u.createdAt >= m.start && u.createdAt < m.end).length;
+      return {
+        name: m.name,
+        users: count
+      };
     });
-
-    const acquisitionChart = Object.keys(monthlyData).reverse().map(month => ({
-      name: month,
-      users: monthlyData[month]
-    }));
 
     return NextResponse.json({
       totalCustomers,

@@ -65,10 +65,19 @@ export async function GET() {
     });
     const usdTotalRevenue = usdRevenueResult._sum.amount || 0;
 
-    // 3. Last 6 months revenue for chart
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    sixMonthsAgo.setDate(1);
+    // 3. Last 6 months revenue for chart with safe UTC date boundaries
+    const now = new Date();
+    const monthsList: { key: string; start: Date; end: Date; name: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth() - i;
+      const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+      const end = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+      const name = start.toLocaleDateString("en-US", { month: "short" });
+      monthsList.push({ key: `${start.getUTCFullYear()}-${start.getUTCMonth()}`, start, end, name });
+    }
+
+    const sixMonthsAgo = monthsList[0].start;
     
     const transactions = await prisma.paymentTransaction.findMany({
       where: { 
@@ -78,27 +87,29 @@ export async function GET() {
       select: { amount: true, currency: true, createdAt: true }
     });
 
-    const monthlyData: Record<string, number> = {};
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const key = d.toLocaleString('default', { month: 'short' });
-      monthlyData[key] = 0;
-    }
-
-    transactions.forEach(tx => {
-      const key = tx.createdAt.toLocaleString('default', { month: 'short' });
-      if (monthlyData[key] !== undefined) {
-        monthlyData[key] += tx.amount;
-      }
+    const revenueChart = monthsList.map(m => {
+      const txsInMonth = transactions.filter(tx => tx.createdAt >= m.start && tx.createdAt < m.end);
+      const totalRevenueInMonth = txsInMonth.reduce((sum, tx) => {
+        const isUsd = tx.currency && tx.currency !== "INR";
+        const amt = isUsd ? tx.amount * 85 : tx.amount;
+        return sum + amt;
+      }, 0);
+      return {
+        name: m.name,
+        revenue: Math.round(totalRevenueInMonth)
+      };
     });
 
-    const revenueChart = Object.keys(monthlyData).reverse().map(month => ({
-      name: month,
-      revenue: monthlyData[month]
-    }));
+    const totalMrrInr = Math.round(inrMrr + (usdMrr * 85));
+    const totalArrInr = Math.round(inrArr + (usdArr * 85));
+    const consolidatedTotalRevenue = Math.round(inrTotalRevenue + (usdTotalRevenue * 85));
 
     return NextResponse.json({
+      consolidated: {
+        mrr: totalMrrInr,
+        arr: totalArrInr,
+        totalRevenue: consolidatedTotalRevenue,
+      },
       inr: {
         mrr: Math.round(inrMrr),
         arr: Math.round(inrArr),
@@ -109,9 +120,9 @@ export async function GET() {
         arr: Math.round(usdArr),
         totalRevenue: Math.round(usdTotalRevenue),
       },
-      mrr: Math.round(inrMrr),
-      arr: Math.round(inrArr),
-      totalRevenue: Math.round(inrTotalRevenue),
+      mrr: totalMrrInr,
+      arr: totalArrInr,
+      totalRevenue: consolidatedTotalRevenue,
       revenueChart
     });
   } catch (error) {

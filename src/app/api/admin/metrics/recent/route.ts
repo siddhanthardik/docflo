@@ -31,24 +31,28 @@ export async function GET() {
       include: { package: true }
     });
 
-    // Calculate MRR for each and sort
+    // Calculate MRR for each and sort with currency normalization (USD * 85 for ranking)
     const topClinics = topClinicsRaw
       .map(doc => {
         let mrr = 0;
         if (doc.package) {
-          if (doc.billingPeriod === "yearly") mrr = doc.package.priceYearly / 12;
-          else if (doc.billingPeriod === "quarterly") mrr = doc.package.priceQuarterly / 3;
-          else mrr = doc.package.priceMonthly;
+          if (doc.billingPeriod === "yearly") mrr = (doc.package.priceYearly || 0) / 12;
+          else if (doc.billingPeriod === "quarterly") mrr = (doc.package.priceQuarterly || 0) / 3;
+          else mrr = doc.package.priceMonthly || 0;
         }
+        const isUsd = Boolean(doc.country && doc.country !== "IN" && doc.country !== "IND" && doc.country !== "INDIA");
+        const normalizedSortMrr = isUsd ? mrr * 85 : mrr;
+
         return {
           id: doc.id,
           name: doc.clinicName || doc.name,
           mrr: Math.round(mrr),
-          currency: (doc.country && doc.country !== "IN" && doc.country !== "IND") ? "USD" : "INR",
+          normalizedSortMrr,
+          currency: isUsd ? "USD" : "INR",
           package: doc.package?.name || "None"
         };
       })
-      .sort((a, b) => b.mrr - a.mrr)
+      .sort((a, b) => b.normalizedSortMrr - a.normalizedSortMrr)
       .slice(0, 5);
 
     return NextResponse.json({
