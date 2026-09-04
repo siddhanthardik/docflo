@@ -118,9 +118,10 @@ export async function POST(req: Request) {
     const cleanPhone = (validatedData.phone || "").replace(/\D/g, "");
     const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
 
-    // Check if patient with this 10-digit phone already exists for this clinic
+    // Check family members sharing this 10-digit phone for this clinic
+    let isFamilyMember = false;
     if (last10.length >= 10) {
-      const existingPatient = await prisma.patient.findFirst({
+      const existingPatientsWithPhone = await prisma.patient.findMany({
         where: {
           doctorId,
           OR: [
@@ -133,14 +134,39 @@ export async function POST(req: Request) {
         select: { id: true, firstName: true, lastName: true, phone: true }
       });
 
-      if (existingPatient) {
-        return NextResponse.json(
-          {
-            error: `A patient with this mobile number already exists (${existingPatient.firstName} ${existingPatient.lastName}, ${existingPatient.phone}).`,
-            existingPatient
-          },
-          { status: 409 }
-        );
+      if (existingPatientsWithPhone.length > 0) {
+        // Enforce max 4 family members under the same mobile number
+        if (existingPatientsWithPhone.length >= 4) {
+          return NextResponse.json(
+            {
+              error: `Maximum of 4 family members can be registered under the same mobile number (${last10}).`,
+              existingPatients: existingPatientsWithPhone
+            },
+            { status: 409 }
+          );
+        }
+
+        // Check if a patient with the exact same name already exists under this phone
+        const reqFirstName = (validatedData.firstName || "").trim().toLowerCase();
+        const reqLastName = (validatedData.lastName || "").trim().toLowerCase();
+        const duplicatePatient = existingPatientsWithPhone.find((p) => {
+          const pFirst = (p.firstName || "").trim().toLowerCase();
+          const pLast = (p.lastName || "").trim().toLowerCase();
+          return pFirst === reqFirstName && pLast === reqLastName;
+        });
+
+        if (duplicatePatient) {
+          const dupName = `${duplicatePatient.firstName} ${duplicatePatient.lastName || ""}`.trim();
+          return NextResponse.json(
+            {
+              error: `A patient named "${dupName}" is already registered under this mobile number.`,
+              existingPatient: duplicatePatient
+            },
+            { status: 409 }
+          );
+        }
+
+        isFamilyMember = true;
       }
     }
 
@@ -159,6 +185,11 @@ export async function POST(req: Request) {
         throw block;
       }
 
+      const initialTags = validatedData.tags || [];
+      const finalTags = (isFamilyMember && !initialTags.includes("Family Member"))
+        ? [...initialTags, "Family Member"]
+        : initialTags;
+
       // 3. Create the patient
       return await tx.patient.create({
         data: {
@@ -169,7 +200,7 @@ export async function POST(req: Request) {
             : null,
           doctorId,
           primaryPractitionerId: validatedData.primaryPractitionerId || undefined,
-          tags: validatedData.tags || [],
+          tags: finalTags,
         },
       });
     });

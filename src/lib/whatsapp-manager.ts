@@ -1321,7 +1321,7 @@ class WhatsAppManager {
                       impactedAptIds: todayApts.map(a => a.id)
                     });
 
-                    const msg = `Doctor, I received your request to *PAUSE new WhatsApp bookings for today*.\n\n• Existing booked appointments (${todayApts.length}) will remain valid and active.\n• New inquiring patients will be offered tomorrow's slots or clinic walk-in tokens.\n\n👉 Reply *1* or *CONFIRM* to pause today's bookings.\n👉 Reply *2* or *NO* to keep bookings open.`;
+                    const msg = `Doctor, I received your request to *PAUSE new WhatsApp bookings for today*.\n\n• Existing booked appointments (${todayApts.length}) will remain valid and active.\n• New inquiring patients will be offered tomorrow's slots or clinic walk-in consultations.\n\n👉 Reply *1* or *CONFIRM* to pause today's bookings.\n👉 Reply *2* or *NO* to keep bookings open.`;
                     await sock.sendMessage(remoteJid, { text: msg });
                     await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant' } });
                     await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date() } });
@@ -1896,8 +1896,32 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                 }
 
                 // 3. Intercept Patient Booking Tag (with Name, Age, Gender, and Doctor support)
-                const bookingRegex = /\[BOOK_APPOINTMENT:\s*([^,]+),\s*([^,]+),\s*([^,\]]+)(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?(?:,\s*([^,\]]+))?\]/i;
-                const match = aiReply.match(bookingRegex);
+                const bookingRegex = /\[(?:BOOK_APPOINTMENT|BOOK_NEW_APPOINTMENT):\s*([^,\]]+?)(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?\]/i;
+                let match = aiReply.match(bookingRegex);
+
+                if (!match && !isStaff) {
+                  // Safety net: Check if the AI textually confirmed an appointment but the tag was omitted or malformed
+                  const isConfirmationReply = /(?:appointment\s*(?:is\s*)?confirm|slot\s*(?:is\s*)?confirm|request\s*note\s*kar\s*li|booked\s*(?:your\s*)?appointment|appointment\s*request\s*register|aapka\s*appointment\s*confirm|slot\s*reserve|booking\s*confirm)/i.test(aiReply);
+                  if (isConfirmationReply) {
+                    const clinicTzFallback = resolveClinicTimezone(doctorInfo?.timezone);
+                    const todayStrFallback = getClinicDateOnlyString(new Date(), clinicTzFallback);
+                    let targetDateFallback = todayStrFallback;
+                    const combined = `${textMessage} ${aiReply}`.toLowerCase();
+                    if (/\b(kal|tomorrow)\b/.test(combined)) {
+                      const tm = new Date();
+                      tm.setDate(tm.getDate() + 1);
+                      targetDateFallback = getClinicDateOnlyString(tm, clinicTzFallback);
+                    } else if (/\b(parso|day after)\b/.test(combined)) {
+                      const da = new Date();
+                      da.setDate(da.getDate() + 2);
+                      targetDateFallback = getClinicDateOnlyString(da, clinicTzFallback);
+                    }
+                    const timeM = combined.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
+                    const sessionFallback = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
+                    const nameFallback = (patient?.firstName && patient.firstName !== "Patient") ? `${patient.firstName} ${patient.lastName || ""}`.trim() : "Patient";
+                    match = [`[BOOK_APPOINTMENT: ${targetDateFallback}, ${sessionFallback}, ${nameFallback}]`, targetDateFallback, sessionFallback, nameFallback, "", "", ""];
+                  }
+                }
                 
                 if (match && !isStaff) {
                   const [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr, rawDoctorName] = match;
@@ -1986,11 +2010,14 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                     }
 
                     // 2. Check if this specific family member already has an upcoming appointment
+                    const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                    const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
+
                     const activeAppointment = await prisma.appointment.findFirst({
                       where: {
                         patientId: targetPatient.id,
                         doctorId: doctorId,
-                        date: { gte: new Date() },
+                        date: { gte: today },
                         status: "CONFIRMED"
                       }
                     });
@@ -2000,8 +2027,6 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
                     } else {
                       // 3. Parse Date with intelligent fallback
-                      const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
-                      const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
                       let appointmentDate = new Date(dateStr.trim());
 
                       if (isNaN(appointmentDate.getTime())) {
@@ -2033,7 +2058,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
                         if (maxDaily !== null && existingAiBookings >= maxDaily) {
                           finalAiReply = finalAiReply.replace(fullTag, "").trim();
-                          finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in tokens are available at the clinic reception.)*`;
+                          finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in consultations are available at the clinic reception.)*`;
                         } else {
                           const isMorning = sessionStr.toLowerCase().includes("morning");
                           const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17);

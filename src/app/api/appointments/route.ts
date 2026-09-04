@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
-import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString } from "@/lib/timezone";
+import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString, getClinicDayBounds } from "@/lib/timezone";
 
 // ---------- Helper functions ----------
 
@@ -63,26 +63,31 @@ export async function GET(req: Request) {
       // as one doctor account equals one clinic in the system architecture.
     }
 
+    // Resolve doctor's clinic timezone to avoid UTC server day truncation
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { timezone: true }
+    });
+    const clinicTz = resolveClinicTimezone(doctor?.timezone);
+
     if (future === "true") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      where.date = { gte: today };
+      const { startOfDay } = getClinicDayBounds(new Date(), clinicTz);
+      where.date = { gte: startOfDay };
     }
 
     if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-      where.date = { gte: startDate, lte: endDate };
+      const { startOfDay, endOfDay } = getClinicDayBounds(date, clinicTz);
+      where.date = { gte: startOfDay, lte: endOfDay };
     }
 
     if (month) {
       const [year, monthNum] = month.split("-");
-      const startDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-      const endDate = new Date(parseInt(year), parseInt(monthNum), 0);
-      endDate.setHours(23, 59, 59, 999);
-      where.date = { gte: startDate, lte: endDate };
+      const startOfMonthStr = `${year}-${monthNum.padStart(2, "0")}-01`;
+      const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+      const endOfMonthStr = `${year}-${monthNum.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      const { startOfDay } = getClinicDayBounds(startOfMonthStr, clinicTz);
+      const { endOfDay } = getClinicDayBounds(endOfMonthStr, clinicTz);
+      where.date = { gte: startOfDay, lte: endOfDay };
     }
 
     if (status) {

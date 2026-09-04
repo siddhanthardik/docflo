@@ -122,7 +122,8 @@ export default function AppointmentsPage() {
       result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
     }
     if (selectedDate) {
-      result = result.filter((apt) => isSameDay(new Date(apt.date), selectedDate));
+      const selectedDateStr = getLocalDateString(selectedDate);
+      result = result.filter((apt) => getLocalDateString(apt.date) === selectedDateStr);
     }
     return result;
   }, [appointments, selectedDate, selectedPractitionerId]);
@@ -133,8 +134,8 @@ export default function AppointmentsPage() {
       result = result.filter(apt => apt.practitionerId === selectedPractitionerId);
     }
     return result.map((apt) => {
-      const d = new Date(apt.date);
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const [year, month, day] = getLocalDateString(apt.date).split("-").map(Number);
+      return new Date(year, month - 1, day);
     });
   }, [appointments, selectedPractitionerId]);
 

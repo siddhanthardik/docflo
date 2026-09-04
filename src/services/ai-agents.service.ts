@@ -556,7 +556,7 @@ function buildDeterministicReceptionistReply(
 
     // 9.55 Urgent Health Concern / Acute Symptoms (Fever, severe pain, emergency, acute illness)
     if (/fever|bukhar|dard|pain|cough|khasi|cold|sardi|vomit|ult[ie]|tabiyat|kharab|headache|sar\s*dard|emergency|chot|injury|sick|ill|severe|jyada/i.test(textLower)) {
-      return `Aapki tabiyat jaldi theek ho 🙏 ${docTitle} (${specialty}) clinic me OPD hours (*${clinicTimings}*) me uplabdh rahenge. Agar bukhar/takleef bahut jyada hai to kripya direct clinic aakar emergency walk-in token le lijiye ya nearest hospital me dikhayein. Kya main aapka OPD slot reserve kar doon?${phoneSuffix}`;
+      return `Aapki tabiyat jaldi theek ho 🙏 ${docTitle} (${specialty}) clinic me OPD hours (*${clinicTimings}*) me uplabdh rahenge. Agar bukhar/takleef bahut jyada hai to kripya direct clinic aakar emergency walk-in consultation le lijiye ya nearest hospital me dikhayein. Kya main aapka OPD slot reserve kar doon?${phoneSuffix}`;
     }
 
     // 9.6.1 User explicitly states they already provided their name / details
@@ -571,7 +571,19 @@ function buildDeterministicReceptionistReply(
 
     // 9.6.3 Appointment details provided (Date + Time + Name)
     if (/\b(kal|tomorrow|parso|aaj|today|pm|am|baje|subah|shaam|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)/i.test(textLower)) {
-      return `Ji dhanyawad! Maine *${text}* ke liye ${docTitle} (${specialty}) ke OPD session me aapki appointment request note kar li hai. Clinic reception se aapko turant token SMS/WhatsApp mil jayega. Agar koi aur jankari chahiye to zaroor batayein!${phoneSuffix}`;
+      const now = new Date();
+      let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      if (/\b(kal|tomorrow)\b/i.test(textLower)) {
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      } else if (/\b(parso|day after)\b/i.test(textLower)) {
+        const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+        targetDateStr = dayAfter.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      }
+      const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
+      const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") || textLower.includes("subah") ? "Morning" : "Evening");
+      const bookingTag = `\n\n[BOOK_APPOINTMENT: ${targetDateStr}, ${sessionStr}, Patient, , , ${activeDoctorName}]`;
+      return `Ji dhanyawad! Maine *${targetDateStr} (${sessionStr})* ke liye ${docTitle} (${activeSpecialty}) ke OPD session me aapki appointment confirm kar di hai. Slot clinic schedule me book ho gaya hai.${bookingTag}${phoneSuffix}`;
     }
 
     // 9.6 Appointment Booking Request (General Inquiry without date/time)
@@ -641,8 +653,17 @@ function buildDeterministicReceptionistReply(
   }
 
   // 10.35 Appointment Details Provided in English (Name, Date, Time)
-  if (isOngoingChat && (/\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower) || text.length > 2)) {
-    return `Thank you! I have registered your appointment request for *${text}* with ${docTitle} (${specialty}). Our clinic front desk will send your booking confirmation token shortly on WhatsApp.${phoneSuffix}`;
+  if (isOngoingChat && (/\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower))) {
+    const now = new Date();
+    let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    if (/\b(tomorrow)\b/i.test(textLower)) {
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    }
+    const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)/i);
+    const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") ? "Morning" : "Evening");
+    const bookingTag = `\n\n[BOOK_APPOINTMENT: ${targetDateStr}, ${sessionStr}, Patient, , , ${activeDoctorName}]`;
+    return `Thank you! I have confirmed your appointment for *${targetDateStr} (${sessionStr})* with ${docTitle} (${activeSpecialty}). Your consultation has been scheduled in our calendar.${bookingTag}${phoneSuffix}`;
   }
 
   // 10.36 Confirmation Query in English
