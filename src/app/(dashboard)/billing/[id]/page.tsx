@@ -279,6 +279,19 @@ export default function InvoiceDetailsPage() {
                   <span className="font-medium">{sym}{invoice.taxAmount.toFixed(2)}</span>
                 </div>
               )}
+              {(() => {
+                const rawTotal = (invoice.subtotal || 0) - (invoice.discountAmount || 0) + (invoice.taxAmount || 0);
+                const roundOff = (invoice.totalAmount || 0) - rawTotal;
+                if (Math.abs(roundOff) >= 0.01) {
+                  return (
+                    <div className="flex justify-between text-gray-500 print:text-gray-900">
+                      <span>Round Off</span>
+                      <span className="font-medium">{roundOff > 0 ? '+' : ''}{sym}{roundOff.toFixed(2)}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               <hr className="border-gray-100 my-2" />
               <div className="flex justify-between text-base">
                 <span className="font-bold text-gray-900">Total</span>

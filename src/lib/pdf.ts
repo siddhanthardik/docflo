@@ -8,30 +8,36 @@ import { numberToWords } from './number-to-words';
 
 type InvoiceWithDetails = Invoice & {
   items: InvoiceItem[];
-  doctor: Doctor;
+  doctor: Doctor & {
+    website?: {
+      logoUrl?: string | null;
+    } | null;
+  };
   patient: Patient;
   payments?: PatientPayment[];
 };
 
 /**
  * Robust logo buffer loader supporting local filesystem, base64 data URIs, and remote URLs.
+ * Automatically converts WebP and other formats to standard PNG via Sharp for PDFKit compatibility.
  */
 async function loadLogoBuffer(imageStr?: string | null): Promise<Buffer | null> {
   if (!imageStr || !imageStr.trim()) return null;
   const img = imageStr.trim();
+  let rawBuffer: Buffer | null = null;
 
   // 1. Base64 Data URI
   if (img.startsWith('data:')) {
     try {
       const base64Data = img.split(',')[1];
-      if (base64Data) return Buffer.from(base64Data, 'base64');
+      if (base64Data) rawBuffer = Buffer.from(base64Data, 'base64');
     } catch (e) {
       console.error('Failed to parse base64 logo:', e);
     }
   }
 
   // 2. Relative upload URL (e.g. /api/uploads/logos/... or /uploads/...)
-  if (img.startsWith('/')) {
+  if (!rawBuffer && img.startsWith('/')) {
     try {
       let relativePath = img;
       if (relativePath.startsWith('/api/uploads/')) {
@@ -39,15 +45,15 @@ async function loadLogoBuffer(imageStr?: string | null): Promise<Buffer | null> 
       }
       const localPath = path.join(process.cwd(), 'public', relativePath);
       if (fs.existsSync(localPath)) {
-        return fs.readFileSync(localPath);
-      }
-
-      // Try fetching using app URL
-      const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://gyrex.in';
-      const fullUrl = `${appUrl.replace(/\/$/, '')}${img}`;
-      const res = await fetch(fullUrl);
-      if (res.ok) {
-        return Buffer.from(await res.arrayBuffer());
+        rawBuffer = fs.readFileSync(localPath);
+      } else {
+        // Try fetching using app URL
+        const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://gyrex.in';
+        const fullUrl = `${appUrl.replace(/\/$/, '')}${img}`;
+        const res = await fetch(fullUrl);
+        if (res.ok) {
+          rawBuffer = Buffer.from(await res.arrayBuffer());
+        }
       }
     } catch (e) {
       console.error('Failed to load local logo file:', e);
@@ -55,22 +61,31 @@ async function loadLogoBuffer(imageStr?: string | null): Promise<Buffer | null> 
   }
 
   // 3. Absolute remote URL (http / https)
-  if (img.startsWith('http://') || img.startsWith('https://')) {
+  if (!rawBuffer && (img.startsWith('http://') || img.startsWith('https://'))) {
     try {
       const res = await fetch(img);
       if (res.ok) {
-        return Buffer.from(await res.arrayBuffer());
+        rawBuffer = Buffer.from(await res.arrayBuffer());
       }
     } catch (e) {
       console.error('Failed to fetch remote logo:', e);
     }
   }
 
-  return null;
+  if (!rawBuffer) return null;
+
+  // Ensure PDFKit compatibility by converting any image format (especially WebP) to PNG
+  try {
+    const sharp = (await import('sharp')).default;
+    return await sharp(rawBuffer).png().toBuffer();
+  } catch (convErr) {
+    console.warn('Sharp PNG conversion fallback to raw buffer:', convErr);
+    return rawBuffer;
+  }
 }
 
 export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<Buffer> {
-  const logoBuffer = await loadLogoBuffer(invoice.doctor.image);
+  const logoBuffer = await loadLogoBuffer(invoice.doctor.image || (invoice.doctor as any).website?.logoUrl);
 
   return new Promise((resolve, reject) => {
     try {
@@ -235,6 +250,11 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       y += 16;
 
       // ════════════ TOTALS & FINANCIAL SUMMARY ════════════
+      // Round off calculation: Round grand total to closest whole integer (standard Indian clinical billing practice)
+      const rawCalculatedTotal = Math.max(0, invoice.subtotal - invoice.discountAmount + ((invoice as any).taxAmount || 0));
+      const roundedTotal = Math.round(invoice.totalAmount || rawCalculatedTotal);
+      const roundOff = roundedTotal - rawCalculatedTotal;
+
       doc.font('Roboto-Bold').fillColor('#334155');
       doc.text('Subtotal:', 340, y, { width: 120, align: 'right' });
       doc.text(`${sym}${invoice.subtotal.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
@@ -254,18 +274,26 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
         y += 16;
       }
 
+      if (Math.abs(roundOff) >= 0.01) {
+        doc.font('Roboto').fillColor('#64748B');
+        doc.text('Round Off:', 340, y, { width: 120, align: 'right' });
+        const sign = roundOff > 0 ? '+' : '-';
+        doc.text(`${sign}${sym}${Math.abs(roundOff).toFixed(2)}`, 470, y, { width: 80, align: 'right' });
+        y += 16;
+      }
+
       doc.strokeColor('#E2E8F0').moveTo(340, y).lineTo(550, y).stroke();
       y += 8;
 
-      // Grand Total
+      // Grand Total (Rounded)
       doc.fontSize(11).font('Roboto-Bold').fillColor('#0F172A');
       doc.text('Grand Total:', 340, y, { width: 120, align: 'right' });
-      doc.text(`${sym}${invoice.totalAmount.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
+      doc.text(`${sym}${roundedTotal.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
       y += 18;
 
       // Amount Paid
       const amountPaid = invoice.payments ? invoice.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
-      const balanceDue = Math.max(0, invoice.totalAmount - amountPaid);
+      const balanceDue = Math.max(0, roundedTotal - amountPaid);
 
       doc.fontSize(9).font('Roboto').fillColor('#475569');
       doc.text('Amount Paid:', 340, y, { width: 120, align: 'right' });
@@ -285,9 +313,9 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       doc.fillColor('black'); // Reset back
       y += 28;
 
-      // Amount in Words
+      // Amount in Words (based on rounded total)
       doc.fontSize(9).font('Roboto-Bold').fillColor('#0F172A').text('Amount in Words:', 50, y);
-      doc.font('Roboto').fillColor('#475569').text(numberToWords(invoice.totalAmount, invoice.currencyCode), 50, y + 14, { width: 500 });
+      doc.font('Roboto').fillColor('#475569').text(numberToWords(roundedTotal, invoice.currencyCode), 50, y + 14, { width: 500 });
       y += 32;
 
       // ════════════ FOOTER ════════════
@@ -304,8 +332,26 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
         footerY += 16;
       }
 
-      doc.fontSize(8).font('Roboto').fillColor('#94A3B8');
-      doc.text('Generated by Gyrex', 50, footerY, { width: 500, align: 'center' });
+      // Gyrex Footer Wordmark: "Generated by GYREX· | www.gyrex.in |"
+      doc.fontSize(8).font('Roboto').fillColor('#64748B');
+      const footerPrefix = 'Generated by GYREX· | ';
+      const footerLink = 'www.gyrex.in';
+      const footerSuffix = ' |';
+
+      const prefixWidth = doc.widthOfString(footerPrefix);
+      const linkWidth = doc.widthOfString(footerLink);
+      const suffixWidth = doc.widthOfString(footerSuffix);
+      const totalWidth = prefixWidth + linkWidth + suffixWidth;
+      const startX = 50 + (500 - totalWidth) / 2;
+
+      doc.text(footerPrefix, startX, footerY, { continued: true, lineBreak: false });
+      doc.fillColor('#4F46E5').text(footerLink, {
+        link: 'https://www.gyrex.in',
+        underline: false,
+        continued: true,
+        lineBreak: false
+      });
+      doc.fillColor('#64748B').text(footerSuffix, { lineBreak: false });
 
       doc.end();
     } catch (error) {

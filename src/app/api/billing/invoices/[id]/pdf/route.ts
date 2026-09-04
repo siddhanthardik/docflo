@@ -13,7 +13,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       include: {
         items: true,
         patient: true,
-        doctor: true,
+        doctor: {
+          include: {
+            website: true
+          }
+        },
         payments: {
           orderBy: { paymentDate: 'desc' }
         }

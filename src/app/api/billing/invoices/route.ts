@@ -97,8 +97,9 @@ export async function POST(req: Request) {
     // Apply Tax (Tax is applied after discount)
     const validatedTaxAmount = Math.max(0, parseFloat(taxAmount) || 0);
     
-    // Calculate final total
-    const totalAmount = Math.max(0, subtotal - calculatedDiscountAmount + validatedTaxAmount);
+    // Calculate final total (rounded to the closest whole rupee)
+    const rawTotalAmount = Math.max(0, subtotal - calculatedDiscountAmount + validatedTaxAmount);
+    const totalAmount = Math.round(rawTotalAmount);
 
     // Rounding to 2 decimal places to prevent floating point anomalies
     const roundToTwo = (num: number) => Math.round(num * 100) / 100;
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
         discountValue: validatedDiscountValue,
         discountAmount: roundToTwo(calculatedDiscountAmount),
         taxAmount: roundToTwo(validatedTaxAmount),
-        totalAmount: roundToTwo(totalAmount),
+        totalAmount: totalAmount,
         currencyCode,
         currencySymbol,
         notes,

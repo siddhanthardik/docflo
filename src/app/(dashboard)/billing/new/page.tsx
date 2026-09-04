@@ -104,7 +104,9 @@ function CreateInvoiceForm() {
   }
   calculatedDiscount = Math.min(subtotal, calculatedDiscount);
   
-  const totalAmount = Math.max(0, subtotal - calculatedDiscount + taxNum);
+  const rawTotal = Math.max(0, subtotal - calculatedDiscount + taxNum);
+  const totalAmount = Math.round(rawTotal);
+  const roundOff = totalAmount - rawTotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,6 +316,13 @@ function CreateInvoiceForm() {
                 />
               </div>
             </div>
+
+            {Math.abs(roundOff) >= 0.01 && (
+              <div className="flex justify-between items-center text-sm font-medium text-gray-500">
+                <span>Round Off</span>
+                <span>{roundOff > 0 ? '+' : ''}₹{roundOff.toFixed(2)}</span>
+              </div>
+            )}
 
             <hr className="border-gray-100" />
 
