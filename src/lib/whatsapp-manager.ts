@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -314,7 +314,10 @@ class WhatsAppManager {
       // Baileys configuration with realistic browser fingerprint and anti-ban safeguards
       const sock = makeWASocket({
         version: version as any,
-        auth: state,
+        auth: {
+          creds: state.creds,
+          keys: makeCacheableSignalKeyStore(state.keys),
+        },
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
         browser: Browsers.appropriate('Chrome'),
@@ -367,37 +370,21 @@ class WhatsAppManager {
           }
 
           // 2. For registered accounts that dropped connection:
-          const isPermanentLogout = !isSuperAdmin && statusCode === DisconnectReason.loggedOut;
-          const shouldReconnect = isSuperAdmin || !isPermanentLogout;
+          // Strict Rule: NEVER purge session files on disk unless it is an unambiguous 401 loggedOut
+          const isExplicitLoggedOut = statusCode === DisconnectReason.loggedOut; // 401
+          const shouldReconnect = !isExplicitLoggedOut;
           
           console.log(`[WhatsAppManager] Connection closed for verified session ${doctorId}. Status code: ${statusCode}. Reconnecting: ${shouldReconnect} (isSuperAdmin: ${isSuperAdmin})`);
           
           if (shouldReconnect) {
             const currentAttempts = (this.reconnectAttempts.get(doctorId) || 0) + 1;
 
-            // Strict Anti-Ban Cap: Max 3 retries (down from 10) to protect account from Meta bot detection
-            const MAX_RETRIES = 3;
-            if (currentAttempts > MAX_RETRIES) {
-              console.warn(`[WhatsAppManager] Maximum reconnection attempts (${MAX_RETRIES}) reached for ${doctorId}. Halting auto-reconnect to protect account.`);
+            // Strict Anti-Ban Guard: After 3 rapid retries, pause immediate retry and hand off to periodic watchdog (every 2-5 mins)
+            // This prevents rapid hammering while ensuring the session STAYS CONNECTED forever in the background
+            const MAX_RAPID_RETRIES = 3;
+            if (currentAttempts > MAX_RAPID_RETRIES) {
+              console.warn(`[WhatsAppManager] Rapid retry cap reached for ${doctorId}. Session preserved on disk. Handing off to background watchdog for gentle reconnection.`);
               this.reconnectAttempts.delete(doctorId);
-
-              logSystemError(new Error(`WhatsApp max reconnection attempts reached for ${doctorId}`), {
-                path: 'whatsapp-manager:reconnect',
-                method: 'MAX_RECONNECT_EXCEEDED',
-                metadata: { doctorId, statusCode }
-              });
-
-              if (!isSuperAdmin) {
-                prisma.notification.create({
-                  data: {
-                    doctorId,
-                    title: "WhatsApp Connection Paused ⚠️",
-                    message: "Unable to reach WhatsApp after 3 attempts. Auto-reconnection paused to protect your account. Please verify phone internet and click Reconnect in Settings.",
-                    type: "WARNING",
-                    actionUrl: "/settings/whatsapp",
-                  }
-                }).catch(() => {});
-              }
               return;
             }
 
@@ -407,17 +394,17 @@ class WhatsAppManager {
             const backoffSchedule = [15000, 45000, 90000];
             const delay = backoffSchedule[currentAttempts - 1] || 90000;
 
-            console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RETRIES}) in ${Math.round(delay / 1000)}s...`);
+            console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RAPID_RETRIES}) in ${Math.round(delay / 1000)}s...`);
             
             setTimeout(() => {
               this.connect(doctorId, { force: true }).catch(e => console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e));
             }, delay);
           } else {
-            // Terminal failure for clinic doctor (explicitly logged out on mobile phone)
-            console.log(`[WhatsAppManager] Terminal auth failure for ${doctorId} (code ${statusCode}). Purging session on disk.`);
+            // Only purge if user explicitly removed the device from phone WhatsApp Linked Devices
+            console.log(`[WhatsAppManager] User explicitly unlinked device from WhatsApp app on phone for ${doctorId} (code ${statusCode}). Purging session on disk.`);
             this.clearSession(doctorId);
             
-            logSystemError(new Error(`WhatsApp terminal auth failure (code ${statusCode}) for doctor ${doctorId}`), {
+            logSystemError(new Error(`WhatsApp user explicitly logged out (code ${statusCode}) for doctor ${doctorId}`), {
               path: 'whatsapp-manager:connection',
               method: 'WA_TERMINAL_AUTH_FAILURE',
               metadata: { doctorId, statusCode }
@@ -426,8 +413,8 @@ class WhatsAppManager {
             prisma.notification.create({
               data: {
                 doctorId,
-                title: "WhatsApp Business Disconnected ⚠️",
-                message: "Your WhatsApp Business device has been disconnected. Please scan the QR code in Settings to reconnect.",
+                title: "WhatsApp Business Unlinked ⚠️",
+                message: "Your WhatsApp Business device was removed from your phone. Please scan the QR code in Settings if you wish to re-link.",
                 type: "ERROR",
                 actionUrl: "/settings/whatsapp",
               }
