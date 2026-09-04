@@ -24,6 +24,7 @@ export function LandingHeader() {
               { label: "Features", href: "/#local-seo" },
               { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
+              { label: "Compare", href: "/#comparison" },
               { label: "Pricing", href: "/#pricing" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
             ].map((item) => (
@@ -81,6 +82,7 @@ export function LandingHeader() {
               { label: "Features", href: "/#local-seo" },
               { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
+              { label: "Compare", href: "/#comparison" },
               { label: "Pricing", href: "/#pricing" },
               { label: "ROI Calculator", href: "/#roi-calculator" },
             ].map((item) => (

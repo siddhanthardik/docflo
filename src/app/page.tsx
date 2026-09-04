@@ -20,6 +20,7 @@ import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 import { AIRepceptionistSimulator } from "@/components/marketing/AIRepceptionistSimulator";
+import { ComparisonTable } from "@/components/marketing/ComparisonTable";
 
 // 12 Medical Specialties - Static Local Paths (Customizable via /public/images/specialties/)
 const SPECIALTY_CARDS = [
@@ -1017,6 +1018,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── DOCTOR PRACTICE COMPARISON TABLE ── */}
+      <ComparisonTable />
 
       {/* ── DYNAMIC SUPERADMIN PRICING SECTION ── */}
       <section id="pricing" ref={pricingRef} className="py-16 bg-slate-50 border-t border-slate-200/80">

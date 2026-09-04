@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { AIRepceptionistSimulator } from "@/components/marketing/AIRepceptionistSimulator";
+import { ComparisonTable } from "@/components/marketing/ComparisonTable";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 import { Footer } from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,9 @@ export default function DemoPage() {
             </div>
           </div>
         </section>
+
+        {/* Doctor Practice Comparison Table */}
+        <ComparisonTable />
       </main>
 
       <Footer />
