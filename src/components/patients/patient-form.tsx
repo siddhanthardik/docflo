@@ -18,12 +18,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePractitioners } from "@/hooks/use-practitioners";
+import { CountryPhoneInput } from "@/components/ui/country-phone-input";
+import { COUNTRIES, getDefaultCountryCodeForTimezone } from "@/lib/countries";
 import {
   UserPlus,
   User,
-  Phone,
   Mail,
-  HeartPulse,
   Stethoscope,
   MapPin,
   FileText,
@@ -41,6 +41,33 @@ interface PatientFormProps {
   mode: "create" | "edit";
 }
 
+function calculateAgeFromDob(dobString: string): { years: number; months: number; display: string } | null {
+  if (!dobString) return null;
+  const dob = new Date(dobString);
+  if (isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - dob.getFullYear();
+  let months = today.getMonth() - dob.getMonth();
+  if (today.getDate() < dob.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  if (years < 0) return null;
+
+  let display = "";
+  if (years > 0 && months > 0) {
+    display = `${years} Y, ${months} M`;
+  } else if (years > 0) {
+    display = `${years} Years`;
+  } else {
+    display = `${months} Months`;
+  }
+  return { years, months, display };
+}
+
 export function PatientForm({
   open,
   onOpenChange,
@@ -50,6 +77,9 @@ export function PatientForm({
 }: PatientFormProps) {
   const [loading, setLoading] = useState(false);
   const [countryCode, setCountryCode] = useState("+91");
+  const [ageInput, setAgeInput] = useState("");
+  const [ageDisplay, setAgeDisplay] = useState("");
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -70,31 +100,49 @@ export function PatientForm({
 
   useEffect(() => {
     if (initialData) {
-      let cCode = "+91";
-      let num = initialData.phone || "";
+      let cCode = getDefaultCountryCodeForTimezone();
+      let num = (initialData.phone || "").trim();
+
       if (num.startsWith("+")) {
-        const match = num.match(/^(\+\d{1,4})\s*(.*)$/);
-        if (match) {
-          cCode = match[1];
-          num = match[2];
-        } else if (num.startsWith("+91")) {
-          cCode = "+91";
-          num = num.substring(3);
-        } else if (num.startsWith("+1")) {
-          cCode = "+1";
-          num = num.substring(2);
+        const sorted = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
+        const matched = sorted.find((c) => num.startsWith(c.dialCode));
+        if (matched) {
+          cCode = matched.dialCode;
+          num = num.substring(matched.dialCode.length);
+        } else {
+          const match = num.match(/^(\+\d{1,4})\s*(.*)$/);
+          if (match) {
+            cCode = match[1];
+            num = match[2];
+          }
         }
       }
       setCountryCode(cCode);
+
+      const dobString = initialData.dateOfBirth
+        ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
+        : "";
+
+      if (dobString) {
+        const ageResult = calculateAgeFromDob(dobString);
+        if (ageResult) {
+          setAgeInput(ageResult.years.toString());
+          setAgeDisplay(ageResult.display);
+        } else {
+          setAgeInput("");
+          setAgeDisplay("");
+        }
+      } else {
+        setAgeInput("");
+        setAgeDisplay("");
+      }
 
       setFormData({
         firstName: initialData.firstName || "",
         lastName: initialData.lastName || "",
         phone: num,
         email: initialData.email || "",
-        dateOfBirth: initialData.dateOfBirth
-          ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
-          : "",
+        dateOfBirth: dobString,
         gender: initialData.gender || "",
         bloodGroup: initialData.bloodGroup || "",
         address: initialData.address || "",
@@ -105,7 +153,9 @@ export function PatientForm({
         primaryPractitionerId: initialData.primaryPractitionerId || "",
       });
     } else {
-      setCountryCode("+91");
+      setCountryCode(getDefaultCountryCodeForTimezone());
+      setAgeInput("");
+      setAgeDisplay("");
       setFormData({
         firstName: "",
         lastName: "",
@@ -124,17 +174,52 @@ export function PatientForm({
     }
   }, [initialData, open]);
 
+  // Handle direct age entry: computes approximate Date of Birth (Jan 1 of birth year)
+  const handleAgeChange = (val: string) => {
+    setAgeInput(val);
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 125) {
+      const now = new Date();
+      const birthYear = now.getFullYear() - parsed;
+      const approxDob = `${birthYear}-01-01`;
+      setFormData((prev) => ({ ...prev, dateOfBirth: approxDob }));
+      setAgeDisplay(`${parsed} Years`);
+    } else if (!val.trim()) {
+      setFormData((prev) => ({ ...prev, dateOfBirth: "" }));
+      setAgeDisplay("");
+    }
+  };
+
+  // Handle calendar Date of Birth selection: computes exact years and months
+  const handleDobChange = (dobVal: string) => {
+    setFormData((prev) => ({ ...prev, dateOfBirth: dobVal }));
+    if (dobVal) {
+      const result = calculateAgeFromDob(dobVal);
+      if (result) {
+        setAgeInput(result.years.toString());
+        setAgeDisplay(result.display);
+      }
+    } else {
+      setAgeInput("");
+      setAgeDisplay("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Sanitize phone number in case user pasted country code or leading zeros
-      const rawNumber = formData.phone.trim();
-      const sanitizedNumber = rawNumber
-        .replace(/^(\+91|\+1|\+44|\+61|\+971)/, "")
-        .replace(/^0+/, "")
-        .replace(/\D/g, "");
+      // Clean phone number dynamically regardless of country code
+      let rawNumber = formData.phone.trim();
+      if (rawNumber.startsWith("+")) {
+        if (rawNumber.startsWith(countryCode)) {
+          rawNumber = rawNumber.slice(countryCode.length);
+        } else {
+          rawNumber = rawNumber.replace(/^\+\d{1,4}/, "");
+        }
+      }
+      const sanitizedNumber = rawNumber.replace(/^0+/, "").replace(/\D/g, "");
 
       await onSubmit({
         ...formData,
@@ -189,7 +274,7 @@ export function PatientForm({
           </button>
         </div>
 
-        {/* Spacious Balanced 2-Column Form */}
+        {/* Spacious Balanced 2-Column Form (4 Rows × 4 Rows) */}
         <form
           id="patient-form"
           onSubmit={(e) => {
@@ -218,6 +303,7 @@ export function PatientForm({
                       }
                       placeholder="Rahul"
                       required
+                      autoFocus
                       className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
@@ -235,14 +321,14 @@ export function PatientForm({
                       onChange={(e) =>
                         setFormData({ ...formData, lastName: e.target.value })
                       }
-                      placeholder="Sharma (or leave blank)"
+                      placeholder="Sharma (or blank)"
                       className="pl-9 h-10 text-sm font-medium text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Row 2: Mobile Number */}
+              {/* Row 2: Mobile Number with Global Country Selector */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="phone" className="text-xs font-semibold text-slate-700 flex items-center gap-0.5">
@@ -252,35 +338,13 @@ export function PatientForm({
                     WhatsApp
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Select value={countryCode} onValueChange={setCountryCode}>
-                    <SelectTrigger className="w-[115px] h-10 text-xs font-semibold text-slate-700 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500 shrink-0">
-                      <SelectValue placeholder="Code" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                      <SelectItem value="+91">🇮🇳 +91 (IN)</SelectItem>
-                      <SelectItem value="+1">🇺🇸 +1 (US)</SelectItem>
-                      <SelectItem value="+44">🇬🇧 +44 (UK)</SelectItem>
-                      <SelectItem value="+61">🇦🇺 +61 (AU)</SelectItem>
-                      <SelectItem value="+971">🇦🇪 +971 (AE)</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      placeholder="98765 43210 (10 digits)"
-                      required
-                      className="pl-9 h-10 text-sm font-semibold tracking-wide text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:font-normal placeholder:tracking-normal"
-                    />
-                  </div>
-                </div>
+                <CountryPhoneInput
+                  countryCode={countryCode}
+                  onCountryCodeChange={setCountryCode}
+                  phone={formData.phone}
+                  onPhoneChange={(val) => setFormData({ ...formData, phone: val })}
+                  required
+                />
               </div>
 
               {/* Row 3: Email Address */}
@@ -334,8 +398,36 @@ export function PatientForm({
 
             {/* ════════════ RIGHT COLUMN: DEMOGRAPHICS & CLINICAL ════════════ */}
             <div className="space-y-4">
-              {/* Row 1: DOB & Gender */}
+              {/* Row 1: Age & Date of Birth (Bidirectional Calculation) */}
               <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="age" className="text-xs font-semibold text-slate-700">
+                      Age
+                    </Label>
+                    {ageDisplay && (
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
+                        {ageDisplay}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
+                    <Input
+                      id="age"
+                      type="number"
+                      min="0"
+                      max="125"
+                      value={ageInput}
+                      onChange={(e) => handleAgeChange(e.target.value)}
+                      placeholder="e.g. 23"
+                      className="h-10 text-xs sm:text-sm font-semibold text-slate-900 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all pr-12"
+                    />
+                    <span className="absolute right-3 text-[11px] font-semibold text-slate-400 pointer-events-none uppercase">
+                      Years
+                    </span>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="dateOfBirth" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                     <CalendarIcon className="w-3.5 h-3.5 text-slate-400" /> Date of Birth
@@ -344,13 +436,14 @@ export function PatientForm({
                     id="dateOfBirth"
                     type="date"
                     value={formData.dateOfBirth}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dateOfBirth: e.target.value })
-                    }
+                    onChange={(e) => handleDobChange(e.target.value)}
                     className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                   />
                 </div>
+              </div>
 
+              {/* Row 2: Gender & Blood Group */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="gender" className="text-xs font-semibold text-slate-700">
                     Gender
@@ -373,10 +466,7 @@ export function PatientForm({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {/* Row 2: Blood Group & Category */}
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="bloodGroup" className="text-xs font-semibold text-slate-700">
                     Blood Group
@@ -396,28 +486,6 @@ export function PatientForm({
                           {group}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="patientType" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <HeartPulse className="w-3.5 h-3.5 text-rose-500" /> Category
-                  </Label>
-                  <Select
-                    value={formData.patientType || "ACTIVE"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, patientType: value })
-                    }
-                  >
-                    <SelectTrigger className="h-10 text-xs sm:text-sm font-medium text-slate-800 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:border-indigo-500">
-                      <SelectValue placeholder="Active" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                      <SelectItem value="ACTIVE">Standard (Active)</SelectItem>
-                      <SelectItem value="VIP">VIP Patient</SelectItem>
-                      <SelectItem value="CHRONIC">Chronic Care</SelectItem>
-                      <SelectItem value="EMERGENCY">Priority</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -458,7 +526,7 @@ export function PatientForm({
                 </div>
               </div>
 
-              {/* Row 4: Medical Notes */}
+              {/* Row 4: Medical Notes / Allergies */}
               <div className="space-y-1.5">
                 <Label htmlFor="medicalNotes" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-slate-400" /> Medical Notes / Allergies

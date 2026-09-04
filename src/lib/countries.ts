@@ -178,3 +178,52 @@ export const COUNTRIES = [
   { name: "Zambia", dialCode: "+260", code: "ZM" },
   { name: "Zimbabwe", dialCode: "+263", code: "ZW" }
 ];
+
+export function getCountryFlag(code: string): string {
+  if (!code || code.length !== 2) return "🌐";
+  try {
+    return code
+      .toUpperCase()
+      .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+  } catch {
+    return "🌐";
+  }
+}
+
+/**
+ * Resolves the default dial code for a given IANA timezone or browser timezone.
+ * Defaults to "+91" (India) for Indian clinics.
+ */
+export function getDefaultCountryCodeForTimezone(timezone?: string | null): string {
+  const tz = (timezone || (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "") || "").toLowerCase().trim();
+  
+  if (!tz || tz.includes("kolkata") || tz.includes("calcutta") || tz.includes("india")) return "+91";
+  if (tz.includes("dubai") || tz.includes("emirates") || tz.includes("uae") || tz.includes("muscat")) return "+971";
+  if (tz.includes("london") || tz.includes("gb") || tz.includes("belfast")) return "+44";
+  if (tz.includes("new_york") || tz.includes("chicago") || tz.includes("denver") || tz.includes("los_angeles") || tz.includes("detroit") || tz.includes("indiana") || tz.includes("boise") || tz.includes("phoenix") || tz.includes("anchorage") || tz.includes("honolulu")) return "+1";
+  if (tz.includes("toronto") || tz.includes("vancouver") || tz.includes("montreal") || tz.includes("edmonton") || tz.includes("winnipeg") || tz.includes("halifax")) return "+1";
+  if (tz.includes("sydney") || tz.includes("melbourne") || tz.includes("brisbane") || tz.includes("perth") || tz.includes("adelaide") || tz.includes("darwin") || tz.includes("australia")) return "+61";
+  if (tz.includes("riyadh") || tz.includes("saudi")) return "+966";
+  if (tz.includes("singapore")) return "+65";
+  if (tz.includes("kuala_lumpur") || tz.includes("malaysia")) return "+60";
+  if (tz.includes("kathmandu") || tz.includes("nepal")) return "+977";
+  if (tz.includes("dhaka") || tz.includes("bangladesh")) return "+880";
+  if (tz.includes("karachi") || tz.includes("pakistan")) return "+92";
+  if (tz.includes("colombo") || tz.includes("sri_lanka")) return "+94";
+  if (tz.includes("auckland") || tz.includes("new_zealand")) return "+64";
+  if (tz.includes("doha") || tz.includes("qatar")) return "+974";
+  if (tz.includes("kuwait")) return "+965";
+  if (tz.includes("bahrain")) return "+973";
+  if (tz.includes("bangkok") || tz.includes("thailand")) return "+66";
+  if (tz.includes("jakarta") || tz.includes("indonesia")) return "+62";
+  if (tz.includes("manila") || tz.includes("philippines")) return "+63";
+  if (tz.includes("hong_kong")) return "+852";
+  if (tz.includes("johannesburg") || tz.includes("south_africa")) return "+27";
+  if (tz.includes("nairobi") || tz.includes("kenya")) return "+254";
+  if (tz.includes("lagos") || tz.includes("nigeria")) return "+234";
+  if (tz.includes("paris") || tz.includes("france")) return "+33";
+  if (tz.includes("berlin") || tz.includes("germany")) return "+49";
+
+  return "+91";
+}
+
