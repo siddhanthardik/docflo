@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { memoryCache } from "@/lib/memory-cache";
+import { resolveClinicTimezone } from "@/lib/timezone";
 
 // Prioritized Gemini models: Primary gemini-3.7-flash (Low Thinking) -> Fallbacks: 3.6-flash -> 3.5-flash-lite
 const CANDIDATE_MODELS = [
@@ -739,6 +740,7 @@ export interface DoctorScheduleContext {
   pacingStrategy?: string; // STAGGERED or CONTINUOUS
   activeAppointments?: ActivePatientAppointmentInfo[];
   existingFamilyNames?: string[];
+  clinicTimezone?: string;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -897,13 +899,14 @@ export class AIAgentsService {
         return `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency medical services.`;
       }
 
+      const clinicTz = resolveClinicTimezone(scheduleContext?.clinicTimezone || config?.timezone);
       const startTime = Date.now();
       const nowClinic = new Date();
-      const currentDateStr = nowClinic.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const currentTimeStr = nowClinic.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true });
+      const currentDateStr = nowClinic.toLocaleDateString('en-US', { timeZone: clinicTz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const currentTimeStr = nowClinic.toLocaleTimeString('en-US', { timeZone: clinicTz, hour: 'numeric', minute: '2-digit', hour12: true });
 
-      // Determine whether OPD has concluded for today in Asia/Kolkata
-      const [nowH, nowM] = nowClinic.toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }).split(':').map(Number);
+      // Determine whether OPD has concluded for today in the clinic's timezone
+      const [nowH, nowM] = nowClinic.toLocaleTimeString('en-GB', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' }).split(':').map(Number);
       const currentMinutes = nowH * 60 + nowM;
 
       let opdEndMinutes = 20 * 60; // 8:00 PM fallback
@@ -1069,7 +1072,7 @@ ${isMultiDoctor ? `==================================================
 ==================================================
 ${isMultiDoctor ? '8' : '7'}. CLINIC DATA, CURRENT TIME & AUTHORITATIVE SPECIFICATIONS
 ==================================================
-CURRENT TIME RIGHT NOW: ${currentTimeStr} IST (Indian Standard Time, Asia/Kolkata)
+CURRENT TIME RIGHT NOW: ${currentTimeStr} (${clinicTz})
 TODAY'S DATE: ${currentDateStr}
 ${isTodayOpdConcluded ? `⚠️ TODAY'S CLINIC OPD STATUS: CONCLUDED FOR THE DAY (Closed at ${timingSource || '8:00 PM'}).
 CRITICAL DIRECTIVE ON SAME-DAY BOOKING:

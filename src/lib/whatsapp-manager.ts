@@ -1474,7 +1474,8 @@ class WhatsAppManager {
                   bookedSlotsToday,
                   pacingStrategy: doctorInfo?.aiSlotPacing || "STAGGERED",
                   activeAppointments,
-                  existingFamilyNames
+                  existingFamilyNames,
+                  clinicTimezone: clinicTzForApts
                 };
 
                 aiReply = await AIAgentsService.runAppointmentAgent(
