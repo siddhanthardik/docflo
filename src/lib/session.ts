@@ -14,13 +14,14 @@ export async function getSessionData() {
   const isSuperAdmin = user.originalRole === "SUPERADMIN" || user.role === "SUPERADMIN"
   const isImpersonating = !!user.originalAdminId || !!user.impersonate
 
-  // If the logged‑in user is a staff member, use the linked doctorId
-  if (role === "RECEPTIONIST" || role === "STAFF") {
+  // If the logged-in user is a staff member or has a linked clinic, use the linked doctorId
+  if (user.doctorId) {
+    doctorId = user.doctorId
+  } else if (["RECEPTIONIST", "STAFF", "NURSE", "MANAGER", "ADMIN"].includes(role)) {
     const staffDoctorId = user.doctorId
-    if (!staffDoctorId) {
-      throw new Error("Staff account not linked to a clinic")
+    if (staffDoctorId) {
+      doctorId = staffDoctorId
     }
-    doctorId = staffDoctorId
   }
 
   // Read the active location ID from cookies if available
@@ -34,6 +35,13 @@ export async function getSessionData() {
   }
 
   return { userId: user.id, doctorId, role, isSuperAdmin, isImpersonating, locationId };
+}
+
+/**
+ * Returns the canonical clinic doctor ID for any session (doctor or staff member).
+ */
+export function getEffectiveDoctorId(session: any): string {
+  return session?.user?.doctorId || session?.user?.id || "";
 }
 
 export function isDoctor(role: string) {

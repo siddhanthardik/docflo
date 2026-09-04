@@ -31,11 +31,14 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
   const [editForm, setEditForm] = useState({ name: "", role: "", password: "" })
 
   const fetchStaff = async () => {
-    // Re-fetch staff (or rely on state updates for simplicity)
-    const res = await fetch("/api/staff", { method: "GET" })
-    if(res.ok) {
-        // Wait, /api/staff GET doesn't exist yet, we rely on page reload or state updates
-        // To be safe, we just update local state instead of fetching since we didn't build GET
+    try {
+      const res = await fetch("/api/staff", { method: "GET" })
+      if (res.ok) {
+        const data = await res.json()
+        setStaff(data)
+      }
+    } catch (e) {
+      console.error("Failed to fetch staff:", e)
     }
   }
 

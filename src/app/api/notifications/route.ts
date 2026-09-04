@@ -5,12 +5,13 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session || !session.user?.email) {
+    if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const doctorId = session.user.doctorId || session.user.id;
     const doctor = await prisma.doctor.findUnique({
-      where: { email: session.user.email },
+      where: { id: doctorId },
     });
 
     if (!doctor) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -31,12 +32,13 @@ export async function PUT(req: NextRequest) {
   // Mark as read
   try {
     const session = await auth();
-    if (!session || !session.user?.email) {
+    if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const doctorId = session.user.doctorId || session.user.id;
     const doctor = await prisma.doctor.findUnique({
-      where: { email: session.user.email },
+      where: { id: doctorId },
     });
 
     if (!doctor) return NextResponse.json({ error: "Not found" }, { status: 404 });

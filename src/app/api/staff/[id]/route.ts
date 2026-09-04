@@ -7,14 +7,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const currentRole = session.user.role || ""
+  if (["RECEPTIONIST", "NURSE", "STAFF"].includes(currentRole)) {
+    return NextResponse.json({ error: "Forbidden: Access restricted to clinic managers and doctors" }, { status: 403 })
+  }
+
   try {
     const { id } = await params;
-    // Only the doctor who owns this staff member can edit them
+    const doctorId = session.user.doctorId || session.user.id;
+
+    // Only the doctor/manager who owns this clinic can edit staff
     const existingStaff = await prisma.staffMember.findUnique({
       where: { id },
     })
 
-    if (!existingStaff || existingStaff.doctorId !== session.user.id) {
+    if (!existingStaff || existingStaff.doctorId !== doctorId) {
       return NextResponse.json({ error: "Staff member not found or access denied" }, { status: 404 })
     }
 
@@ -22,8 +29,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     
     // Prepare update data
     const dataToUpdate: any = {}
-    if (email !== undefined) dataToUpdate.email = email
-    if (name !== undefined) dataToUpdate.name = name
+    if (email !== undefined) dataToUpdate.email = email.trim().toLowerCase()
+    if (name !== undefined) dataToUpdate.name = name.trim()
     if (role !== undefined) dataToUpdate.role = role
     if (isActive !== undefined) dataToUpdate.isActive = isActive
     if (phone !== undefined) dataToUpdate.phone = phone
@@ -49,13 +56,20 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const currentRole = session.user.role || ""
+  if (["RECEPTIONIST", "NURSE", "STAFF"].includes(currentRole)) {
+    return NextResponse.json({ error: "Forbidden: Access restricted to clinic managers and doctors" }, { status: 403 })
+  }
+
   try {
     const { id } = await params;
+    const doctorId = session.user.doctorId || session.user.id;
+
     const existingStaff = await prisma.staffMember.findUnique({
       where: { id },
     })
 
-    if (!existingStaff || existingStaff.doctorId !== session.user.id) {
+    if (!existingStaff || existingStaff.doctorId !== doctorId) {
       return NextResponse.json({ error: "Staff member not found or access denied" }, { status: 404 })
     }
 

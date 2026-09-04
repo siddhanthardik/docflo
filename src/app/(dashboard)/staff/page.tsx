@@ -9,8 +9,15 @@ export default async function StaffPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")   // guards against undefined user
 
+  const role = session.user.role || ""
+  if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
+    redirect("/dashboard")
+  }
+
+  const doctorId = session.user.doctorId || session.user.id
   const staff = await prisma.staffMember.findMany({
-    where: { doctorId: session.user.id },
+    where: { doctorId },
+    orderBy: { createdAt: "asc" },
   })
 
   return (

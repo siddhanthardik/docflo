@@ -157,7 +157,21 @@ export function MobileNav() {
                 </Link>
               )}
 
-              {allNavItems.map((item) => {
+              {allNavItems
+                .filter((item) => {
+                  const role = session?.user?.role || "DOCTOR";
+                  if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+                    return true;
+                  }
+                  if (role === "MANAGER") {
+                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/campaigns", "/reports", "/settings"].includes(item.href);
+                  }
+                  if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
+                    return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);
+                  }
+                  return true;
+                })
+                .map((item) => {
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"

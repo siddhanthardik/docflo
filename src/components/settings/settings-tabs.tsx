@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   User,
   Building,
@@ -26,20 +27,25 @@ interface TabItem {
   description: string;
   icon: any;
   href: string;
+  roles?: string[];
 }
 
 export function SettingsTabs() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [sheetOpen, setSheetOpen] = useState(false);
   const activePillRef = useRef<HTMLAnchorElement>(null);
 
-  const tabs: TabItem[] = [
+  const userRole = ((session?.user as any)?.role || "DOCTOR").toUpperCase();
+
+  const allTabs: TabItem[] = [
     {
       key: "clinic",
       label: "Clinic Profile",
       description: "Clinic branding, address, timings & currency",
       icon: Building,
       href: "/settings/clinic",
+      roles: ["DOCTOR", "ADMIN", "MANAGER"],
     },
     {
       key: "doctors",
@@ -47,6 +53,7 @@ export function SettingsTabs() {
       description: "Practitioners, clinical specialties, OPD timings & fees",
       icon: Stethoscope,
       href: "/settings/practitioners",
+      roles: ["DOCTOR", "ADMIN", "MANAGER"],
     },
     {
       key: "staff",
@@ -54,6 +61,7 @@ export function SettingsTabs() {
       description: "Team members & receptionist access",
       icon: UserPlus,
       href: "/staff",
+      roles: ["DOCTOR", "ADMIN", "MANAGER"],
     },
     {
       key: "whatsapp",
@@ -61,6 +69,7 @@ export function SettingsTabs() {
       description: "QR connection, device status & AI message triggers",
       icon: MessageCircle,
       href: "/settings/whatsapp",
+      roles: ["DOCTOR", "ADMIN", "MANAGER"],
     },
     {
       key: "subscription",
@@ -68,6 +77,7 @@ export function SettingsTabs() {
       description: "Current plan, usage limits & billing invoices",
       icon: CreditCard,
       href: "/subscription",
+      roles: ["DOCTOR", "ADMIN"],
     },
     {
       key: "integrations",
@@ -75,6 +85,7 @@ export function SettingsTabs() {
       description: "Google Business Profile, calendar & external APIs",
       icon: Puzzle,
       href: "/settings/integrations",
+      roles: ["DOCTOR", "ADMIN"],
     },
     {
       key: "reviews",
@@ -82,6 +93,7 @@ export function SettingsTabs() {
       description: "Patient review automations & Google review alerts",
       icon: Star,
       href: "/settings/reviews",
+      roles: ["DOCTOR", "ADMIN", "MANAGER"],
     },
     {
       key: "account",
@@ -89,15 +101,20 @@ export function SettingsTabs() {
       description: "Login credentials, recovery phone, password & sessions",
       icon: Shield,
       href: "/settings",
+      roles: ["DOCTOR", "ADMIN"],
     },
   ];
 
+  const visibleTabs = allTabs.filter(
+    (tab) => !tab.roles || tab.roles.includes(userRole)
+  );
+
   // Match active tab precisely or by sub-path (excluding root /settings from prefix matching other settings)
   const activeTab =
-    tabs.find((t) => {
+    visibleTabs.find((t) => {
       if (t.href === "/settings") return pathname === "/settings";
       return pathname === t.href || pathname?.startsWith(t.href + "/");
-    }) || tabs[0];
+    }) || visibleTabs[0] || allTabs[0];
 
   const ActiveIcon = activeTab.icon;
 
@@ -178,7 +195,7 @@ export function SettingsTabs() {
 
         {/* Horizontal Quick-Scroll Tabs for 1-Tap Navigation */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 px-0.5 scrollbar-none no-scrollbar">
-          {tabs.map(({ key, label, icon: Icon, href }) => {
+          {visibleTabs.map(({ key, label, icon: Icon, href }) => {
             const isActive =
               href === "/settings"
                 ? pathname === "/settings"
@@ -245,7 +262,7 @@ export function SettingsTabs() {
 
             {/* List of Settings Tabs */}
             <div className="overflow-y-auto p-3 space-y-1.5 max-h-[calc(85vh-100px)] pb-8">
-              {tabs.map(({ key, label, description, icon: Icon, href }) => {
+              {visibleTabs.map(({ key, label, description, icon: Icon, href }) => {
                 const isActive =
                   href === "/settings"
                     ? pathname === "/settings"
@@ -315,7 +332,7 @@ export function SettingsTabs() {
 
       {/* ── DESKTOP & TABLET GRID (≥ 768px) ── */}
       <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-2 bg-white border border-slate-200/80 rounded-2xl p-3 shadow-xs">
-        {tabs.map(({ key, label, icon: Icon, href }) => {
+        {visibleTabs.map(({ key, label, icon: Icon, href }) => {
           const isActive =
             href === "/settings"
               ? pathname === "/settings"

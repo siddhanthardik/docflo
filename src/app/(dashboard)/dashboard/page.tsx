@@ -158,7 +158,7 @@ function avatarColor(name: string) {
 export default async function DashboardPage(props: { searchParams?: Promise<{ practitionerId?: string }> }) {
   const searchParams = await props.searchParams;
   const session = await auth()
-  const doctorId = session?.user?.id as string
+  const doctorId = (session?.user?.doctorId || session?.user?.id) as string
   const doctorName = session?.user?.name || "Doctor"
   
   const stats = await getDashboardStats(doctorId, searchParams?.practitionerId === "all" ? undefined : searchParams?.practitionerId)

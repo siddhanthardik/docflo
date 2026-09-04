@@ -11,6 +11,8 @@ declare module "next-auth" {
   interface User {
     role?: string;
     doctorId?: string;
+    clinicName?: string | null;
+    doctorName?: string | null;
     createdAt?: Date;
     emailVerified?: Date | null;
     rememberMe?: boolean;
@@ -23,6 +25,8 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       doctorId?: string;
+      clinicName?: string | null;
+      doctorName?: string | null;
       createdAt?: string;
       emailVerified?: string | null;
     };
@@ -165,6 +169,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: true,
             email: true,
             name: true,
+            clinicName: true,
             password: true,
             role: true,
             createdAt: true,
@@ -192,6 +197,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 email: doctor.email, 
                 name: doctor.name, 
                 role: doctor.role,
+                doctorId: doctor.id,
+                clinicName: doctor.clinicName || null,
+                doctorName: doctor.name,
                 createdAt: doctor.createdAt,
                 emailVerified: doctor.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
@@ -215,6 +223,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             emailVerified: true,
             failedLoginAttempts: true,
             lockedUntil: true,
+            doctor: {
+              select: {
+                name: true,
+                clinicName: true,
+              }
+            }
           },
         });
 
@@ -237,6 +251,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 name: staff.name, 
                 role: staff.role, 
                 doctorId: staff.doctorId,
+                clinicName: staff.doctor?.clinicName || null,
+                doctorName: staff.doctor?.name || null,
                 createdAt: staff.createdAt,
                 emailVerified: staff.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
@@ -269,6 +285,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.role = user.role;
         token.doctorId = user.doctorId;
+        token.clinicName = user.clinicName;
+        token.doctorName = user.doctorName;
         token.createdAt = user.createdAt?.toISOString();
         token.emailVerified = user.emailVerified?.toISOString() || null;
         
@@ -289,6 +307,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.sub;
       session.user.role = token.role as string;
       session.user.doctorId = token.doctorId as string | undefined;
+      (session.user as any).clinicName = token.clinicName as string | null | undefined;
+      (session.user as any).doctorName = token.doctorName as string | null | undefined;
       (session.user as any).createdAt = token.createdAt as string;
       (session.user as any).emailVerified = token.emailVerified as string | null;
 

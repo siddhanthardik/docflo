@@ -4,16 +4,26 @@ import { headers } from "next/headers";
 import { BillingClient } from "./BillingClient";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
+import { redirect } from "next/navigation";
+
 export default async function BillingPage() {
   const session = await auth();
   
   if (!session?.user?.id) {
-    return null;
+    redirect("/login");
   }
+
+  const role = session.user.role || "";
+  // Restrict subscription management exclusively to the clinic owner / doctor
+  if (role !== "DOCTOR" && !["SUPERADMIN", "ADMIN", "ACCOUNTS"].includes(role)) {
+    redirect("/dashboard");
+  }
+
+  const doctorId = session.user.doctorId || session.user.id;
 
   // Get current user and their package
   const doctor = await prisma.doctor.findUnique({
-    where: { id: session.user.id },
+    where: { id: doctorId },
     include: {
       package: true
     }

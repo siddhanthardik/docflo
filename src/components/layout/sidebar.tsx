@@ -125,31 +125,46 @@ export function Sidebar() {
           </Link>
         )}
         
-        {navigationItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : item.href === "/gbp"
-              ? pathname === "/gbp"
-              : pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150 mb-0.5",
-                isCollapsed ? "justify-center" : "gap-3",
-                isActive
-                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-200"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              )}
-              title={item.name}
-            >
-              <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-white" : "text-slate-400")} />
-              {!isCollapsed && <span className="whitespace-nowrap">{item.name}</span>}
-            </Link>
-          );
-        })}
+        {/* Role-filtered navigation items */}
+        {navigationItems
+          .filter((item) => {
+            const role = session?.user?.role || "DOCTOR";
+            if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+              return true;
+            }
+            if (role === "MANAGER") {
+              return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/campaigns", "/reports"].includes(item.href);
+            }
+            if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
+              return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);
+            }
+            return true;
+          })
+          .map((item) => {
+            const isActive =
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : item.href === "/gbp"
+                ? pathname === "/gbp"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150 mb-0.5",
+                  isCollapsed ? "justify-center" : "gap-3",
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-xs shadow-indigo-200"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                )}
+                title={item.name}
+              >
+                <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-white" : "text-slate-400")} />
+                {!isCollapsed && <span className="whitespace-nowrap">{item.name}</span>}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* Anchored Bottom Footer: Download App, Settings & Sign Out */}
@@ -182,20 +197,22 @@ export function Sidebar() {
           {!isCollapsed && <span>Help & Support</span>}
         </Link>
 
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
-            isCollapsed ? "justify-center" : "gap-3",
-            pathname.startsWith("/settings")
-              ? "bg-indigo-600 text-white shadow-xs"
-              : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
-          )}
-          title="Settings"
-        >
-          <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/settings") ? "text-white" : "text-slate-400")} />
-          {!isCollapsed && <span>Settings</span>}
-        </Link>
+        {(!session?.user?.role || !["RECEPTIONIST", "NURSE", "STAFF"].includes(session.user.role)) && (
+          <Link
+            href="/settings"
+            className={cn(
+              "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
+              isCollapsed ? "justify-center" : "gap-3",
+              pathname.startsWith("/settings")
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
+            )}
+            title="Settings"
+          >
+            <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/settings") ? "text-white" : "text-slate-400")} />
+            {!isCollapsed && <span>Settings</span>}
+          </Link>
+        )}
 
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

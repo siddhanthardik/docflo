@@ -16,6 +16,30 @@ export async function POST(req: Request) {
     const normalizedEmail = validatedData.email.trim().toLowerCase();
     const normalizedPassword = validatedData.password.trim();
 
+    // Check if email already exists as a clinic doctor
+    const existingDoctor = await prisma.doctor.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } }
+    });
+    if (existingDoctor) {
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in instead." },
+        { status: 400 }
+      );
+    }
+
+    // Check if email is already registered as a clinic staff member
+    const existingStaff = await prisma.staffMember.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      include: { doctor: { select: { name: true, clinicName: true } } }
+    });
+    if (existingStaff) {
+      const clinicName = existingStaff.doctor?.clinicName || existingStaff.doctor?.name || "your clinic";
+      return NextResponse.json(
+        { error: `This email is already registered as a staff member for ${clinicName}. Please sign in directly at the login page with your staff credentials.` },
+        { status: 400 }
+      );
+    }
+
     // Hash password
     const hashedPassword = await hash(normalizedPassword, 12);
 

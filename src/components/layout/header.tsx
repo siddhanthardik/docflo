@@ -22,6 +22,9 @@ export function Header() {
   const hour = mounted ? new Date().getHours() : 12;
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
+  const clinicDisplay = (session?.user as any)?.clinicName || (session?.user as any)?.doctorName;
+  const isStaff = !!session?.user?.doctorId && session?.user?.role !== "DOCTOR";
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 shadow-xs print:hidden shrink-0">
       {/* Left: Mobile Brand Logo or Welcome text */}
@@ -38,6 +41,9 @@ export function Header() {
             {mounted ? greeting : "Welcome"}, <span className="text-indigo-600">{name}</span> 👋
           </p>
           <p className="text-xs text-slate-500 mt-0.5 font-normal hidden md:block">
+            {isStaff && clinicDisplay ? (
+              <span>Working at <strong className="text-slate-700 font-semibold">{clinicDisplay}</strong> • </span>
+            ) : null}
             {mounted ? new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : "Loading date..."}
           </p>
         </div>
@@ -63,9 +69,11 @@ export function Header() {
           <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
             {initials}
           </div>
-          <div className="hidden lg:block truncate">
+          <div className="hidden lg:block truncate max-w-[190px]">
             <p className="text-xs font-bold text-slate-900 leading-tight truncate">{name}</p>
-            <p className="text-[10px] font-medium text-slate-500 leading-tight">{session?.user?.role || "SUPERADMIN"}</p>
+            <p className="text-[10px] font-medium text-slate-500 leading-tight truncate">
+              {session?.user?.role || "DOCTOR"} {isStaff && clinicDisplay ? `• ${clinicDisplay}` : ""}
+            </p>
           </div>
         </div>
       </div>

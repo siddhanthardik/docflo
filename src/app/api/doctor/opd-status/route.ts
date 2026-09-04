@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = session.user.doctorId || session.user.id;
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       select: {
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = session.user.doctorId || session.user.id;
     const body = await req.json();
     const { action, delayMinutes, reason, notifyPatients } = body;
 
