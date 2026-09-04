@@ -21,6 +21,7 @@ import { Footer } from "@/components/layout/Footer";
 import { LandingHeader } from "@/components/layout/LandingHeader";
 import { AIRepceptionistSimulator } from "@/components/marketing/AIRepceptionistSimulator";
 import { ComparisonTable } from "@/components/marketing/ComparisonTable";
+import { LiveWhatsAppChatMockup } from "@/components/marketing/LiveWhatsAppChatMockup";
 
 // 12 Medical Specialties - Static Local Paths (Customizable via /public/images/specialties/)
 const SPECIALTY_CARDS = [
@@ -946,6 +947,11 @@ export default function LandingPage() {
           </div>
 
         </div>
+      </section>
+
+      {/* ── LIVE WHATSAPP CHAT MOCKUP SHOWCASE ── */}
+      <section id="whatsapp-demo" className="py-16 bg-white border-t border-slate-200/80">
+        <LiveWhatsAppChatMockup />
       </section>
 
       {/* ── INTERACTIVE ROI CALCULATOR SECTION ── */}
