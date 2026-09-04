@@ -1031,7 +1031,14 @@ FEES & POLICIES:
 - Tele-Consultation: ${allowTeleConsultation ? `ENABLED (${teleConsultationFee || 'Standard Fee'})` : "IN-CLINIC ONLY (Online consultation / WhatsApp prescription not provided)"}
 - Pediatric Vaccines: ${isPediatrician ? vaccinationsList : "N/A (Pediatric clinics only)"}
 - Services Offered: ${servicesOffered}
-${customRules ? `- Doctor Custom Guidelines: "${customRules}"` : ""}
+${customRules ? `
+==================================================
+CUSTOM GUIDELINES & RULES (HIGHEST PRIORITY OVERRIDES):
+==================================================
+- THE DOCTOR HAS ENTERED THE FOLLOWING CUSTOM RULES AND OPERATIONAL INSTRUCTIONS.
+- CRITICAL DIRECTIVE: INSTRUCTIONS ENTERED HERE STRICTLY OVERRIDE ANY DEFAULT TIMINGS, GENERAL CLINIC POLICIES, OR STANDARD RECEPTIONIST BEHAVIOR ABOVE:
+"${customRules}"
+` : ""}
 
 ==================================================
 ${isMultiDoctor ? '9' : '8'}. BOOKING & RESCHEDULING TAGS

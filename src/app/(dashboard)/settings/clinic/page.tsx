@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, UploadCloud, X, Lock, AlertTriangle, MapPin, Building2, Phone } from "lucide-react";
+import { Loader2, UploadCloud, X, Lock, AlertTriangle, MapPin, Building2, Phone, Clock, Sun, Moon, Coffee, Sparkles } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { getIndianStates, getCitiesByState, getPincodesByCity, lookupPincode } from "@/lib/location-data";
+import { GoogleTimePicker } from "@/components/ui/google-time-picker";
 
 export default function SettingsClinicPage() {
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,15 @@ export default function SettingsClinicPage() {
     timezone: "Asia/Kolkata",
     workingHoursStart: "09:00",
     workingHoursEnd: "17:00",
+    daysOff: [] as string[],
   });
+
+  // Clinic Multi-Session Operational Hours State
+  const [morningSession, setMorningSession] = useState({ enabled: true, start: "09:00", end: "13:30" });
+  const [afternoonSession, setAfternoonSession] = useState({ enabled: false, start: "14:00", end: "17:00" });
+  const [eveningSession, setEveningSession] = useState({ enabled: true, start: "17:30", end: "20:30" });
+  const [syncingGoogleHours, setSyncingGoogleHours] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
 
   const [currencyLocked, setCurrencyLocked] = useState(false);
   const [userRole, setUserRole] = useState<string>("DOCTOR");
@@ -144,7 +153,42 @@ export default function SettingsClinicPage() {
           timezone: data.timezone || "Asia/Kolkata",
           workingHoursStart: data.workingHoursStart || "09:00",
           workingHoursEnd: data.workingHoursEnd || "17:00",
+          daysOff: Array.isArray(data.daysOff) ? data.daysOff : [],
         }));
+
+        // Parse multi-slot working hours into Morning/Afternoon/Evening
+        const startStr = data.workingHoursStart || "09:00";
+        const endStr = data.workingHoursEnd || "20:30";
+
+        if (startStr.includes(",") || endStr.includes(",")) {
+          const starts = startStr.split(",");
+          const ends = endStr.split(",");
+          if (starts.length >= 1 && starts[0]) {
+            setMorningSession({ enabled: true, start: starts[0], end: ends[0] || "13:30" });
+          }
+          if (starts.length >= 2 && starts[1]) {
+            setEveningSession({ enabled: true, start: starts[1], end: ends[1] || "20:30" });
+          } else {
+            setEveningSession({ enabled: false, start: "17:30", end: "20:30" });
+          }
+          if (starts.length >= 3 && starts[2]) {
+            setAfternoonSession({ enabled: true, start: starts[2], end: ends[2] || "17:00" });
+          } else {
+            setAfternoonSession({ enabled: false, start: "14:00", end: "17:00" });
+          }
+        } else {
+          const startH = parseInt(startStr.split(":")[0], 10);
+          if (startH >= 15) {
+            setMorningSession({ enabled: false, start: "09:00", end: "13:30" });
+            setEveningSession({ enabled: true, start: startStr, end: endStr });
+          } else if (parseInt(endStr.split(":")[0], 10) <= 15) {
+            setMorningSession({ enabled: true, start: startStr, end: endStr });
+            setEveningSession({ enabled: false, start: "17:30", end: "20:30" });
+          } else {
+            setMorningSession({ enabled: true, start: startStr, end: "13:30" });
+            setEveningSession({ enabled: true, start: "17:30", end: endStr });
+          }
+        }
         
         setUserRole(data.role || "DOCTOR");
 
@@ -154,11 +198,52 @@ export default function SettingsClinicPage() {
         } else {
           setCurrencyLocked(false);
         }
+
+        // Check GBP connection status
+        fetch("/api/gbp/status")
+          .then(res => res.json())
+          .then(statusData => {
+            if (statusData.connected) {
+              setGoogleConnected(true);
+            }
+          })
+          .catch(() => {});
       }
     } catch (error) {
       console.error("Error fetching clinic profile:", error);
     } finally {
       setPageLoading(false);
+    }
+  };
+
+  const handleSyncGoogleHours = async () => {
+    try {
+      setSyncingGoogleHours(true);
+      const res = await fetch("/api/settings/clinic/sync-google-hours");
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to fetch Google hours");
+      }
+
+      if (data.morningSlot) setMorningSession(data.morningSlot);
+      if (data.afternoonSlot) setAfternoonSession(data.afternoonSlot);
+      if (data.eveningSlot) setEveningSession(data.eveningSlot);
+      if (Array.isArray(data.closedDays) && data.closedDays.length > 0) {
+        setClinic(prev => ({ ...prev, daysOff: data.closedDays }));
+      }
+
+      toast({
+        title: "Google Timings Synced! 🕒",
+        description: "Clinic hours successfully populated from your Google Business Profile.",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Google Sync Notice",
+        description: e.message || "Could not fetch Google Business Profile hours.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingGoogleHours(false);
     }
   };
 
@@ -267,10 +352,33 @@ export default function SettingsClinicPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      // Assemble multi-session working hours
+      const activeStarts: string[] = [];
+      const activeEnds: string[] = [];
+
+      if (morningSession.enabled && morningSession.start && morningSession.end) {
+        activeStarts.push(morningSession.start);
+        activeEnds.push(morningSession.end);
+      }
+      if (eveningSession.enabled && eveningSession.start && eveningSession.end) {
+        activeStarts.push(eveningSession.start);
+        activeEnds.push(eveningSession.end);
+      }
+      if (afternoonSession.enabled && afternoonSession.start && afternoonSession.end) {
+        activeStarts.push(afternoonSession.start);
+        activeEnds.push(afternoonSession.end);
+      }
+
+      const payload = {
+        ...clinic,
+        workingHoursStart: activeStarts.length > 0 ? activeStarts.join(",") : "09:00",
+        workingHoursEnd: activeEnds.length > 0 ? activeEnds.join(",") : "20:30",
+      };
+
       const response = await fetch("/api/settings/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(clinic),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const data = await response.json();
@@ -620,7 +728,7 @@ export default function SettingsClinicPage() {
 
             {/* Localization Settings */}
             <div className="space-y-6 pt-4 border-t border-slate-100">
-              <h3 className={sectionTitleClass}>Localization &amp; Timings</h3>
+              <h3 className={sectionTitleClass}>Localization</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Timezone</label>
@@ -654,6 +762,199 @@ export default function SettingsClinicPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Clinic Operational Hours Section */}
+            <div className="space-y-5 pt-4 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-600" />
+                    Clinic Operating Hours &amp; Working Timings
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    General opening hours for your clinic reception. Used for patient invoices, clinic inquiries, and WhatsApp AI responses.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSyncGoogleHours}
+                  disabled={syncingGoogleHours}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all shrink-0 ${
+                    googleConnected
+                      ? "bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50 shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Auto-fetch opening hours from your connected Google Business Profile"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 text-indigo-600 ${syncingGoogleHours ? "animate-spin" : ""}`} />
+                  <span>{syncingGoogleHours ? "Syncing from Google..." : "Fetch from Google Business Profile"}</span>
+                </button>
+              </div>
+
+              {/* Sessions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Morning Session */}
+                <div className={`p-4 rounded-2xl border transition-all ${morningSession.enabled ? 'bg-amber-50/40 border-amber-200/80 shadow-xs' : 'bg-slate-50/60 border-slate-200/60 opacity-60'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${morningSession.enabled ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-200 text-slate-500'}`}>
+                        <Sun className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">Morning Session</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={morningSession.enabled}
+                        onChange={(e) => setMorningSession({ ...morningSession, enabled: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                  </div>
+
+                  {morningSession.enabled ? (
+                    <div className="space-y-2 pt-1">
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Open Time</span>
+                        <GoogleTimePicker
+                          value={morningSession.start}
+                          onChange={(val) => setMorningSession({ ...morningSession, start: val })}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Close Time</span>
+                        <GoogleTimePicker
+                          value={morningSession.end}
+                          minTime={morningSession.start}
+                          onChange={(val) => setMorningSession({ ...morningSession, end: val })}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 block pt-3">Closed in the morning</span>
+                  )}
+                </div>
+
+                {/* 2. Afternoon Session */}
+                <div className={`p-4 rounded-2xl border transition-all ${afternoonSession.enabled ? 'bg-emerald-50/40 border-emerald-200/80 shadow-xs' : 'bg-slate-50/60 border-slate-200/60 opacity-60'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${afternoonSession.enabled ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-500'}`}>
+                        <Coffee className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">Afternoon Session</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={afternoonSession.enabled}
+                        onChange={(e) => setAfternoonSession({ ...afternoonSession, enabled: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
+
+                  {afternoonSession.enabled ? (
+                    <div className="space-y-2 pt-1">
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Open Time</span>
+                        <GoogleTimePicker
+                          value={afternoonSession.start}
+                          onChange={(val) => setAfternoonSession({ ...afternoonSession, start: val })}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Close Time</span>
+                        <GoogleTimePicker
+                          value={afternoonSession.end}
+                          minTime={afternoonSession.start}
+                          onChange={(val) => setAfternoonSession({ ...afternoonSession, end: val })}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 block pt-3">Closed in the afternoon</span>
+                  )}
+                </div>
+
+                {/* 3. Evening Session */}
+                <div className={`p-4 rounded-2xl border transition-all ${eveningSession.enabled ? 'bg-indigo-50/40 border-indigo-200/80 shadow-xs' : 'bg-slate-50/60 border-slate-200/60 opacity-60'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${eveningSession.enabled ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-500'}`}>
+                        <Moon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">Evening Session</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={eveningSession.enabled}
+                        onChange={(e) => setEveningSession({ ...eveningSession, enabled: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+
+                  {eveningSession.enabled ? (
+                    <div className="space-y-2 pt-1">
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Open Time</span>
+                        <GoogleTimePicker
+                          value={eveningSession.start}
+                          onChange={(val) => setEveningSession({ ...eveningSession, start: val })}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Close Time</span>
+                        <GoogleTimePicker
+                          value={eveningSession.end}
+                          minTime={eveningSession.start}
+                          onChange={(val) => setEveningSession({ ...eveningSession, end: val })}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 block pt-3">Closed in the evening</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Sunday & Closed Days Policy */}
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800">Weekly Off / Closed Days</label>
+                  <span className="text-[11px] text-slate-500">Select days when the clinic is completely closed</span>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                    const isClosed = (clinic.daysOff || []).includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          const current = clinic.daysOff || [];
+                          const updated = isClosed ? current.filter((d) => d !== day) : [...current, day];
+                          setClinic((prev) => ({ ...prev, daysOff: updated }));
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                          isClosed
+                            ? "bg-rose-100 border border-rose-300 text-rose-700 font-bold"
+                            : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {day} {isClosed ? "(Closed)" : ""}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

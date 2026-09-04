@@ -24,6 +24,7 @@ import {
   Coffee,
   Plus,
   Trash2,
+  Sliders,
 } from "lucide-react";
 
 interface PractitionerDialogProps {
@@ -48,9 +49,19 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
     qualification: "",
     registrationNumber: "",
     consultationFee: "",
+    followUpFee: "0",
+    followUpDays: "7",
     duration: "15",
     calendarColor: "#6366f1",
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+  });
+
+  // AI Booking Capacity & Pacing Controls (Per-Doctor / OPD)
+  const [capacityControls, setCapacityControls] = useState({
+    maxDailyAiBookings: "10" as string,
+    maxMorningAiBookings: 5,
+    maxEveningAiBookings: 5,
+    aiSlotPacing: "STAGGERED",
   });
 
   // Multi-Session OPD Slots
@@ -70,10 +81,27 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
         qualification: practitioner.qualification || "",
         registrationNumber: practitioner.registrationNumber || "",
         consultationFee: practitioner.consultationFee !== null && practitioner.consultationFee !== undefined ? practitioner.consultationFee.toString() : "",
+        followUpFee: practitioner.followUpFee !== null && practitioner.followUpFee !== undefined ? practitioner.followUpFee.toString() : "0",
+        followUpDays: practitioner.followUpDays ? practitioner.followUpDays.toString() : "7",
         duration: practitioner.duration ? practitioner.duration.toString() : "15",
         calendarColor: practitioner.calendarColor || "#6366f1",
         workingDays: practitioner.workingDays && practitioner.workingDays.length > 0 ? practitioner.workingDays : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       });
+
+      // Load AI booking capacity controls
+      fetch("/api/doctor/opd-status")
+        .then(res => res.json())
+        .then(data => {
+          if (data?.doctor) {
+            setCapacityControls({
+              maxDailyAiBookings: data.doctor.maxDailyAiBookings !== null && data.doctor.maxDailyAiBookings !== undefined ? String(data.doctor.maxDailyAiBookings) : "unlimited",
+              maxMorningAiBookings: data.doctor.maxMorningAiBookings ?? 5,
+              maxEveningAiBookings: data.doctor.maxEveningAiBookings ?? 5,
+              aiSlotPacing: data.doctor.aiSlotPacing || "STAGGERED",
+            });
+          }
+        })
+        .catch(() => {});
 
       // Parse multi-slot working hours
       const startStr = practitioner.workingHoursStart || "09:00";
@@ -122,7 +150,7 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
     } else if (isOpen) {
       setFormData({
         name: "", email: "", phone: "", specialty: "", otherSpecialty: "",
-        qualification: "", registrationNumber: "", consultationFee: "", duration: "15",
+        qualification: "", registrationNumber: "", consultationFee: "", followUpFee: "", followUpDays: "7", duration: "15",
         calendarColor: "#6366f1",
         workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       });
@@ -226,6 +254,30 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to save practitioner");
+      }
+
+      // Synchronize capacity & follow-up policy to AI agent config
+      try {
+        const capacityPayload = {
+          maxDailyAiBookings: capacityControls.maxDailyAiBookings === "unlimited" ? null : parseInt(capacityControls.maxDailyAiBookings),
+          maxMorningAiBookings: capacityControls.maxMorningAiBookings,
+          maxEveningAiBookings: capacityControls.maxEveningAiBookings,
+          aiSlotPacing: capacityControls.aiSlotPacing,
+          consultationFee: formData.consultationFee ? `₹${formData.consultationFee}` : "",
+          followUpFee: formData.followUpFee ? `₹${formData.followUpFee}` : "₹0",
+          followUpDays: formData.followUpDays ? `${formData.followUpDays} days` : "7 days",
+        };
+
+        await fetch("/api/ai-agents", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentType: "APPOINTMENT",
+            config: capacityPayload,
+          }),
+        });
+      } catch (capErr) {
+        console.warn("Capacity sync notice:", capErr);
       }
 
       toast.success(practitioner ? "Doctor updated successfully" : "Doctor added successfully");
@@ -358,16 +410,16 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
             </div>
           </div>
 
-          {/* SECTION 2: FEES & DURATION */}
+          {/* SECTION 2: FEES & FOLLOW-UP POLICY */}
           <div className="space-y-4 pt-3 border-t border-slate-100">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
               <DollarSign className="w-4 h-4 text-emerald-600" />
-              <span>Consultation Fees &amp; Duration</span>
+              <span>Consultation Fees &amp; Follow-up Policy</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className={labelClass}>Consultation Fee (₹)</label>
+                <label className={labelClass}>First Visit Fee (₹)</label>
                 <Input 
                   type="number" 
                   step="1" 
@@ -392,6 +444,36 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                     <SelectItem value="60">60 mins</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClass}>Follow-up Consultation Fee (₹)</label>
+                <Input 
+                  type="number" 
+                  step="1" 
+                  min="0"
+                  value={formData.followUpFee} 
+                  onChange={e => setFormData({...formData, followUpFee: e.target.value})} 
+                  placeholder="e.g. 0 (Free) or 300" 
+                  className={inputClass} 
+                />
+                <span className="text-[10px] text-slate-500">Charged for test report review &amp; second consult</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClass}>Follow-up Validity Period</label>
+                <Select value={formData.followUpDays} onValueChange={v => setFormData({...formData, followUpDays: v})}>
+                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">Within 3 Days</SelectItem>
+                    <SelectItem value="5">Within 5 Days</SelectItem>
+                    <SelectItem value="7">Within 7 Days (Standard)</SelectItem>
+                    <SelectItem value="10">Within 10 Days</SelectItem>
+                    <SelectItem value="14">Within 14 Days</SelectItem>
+                    <SelectItem value="30">Within 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-[10px] text-slate-500">Duration after first visit where follow-up rate applies</span>
               </div>
             </div>
           </div>
@@ -644,6 +726,91 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 4: AI BOOKING CAPACITY & PACING CONTROLS */}
+          <div className="space-y-4 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <Sliders className="w-4 h-4 text-indigo-600" />
+                <span>AI Booking Capacity &amp; Pacing Controls</span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Pacing Active
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Configure how many automated appointment slots the 24/7 WhatsApp AI receptionist can confirm per day for this doctor, avoiding waiting room overcrowding.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className={labelClass}>Daily AI Booking Cap</label>
+                <Select
+                  value={capacityControls.maxDailyAiBookings}
+                  onValueChange={(v) => setCapacityControls({ ...capacityControls, maxDailyAiBookings: v })}
+                >
+                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">Max 5 Patients / day</SelectItem>
+                    <SelectItem value="8">Max 8 Patients / day</SelectItem>
+                    <SelectItem value="10">Max 10 Patients / day</SelectItem>
+                    <SelectItem value="15">Max 15 Patients / day</SelectItem>
+                    <SelectItem value="20">Max 20 Patients / day</SelectItem>
+                    <SelectItem value="unlimited">Unlimited (Fill all slots)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-[10px] text-slate-400">Total daily limit for AI</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClass}>Morning Session Max</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={capacityControls.maxMorningAiBookings}
+                  onChange={(e) => setCapacityControls({ ...capacityControls, maxMorningAiBookings: parseInt(e.target.value) || 0 })}
+                  className={inputClass}
+                />
+                <span className="text-[10px] text-slate-400">Slots reserved in morning</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClass}>Evening Session Max</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={capacityControls.maxEveningAiBookings}
+                  onChange={(e) => setCapacityControls({ ...capacityControls, maxEveningAiBookings: parseInt(e.target.value) || 0 })}
+                  className={inputClass}
+                />
+                <span className="text-[10px] text-slate-400">Slots reserved in evening</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div className="space-y-1">
+                <label className={labelClass}>Slot Pacing Strategy</label>
+                <Select
+                  value={capacityControls.aiSlotPacing}
+                  onValueChange={(v) => setCapacityControls({ ...capacityControls, aiSlotPacing: v })}
+                >
+                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STAGGERED">Staggered (Leaves 15m gaps for walk-ins)</SelectItem>
+                    <SelectItem value="CONTINUOUS">Continuous (Fills back-to-back)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-[10px] text-slate-400">Staggered prevents crowded waiting areas</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClass}>When Quota is Reached</label>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                  AI politely offers <strong>Tomorrow&apos;s earliest slot</strong> + shares counter walk-in instructions.
+                </div>
               </div>
             </div>
           </div>
