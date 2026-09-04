@@ -21,19 +21,49 @@ interface ChatMessage {
 }
 
 const ALL_SPECIALTIES = [
-  { id: "derma", name: "Dermatology & Cosmetology", defaultDoc: "Dr. Ananya Rao", defaultClinic: "Aura Skin & Hair Clinic", fee: 900, teleFee: 1100 },
-  { id: "pedia", name: "Pediatrics & Child Care", defaultDoc: "Dr. Vinay Mehta", defaultClinic: "Little Stars Child Clinic", fee: 800, teleFee: 1000 },
-  { id: "dental", name: "Dental & Orthodontics", defaultDoc: "Dr. Rohan Kapoor", defaultClinic: "Apex Dental & Implant Studio", fee: 600, teleFee: 800 },
-  { id: "gynae", name: "Gynecology & IVF Care", defaultDoc: "Dr. Priya Sharma", defaultClinic: "Bloom Women's & IVF Care", fee: 1000, teleFee: 1200 },
+  { id: "derma", name: "Dermatology", defaultDoc: "Dr. Ananya Rao", defaultClinic: "Aura Skin & Laser Clinic", fee: 900, teleFee: 1100 },
+  { id: "dental", name: "Dentistry", defaultDoc: "Dr. Rohan Kapoor", defaultClinic: "Apex Dental & Implant Studio", fee: 600, teleFee: 800 },
+  { id: "pedia", name: "Pediatrics", defaultDoc: "Dr. Vinay Mehta", defaultClinic: "Little Stars Child Clinic", fee: 800, teleFee: 1000 },
+  { id: "gynae", name: "Gynecology & Obstetrics", defaultDoc: "Dr. Priya Sharma", defaultClinic: "Bloom Women's & Maternity Clinic", fee: 1000, teleFee: 1200 },
   { id: "general", name: "General Medicine", defaultDoc: "Dr. Rajesh Gupta", defaultClinic: "City Health Care Clinic", fee: 500, teleFee: 700 },
-  { id: "ortho", name: "Orthopedics & Joint Care", defaultDoc: "Dr. Amit Verma", defaultClinic: "Joint & Spine Clinic", fee: 850, teleFee: 1000 },
-  { id: "sexology", name: "Sexual Wellness", defaultDoc: "Dr. Sameer Khan", defaultClinic: "Revive Wellness Clinic", fee: 1200, teleFee: 1500 },
-  { id: "cardio", name: "Cardiology & Heart Care", defaultDoc: "Dr. Sanjay Deshmukh", defaultClinic: "Heart & Vascular Care", fee: 1500, teleFee: 1800 },
-  { id: "diabetes", name: "Diabetology & Endocrinology", defaultDoc: "Dr. Kavita Joshi", defaultClinic: "Sugar & Thyroid Clinic", fee: 900, teleFee: 1100 },
-  { id: "ophthalmology", name: "Ophthalmology & Eye Care", defaultDoc: "Dr. Alok Nath", defaultClinic: "Vision Eye Care Centre", fee: 700, teleFee: 900 },
-  { id: "ent", name: "ENT & Head-Neck", defaultDoc: "Dr. Meera Nambiar", defaultClinic: "Care ENT Speciality Clinic", fee: 750, teleFee: 950 },
-  { id: "psychiatry", name: "Psychiatry & Mental Health", defaultDoc: "Dr. Arun Sen", defaultClinic: "Mind Wellness Clinic", fee: 1500, teleFee: 1800 },
-  { id: "physio", name: "Physiotherapy & Rehab", defaultDoc: "Dr. Pooja Nair", defaultClinic: "Active Motion Rehab Clinic", fee: 600, teleFee: 800 },
+  { id: "ortho", name: "Orthopedics", defaultDoc: "Dr. Amit Verma", defaultClinic: "Joint & Spine Bone Clinic", fee: 850, teleFee: 1000 },
+  { id: "cardio", name: "Cardiology", defaultDoc: "Dr. Sanjay Deshmukh", defaultClinic: "Heart & Vascular Care", fee: 1500, teleFee: 1800 },
+  { id: "ent", name: "ENT (Otolaryngology)", defaultDoc: "Dr. Meera Nambiar", defaultClinic: "Care ENT Speciality Clinic", fee: 750, teleFee: 950 },
+  { id: "ophthalmology", name: "Ophthalmology", defaultDoc: "Dr. Alok Nath", defaultClinic: "Vision Eye Care Centre", fee: 700, teleFee: 900 },
+  { id: "diabetes", name: "Diabetology", defaultDoc: "Dr. Kavita Joshi", defaultClinic: "Sugar & Diabetes Care Clinic", fee: 900, teleFee: 1100 },
+  { id: "psychiatry", name: "Psychiatry", defaultDoc: "Dr. Arun Sen", defaultClinic: "Mind Wellness Clinic", fee: 1500, teleFee: 1800 },
+  { id: "physio", name: "Physiotherapy", defaultDoc: "Dr. Pooja Nair", defaultClinic: "Active Motion Rehab Clinic", fee: 600, teleFee: 800 },
+  { id: "gastro", name: "Gastroenterology", defaultDoc: "Dr. Nikhil Kulkarni", defaultClinic: "Digestive Health & Liver Clinic", fee: 1200, teleFee: 1400 },
+  { id: "pulmo", name: "Pulmonology & Respiratory Medicine", defaultDoc: "Dr. Sandeep Bajaj", defaultClinic: "Breathe Easy Chest & Allergy Care", fee: 1000, teleFee: 1200 },
+  { id: "uro", name: "Urology", defaultDoc: "Dr. Vivek Chhabra", defaultClinic: "UroCare Kidney & Prostate Clinic", fee: 1200, teleFee: 1500 },
+  { id: "neuro", name: "Neurology", defaultDoc: "Dr. Sunita Bansal", defaultClinic: "NeuroLife Brain & Spine Centre", fee: 1500, teleFee: 1800 },
+  { id: "neurosurg", name: "Neurosurgery & Spine Surgery", defaultDoc: "Dr. Vikram Sethi", defaultClinic: "Advanced Spine & Neuro Care", fee: 1800, teleFee: 2000 },
+  { id: "nephro", name: "Nephrology", defaultDoc: "Dr. Pradeep Mishra", defaultClinic: "Renal Health & Kidney Clinic", fee: 1200, teleFee: 1400 },
+  { id: "onco", name: "Oncology", defaultDoc: "Dr. Rajeev Aggarwal", defaultClinic: "Hope Cancer Care Centre", fee: 1800, teleFee: 2000 },
+  { id: "endo", name: "Endocrinology", defaultDoc: "Dr. Ritu Saxena", defaultClinic: "Endocrine & Hormone Wellness", fee: 1100, teleFee: 1300 },
+  { id: "ivf", name: "IVF & Infertility", defaultDoc: "Dr. Radhika Singhal", defaultClinic: "Miracle IVF & Fertility Centre", fee: 1500, teleFee: 1800 },
+  { id: "cosmetology", name: "Cosmetology & Aesthetic Medicine", defaultDoc: "Dr. Shalini Roy", defaultClinic: "Glow Aesthetics & Skin Studio", fee: 1000, teleFee: 1200 },
+  { id: "trichology", name: "Trichology & Hair Transplant", defaultDoc: "Dr. Gaurav Chopra", defaultClinic: "HairCraft Restoration Clinic", fee: 900, teleFee: 1100 },
+  { id: "sexology", name: "Sexology & Andrology", defaultDoc: "Dr. Sameer Khan", defaultClinic: "Revive Men & Women Wellness", fee: 1200, teleFee: 1500 },
+  { id: "gensurg", name: "General Surgery", defaultDoc: "Dr. Ashok Mathur", defaultClinic: "Surgical Care & Daycare Centre", fee: 1000, teleFee: 1200 },
+  { id: "laparo", name: "Laparoscopic Surgery", defaultDoc: "Dr. Manish Tandon", defaultClinic: "Minimal Access Surgery Clinic", fee: 1100, teleFee: 1300 },
+  { id: "plastic", name: "Plastic & Reconstructive Surgery", defaultDoc: "Dr. Deepak Singhania", defaultClinic: "Form & Contour Plastic Surgery", fee: 1500, teleFee: 1800 },
+  { id: "pediasurg", name: "Pediatric Surgery", defaultDoc: "Dr. Vandana Goyal", defaultClinic: "Child Surgical Care Centre", fee: 1200, teleFee: 1400 },
+  { id: "dietetics", name: "Dietetics & Clinical Nutrition", defaultDoc: "Dt. Simran Kaur", defaultClinic: "NutriLife Diet & Wellness Clinic", fee: 700, teleFee: 800 },
+  { id: "psychology", name: "Clinical Psychology & Counseling", defaultDoc: "Dr. Neha Bhatt", defaultClinic: "MindSpace Therapy & Counseling", fee: 1200, teleFee: 1400 },
+  { id: "rheuma", name: "Rheumatology", defaultDoc: "Dr. Tarun Sood", defaultClinic: "Arthritis & Autoimmune Care Clinic", fee: 1200, teleFee: 1400 },
+  { id: "hematology", name: "Hematology", defaultDoc: "Dr. Anirudh Sen", defaultClinic: "Blood Disorders & Bone Marrow Clinic", fee: 1400, teleFee: 1600 },
+  { id: "infectious", name: "Infectious Diseases", defaultDoc: "Dr. Rahul Mahajan", defaultClinic: "Infection & Travel Medicine Clinic", fee: 1000, teleFee: 1200 },
+  { id: "sports", name: "Sports Medicine", defaultDoc: "Dr. Karan Malhotra", defaultClinic: "ProAthlete Sports Injury & Rehab", fee: 1100, teleFee: 1300 },
+  { id: "vascular", name: "Vascular Surgery", defaultDoc: "Dr. Sunil Khurana", defaultClinic: "Vein & Vascular Care Clinic", fee: 1300, teleFee: 1500 },
+  { id: "pathology", name: "Pathology & Laboratory Medicine", defaultDoc: "Dr. Harish Bhatia", defaultClinic: "Precision Diagnostic Care", fee: 500, teleFee: 600 },
+  { id: "radiology", name: "Radiology & Imaging", defaultDoc: "Dr. Smita Patwardhan", defaultClinic: "ScanWell Diagnostic Centre", fee: 600, teleFee: 700 },
+  { id: "audiology", name: "Audiology & Speech Therapy", defaultDoc: "Dr. Swati Ghosh", defaultClinic: "HearWell Speech & Hearing Clinic", fee: 800, teleFee: 900 },
+  { id: "occupational", name: "Occupational Therapy", defaultDoc: "Dr. Kiran Rao", defaultClinic: "StepAhead Occupational Therapy", fee: 800, teleFee: 900 },
+  { id: "ayurveda", name: "Ayurveda", defaultDoc: "Vaidya Shrikant Deshpande", defaultClinic: "AyurVeda Wellness & Panchakarma", fee: 600, teleFee: 750 },
+  { id: "homeopathy", name: "Homeopathy", defaultDoc: "Dr. Mukesh Solanki", defaultClinic: "Holistic Homeopathic Healing", fee: 500, teleFee: 650 },
+  { id: "naturopathy", name: "Naturopathy & Yoga", defaultDoc: "Dr. Arvind Patel", defaultClinic: "NatureCare Holistic Wellness", fee: 600, teleFee: 750 },
+  { id: "other", name: "Other Specialty", defaultDoc: "Dr. Clinic Specialist", defaultClinic: "Healthcare Speciality Clinic", fee: 700, teleFee: 900 },
 ];
 
 export function AIRepceptionistSimulator() {
@@ -370,7 +400,7 @@ export function AIRepceptionistSimulator() {
                 </span>
               </div>
 
-              {/* Medical Specialty Selector (All 13 Specialties) */}
+              {/* Medical Specialty Selector (40+ Specialties) */}
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                   Medical Specialty
