@@ -10,12 +10,47 @@ export function NotificationBell() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/notifications")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setNotifications(data);
-      })
-      .catch(console.error);
+    // Request desktop notification permission on first user engagement
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    const loadNotifications = () => {
+      fetch("/api/notifications")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            // Check for new critical unread notifications (e.g. WhatsApp Disconnected)
+            const criticalUnread = data.filter(
+              (n) => !n.isRead && (n.title?.includes("WhatsApp") || n.type === "ERROR")
+            );
+
+            if (
+              criticalUnread.length > 0 &&
+              typeof window !== "undefined" &&
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              const latest = criticalUnread[0];
+              const storageKey = `gyrex_notif_seen_${latest.id}`;
+              if (!sessionStorage.getItem(storageKey)) {
+                sessionStorage.setItem(storageKey, "true");
+                new Notification(latest.title, {
+                  body: latest.message,
+                  icon: "/favicon.ico",
+                });
+              }
+            }
+
+            setNotifications(data);
+          }
+        })
+        .catch(console.error);
+    };
+
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 20000);
+    return () => clearInterval(interval);
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

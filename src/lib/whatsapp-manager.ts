@@ -36,6 +36,7 @@ class WhatsAppManager {
   private lastConnectAttempt: Map<string, number> = new Map(); // doctorId -> timestamp of last connection attempt
   private connectionOpenAt: Map<string, number> = new Map(); // doctorId -> timestamp when connection opened (for warm-up)
   private lastMessageSentAt: Map<string, number> = new Map(); // doctorId -> timestamp of last outbound message (for pacing)
+  private lastDisconnectNotificationAt: Map<string, number> = new Map(); // doctorId -> timestamp when disconnect notification was dispatched
   private watchdogTimer: NodeJS.Timeout | null = null;
   // Holds doctor-delegated tasks (patientPhone -> task)
   private delegatedDoctorTasks: Map<string, {
@@ -112,6 +113,34 @@ class WhatsAppManager {
       } catch (err) {
         console.error(`[WhatsAppManager] Failed to delete session dir for ${doctorId}:`, err);
       }
+    }
+  }
+
+  // Dispatches an immediate high-priority in-app alert and notifies the clinic that WhatsApp is disconnected
+  async notifyDoctorDisconnected(doctorId: string, reason: string = "Connection closed") {
+    if (doctorId === 'PLATFORM_SUPERADMIN') return;
+
+    // Rate-limit notifications to once every 30 minutes to prevent noise
+    const lastNotif = this.lastDisconnectNotificationAt.get(doctorId) || 0;
+    if (Date.now() - lastNotif < 1800000) {
+      return;
+    }
+    this.lastDisconnectNotificationAt.set(doctorId, Date.now());
+
+    console.warn(`[WhatsAppManager] Dispatching disconnect alert for doctor ${doctorId}: ${reason}`);
+
+    try {
+      await prisma.notification.create({
+        data: {
+          doctorId,
+          title: "WhatsApp Disconnected ⚠️",
+          message: "Your clinic's WhatsApp Business connection is offline. Patient AI auto-replies, reminders, and notifications are paused. Tap to reconnect now.",
+          type: "ERROR",
+          actionUrl: "/settings/whatsapp",
+        }
+      });
+    } catch (e) {
+      console.error(`[WhatsAppManager] Failed to create disconnect notification for ${doctorId}:`, e);
     }
   }
 
@@ -379,25 +408,30 @@ class WhatsAppManager {
           if (shouldReconnect) {
             const currentAttempts = (this.reconnectAttempts.get(doctorId) || 0) + 1;
 
-            // Strict Anti-Ban Guard: After 3 rapid retries, pause immediate retry and hand off to periodic watchdog (every 2-5 mins)
-            // This prevents rapid hammering while ensuring the session STAYS CONNECTED forever in the background
-            const MAX_RAPID_RETRIES = 3;
+            // Strict Anti-Ban Guard: After 2 rapid retries, alert doctor and release the connecting lock
+            // so UI can show a fresh QR code instead of hanging indefinitely on "Auto-Connecting"
+            const MAX_RAPID_RETRIES = 2;
             if (currentAttempts > MAX_RAPID_RETRIES) {
-              console.warn(`[WhatsAppManager] Rapid retry cap reached for ${doctorId}. Session preserved on disk. Handing off to background watchdog for gentle reconnection.`);
+              console.warn(`[WhatsAppManager] Rapid retry cap reached for ${doctorId}. Marking as disconnected & alerting doctor.`);
               this.reconnectAttempts.delete(doctorId);
+              this.connectingDoctors.delete(doctorId);
+              this.notifyDoctorDisconnected(doctorId, `Failed to reconnect after ${MAX_RAPID_RETRIES} attempts`);
               return;
             }
 
             this.reconnectAttempts.set(doctorId, currentAttempts);
 
-            // Humane Anti-Ban Backoff: Attempt 1: 15s | Attempt 2: 45s | Attempt 3: 90s
-            const backoffSchedule = [15000, 45000, 90000];
-            const delay = backoffSchedule[currentAttempts - 1] || 90000;
+            // Humane Anti-Ban Backoff: Attempt 1: 10s | Attempt 2: 25s
+            const backoffSchedule = [10000, 25000];
+            const delay = backoffSchedule[currentAttempts - 1] || 25000;
 
             console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RAPID_RETRIES}) in ${Math.round(delay / 1000)}s...`);
             
             setTimeout(() => {
-              this.connect(doctorId, { force: true }).catch(e => console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e));
+              this.connect(doctorId, { force: true }).catch(e => {
+                console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e);
+                this.notifyDoctorDisconnected(doctorId, "Auto-reconnect failed");
+              });
             }, delay);
           } else {
             // Only purge if user explicitly removed the device from phone WhatsApp Linked Devices
@@ -410,15 +444,7 @@ class WhatsAppManager {
               metadata: { doctorId, statusCode }
             });
 
-            prisma.notification.create({
-              data: {
-                doctorId,
-                title: "WhatsApp Business Unlinked ⚠️",
-                message: "Your WhatsApp Business device was removed from your phone. Please scan the QR code in Settings if you wish to re-link.",
-                type: "ERROR",
-                actionUrl: "/settings/whatsapp",
-              }
-            }).catch(err => console.error(`[WhatsAppManager] Failed to create notification:`, err));
+            this.notifyDoctorDisconnected(doctorId, "Device removed from WhatsApp on phone");
           }
         } else if (connection === 'open') {
           console.log(`[WhatsAppManager] Connection OPEN and verified for session ${doctorId}`);

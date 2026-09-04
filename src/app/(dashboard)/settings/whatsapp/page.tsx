@@ -11,11 +11,27 @@ export default function WhatsAppSettingsPage() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
 
   const [retryCount, setRetryCount] = useState(0);
+  const [connectingElapsed, setConnectingElapsed] = useState(0);
 
   useEffect(() => {
     // Initial fetch triggers connect if not already connected
     fetchWhatsAppConfig(true);
   }, []);
+
+  // Track elapsed time when in CONNECTING state
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (waStatus === "CONNECTING") {
+      timer = setInterval(() => {
+        setConnectingElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setConnectingElapsed(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [waStatus]);
 
   const fetchWhatsAppConfig = async (initiateIfDisconnected: boolean = false) => {
     try {
@@ -40,7 +56,7 @@ export default function WhatsAppSettingsPage() {
 
   // Poll status non-destructively: every 5s during setup/connecting, slow down to 25s when connected
   useEffect(() => {
-    const pollInterval = waStatus === "CONNECTED" ? 25000 : 5000;
+    const pollInterval = waStatus === "CONNECTED" ? 25000 : 4000;
     const interval = setInterval(() => {
       fetchWhatsAppConfig(false);
     }, pollInterval);
@@ -119,16 +135,23 @@ export default function WhatsAppSettingsPage() {
                 <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-2">
                   <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
                 </div>
-                <h4 className="text-xl font-bold text-gray-900">Auto-Connecting to WhatsApp...</h4>
+                <h4 className="text-xl font-bold text-gray-900">
+                  {connectingElapsed > 15 ? "Reconnection Taking Longer..." : "Auto-Connecting to WhatsApp..."}
+                </h4>
                 <p className="text-sm text-gray-500 max-w-md">
-                  Restoring your previously linked WhatsApp Business account automatically. Please wait a moment...
+                  {connectingElapsed > 15
+                    ? "Your phone may be offline or the session has expired. You can generate a fresh QR code right now to link your WhatsApp."
+                    : "Restoring your previously linked WhatsApp Business account automatically. Please wait a moment..."}
                 </p>
-                <button
-                  onClick={handleDisconnectWhatsApp}
-                  className="mt-4 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-semibold transition"
-                >
-                  <PowerOff className="h-3.5 w-3.5" /> Unlink & Generate New QR
-                </button>
+
+                <div className="flex items-center gap-3 mt-4">
+                  <button
+                    onClick={handleDisconnectWhatsApp}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm"
+                  >
+                    <PowerOff className="h-3.5 w-3.5" /> Unlink & Generate New QR
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-6 text-center">

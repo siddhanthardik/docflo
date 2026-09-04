@@ -3,10 +3,48 @@
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
-import { Bell, LifeBuoy } from "lucide-react";
+import { Bell, LifeBuoy, AlertTriangle } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { OPDStatusControl } from "@/components/dashboard/OPDStatusControl";
 import { useEffect, useState } from "react";
+
+function WhatsAppStatusBadge() {
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkStatus = () => {
+      fetch("/api/whatsapp/qr")
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted) {
+            setStatus(data.status);
+          }
+        })
+        .catch(() => {});
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (!status || status === "CONNECTED") return null;
+
+  return (
+    <Link
+      href="/settings/whatsapp"
+      className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors animate-pulse"
+      title="Your WhatsApp Business is disconnected. Click to reconnect."
+    >
+      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+      <span>WA Offline</span>
+    </Link>
+  );
+}
 
 export function Header() {
   const { data: session } = useSession();
@@ -51,6 +89,10 @@ export function Header() {
 
       {/* Right: actions + avatar */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        {session?.user?.role !== "SUPERADMIN" && session?.user?.role !== "ADMIN" && (
+          <WhatsAppStatusBadge />
+        )}
+
         {session?.user?.role !== "SUPERADMIN" && session?.user?.role !== "ADMIN" && (
           <OPDStatusControl />
         )}

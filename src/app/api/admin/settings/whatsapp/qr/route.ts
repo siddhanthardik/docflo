@@ -27,11 +27,7 @@ export async function GET() {
       return NextResponse.json({ status: "CONNECTING", qr: null }, { status: 200 });
     }
 
-    // Auto connect only if not recently attempted (enforced by connect internal cooldown)
-    whatsappManager.connect(SUPERADMIN_DOCTOR_ID).catch((e) => {
-      console.error("[SuperAdmin WhatsApp QR] Auto connect error:", e);
-    });
-
+    // Return current state without triggering new QR generation unless requested via POST or action=connect
     return NextResponse.json({ status: "DISCONNECTED", qr: null }, { status: 200 });
   } catch (error: any) {
     console.error("[SuperAdmin WhatsApp QR] GET error:", error);
