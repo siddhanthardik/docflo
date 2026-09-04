@@ -612,14 +612,16 @@ class WhatsAppManager {
               const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
 
               if (!patient) {
-                const parts = hasValidPushName ? pushNameRaw.split(" ") : ["Patient", `+${patientPhone}`];
+                const parts = hasValidPushName ? pushNameRaw.split(" ") : ["Patient", ""];
+                const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                 patient = await prisma.patient.create({
                   data: {
                     doctorId,
                     firstName: parts[0] || "Patient",
-                    lastName: parts.slice(1).join(" ") || `+${patientPhone}`,
+                    lastName: parts.slice(1).join(" ") || "",
                     phone: patientPhone,
                     patientType: "ACTIVE",
+                    primaryPractitionerId: defaultPractitioner?.id || null,
                     tags: ["WhatsApp"]
                   }
                 });
@@ -632,6 +634,11 @@ class WhatsAppManager {
                     firstName: parts[0] || "Patient",
                     lastName: parts.slice(1).join(" ") || ""
                   }
+                });
+              } else if (patient && patient.lastName && patient.lastName.startsWith("+")) {
+                patient = await prisma.patient.update({
+                  where: { id: patient.id },
+                  data: { lastName: "" }
                 });
               }
 
@@ -1415,6 +1422,48 @@ class WhatsAppManager {
                   }).catch(e => console.warn(`[WhatsAppManager] Failed to background auto-reset stale OPD status:`, e));
                 }
 
+                // Fetch existing family member records and active appointments on this phone to prevent hallucinations
+                const cleanPtDigitsForApts = patientPhone.replace(/\D/g, '');
+                const last10ForApts = cleanPtDigitsForApts.length >= 10 ? cleanPtDigitsForApts.slice(-10) : cleanPtDigitsForApts;
+                const existingFamilyPatients = await prisma.patient.findMany({
+                  where: {
+                    doctorId,
+                    OR: [
+                      { phone: patientPhone },
+                      { phone: `+${patientPhone}` },
+                      ...(last10ForApts.length >= 10 ? [{ phone: { endsWith: last10ForApts } }] : [])
+                    ]
+                  },
+                  select: { id: true, firstName: true, lastName: true }
+                });
+                const existingFamilyNames = existingFamilyPatients
+                  .map(p => `${p.firstName} ${p.lastName || ''}`.trim())
+                  .filter(name => name.toLowerCase() !== 'patient' && !name.startsWith('+'));
+
+                const patientIds = existingFamilyPatients.map(p => p.id);
+                const clinicTzForApts = resolveClinicTimezone(doctorInfo?.timezone);
+                const { startOfDay: clinicTodayStart } = getClinicDayBounds(new Date(), clinicTzForApts);
+                const upcomingApts = await prisma.appointment.findMany({
+                  where: {
+                    doctorId,
+                    patientId: { in: patientIds },
+                    status: { in: ["CONFIRMED", "SCHEDULED", "CHECKED_IN"] },
+                    date: { gte: clinicTodayStart }
+                  },
+                  orderBy: { date: "asc" },
+                  include: { practitioner: true, patient: true }
+                });
+
+                const activeAppointments = upcomingApts.map(a => ({
+                  date: a.date.toLocaleDateString("en-IN", { timeZone: clinicTzForApts, weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+                  time: a.startTime ? a.startTime.toLocaleTimeString("en-IN", { timeZone: clinicTzForApts, hour: "numeric", minute: "2-digit", hour12: true }) : "Scheduled Session",
+                  doctorName: a.practitioner?.name || doctorInfo?.name || "Doctor",
+                  specialty: a.practitioner?.specialty || doctorInfo?.specialty || "General",
+                  status: a.status,
+                  type: a.type,
+                  patientName: a.patient ? `${a.patient.firstName} ${a.patient.lastName || ''}`.trim() : "Patient"
+                }));
+
                 const scheduleContext = {
                   opdStatus: effectiveOpdStatus,
                   opdDelayMinutes: effectiveOpdDelay,
@@ -1423,7 +1472,9 @@ class WhatsAppManager {
                   todayAiCount,
                   isTodayQuotaFull,
                   bookedSlotsToday,
-                  pacingStrategy: doctorInfo?.aiSlotPacing || "STAGGERED"
+                  pacingStrategy: doctorInfo?.aiSlotPacing || "STAGGERED",
+                  activeAppointments,
+                  existingFamilyNames
                 };
 
                 aiReply = await AIAgentsService.runAppointmentAgent(
@@ -1924,7 +1975,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                 }
                 
                 if (match && !isStaff) {
-                  const [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr, rawDoctorName] = match;
+                  let [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr, rawDoctorName] = match;
                   
                   try {
                     const nameParts = (patientFullName || "Patient").trim().split(/\s+/);
@@ -1938,13 +1989,22 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       if (ageMatch) parsedAge = parseInt(ageMatch[0], 10);
                     }
 
-                    // Clean gender
+                    // Clean gender: enforce strict gender tokens and ensure doctor names are never parsed as gender
                     let parsedGender: string | null = null;
                     if (rawGenderStr) {
-                      const gUpper = rawGenderStr.trim().toUpperCase();
-                      if (gUpper.startsWith("M") || gUpper.includes("BOY") || gUpper.includes("MALE")) parsedGender = "MALE";
-                      else if (gUpper.startsWith("F") || gUpper.includes("GIRL") || gUpper.includes("FEMALE")) parsedGender = "FEMALE";
-                      else if (gUpper.startsWith("O")) parsedGender = "OTHER";
+                      const gClean = rawGenderStr.trim().toLowerCase();
+                      const isDoctorIdentifier = /^(dr\.?|doctor)\b/i.test(gClean) || practitioners.some(p => p.name.toLowerCase().includes(gClean));
+                      if (!isDoctorIdentifier) {
+                        if (/^(m|male|boy|man)$/i.test(gClean) || (/\bmale\b/i.test(gClean) && !/\bfemale\b/i.test(gClean))) {
+                          parsedGender = "MALE";
+                        } else if (/^(f|female|girl|woman|lady)$/i.test(gClean) || /\bfemale\b/i.test(gClean)) {
+                          parsedGender = "FEMALE";
+                        } else if (/^(o|other)$/i.test(gClean)) {
+                          parsedGender = "OTHER";
+                        }
+                      } else if (!rawDoctorName) {
+                        rawDoctorName = rawGenderStr;
+                      }
                     }
 
                     let approximateDob: Date | null = null;
@@ -1952,20 +2012,40 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       approximateDob = new Date(new Date().getFullYear() - parsedAge, 0, 1);
                     }
 
-                    // 1. Resolve Family Member Identity: Check for existing patient with this FIRST NAME under this phone (matching any phone variation)
+                    // 1. Resolve Family Member Identity
                     const cleanPtDigitsBk = patientPhone.replace(/\D/g, '');
                     const last10Bk = cleanPtDigitsBk.length >= 10 ? cleanPtDigitsBk.slice(-10) : cleanPtDigitsBk;
-                    let targetPatient = await prisma.patient.findFirst({
-                      where: {
-                        doctorId,
-                        OR: [
-                          { phone: patientPhone },
-                          { phone: `+${patientPhone}` },
-                          ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
-                        ],
-                        firstName: { equals: candidateFirstName, mode: "insensitive" }
-                      }
-                    });
+                    let targetPatient = null;
+
+                    // If candidate name is a generic dummy "Patient", do NOT create a new "Patient" record if a valid patient already exists on this phone!
+                    if (candidateFirstName.toLowerCase() === "patient") {
+                      targetPatient = await prisma.patient.findFirst({
+                        where: {
+                          doctorId,
+                          OR: [
+                            { phone: patientPhone },
+                            { phone: `+${patientPhone}` },
+                            ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                          ],
+                          firstName: { not: "Patient" }
+                        },
+                        orderBy: { updatedAt: "desc" }
+                      });
+                    }
+
+                    if (!targetPatient) {
+                      targetPatient = await prisma.patient.findFirst({
+                        where: {
+                          doctorId,
+                          OR: [
+                            { phone: patientPhone },
+                            { phone: `+${patientPhone}` },
+                            ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                          ],
+                          firstName: { equals: candidateFirstName, mode: "insensitive" }
+                        }
+                      });
+                    }
 
                     if (!targetPatient) {
                       // If existing patient on this phone is a temporary placeholder, update it
@@ -1981,6 +2061,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         });
                       } else {
                         // A distinct family member is booking from this shared mobile number! Create a separate profile
+                        const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                         targetPatient = await prisma.patient.create({
                           data: {
                             doctorId,
@@ -1990,6 +2071,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                             gender: parsedGender,
                             dateOfBirth: approximateDob,
                             patientType: "ACTIVE",
+                            primaryPractitionerId: defaultPractitioner?.id || null,
                             tags: ["WhatsApp", "Family Member"]
                           }
                         });

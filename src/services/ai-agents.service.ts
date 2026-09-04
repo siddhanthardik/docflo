@@ -573,7 +573,9 @@ function buildDeterministicReceptionistReply(
     if (/\b(kal|tomorrow|parso|aaj|today|pm|am|baje|subah|shaam|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)/i.test(textLower)) {
       const now = new Date();
       let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-      if (/\b(kal|tomorrow)\b/i.test(textLower)) {
+      const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit" }), 10);
+      const isPastOpd = nowClinicH >= 19;
+      if (/\b(kal|tomorrow)\b/i.test(textLower) || (!/\b(aaj|today)\b/i.test(textLower) && isPastOpd)) {
         const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
       } else if (/\b(parso|day after)\b/i.test(textLower)) {
@@ -656,7 +658,9 @@ function buildDeterministicReceptionistReply(
   if (isOngoingChat && (/\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower))) {
     const now = new Date();
     let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    if (/\b(tomorrow)\b/i.test(textLower)) {
+    const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit" }), 10);
+    const isPastOpd = nowClinicH >= 19;
+    if (/\b(tomorrow)\b/i.test(textLower) || (!/\b(today)\b/i.test(textLower) && isPastOpd)) {
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     }
@@ -714,6 +718,16 @@ function buildDeterministicReceptionistReply(
   return `Hello! Thank you for reaching out to *${clinicName}*. I am ${assistantName}, here to assist you with booking an appointment with ${docTitle} (${specialty}) or answering any clinic questions.\n\nWould you like to schedule an in-clinic visit for today or tomorrow?${phoneSuffix}`;
 }
 
+export interface ActivePatientAppointmentInfo {
+  date: string;
+  time: string;
+  doctorName?: string;
+  specialty?: string;
+  status: string;
+  type?: string;
+  patientName?: string;
+}
+
 export interface DoctorScheduleContext {
   opdStatus?: string; // ACTIVE, RUNNING_LATE, PAUSED, CANCELLED
   opdDelayMinutes?: number;
@@ -723,6 +737,8 @@ export interface DoctorScheduleContext {
   isTodayQuotaFull?: boolean;
   bookedSlotsToday?: string[];
   pacingStrategy?: string; // STAGGERED or CONTINUOUS
+  activeAppointments?: ActivePatientAppointmentInfo[];
+  existingFamilyNames?: string[];
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -882,7 +898,27 @@ export class AIAgentsService {
       }
 
       const startTime = Date.now();
-      const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const nowClinic = new Date();
+      const currentDateStr = nowClinic.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const currentTimeStr = nowClinic.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true });
+
+      // Determine whether OPD has concluded for today in Asia/Kolkata
+      const [nowH, nowM] = nowClinic.toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }).split(':').map(Number);
+      const currentMinutes = nowH * 60 + nowM;
+
+      let opdEndMinutes = 20 * 60; // 8:00 PM fallback
+      const timingSource = eveningOpd || clinicTimings || "";
+      const matches = [...timingSource.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/gi)];
+      if (matches.length > 0) {
+        const lastM = matches[matches.length - 1];
+        let h = parseInt(lastM[1], 10);
+        const m = lastM[2] ? parseInt(lastM[2], 10) : 0;
+        const mer = (lastM[3] || "").toLowerCase();
+        if (mer === "pm" && h < 12) h += 12;
+        if (mer === "am" && h === 12) h = 0;
+        if (h > 0) opdEndMinutes = h * 60 + m;
+      }
+      const isTodayOpdConcluded = currentMinutes >= (opdEndMinutes - 15);
 
       // Live OPD Status & Capacity Context
       const opdStatus = scheduleContext?.opdStatus || "ACTIVE";
@@ -1031,9 +1067,16 @@ ${isMultiDoctor ? `==================================================
     [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender, Doctor Name]` : ''}
 
 ==================================================
-${isMultiDoctor ? '8' : '7'}. CLINIC DATA & AUTHORITATIVE SPECIFICATIONS
+${isMultiDoctor ? '8' : '7'}. CLINIC DATA, CURRENT TIME & AUTHORITATIVE SPECIFICATIONS
 ==================================================
-TODAY'S DATE: ${currentDateStr} (Indian Standard Time)
+CURRENT TIME RIGHT NOW: ${currentTimeStr} IST (Indian Standard Time, Asia/Kolkata)
+TODAY'S DATE: ${currentDateStr}
+${isTodayOpdConcluded ? `⚠️ TODAY'S CLINIC OPD STATUS: CONCLUDED FOR THE DAY (Closed at ${timingSource || '8:00 PM'}).
+CRITICAL DIRECTIVE ON SAME-DAY BOOKING:
+- Clinic OPD hours for TODAY (${currentDateStr}) have already ended.
+- You MUST NOT offer, suggest, or book ANY appointments for TODAY.
+- If the patient asks for an appointment today, politely explain that today's OPD has already concluded.
+- Proactively offer slots for TOMORROW or upcoming working days.` : `- Clinic OPD Status: OPEN / ACTIVE for today.`}
 ${isMultiDoctor ? `- Clinic Facility Name: ${clinicName} (Multi-Doctor Healthcare Polyclinic)` : `- Primary Doctor: ${doctorName}\n- Specialty: ${specialty}\n- Clinic Name: ${clinicName}`}
 - Morning OPD Hours: ${morningOpd || "Not Active / Check Schedule"}
 - Evening OPD Hours: ${eveningOpd || "Not Active / Check Schedule"}
@@ -1045,6 +1088,23 @@ ${bookedSlots}
 ${websiteUrl ? `- Official Clinic Website: ${websiteUrl}` : ""}
 ${practitionersBlock ? practitionersBlock : ""}
 ${locationBlock ? locationBlock : ""}
+
+==================================================
+PATIENT'S EXISTING APPOINTMENTS ON RECORD:
+==================================================
+${scheduleContext?.activeAppointments && scheduleContext.activeAppointments.length > 0
+  ? `The patient has the following existing appointment(s) in the clinic CRM:\n` +
+    scheduleContext.activeAppointments.map(a => `- Date: ${a.date} at ${a.time} | Doctor: ${a.doctorName || doctorName} (${a.specialty || specialty}) | Patient: ${a.patientName || 'Patient'} | Status: ${a.status}`).join('\n') +
+    `\n\nDIRECTIVE ON STATUS INQUIRIES:\n- When the patient asks "When is my appointment?", "Mera appointment kab hai?", "Is my appointment confirmed?":\n  Recite the exact appointment date, time, and doctor from the confirmed list above.\n  NEVER invent, hallucinate, or guess any other time (e.g. NEVER invent 10:30 PM).`
+  : `No upcoming appointments are currently booked in the system for this phone number.\n- If the patient asks "When is my appointment?" or queries their booking:\n  Politely inform them that there is no active appointment currently scheduled on record, and offer to book one for tomorrow or an upcoming date.`
+}
+${scheduleContext?.existingFamilyNames && scheduleContext.existingFamilyNames.length > 1
+  ? `\n==================================================
+REGISTERED FAMILY MEMBERS ON THIS PHONE:
+==================================================
+The following family members are registered under this shared number: ${scheduleContext.existingFamilyNames.join(', ')}.
+- If the patient books without stating who it is for, ask politely: "Is this appointment for ${scheduleContext.existingFamilyNames.join(', ')}, or another family member?"`
+  : ''}
 
 FEES & POLICIES:
 - Consultation Fee: ${consultationFee || "Shared at clinic"}
