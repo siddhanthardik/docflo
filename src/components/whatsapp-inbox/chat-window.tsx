@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, Phone, ArrowLeft } from "lucide-react"
+import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown } from "lucide-react"
 import { format, isToday, isYesterday } from "date-fns"
 
 function getChatDateDivider(dateStr: string): string {
@@ -43,16 +43,47 @@ export function ChatWindow({
 }) {
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const activeConversationIdRef = useRef<string | null>(null)
+  const isNearBottomRef = useRef(true)
 
-  useEffect(() => {
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth"
+        behavior
       })
     }
-  }, [messages])
+  }
+
+  const handleScroll = () => {
+    const container = chatContainerRef.current
+    if (!container) return
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    const isNear = distanceFromBottom <= 120
+    isNearBottomRef.current = isNear
+    setShowScrollBottom(!isNear)
+  }
+
+  useEffect(() => {
+    const isNewConv = activeConversationIdRef.current !== conversation?.id
+    if (isNewConv) {
+      activeConversationIdRef.current = conversation?.id || null
+      isNearBottomRef.current = true
+      setShowScrollBottom(false)
+      requestAnimationFrame(() => {
+        scrollToBottom("auto")
+      })
+      return
+    }
+
+    // Only auto-scroll down if user was already near the bottom
+    // Do not pull down if user is reading previous messages
+    if (isNearBottomRef.current) {
+      scrollToBottom("smooth")
+    }
+  }, [conversation?.id, messages])
 
   const handleSend = async () => {
     const text = newMsg.trim()
@@ -61,6 +92,9 @@ export function ChatWindow({
     setNewMsg("")
     await onSendMessage(text)
     setSending(false)
+    isNearBottomRef.current = true
+    setShowScrollBottom(false)
+    setTimeout(() => scrollToBottom("smooth"), 50)
   }
 
   if (!conversation) {
@@ -76,7 +110,7 @@ export function ChatWindow({
   const name = conversation.patientName || conversation.patientPhone
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       {/* Chat Header */}
       <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -137,7 +171,7 @@ export function ChatWindow({
       </div>
 
       {/* Messages */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
+      <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-xs text-gray-400">No messages yet. Start the conversation below.</p>
@@ -183,6 +217,22 @@ export function ChatWindow({
           )
         })}
       </div>
+
+      {/* Floating Scroll to Bottom Button */}
+      {showScrollBottom && (
+        <button
+          type="button"
+          onClick={() => {
+            isNearBottomRef.current = true
+            setShowScrollBottom(false)
+            scrollToBottom("smooth")
+          }}
+          className="absolute bottom-24 right-6 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200/90 shadow-md p-2 rounded-full transition-all flex items-center justify-center group z-20 cursor-pointer"
+          title="Scroll to bottom"
+        >
+          <ChevronDown className="w-4 h-4 text-slate-600 group-hover:text-indigo-600 transition-colors" />
+        </button>
+      )}
 
       {/* Input Bar */}
       <div className="px-4 py-3 border-t border-gray-100 bg-white">

@@ -38,8 +38,20 @@ export function useConversation(id: string) {
       const res = await fetch(`/api/inbox/conversations/${id}`)
       if (res.ok) {
         const data = await res.json()
-        setConversation(data)
-        setMessages(data.messages || [])
+        setConversation((prev: any) => {
+          if (prev?.id === data.id && prev?.status === data.status && prev?.assignedToId === data.assignedToId && prev?.patientName === data.patientName) {
+            return prev
+          }
+          return data
+        })
+        setMessages((prev: any[]) => {
+          const next = data.messages || []
+          if (prev.length === next.length) {
+            const isIdentical = prev.every((m, idx) => m.id === next[idx]?.id && m.content === next[idx]?.content)
+            if (isIdentical) return prev
+          }
+          return next
+        })
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" })
