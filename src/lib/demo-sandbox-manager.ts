@@ -5,12 +5,11 @@ import * as path from 'path';
 import { AIAgentsService } from '@/services/ai-agents.service';
 
 function getSandboxBaseDir(): string {
-  const parts = ["auth", "info", "sandbox"];
-  return path.resolve(process.cwd(), parts.join("_"));
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), "auth_info_sandbox");
 }
 
 function getSandboxSessionDir(sessionId: string): string {
-  return path.resolve(getSandboxBaseDir(), sessionId);
+  return path.join(getSandboxBaseDir(), sessionId);
 }
 
 export interface SandboxSessionProfile {
