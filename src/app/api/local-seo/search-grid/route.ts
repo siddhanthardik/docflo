@@ -12,6 +12,9 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const searchKeyword = url.searchParams.get("keyword") || "";
+    const radiusStep = url.searchParams.get("radiusStep");
+    const parsedSpacing = radiusStep ? parseInt(radiusStep, 10) : undefined;
+    const spacingFilter = parsedSpacing && !isNaN(parsedSpacing) ? { spacingMeters: parsedSpacing } : {};
 
     const session = await getSessionData();
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
@@ -38,7 +41,8 @@ export async function GET(request: Request) {
     const cached = await prisma.searchGridSnapshot.findFirst({
       where: { 
         gbpAccountId: account.id,
-        keyword: targetKeyword
+        keyword: targetKeyword,
+        ...spacingFilter,
       },
       orderBy: { date: "desc" },
     });

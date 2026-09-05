@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, Info, Sparkles, SlidersHorizontal, Trophy, Target, TrendingUp } from "lucide-react";
+import { MapPin, RefreshCw, Clock, Info, Sparkles, SlidersHorizontal, Trophy, Target, TrendingUp, Map, LayoutGrid, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
+import { RankTrackerMap } from "./RankTrackerMap";
 
 interface GridCell {
   row: number;
@@ -33,6 +34,7 @@ export function SearchGrid() {
   const [keywordInput, setKeywordInput] = useState<string>("");
   const [activeKeyword, setActiveKeyword] = useState<string>("");
   const [gridRadiusStep, setGridRadiusStep] = useState<number>(1000); // 200m, 500m, 1km, 2km
+  const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
@@ -44,19 +46,30 @@ export function SearchGrid() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamic Keyword Pill Generator from Organic Doctor Profile Data
+  // Dynamic Keyword Pill Generator with Strict Case-Insensitive Deduplication
   const dynamicSuggestedKeywords = (() => {
     const list: string[] = [];
-    if (overviewData?.primaryCategory) {
-      list.push(overviewData.primaryCategory);
-    }
+    const seen = new Set<string>();
+
+    const addWord = (w?: string) => {
+      if (!w) return;
+      const clean = w.trim();
+      const lower = clean.toLowerCase();
+      if (clean && !seen.has(lower)) {
+        seen.add(lower);
+        list.push(clean);
+      }
+    };
+
+    addWord(overviewData?.primaryCategory);
+
     if (keywordsData?.searchKeywordsCounts && Array.isArray(keywordsData.searchKeywordsCounts)) {
       keywordsData.searchKeywordsCounts.forEach((kw: any) => {
         const word = typeof kw === "string" ? kw : kw.searchKeyword;
-        if (word && !list.includes(word)) list.push(word);
+        addWord(word);
       });
     }
-    return list.slice(0, 6);
+    return list.slice(0, 8);
   })();
 
   const handleRefresh = async (customKw?: string) => {
@@ -230,7 +243,7 @@ export function SearchGrid() {
             ))}
           </div>
           <p className="text-[11px] text-gray-500">
-            Total scan area: {(gridRadiusStep * 4) / 1000}km radius around clinic.
+            Coverage: {(gridRadiusStep * 2) / 1000}km radius ({(gridRadiusStep * 4) / 1000}km total span)
           </p>
         </div>
       </div>
@@ -243,12 +256,12 @@ export function SearchGrid() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="e.g. Gynecologist, Orthopedic surgeon..."
+                placeholder={overviewData?.primaryCategory ? `e.g. ${overviewData.primaryCategory}, Best ${overviewData.primaryCategory} near me...` : "e.g. Pediatrician, Child Specialist, Best Pediatrician near me..."}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 flex-1"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
               />
-              <Button type="submit" size="sm" className="h-9 bg-indigo-600 hover:bg-indigo-700">Track</Button>
+              <Button type="submit" size="sm" className="h-9 bg-indigo-600 hover:bg-indigo-700 font-semibold">Track</Button>
             </div>
           </div>
         </form>
@@ -256,7 +269,7 @@ export function SearchGrid() {
         {/* Organic Dynamic Keyword Pills */}
         {dynamicSuggestedKeywords.length > 0 && (
           <div>
-            <span className="text-xs font-semibold text-gray-400 block mb-1.5">Your GMB Target Keywords (Click to Track):</span>
+            <span className="text-xs font-semibold text-gray-500 block mb-1.5">Target Keywords to Track:</span>
             <div className="flex flex-wrap gap-2">
               {dynamicSuggestedKeywords.map((kw, i) => (
                 <button
@@ -307,76 +320,163 @@ export function SearchGrid() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid and Map Section */}
       {rows.length > 0 && (
-        <>
-          {/* The grid */}
-          <div className="bg-gray-50 rounded-2xl p-4 overflow-x-auto">
-            <div className="flex flex-col gap-2 min-w-[300px]">
-              {rows.map((row, rIdx) => (
-                <div key={rIdx} className="flex gap-2 justify-center">
-                  {row.map((cell, cIdx) => {
-                    const isCenter = rIdx === centerRow && cIdx === centerCol;
-                    const colors = getRankColor(cell.rank, cell.found);
-                    const label = getRankLabel(cell.rank, cell.found);
+        <div className="space-y-4">
+          {/* View Mode Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="inline-flex p-1 bg-gray-100 rounded-xl border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setViewMode("map")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === "map"
+                    ? "bg-white text-indigo-700 shadow-xs border border-gray-200"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Map className="w-3.5 h-3.5 text-indigo-600" />
+                Google Map View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === "grid"
+                    ? "bg-white text-indigo-700 shadow-xs border border-gray-200"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5 text-indigo-600" />
+                5×5 Matrix View
+              </button>
+            </div>
 
-                    return (
-                      <div
-                        key={cIdx}
-                        title={isCenter ? `${businessName} (You)` : `Rank ${label} at this location`}
-                        className={`
-                          relative w-14 h-14 rounded-xl flex flex-col items-center justify-center
-                          border-2 font-bold transition-all cursor-default
-                          ${isCenter
-                            ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-200 scale-110'
-                            : `${colors.bg} ${colors.border} ${colors.text}`
-                          }
-                        `}
-                      >
-                        {isCenter ? (
-                          <>
-                            <MapPin className="w-5 h-5 fill-white text-white" />
-                            <span className="text-[9px] font-medium mt-0.5 opacity-90">You</span>
-                          </>
-                        ) : (
-                          <span className="text-base leading-none">{label}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Compass className="w-4 h-4 text-indigo-500" />
+              <span>Center: <strong className="text-gray-700 font-semibold">{businessName}</strong></span>
             </div>
           </div>
+
+          {/* Conditional Rendering: Google Map or Matrix */}
+          {viewMode === "map" ? (
+            <RankTrackerMap
+              grid={grid}
+              centerLat={gridData?.centerLat}
+              centerLng={gridData?.centerLng}
+              businessName={businessName}
+              spacingMeters={gridRadiusStep}
+              keyword={gridData?.keyword || activeKeyword}
+            />
+          ) : (
+            <div className="bg-gray-50/80 rounded-2xl p-6 border border-gray-200 overflow-x-auto">
+              {/* North Cardinal Indicator */}
+              <div className="text-center text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3">
+                <span className="text-indigo-600 text-xs">▲</span> North <span className="text-indigo-600 text-xs">▲</span>
+              </div>
+
+              {/* Grid with West/East labels */}
+              <div className="flex items-center justify-center gap-3 min-w-[340px]">
+                <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest writing-mode-vertical rotate-180 flex items-center gap-1">
+                  <span>◀</span> West
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {rows.map((row, rIdx) => (
+                    <div key={rIdx} className="flex gap-2 justify-center">
+                      {row.map((cell, cIdx) => {
+                        const isCenter = rIdx === centerRow && cIdx === centerCol;
+                        const colors = getRankColor(cell.rank, cell.found);
+                        const label = getRankLabel(cell.rank, cell.found);
+
+                        const dRow = centerRow - cell.row;
+                        const dCol = cell.col - centerCol;
+                        let dir = "";
+                        if (dRow > 0) dir += "North";
+                        else if (dRow < 0) dir += "South";
+                        if (dCol > 0) dir += (dir ? "-East" : "East");
+                        else if (dCol < 0) dir += (dir ? "-West" : "West");
+                        const approxDist = Math.round(Math.sqrt(dRow * dRow + dCol * dCol) * gridRadiusStep);
+
+                        const titleText = isCenter
+                          ? `${businessName} (Clinic Origin Point)`
+                          : `Rank ${label} · ${dir || 'Center'} (~${approxDist}m from clinic)`;
+
+                        return (
+                          <div
+                            key={cIdx}
+                            title={titleText}
+                            className={`
+                              relative w-14 h-14 rounded-xl flex flex-col items-center justify-center
+                              border-2 font-bold transition-all cursor-pointer hover:shadow-md
+                              ${isCenter
+                                ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-200 scale-105'
+                                : `${colors.bg} ${colors.border} ${colors.text}`
+                              }
+                            `}
+                          >
+                            {isCenter ? (
+                              <>
+                                <MapPin className="w-5 h-5 fill-white text-white" />
+                                <span className="text-[9px] font-medium mt-0.5 opacity-90">You</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-base leading-none">{label}</span>
+                                {dir && (
+                                  <span className="text-[8px] font-medium opacity-70 mt-0.5">
+                                    {dir.split("-").map(d => d[0]).join("")}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                  East <span>▶</span>
+                </div>
+              </div>
+
+              {/* South Cardinal Indicator */}
+              <div className="text-center text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center justify-center gap-1.5 mt-3">
+                <span className="text-indigo-600 text-xs">▼</span> South <span className="text-indigo-600 text-xs">▼</span>
+              </div>
+            </div>
+          )}
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-emerald-200 border border-emerald-300 inline-block" />
+          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 bg-white p-3 rounded-xl border border-gray-100">
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600 inline-block" />
               Rank 1–3 (Top Pack)
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-amber-200 border border-amber-300 inline-block" />
-              Rank 4–7
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-600 inline-block" />
+              Rank 4–7 (Page 1)
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-orange-200 border border-orange-300 inline-block" />
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-600 inline-block" />
               Rank 8–15
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-red-200 border border-red-300 inline-block" />
-              &gt;15 / Not found
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-full bg-red-500 border border-red-600 inline-block" />
+              &gt;15 / Unranked
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-indigo-600 inline-block" />
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="w-3 h-3 rounded-full bg-indigo-600 inline-block" />
               Your clinic (center)
             </div>
-            <div className="flex items-center gap-1 ml-auto text-gray-400">
+            <div className="flex items-center gap-1 ml-auto text-gray-400 font-normal">
               <Info className="w-3 h-3" />
-              Each cell = {gridRadiusStep}m from center
+              Each node = {gridRadiusStep}m step from clinic center
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
