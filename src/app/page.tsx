@@ -958,25 +958,37 @@ export default function LandingPage() {
         <LiveWhatsAppChatMockup />
       </section>
 
-      {/* ── INTERACTIVE ROI CALCULATOR SECTION ── */}
-      <section id="roi-calculator" className="py-16 bg-white border-y border-slate-200/80">
+      {/* ── AESTHETIC ROI CALCULATOR SECTION ── */}
+      <section id="roi-calculator" className="py-16 bg-slate-50/60 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 sm:p-10 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div className="max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
-            <div className="lg:col-span-7 space-y-5">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
-                Calculate Your Practice&apos;s Additional Annual Revenue
-              </h2>
-              <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
-                See how capturing even 10–15 additional high-ticket consultations per month from Google Maps and 24/7 WhatsApp response compounds your clinic earnings.
-              </p>
+            {/* Left Column: Sliders & Description */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Practice Revenue Forecast</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  Estimate Your Clinic&apos;s Annual Growth
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  See how capturing even a few additional consultations per month from Google Maps and 24/7 WhatsApp inquiries impacts your practice.
+                </p>
+              </div>
 
-              {/* Sliders */}
-              <div className="space-y-4 pt-1">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-slate-300">Average Consultation / Procedure Fee</span>
-                    <span className="text-amber-400 font-mono text-sm">₹{avgFee.toLocaleString("en-IN")}</span>
+              {/* Sliders Box */}
+              <div className="space-y-5 pt-1">
+                
+                {/* Slider 1: Consultation Fee */}
+                <div className="space-y-2 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-700">Average Consultation / Procedure Fee</span>
+                    <span className="text-sm font-black text-blue-600 font-mono bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">
+                      ₹{avgFee.toLocaleString("en-IN")}
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -985,14 +997,22 @@ export default function LandingPage() {
                     step="500"
                     value={avgFee}
                     onChange={(e) => setAvgFee(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
+                  <div className="flex justify-between text-[10px] font-semibold text-slate-400 px-0.5">
+                    <span>₹500</span>
+                    <span>₹7,500</span>
+                    <span>₹15,000</span>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-slate-300">Estimated New Patients Gained / Month</span>
-                    <span className="text-emerald-400 font-mono text-sm">+{newPatients} Patients / mo</span>
+                {/* Slider 2: New Patients Gained */}
+                <div className="space-y-2 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-700">Estimated New Patients / Month</span>
+                    <span className="text-sm font-black text-emerald-600 font-mono bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-100">
+                      +{newPatients} Patients
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -1001,31 +1021,48 @@ export default function LandingPage() {
                     step="1"
                     value={newPatients}
                     onChange={(e) => setNewPatients(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
+                  <div className="flex justify-between text-[10px] font-semibold text-slate-400 px-0.5">
+                    <span>3 patients</span>
+                    <span>25 patients</span>
+                    <span>50+ patients</span>
+                  </div>
                 </div>
+
               </div>
             </div>
 
-            {/* Output Metric Card */}
-            <div className="lg:col-span-5 bg-white/10 backdrop-blur-md rounded-3xl p-7 border border-white/20 text-center space-y-3 shadow-xl">
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Projected Annual Growth</p>
-              <div className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono">
-                ₹{annualRevenue.toLocaleString("en-IN")}
+            {/* Right Column: Aesthetic Revenue Card */}
+            <div className="lg:col-span-5 bg-gradient-to-b from-slate-50 to-slate-100/70 rounded-2xl p-6 sm:p-7 border border-slate-200 text-center space-y-4 shadow-2xs">
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Projected Annual Clinic Growth
+                </span>
+                <div className="text-3xl sm:text-4xl font-black text-slate-900 font-mono mt-1">
+                  ₹{annualRevenue.toLocaleString("en-IN")}
+                </div>
+                <p className="text-xs font-semibold text-emerald-700 mt-1 flex items-center justify-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  +₹{monthlyRevenue.toLocaleString("en-IN")} in additional monthly revenue
+                </p>
               </div>
-              <p className="text-xs text-slate-300">
-                +₹{monthlyRevenue.toLocaleString("en-IN")} in additional monthly revenue
-              </p>
-              <div className="pt-3 border-t border-white/10">
+
+              <div className="pt-3 border-t border-slate-200/80">
                 <Link href="/register">
-                  <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs h-11 rounded-xl shadow-lg">
-                    Unlock This Growth for Your Practice 🚀
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-11 rounded-xl shadow-xs transition-transform hover:scale-102 flex items-center justify-center gap-2">
+                    <span>Start 14-Day Free Trial</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
+                <span className="text-[10px] font-medium text-slate-500 mt-2 block">
+                  No credit card required • Instant 2-minute setup
+                </span>
               </div>
             </div>
 
           </div>
+
         </div>
       </section>
 
