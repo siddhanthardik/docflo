@@ -141,6 +141,9 @@ model Patient {
 
   @@index([doctorId])
   @@index([doctorId, createdAt])
+  @@index([doctorId, phone])
+  @@index([doctorId, lastName, firstName])
+  @@index([doctorId, primaryPractitionerId])
   @@index([gbpAccountId])
   @@map("patients")
 }

@@ -36,9 +36,10 @@ interface Pagination {
   totalPages: number;
 }
 
-export function usePatients(search?: string, tag?: string, type?: string, page: number = 1) {
-  const { toast } = useToast();   // 👈 use the hook here (allowed inside a custom hook)
+export function usePatients(search?: string, tag?: string, type?: string, page: number = 1, primaryPractitionerId?: string) {
+  const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: 10,
@@ -61,6 +62,9 @@ export function usePatients(search?: string, tag?: string, type?: string, page: 
       if (search) params.append("search", search);
       if (tag) params.append("tag", tag);
       if (type && type !== "ALL") params.append("type", type);
+      if (primaryPractitionerId && primaryPractitionerId !== "ALL") {
+        params.append("primaryPractitionerId", primaryPractitionerId);
+      }
 
       const response = await fetch(`/api/patients?${params}`);
 
@@ -69,8 +73,11 @@ export function usePatients(search?: string, tag?: string, type?: string, page: 
       }
 
       const data = await response.json();
-      setPatients(data.patients);
-      setPagination(data.pagination);
+      setPatients(data.patients || []);
+      if (Array.isArray(data.availableTags)) {
+        setAvailableTags(data.availableTags);
+      }
+      setPagination(data.pagination || { page: 1, limit: 10, totalCount: 0, totalPages: 0 });
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -81,7 +88,7 @@ export function usePatients(search?: string, tag?: string, type?: string, page: 
     } finally {
       setLoading(false);
     }
-  }, [search, tag, type, page, toast]);
+  }, [search, tag, type, page, primaryPractitionerId, toast]);
 
   useEffect(() => {
     fetchPatients();
@@ -174,6 +181,7 @@ export function usePatients(search?: string, tag?: string, type?: string, page: 
 
   return {
     patients,
+    availableTags,
     pagination,
     loading,
     error,

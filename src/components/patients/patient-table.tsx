@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Search, Phone, Mail, UserPlus, Users, MessageSquare, ChevronLeft, ChevronRight, UserCheck, UserX } from "lucide-react";
+import { MoreHorizontal, Search, Phone, Mail, UserPlus, Users, MessageSquare, ChevronLeft, ChevronRight, UserCheck, UserX, Tag, Filter, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -66,6 +66,12 @@ interface PatientTableProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onRefresh?: () => void;
+  availableTags?: string[];
+  selectedTag?: string;
+  onTagSelect?: (tag: string) => void;
+  practitioners?: any[];
+  selectedPractitionerId?: string;
+  onPractitionerChange?: (id: string) => void;
 }
 
 export function PatientTable({
@@ -80,6 +86,12 @@ export function PatientTable({
   searchQuery,
   onSearchChange,
   onRefresh,
+  availableTags = [],
+  selectedTag = "",
+  onTagSelect,
+  practitioners = [],
+  selectedPractitionerId = "ALL",
+  onPractitionerChange,
 }: PatientTableProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -118,21 +130,90 @@ export function PatientTable({
 
   return (
     <div className="space-y-4 relative">
-      <div className="flex items-center justify-center p-6 border-b border-gray-100 bg-white rounded-t-xl">
-        <div className="relative w-full max-w-2xl">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input
-            placeholder="Search patients by name, email, or phone number..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-12 pr-12 h-12 w-full bg-gray-50/50 border-gray-200 focus-visible:ring-indigo-500 rounded-xl text-sm shadow-sm transition-all hover:bg-white"
-          />
-          {loading && (
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-              <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      {/* Search & Filter Header */}
+      <div className="p-4 sm:p-6 border-b border-gray-100 bg-white rounded-t-xl space-y-3.5">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search by patient name, phone number, or email..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-11 pr-10 h-11 w-full bg-gray-50/70 border-gray-200 focus-visible:ring-indigo-500 rounded-xl text-xs sm:text-sm shadow-2xs transition-all hover:bg-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            {loading && !searchQuery && (
+              <div className="absolute right-3.5 top-1/2 transform -translate-y-1/2">
+                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+
+          {/* Practitioner Filter Selector */}
+          {practitioners.length > 0 && onPractitionerChange && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-slate-400" /> Doctor:
+              </span>
+              <select
+                value={selectedPractitionerId}
+                onChange={(e) => onPractitionerChange(e.target.value)}
+                className="h-11 px-3 text-xs sm:text-sm font-medium bg-white border border-gray-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs cursor-pointer"
+              >
+                <option value="ALL">All Doctors / Clinic Pool</option>
+                {practitioners.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.specialty ? `(${p.specialty})` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </div>
+
+        {/* Tag Filter Bar */}
+        {(availableTags.length > 0 || selectedTag) && onTagSelect && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-gray-50">
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1 mr-1">
+              <Tag className="w-3 h-3 text-indigo-500" /> Tags:
+            </span>
+            <button
+              onClick={() => onTagSelect("")}
+              className={`text-xs font-semibold px-3 py-1 rounded-full transition-all ${
+                !selectedTag
+                  ? "bg-indigo-600 text-white shadow-2xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              All Tags
+            </button>
+            {availableTags.map((t) => {
+              const isSelected = selectedTag.toLowerCase() === t.toLowerCase();
+              return (
+                <button
+                  key={t}
+                  onClick={() => onTagSelect(isSelected ? "" : t)}
+                  className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all flex items-center gap-1 ${
+                    isSelected
+                      ? "bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-500/20"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                  }`}
+                >
+                  <span>{t}</span>
+                  {isSelected && <X className="w-3 h-3 text-indigo-600 ml-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {patients.length === 0 && !loading ? (
@@ -256,12 +337,18 @@ export function PatientTable({
                   <TableCell>
                     <div className="flex gap-1.5 flex-wrap">
                       {patient.tags?.map((tag) => (
-                        <span
+                        <button
                           key={tag}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTagSelect?.(tag);
+                          }}
+                          title={`Filter by tag: ${tag}`}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-300 transition-colors cursor-pointer"
                         >
                           {tag}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </TableCell>

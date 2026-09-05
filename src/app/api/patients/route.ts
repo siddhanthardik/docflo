@@ -26,12 +26,23 @@ export async function GET(req: Request) {
     }
 
     if (search) {
-      where.OR = [
+      const cleanDigits = search.replace(/\D/g, "");
+      const orConditions: any[] = [
         { firstName: { contains: search, mode: "insensitive" } },
         { lastName: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search } },
         { email: { contains: search, mode: "insensitive" } },
       ];
+
+      if (cleanDigits.length >= 3) {
+        orConditions.push(
+          { phone: { contains: search } },
+          { phone: { contains: cleanDigits } }
+        );
+      } else {
+        orConditions.push({ phone: { contains: search } });
+      }
+
+      where.OR = orConditions;
     }
 
     if (tag) {
@@ -66,11 +77,11 @@ export async function GET(req: Request) {
     }
 
     const primaryPractitionerId = searchParams.get("primaryPractitionerId");
-    if (primaryPractitionerId) {
+    if (primaryPractitionerId && primaryPractitionerId !== "ALL") {
       where.primaryPractitionerId = primaryPractitionerId;
     }
 
-    const [patients, totalCount] = await Promise.all([
+    const [patients, totalCount, allClinicTags] = await Promise.all([
       prisma.patient.findMany({
         where,
         skip,
@@ -88,10 +99,25 @@ export async function GET(req: Request) {
         },
       }),
       prisma.patient.count({ where }),
+      prisma.patient.findMany({
+        where: { doctorId },
+        select: { tags: true },
+        take: 200, // sample recent patients for clinic tags
+      }),
     ]);
+
+    // Aggregate unique tags for clinic
+    const tagSet = new Set<string>();
+    allClinicTags.forEach((p) => {
+      p.tags?.forEach((t) => {
+        if (t && t.trim()) tagSet.add(t.trim());
+      });
+    });
+    const availableTags = Array.from(tagSet).sort();
 
     return NextResponse.json({
       patients,
+      availableTags,
       pagination: {
         page,
         limit,

@@ -1,30 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PatientTable } from "@/components/patients/patient-table";
 import { PatientForm } from "@/components/patients/patient-form";
 import { usePatients } from "@/hooks/use-patients";
+import { usePractitioners } from "@/hooks/use-practitioners";
 import { useSession } from "next-auth/react";
 import { Plus, Users, UserCheck, UserX, Download } from "lucide-react";
 
 export default function PatientsPage() {
   const { data: session } = useSession();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState("ALL");
   const [activeTab, setActiveTab] = useState("ALL");
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
 
+  const { practitioners } = usePractitioners();
+
+  // 300ms Search Debounce to protect database and prevent query spamming
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
   const {
     patients,
+    availableTags,
     pagination,
     loading,
     createPatient,
     updatePatient,
     deletePatient,
     refetch,
-  } = usePatients(searchQuery, undefined, activeTab, page);
+  } = usePatients(debouncedSearch, selectedTag, activeTab, page, selectedPractitionerId);
 
   const handleCreate = () => {
     setSelectedPatient(null);
@@ -127,9 +143,15 @@ export default function PatientsPage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onCreate={handleCreate}
-          searchQuery={searchQuery}
-          onSearchChange={(q) => { setSearchQuery(q); setPage(1); }}
+          searchQuery={searchInput}
+          onSearchChange={(q) => { setSearchInput(q); }}
           onRefresh={refetch}
+          availableTags={availableTags}
+          selectedTag={selectedTag}
+          onTagSelect={(t) => { setSelectedTag(t); setPage(1); }}
+          practitioners={practitioners}
+          selectedPractitionerId={selectedPractitionerId}
+          onPractitionerChange={(id) => { setSelectedPractitionerId(id); setPage(1); }}
         />
       </div>
 
