@@ -484,17 +484,17 @@ export default function AIAgentsHubPage() {
 
       {/* Deep Agent Configuration Dialog */}
       <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[760px] max-h-[92dvh] sm:max-h-[85vh] p-0 gap-0 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-2xl flex flex-col bg-slate-50 overflow-hidden my-auto">
-          <DialogHeader className="p-3.5 sm:p-5 border-b border-slate-200/80 bg-white sticky top-0 z-20 shrink-0">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100/80 shrink-0">
-                <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl md:max-w-3xl max-h-[92dvh] sm:max-h-[88vh] p-0 gap-0 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-2xl flex flex-col bg-slate-50 overflow-hidden my-auto">
+          <DialogHeader className="p-4 sm:p-6 border-b border-slate-200/80 bg-white sticky top-0 z-20 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2.5 rounded-xl sm:rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100/80 shrink-0">
+                <Settings className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <DialogTitle className="text-sm sm:text-lg font-bold text-slate-900 leading-snug truncate">
+                <DialogTitle className="text-base sm:text-xl font-bold text-slate-900 leading-snug">
                   Configure Agent: {activeAgent?.name}
                 </DialogTitle>
-                <DialogDescription className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-normal line-clamp-1 sm:line-clamp-none">
+                <DialogDescription className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-normal">
                   Pre-trained out-of-the-box. Customize optional clinic guidelines, triggers, and operational rules below.
                 </DialogDescription>
               </div>
@@ -766,42 +766,69 @@ export default function AIAgentsHubPage() {
 
             {/* 2. REVIEW MANAGER AGENT CONFIG */}
             {activeAgent?.type === "REVIEW" && (
-              <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                    Review Reply Rules & Human Staff Voice
-                  </h4>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    Human Staff Persona
+              <div className="space-y-4 p-4 sm:p-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                      Review Reply Rules & Human Staff Voice
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Configure how AI automatically drafts authentic, human responses to your Google reviews.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Human Staff Persona Active
                   </span>
                 </div>
 
-                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-slate-700 text-xs space-y-1">
-                  <p className="font-bold text-emerald-950 flex items-center gap-1.5 text-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    Human Clinic Staff Voice & Anti-Robotic Guardrails:
-                  </p>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                {/* Human Care Coordinator Voice & Anti-Robotic Guardrails */}
+                <div className="p-4 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-emerald-50/50 rounded-xl border border-emerald-100/90 text-slate-700 text-xs space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-bold text-emerald-950 text-xs sm:text-sm">
+                      Human Care Coordinator Voice & Active Anti-Robotic Guardrails
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed pl-8">
                     Replies are generated from the perspective of your clinic care coordinator or practice manager. Exaggerated AI clichés (like &ldquo;thrilled&rdquo;, &ldquo;delighted&rdquo;, &ldquo;unwavering commitment&rdquo;) are strictly banned to ensure every reply sounds authentic, warm, and distinctly written by your team.
                   </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pl-8">
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                      <strong className="text-emerald-950 block font-bold mb-0.5">⭐ Star-Only Reviews</strong>
+                      1-2 concise, sincere sentences. No hallucinated medical procedures.
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                      <strong className="text-emerald-950 block font-bold mb-0.5">💬 Positive Reviews</strong>
+                      Reflects specific patient praise and concludes with a health wish.
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                      <strong className="text-emerald-950 block font-bold mb-0.5">🤝 1-3 Star Reviews</strong>
+                      Humble, non-defensive, and invites private manager resolution.
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div className="space-y-1.5 min-w-0">
                     <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
                     <Select 
                       value={configDraft.autoPublish || "none"} 
                       onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
                     >
-                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0"><SelectValue className="truncate" /></SelectTrigger>
+                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                        <SelectValue placeholder="Select threshold" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
                         <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
                         <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-[11px] sm:text-xs text-slate-500">Reviews below threshold require manual doctor approval before live publishing.</p>
+                    <p className="text-[11px] text-slate-500 leading-normal">Reviews below threshold will wait in your Reviews inbox for approval before posting.</p>
                   </div>
 
                   <div className="space-y-1.5 min-w-0">
@@ -810,21 +837,62 @@ export default function AIAgentsHubPage() {
                       placeholder="E.g., Consultation, General Checkup, Preventive Care, Treatment Planning"
                       value={configDraft.targetKeywords || ""}
                       onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
-                      className="h-10 text-xs sm:text-sm bg-white border-slate-200"
+                      className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20"
                     />
-                    <p className="text-[11px] sm:text-xs text-slate-500">Keywords naturally woven into replies to boost local Google search rankings.</p>
+                    <p className="text-[11px] text-slate-500 leading-normal">Keywords naturally woven into replies to boost local Google search rankings.</p>
                   </div>
                 </div>
 
-                <div className="space-y-1.5 min-w-0">
-                  <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
+                    <span className="text-[10px] text-slate-400 font-medium">Optional</span>
+                  </div>
                   <Textarea 
                     placeholder="E.g., Thank patients warmly, mention our clinic team, and invite any unhappy patients to contact our clinic desk directly so our practice manager can address their concerns."
                     value={configDraft.instructions || ""}
                     onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
-                    className="resize-none text-xs sm:text-sm bg-white border-slate-200"
+                    className="resize-none text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20 leading-relaxed font-normal"
                     rows={4}
                   />
+
+                  {/* Quick Suggestions Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-slate-400 font-medium mr-1">Quick Suggestions:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const append = "Always thank the patient warmly by name.";
+                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                        setConfigDraft({ ...configDraft, instructions: current + append });
+                      }}
+                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                    >
+                      + Thank by name
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const append = "Mention that our doctor and clinical team are grateful for their trust.";
+                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                        setConfigDraft({ ...configDraft, instructions: current + append });
+                      }}
+                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                    >
+                      + Mention Dr. & team
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const append = "For dissatisfied reviews, invite them to speak with our clinic desk or manager directly.";
+                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                        setConfigDraft({ ...configDraft, instructions: current + append });
+                      }}
+                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                    >
+                      + Private manager resolution
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
