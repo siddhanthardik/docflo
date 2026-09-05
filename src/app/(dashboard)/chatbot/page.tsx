@@ -785,35 +785,6 @@ export default function AIAgentsHubPage() {
                       Human Staff Persona Active
                     </span>
                   </div>
-
-                  {/* Human Care Coordinator Voice & Anti-Robotic Guardrails Info */}
-                  <div className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-emerald-50/50 rounded-xl border border-emerald-100/90 text-slate-700 text-xs space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-bold text-emerald-950 text-xs sm:text-sm">
-                        Human Care Coordinator Voice & Active Anti-Robotic Guardrails
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 leading-relaxed pl-8">
-                      Replies are generated from the perspective of your clinic care coordinator or practice manager. Over-the-top corporate clichés (like &ldquo;thrilled&rdquo;, &ldquo;delighted&rdquo;, &ldquo;unwavering commitment&rdquo;) are strictly banned to ensure every reply sounds authentic, warm, and distinctly written by your team.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pl-8">
-                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                        <strong className="text-emerald-950 block font-bold mb-0.5">⭐ Star-Only Reviews</strong>
-                        1-2 concise, sincere sentences. No hallucinated medical procedures.
-                      </div>
-                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                        <strong className="text-emerald-950 block font-bold mb-0.5">💬 Positive Reviews</strong>
-                        Reflects specific patient praise and concludes with a health wish.
-                      </div>
-                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                        <strong className="text-emerald-950 block font-bold mb-0.5">🤝 1-3 Star Reviews</strong>
-                        Humble, non-defensive, and invites private manager resolution.
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* 1. AUTOMATION & VOICE SETTINGS */}
