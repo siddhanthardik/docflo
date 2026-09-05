@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 const MODULES = [
   { id: "CLINIC_CORE", name: "Clinic Core", desc: "Essential clinic operations: Patients, Appointments, Billing, Staff, Reviews." },
   { id: "GROWTH_SEO", name: "Growth & SEO", desc: "Acquisition tools: Google Business Profile, Local SEO tracking, Google Updates." },
-  { id: "WHATSAPP_CRM", name: "WhatsApp CRM", desc: "Patient communication: WhatsApp Inbox, Announcements." },
+  { id: "WHATSAPP_CRM", name: "WhatsApp CRM", desc: "Patient communication: WhatsApp Unified Inbox & Real-time Chat." },
   { id: "AI_ASSISTANT", name: "AI Assistant", desc: "Unified AI for bookings, reviews, profile updates, and ranking." }
 ];
 

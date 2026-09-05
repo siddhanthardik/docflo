@@ -20,7 +20,6 @@ import {
   Bot,
   BarChart3,
   Stethoscope,
-  Megaphone,
   MessageSquare,
   TrendingUp,
   ShieldAlert,
@@ -40,7 +39,6 @@ const navigationItems = [
   { name: "Patients", href: "/patients", icon: Users },
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Billing", href: "/billing", icon: FileText },
-  { name: "Announcements", href: "/campaigns", icon: Megaphone },
   { name: "Google Profile", href: "/gbp", icon: Star },
   { name: "Local SEO", href: "/local-seo", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
@@ -133,7 +131,7 @@ export function Sidebar() {
               return true;
             }
             if (role === "MANAGER") {
-              return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/campaigns", "/reports"].includes(item.href);
+              return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/reports"].includes(item.href);
             }
             if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
               return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);

@@ -1132,7 +1132,7 @@ export default function LandingPage() {
                               "Custom Specialty Website (20 Themes)",
                               "Connect Custom Domain (drname.com)",
                               "Web Appointment Booking Engine",
-                              "WhatsApp CRM & Announcements (500/mo)",
+                              "WhatsApp CRM & Unified Inbox",
                               "AI Google Business Posts (15 Posts/mo)",
                               "Digital Invoicing & WhatsApp Sharing",
                               "Medical SEO Schema & Meta Tags"
@@ -1142,7 +1142,7 @@ export default function LandingPage() {
                               "Everything in Growth, plus:",
                               "24/7 Multilingual WhatsApp AI Receptionist",
                               "Doctor WhatsApp Delegation Assistant",
-                              "Unlimited WhatsApp Announcements",
+                              "Automated WhatsApp Review & Feedback Engine",
                               "Unlimited Google Posts & AI Creator",
                               "24h & 2h Automated WhatsApp Reminders",
                               "Multi-Doctor Practice Scheduling & VIP Support"

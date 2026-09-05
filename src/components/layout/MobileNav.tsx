@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   FileText,
-  Megaphone,
   Star,
   TrendingUp,
   MessageSquare,
@@ -42,7 +41,6 @@ const allNavItems = [
   { name: "Patients", href: "/patients", icon: Users },
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Billing", href: "/billing", icon: FileText },
-  { name: "Announcements", href: "/campaigns", icon: Megaphone },
   { name: "Google Profile", href: "/gbp", icon: Star },
   { name: "Local SEO", href: "/local-seo", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
@@ -164,7 +162,7 @@ export function MobileNav() {
                     return true;
                   }
                   if (role === "MANAGER") {
-                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/campaigns", "/reports", "/settings"].includes(item.href);
+                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/reports", "/settings"].includes(item.href);
                   }
                   if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
                     return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);

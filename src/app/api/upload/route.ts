@@ -53,8 +53,6 @@ export async function POST(req: Request) {
     let uploadDir = path.join(process.cwd(), "public", "uploads");
     if (type === "logo") {
       uploadDir = path.join(process.cwd(), "public", "uploads", "logos");
-    } else if (type === "announcement") {
-      uploadDir = path.join(process.cwd(), "public", "uploads", "announcements");
     } else if (type === "blog" || type === "website" || type === "hero" || type === "gallery") {
       uploadDir = path.join(process.cwd(), "public", "uploads", "blogs");
     }
@@ -64,7 +62,7 @@ export async function POST(req: Request) {
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, finalBuffer);
 
-    const folder = type === "logo" ? "logos/" : type === "announcement" ? "announcements/" : (type === "blog" || type === "website" || type === "hero" || type === "gallery") ? "blogs/" : "";
+    const folder = type === "logo" ? "logos/" : (type === "blog" || type === "website" || type === "hero" || type === "gallery") ? "blogs/" : "";
     const url = `/api/uploads/${folder}${filename}`;
 
     return NextResponse.json({ url, format: "webp", size: finalBuffer.length });

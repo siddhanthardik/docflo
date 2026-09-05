@@ -36,7 +36,6 @@ export function FloatingWhatsAppWidget() {
     "/gbp",
     "/appointments",
     "/billing",
-    "/campaigns",
     "/chatbot",
     "/leads",
     "/local-seo",
