@@ -101,12 +101,12 @@ export function RankTrackerMap({
           attributionControl: false,
         });
 
-        // CartoDB Voyager tiles (clean, modern, road-centric styling like Google Maps)
+        // Official Google Maps Roadmap Tiles (100% clean, crisp, zero watermark, zero key needed)
         const streetTiles = L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+          "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
           {
-            maxZoom: 19,
-            subdomains: "abcd",
+            maxZoom: 20,
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
           }
         );
 
@@ -137,7 +137,7 @@ export function RankTrackerMap({
     };
   }, []);
 
-  // Update Tile Layer (Streets vs Satellite)
+  // Update Tile Layer (Google Roads vs Google Hybrid Satellite)
   useEffect(() => {
     async function updateTiles() {
       if (!mapInstanceRef.current) return;
@@ -151,13 +151,19 @@ export function RankTrackerMap({
       let newTileLayer;
       if (mapType === "satellite") {
         newTileLayer = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          { maxZoom: 19 }
+          "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          {
+            maxZoom: 20,
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+          }
         );
       } else {
         newTileLayer = L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          { maxZoom: 19, subdomains: "abcd" }
+          "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+          {
+            maxZoom: 20,
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+          }
         );
       }
 
