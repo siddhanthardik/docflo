@@ -22,6 +22,7 @@ import { LandingHeader } from "@/components/layout/LandingHeader";
 import { AIRepceptionistSimulator } from "@/components/marketing/AIRepceptionistSimulator";
 import { ComparisonTable } from "@/components/marketing/ComparisonTable";
 import { LiveWhatsAppChatMockup } from "@/components/marketing/LiveWhatsAppChatMockup";
+import { LiveLocalGridShowcase } from "@/components/marketing/LiveLocalGridShowcase";
 
 // 12 Medical Specialties - Static Local Paths (Customizable via /public/images/specialties/)
 const SPECIALTY_CARDS = [
@@ -533,6 +534,9 @@ export default function LandingPage() {
 
         </div>
       </section>
+
+      {/* ── INTERACTIVE LIVE LOCAL GRID VISIBILITY ENGINE ── */}
+      <LiveLocalGridShowcase />
 
       {/* ── 12 MEDICAL SPECIALTY PHOTOGRAPHY GRID ("BUILT FOR MEDICAL SPECIALISTS") ── */}
       <section ref={specialtyGridRef} className="py-16 bg-slate-50 border-b border-slate-200/80">

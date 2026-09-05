@@ -21,7 +21,8 @@ export function LandingHeader() {
 
           <nav className="hidden md:flex items-center gap-7">
             {[
-              { label: "Features", href: "/#local-seo" },
+              { label: "Local Rank Grid", href: "/#local-grid" },
+              { label: "Features", href: "/#features" },
               { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
               { label: "Compare", href: "/#comparison" },
@@ -79,7 +80,8 @@ export function LandingHeader() {
           
           <nav className="flex flex-col gap-5 text-lg font-semibold text-slate-700">
             {[
-              { label: "Features", href: "/#local-seo" },
+              { label: "Local Rank Grid", href: "/#local-grid" },
+              { label: "Features", href: "/#features" },
               { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
               { label: "WhatsApp AI", href: "/#whatsapp-engine" },
               { label: "Compare", href: "/#comparison" },
