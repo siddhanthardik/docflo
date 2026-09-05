@@ -49,20 +49,73 @@ export function PostScheduler() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [publishingDraftId, setPublishingDraftId] = useState<string | null>(null)
 
+  const handleGenerateAI = async (overrideTopic?: string, overrideImageUrl?: string, overrideKeywords?: string[]) => {
+    const topicToUse = overrideTopic || aiTopic.trim();
+    const imageToUse = overrideImageUrl || form.imageUrl;
+    const keywordsToUse = overrideKeywords || [];
+
+    if (!topicToUse && !imageToUse) {
+      toast({ title: "Topic required", description: "Please enter a topic or upload an image.", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/gbp/posts/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: topicToUse,
+          imageUrl: imageToUse || undefined,
+          tone: aiTone,
+          targetKeywords: keywordsToUse
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const autoCta = data.suggestedCtaType || "CALL";
+        setForm(prev => ({ 
+          ...prev, 
+          content: data.content,
+          ctaType: autoCta
+        }));
+        toast({ 
+          title: "Update drafted with AI! ✨", 
+          description: `Content generated and button set to "${autoCta === "CALL" ? "Call now" : autoCta === "BOOK" ? "Book" : "Learn more"}".` 
+        });
+        setShowAIDialog(false);
+        setAiTopic("");
+      } else {
+        if (res.status === 402) {
+          toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" });
+        } else if (res.status === 403) {
+          toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" });
+        } else {
+          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" });
+        }
+      }
+    } catch (error) {
+      toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   useEffect(() => {
     // Check for draftKeyword search parameter
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const kw = params.get("draftKeyword");
       if (kw) {
-        setForm((prev) => ({
-          ...prev,
-          content: `Looking for top-quality ${kw}? At Gyrex Clinic, our experienced team provides comprehensive care tailored to your needs. Book your appointment today or call us to learn more about our specialized services.`,
-        }));
+        // Clean URL to prevent re-triggering on reload
+        window.history.replaceState({}, document.title, window.location.pathname);
         toast({
-          title: "Target Keyword Draft Loaded",
-          description: `Post text generated for "${kw}". Upload or select an image manually to publish to Google.`,
+          title: "Drafting Update with AI ✨",
+          description: `Google Updates Assistant is crafting a targeted clinical update for "${kw}"...`,
         });
+        handleGenerateAI(`Specialized patient care and guidance regarding ${kw}`, undefined, [kw]);
       }
     }
 
@@ -186,59 +239,6 @@ export function PostScheduler() {
     }
   };
 
-  const handleGenerateAI = async (overrideTopic?: string, overrideImageUrl?: string) => {
-    const topicToUse = overrideTopic || aiTopic.trim();
-    const imageToUse = overrideImageUrl || form.imageUrl;
-
-    if (!topicToUse && !imageToUse) {
-      toast({ title: "Topic required", description: "Please enter a topic or upload an image.", variant: "destructive" });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const res = await fetch("/api/gbp/posts/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: topicToUse,
-          imageUrl: imageToUse || undefined,
-          tone: aiTone,
-          targetKeywords: []
-        })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        const autoCta = data.suggestedCtaType || "CALL";
-        setForm(prev => ({ 
-          ...prev, 
-          content: data.content,
-          ctaType: autoCta
-        }));
-        toast({ 
-          title: "Post drafted with AI! ✨", 
-          description: `Content generated and button set to "${autoCta === "CALL" ? "Call now" : autoCta === "BOOK" ? "Book" : "Learn more"}".` 
-        });
-        setShowAIDialog(false);
-        setAiTopic("");
-      } else {
-        if (res.status === 402) {
-          toast({ title: "Insufficient AI Credits", description: "You have run out of AI credits for this month. Please upgrade your plan or wait until next month.", variant: "destructive" });
-        } else if (res.status === 403) {
-          toast({ title: "Upgrade Required", description: data.error || "Your subscription plan does not include AI features.", variant: "destructive" });
-        } else {
-          toast({ title: "Generation failed", description: data.error || "An error occurred while generating the post.", variant: "destructive" });
-        }
-      }
-    } catch (error) {
-      toast({ title: "Generation failed", description: "Network error occurred.", variant: "destructive" });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handlePublishDraft = async (postId: string) => {
     setPublishingDraftId(postId);
     try {
@@ -308,7 +308,7 @@ export function PostScheduler() {
           <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center justify-between">
             <h2 className="font-bold text-gray-900 text-xl flex items-center gap-2">
               <Globe className="h-5 w-5 text-indigo-600" />
-              Create Post
+              Create Google Update
             </h2>
             <div className="text-xs font-semibold text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
               {form.content.length} / 1500
@@ -379,7 +379,7 @@ export function PostScheduler() {
                   className="h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300"
                 >
                   {isGenerating ? (
-                    <><Sparkles className="w-4 h-4 mr-2 animate-spin text-indigo-600" /> Generating...</>
+                    <><Sparkles className="w-4 h-4 mr-2 animate-spin text-indigo-600" /> Generating Update...</>
                   ) : (
                     <><Bot className="w-4 h-4 mr-2" /> Draft with AI</>
                   )}
@@ -389,7 +389,7 @@ export function PostScheduler() {
                 value={form.content} 
                 onChange={(e) => setForm({...form, content: e.target.value.substring(0, 1500)})} 
                 rows={5} 
-                placeholder="What's new at your clinic?"
+                placeholder={isGenerating ? "Google Updates Assistant is crafting your update..." : "What's new at your clinic?"}
                 className="resize-none focus:ring-indigo-500"
               />
             </div>
@@ -656,10 +656,10 @@ export function PostScheduler() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="w-5 h-5 text-indigo-600" />
-              Draft Post with AI
+              Draft Google Update with AI
             </DialogTitle>
             <DialogDescription>
-              Enter a topic and let AI draft an engaging post for your Google Business Profile.
+              Enter a clinical topic or health advisory and let Google Updates Assistant draft a policy-compliant update for your practice.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

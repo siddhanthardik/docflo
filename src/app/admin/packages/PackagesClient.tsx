@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 
 const MODULES = [
   { id: "CLINIC_CORE", name: "Clinic Core", desc: "Essential clinic operations: Patients, Appointments, Billing, Staff, Reviews." },
-  { id: "GROWTH_SEO", name: "Growth & SEO", desc: "Acquisition tools: Google Business Profile, Local SEO tracking, Scheduled Posts." },
+  { id: "GROWTH_SEO", name: "Growth & SEO", desc: "Acquisition tools: Google Business Profile, Local SEO tracking, Google Updates." },
   { id: "WHATSAPP_CRM", name: "WhatsApp CRM", desc: "Patient communication: WhatsApp Inbox, Announcements." },
   { id: "AI_ASSISTANT", name: "AI Assistant", desc: "Unified AI for bookings, reviews, profile updates, and ranking." }
 ];
@@ -32,14 +32,14 @@ const LIMITS = [
   { id: "MAX_PATIENTS", name: "Max Patients" },
   { id: "MAX_GBP_LOCATIONS", name: "GBP Locations" },
   { id: "MAX_TRACKED_KEYWORDS", name: "Tracked Keywords" },
-  { id: "MAX_SCHEDULED_POSTS", name: "Scheduled Posts / Month" },
+  { id: "MAX_SCHEDULED_POSTS", name: "Google Updates / Month" },
   { id: "AI_CREDITS_PER_MONTH", name: "AI Credits / Month" },
 ];
 
 const AI_AGENT_FEATURES = [
   { key: "AI_RECEPTIONIST", name: "AI Receptionist & Booking Assistant", desc: "24/7 Live WhatsApp AI assistant for patient inquiries & calendar bookings." },
   { key: "AI_REVIEW_REPLY", name: "Review Manager Assistant", desc: "Auto-drafting & live publishing of HIPAA-compliant Google Review replies." },
-  { key: "AI_POST_CREATOR", name: "AI Content & Post Creator", desc: "AI creation of Google Business Profile update posts & clinical content." },
+  { key: "AI_POST_CREATOR", name: "Google Updates Assistant", desc: "AI creation of Google Business Profile update posts & clinical content." },
   { key: "AI_SEO_COPILOT", name: "Local SEO Optimizer", desc: "Weekly local search audits and prioritized execution tasks." }
 ];
 

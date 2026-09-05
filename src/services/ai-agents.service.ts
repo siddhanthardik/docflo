@@ -1532,13 +1532,20 @@ Write your professional, direct, concise administrative response directly to Doc
 
       if (doctorId) {
         try {
-          const doc = await prisma.doctor.findUnique({
-            where: { id: doctorId },
-            select: { name: true, clinicName: true, specialty: true }
-          });
+          const [doc, gbp] = await Promise.all([
+            prisma.doctor.findUnique({
+              where: { id: doctorId },
+              select: { name: true, clinicName: true, specialty: true }
+            }),
+            prisma.gbpAccount.findFirst({
+              where: { doctorId },
+              select: { locationName: true, insightsData: true }
+            })
+          ]);
           if (doc) {
             doctorName = formatDoctorDisplayName(doc.name);
-            clinicName = doc.clinicName || clinicName;
+            const gbpName = (gbp?.insightsData as any)?.name || gbp?.locationName || "";
+            clinicName = doc.clinicName || gbpName || doctorName || clinicName;
             specialty = doc.specialty || specialty;
           }
         } catch (_) {}
@@ -1556,7 +1563,7 @@ Write your professional, direct, concise administrative response directly to Doc
           : "Tap Learn More below for full treatment details";
 
       const prompt = `
-        You are the "AI Content & Post Creator" agent for Google Business Profile.
+        You are the "Google Updates Assistant" agent for Google Business Profile.
         Generate an engaging, clinically sound Google Business Profile update post for:
         Doctor: ${doctorName}
         Clinic: ${clinicName}

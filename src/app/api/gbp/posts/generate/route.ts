@@ -16,8 +16,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { topic, tone = "professional", targetKeywords = [], imageUrl } = body;
 
-    // Fetch verified doctor profile AND trained "AI Content & Post Creator" config to ground AI generation
-    const [doctor, agentConfig] = await Promise.all([
+    // Fetch verified doctor profile, GBP account details, AND trained "Google Updates Assistant" config to ground AI generation
+    const [doctor, agentConfig, gbpAccount] = await Promise.all([
       prisma.doctor.findUnique({
         where: { id: doctorId },
         select: {
@@ -35,6 +35,13 @@ export async function POST(req: Request) {
           doctorId,
           agentType: { in: ["POST_CREATION", "PROFILE"] }
         }
+      }),
+      prisma.gbpAccount.findFirst({
+        where: { doctorId },
+        select: {
+          locationName: true,
+          insightsData: true
+        }
       })
     ]);
 
@@ -44,52 +51,65 @@ export async function POST(req: Request) {
     const customRules = trainedConfig.customRules || trainedConfig.instructions ? `Doctor Custom Rules: ${trainedConfig.customRules || trainedConfig.instructions}` : "";
     const preferredCta = trainedConfig.ctaType || "CALL";
 
-    const clinicNameStr = doctor?.clinicName || "our clinic";
+    const gbpLocationName = (gbpAccount?.insightsData as any)?.name || gbpAccount?.locationName || "";
     const rawDoctorName = doctor?.name || "";
     const doctorNameStr = rawDoctorName ? (rawDoctorName.toLowerCase().startsWith("dr") ? rawDoctorName : `Dr. ${rawDoctorName}`) : "";
+    const clinicNameStr = doctor?.clinicName || gbpLocationName || doctorNameStr || "our clinic";
     const specialtyStr = doctor?.specialty || "";
+    const cityStr = doctor?.city || "";
 
-    const keywordsStr = targetKeywords.length > 0 ? `Include these keywords organically: ${targetKeywords.join(", ")}` : "";
+    let keywordsInstruction = "";
+    if (targetKeywords.length > 0) {
+      keywordsInstruction = `
+TARGET SEARCH TOPIC / KEYWORDS:
+${targetKeywords.join(", ")}
+
+CRITICAL KEYWORD INTEGRATION RULE:
+- Integrate the essence and medical theme of these target search terms NATURALLY and GRAMMATICALLY into the text.
+- NEVER dump the raw keyword phrase awkwardly (e.g., DO NOT write "Looking for top-quality Best Gynecologist Delhi?" or "We offer the best Obstetrician near me").
+- Instead, express it with natural clinical elegance (e.g., "${doctorNameStr ? doctorNameStr + " provides " : "Our clinic provides "}comprehensive ${specialtyStr ? specialtyStr.toLowerCase() + " " : ""}care and consultations in ${cityStr || "the local community"}...").
+`;
+    }
     
     const groundingContext = `
-VERIFIED CLINIC PROFILE & TRAINED AI AGENT GUIDELINES:
-- Doctor Name: ${doctorNameStr || "Our Doctor"}
-- Clinic Name: ${clinicNameStr}
-- Medical Specialty: ${specialtyStr || "Healthcare Services"}
+VERIFIED CLINIC PROFILE & GOOGLE UPDATES ASSISTANT GUIDELINES:
+- Doctor Name: ${doctorNameStr || "Our Specialist"}
+- Practice / Clinic Name: ${clinicNameStr}
+- Medical Specialty: ${specialtyStr || "Healthcare Practice"}
+${cityStr ? `- Practice City: ${cityStr}` : ""}
 ${focusAreas ? `- ${focusAreas}` : ""}
 ${brandVoice ? `- ${brandVoice}` : ""}
 ${customRules ? `- ${customRules}` : ""}
 - Target Action Button: ${preferredCta}
+${keywordsInstruction}
 
 STRICT GOOGLE CONTENT POLICY & FORMATTING RULES:
-1. STRICTLY PLAIN TEXT ONLY: Absolutely DO NOT use markdown bolding (no **asterisks**), no headings (#), and no markdown bullets. Everything must be pure readable plain text.
+1. STRICTLY PLAIN TEXT ONLY: Absolutely DO NOT use markdown bolding (no **asterisks**), no markdown headings (#), and no markdown bullets (* or -). Everything must be pure readable plain text.
 2. ZERO PHONE NUMBERS: NEVER write any phone number in the body text (Google strictly bans phone numbers in post text).
 3. ZERO STREET ADDRESSES: Do NOT type out the street address in the body text (Google Maps already displays the pinned address on the profile card).
-4. ETHICAL HEALTHCARE CONTENT: Share practical wellness insights, treatment benefits, or recovery tips. Never make absolute guarantees or miracle cure claims.
+4. ETHICAL HEALTHCARE CONTENT: Share practical wellness insights, treatment benefits, prevention tips, or clinic updates. Never make absolute guarantees or miracle cure claims.
 5. CALL TO ACTION: Conclude the post by inviting the patient to take action via the button:
-   ${preferredCta === "CALL" ? "Tap 'Call Now' below to book your consultation with " + (doctorNameStr || "our clinic") : "Tap 'Book' below to schedule your appointment with " + (doctorNameStr || "our clinic")}.
+   ${preferredCta === "CALL" ? "Tap 'Call Now' below to consult with " + (doctorNameStr || clinicNameStr) : preferredCta === "BOOK" ? "Tap 'Book' below to schedule your appointment with " + (doctorNameStr || clinicNameStr) : "Tap 'Learn More' below to find out more about our services"}.
 `;
 
     let prompt = "";
     if (imageUrl) {
       prompt = `${groundingContext}
-You are the AI Content & Post Creator writing a Google Business Profile update post based on the attached image.
+You are the Google Updates Assistant writing an authentic Google Business Profile update post based on the attached image.
 User Request / Topic: ${topic || "Analyze the image content and write an engaging clinic update post for our patients."}
 Tone: ${tone}
-${keywordsStr}
 
-Write an engaging, warm, professional post (1-2 paragraphs, max 900 characters) accurately representing the attached image. Include a clear call to action (e.g., 'Tap Call Now to speak with our team' or 'Visit us today'). REMEMBER: DO NOT use markdown asterisks and DO NOT write any phone numbers or street addresses in the text.`;
+Write an engaging, warm, professional post (1-2 paragraphs, max 800 characters) accurately representing the practice and the image. Include a clear call to action aligning with the button. REMEMBER: DO NOT use markdown asterisks and DO NOT write any phone numbers or street addresses in the text.`;
     } else {
       if (!topic) {
         return NextResponse.json({ error: "Topic or image is required for AI generation" }, { status: 400 });
       }
       prompt = `${groundingContext}
-You are the AI Content & Post Creator writing a Google Business Profile update post.
+You are the Google Updates Assistant writing an authentic Google Business Profile update post.
 Topic: ${topic}
 Tone: ${tone}
-${keywordsStr}
 
-Write an engaging, warm, professional post (1-2 paragraphs, max 900 characters). Include a clear call to action (e.g., 'Tap Call Now to book your consultation' or 'Visit our clinic today'). REMEMBER: DO NOT use markdown asterisks and DO NOT write any phone numbers or street addresses in the text.`;
+Write an engaging, warm, professional post (1-2 paragraphs, max 800 characters). Include a clear call to action aligning with the button. REMEMBER: DO NOT use markdown asterisks and DO NOT write any phone numbers or street addresses in the text.`;
     }
 
     let aiResult;
@@ -128,9 +148,11 @@ Write an engaging, warm, professional post (1-2 paragraphs, max 900 characters).
     cleanContent = cleanContent
       .replace(/^```[a-z]*\n?/i, "")
       .replace(/\n?```$/i, "")
-      // Strip markdown bold and italic asterisks
+      // Strip markdown bold and italic asterisks & underscores
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
       // Remove any accidental phone numbers
       .replace(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{4,5}/g, "")
       .replace(/[ \t]+/g, " ")

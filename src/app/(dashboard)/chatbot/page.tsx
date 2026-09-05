@@ -196,12 +196,12 @@ export default function AIAgentsHubPage() {
     },
     {
       type: "POST_CREATION",
-      name: "AI Content & Post Creator",
+      name: "Google Updates Assistant",
       icon: Megaphone,
       color: "text-purple-600",
       bg: "bg-purple-50 border-purple-100",
-      desc: "Generates engaging Google Business Profile updates and patient education content tailored specifically for your clinic practice.",
-      metrics: "Profile Updates",
+      desc: "Drafts compliant Google Business Profile updates, seasonal health advisories, and treatment tips grounded in your medical practice.",
+      metrics: "Google Updates",
     },
     {
       type: "LOCAL_SEO_COPILOT",
@@ -804,7 +804,7 @@ export default function AIAgentsHubPage() {
                 <div className="space-y-1.5 min-w-0">
                   <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
                   <Textarea 
-                    placeholder="E.g., Always thank the patient by name, mention Gyrex Clinic, and invite negative reviewers to contact support@gyrex.com privately."
+                    placeholder="E.g., Always thank the patient by name, mention our clinic name, and invite negative reviewers to contact our clinic desk privately."
                     value={configDraft.instructions || ""}
                     onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
                     className="resize-none text-xs sm:text-sm bg-white border-slate-200"
@@ -814,13 +814,13 @@ export default function AIAgentsHubPage() {
               </div>
             )}
 
-            {/* 3. AI CONTENT & POST CREATOR AGENT CONFIG */}
+            {/* 3. GOOGLE UPDATES ASSISTANT CONFIG */}
             {(activeAgent?.type === "POST_CREATION" || activeAgent?.type === "PROFILE") && (
               <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                     <Megaphone className="w-4 h-4 text-purple-600 shrink-0" />
-                    Google Post Creation & Clinical Brain Rules
+                    Google Updates Assistant & Practice Intelligence
                   </h4>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     Google Policy Compliant

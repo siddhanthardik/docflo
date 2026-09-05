@@ -46,7 +46,7 @@ const allNavItems = [
   { name: "Google Profile", href: "/gbp", icon: Star },
   { name: "Local SEO", href: "/local-seo", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: MessageSquare },
-  { name: "Scheduled Posts", href: "/gbp/posts", icon: FileText },
+  { name: "Google Updates", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Smart Automation", href: "/ai-agents", icon: Zap },
   { name: "Download App", href: "/download", icon: Download },

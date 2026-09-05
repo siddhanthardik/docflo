@@ -68,7 +68,7 @@ interface AIAnalyticsClientProps {
 
 const FEATURE_LABELS: Record<string, { label: string; icon: any; color: string; bg: string }> = {
   WHATSAPP_REPLY: { label: "WhatsApp AI Assistant", icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50" },
-  GBP_POST: { label: "Google Post Creator", icon: Sparkles, color: "text-blue-600", bg: "bg-blue-50" },
+  GBP_POST: { label: "Google Updates Assistant", icon: Sparkles, color: "text-blue-600", bg: "bg-blue-50" },
   REVIEW_REPLY: { label: "AI Review Responder", icon: Bot, color: "text-violet-600", bg: "bg-violet-50" },
   CLINIC_AUDIT: { label: "Clinical Audit & SEO", icon: Layers, color: "text-amber-600", bg: "bg-amber-50" },
   SEO_OPTIMIZATION: { label: "SEO Optimization", icon: BarChart3, color: "text-indigo-600", bg: "bg-indigo-50" },
