@@ -28,30 +28,28 @@ export async function POST(
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    // Try to send via WhatsApp Manager first
+    // Try to send via WhatsApp Manager (which logs ChatMessage with true WhatsApp timestamp)
+    let result: any;
     try {
-      await whatsappManager.sendMessage(doctorId, conversation.patientPhone, content);
+      result = await whatsappManager.sendMessage(doctorId, conversation.patientPhone, content, "Doctor");
     } catch (waError: any) {
       console.error("WhatsApp Send Error:", waError);
       return NextResponse.json({ error: "Failed to deliver WhatsApp message" }, { status: 502 });
     }
 
-    // Create the message log only if delivery succeeded
-    const message = await prisma.chatMessage.create({
-      data: {
-        conversationId: id,
-        direction: "OUTGOING",
-        content,
-        senderName: "Doctor",
-      },
-    });
+    if (!result?.message) {
+      const fallbackMessage = await prisma.chatMessage.create({
+        data: {
+          conversationId: id,
+          direction: "OUTGOING",
+          content,
+          senderName: "Doctor",
+        },
+      });
+      return NextResponse.json(fallbackMessage);
+    }
 
-    await prisma.conversation.update({
-      where: { id },
-      data: { lastMessageAt: new Date() },
-    });
-
-    return NextResponse.json(message);
+    return NextResponse.json(result.message);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

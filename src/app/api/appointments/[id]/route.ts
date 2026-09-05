@@ -191,38 +191,7 @@ export async function PUT(
 
         if (messageText) {
           const patientPhone = updated.patient.phone;
-          const normalizedPhone = await whatsappManager.sendMessage(doctorId, patientPhone, messageText);
-
-          let conversation = await prisma.conversation.findUnique({
-            where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
-          });
-
-          if (!conversation) {
-            conversation = await prisma.conversation.create({
-              data: {
-                doctorId,
-                patientPhone: normalizedPhone,
-                patientName: `${updated.patient.firstName} ${updated.patient.lastName}`,
-                patientId: updated.patient.id,
-                status: "OPEN",
-              }
-            });
-          }
-
-          await prisma.chatMessage.create({
-            data: {
-              conversationId: conversation.id,
-              direction: "OUTGOING",
-              messageType: "text",
-              content: messageText,
-              senderName: "Clinic",
-            }
-          });
-
-          await prisma.conversation.update({
-            where: { id: conversation.id },
-            data: { lastMessageAt: new Date() }
-          });
+          await whatsappManager.sendMessage(doctorId, patientPhone, messageText, "Clinic");
         }
       }
     } catch (waError) {

@@ -327,43 +327,7 @@ export async function POST(req: Request) {
         }
 
         const patientPhone = appointment.patient.phone;
-        const patientName = `${appointment.patient.firstName} ${appointment.patient.lastName}`;
-
-        // Send via Baileys and get normalized phone
-        const normalizedPhone = await whatsappManager.sendMessage(doctorId, patientPhone, messageText);
-
-        // Find or create Conversation using normalizedPhone
-        let conversation = await prisma.conversation.findUnique({
-          where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
-        });
-
-        if (!conversation) {
-          conversation = await prisma.conversation.create({
-            data: {
-              doctorId,
-              patientPhone: normalizedPhone,
-              patientName,
-              patientId: appointment.patient.id,
-              status: "OPEN",
-            }
-          });
-        }
-
-        // Add to ChatMessage
-        await prisma.chatMessage.create({
-          data: {
-            conversationId: conversation.id,
-            direction: "OUTGOING",
-            messageType: "text",
-            content: messageText,
-            senderName: "Clinic", // Or fetch doctor name
-          }
-        });
-
-        await prisma.conversation.update({
-          where: { id: conversation.id },
-          data: { lastMessageAt: new Date() }
-        });
+        await whatsappManager.sendMessage(doctorId, patientPhone, messageText, "Clinic");
       }
     } catch (waError) {
       console.error("Failed to send WhatsApp confirmation:", waError);

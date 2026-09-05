@@ -72,7 +72,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     caption += `Please let us know if you have any questions. Thank you! 📄`;
 
     // Send Document via Baileys
-    await whatsappManager.sendDocument(doctorId, invoice.patient.phone, pdfBuffer, fileName, caption);
+    const sendResult = await whatsappManager.sendDocument(doctorId, invoice.patient.phone, pdfBuffer, fileName, caption);
+    const sentDate = sendResult?.sentDate || new Date();
 
     // Let's create an outgoing ChatMessage
     let conversation = await prisma.conversation.findUnique({
@@ -85,8 +86,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           doctorId,
           patientId: invoice.patient.id,
           patientPhone: invoice.patient.phone,
-          patientName: `${invoice.patient.firstName} ${invoice.patient.lastName}`
+          patientName: `${invoice.patient.firstName} ${invoice.patient.lastName}`,
+          lastMessageAt: sentDate,
+          createdAt: sentDate,
         }
+      });
+    } else {
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: sentDate },
       });
     }
 
@@ -96,7 +104,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         direction: "OUTGOING",
         messageType: "document",
         content: caption,
-        senderName: "Clinic Staff"
+        senderName: "Clinic Staff",
+        createdAt: sentDate,
       }
     });
 

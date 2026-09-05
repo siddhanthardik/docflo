@@ -150,38 +150,8 @@ export class ReviewDispatcherService {
           const optOutMsg = "\n\n*(Reply STOP to opt out of automated messages)*";
           const finalMessage = surveyMessage + optOutMsg;
 
-          const normalizedPhone = await whatsappManager.sendMessage(doctor.id, patient.phone, finalMessage);
-
-          let conversation = await prisma.conversation.findUnique({
-            where: { doctorId_patientPhone: { doctorId: doctor.id, patientPhone: normalizedPhone } }
-          });
-          
-          if (!conversation) {
-            conversation = await prisma.conversation.create({
-              data: {
-                doctorId: doctor.id,
-                patientPhone: normalizedPhone,
-                patientName: `${patient.firstName} ${patient.lastName}`,
-                patientId: patient.id,
-                status: "OPEN",
-              }
-            });
-          }
-          
-          await prisma.chatMessage.create({
-            data: {
-              conversationId: conversation.id,
-              direction: "OUTGOING",
-              messageType: "text",
-              content: finalMessage,
-              senderName: "Clinic",
-            }
-          });
-          
-          await prisma.conversation.update({
-            where: { id: conversation.id },
-            data: { lastMessageAt: new Date() }
-          });
+          // whatsappManager.sendMessage delivers the message and records Conversation/ChatMessage once with true timestamp
+          await whatsappManager.sendMessage(doctor.id, patient.phone, finalMessage);
 
           // Update Status
           await prisma.appointment.update({
@@ -250,33 +220,8 @@ export class ReviewDispatcherService {
       finalMessage = surveyMessage + optOutMsg;
     }
 
-    const normalizedPhone = await whatsappManager.sendMessage(doctorId, patient.phone, finalMessage);
-
-    let conversation = await prisma.conversation.findUnique({
-      where: { doctorId_patientPhone: { doctorId, patientPhone: normalizedPhone } }
-    });
-    
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: {
-          doctorId,
-          patientPhone: normalizedPhone,
-          patientName: `${patient.firstName} ${patient.lastName}`,
-          patientId: patient.id,
-          status: "OPEN",
-        }
-      });
-    }
-    
-    await prisma.chatMessage.create({
-      data: {
-        conversationId: conversation.id,
-        direction: "OUTGOING",
-        messageType: "text",
-        content: finalMessage,
-        senderName: "Clinic",
-      }
-    });
+    // whatsappManager.sendMessage delivers the message and records Conversation/ChatMessage once with true timestamp
+    await whatsappManager.sendMessage(doctorId, patient.phone, finalMessage);
 
     if (appointmentId) {
       await prisma.appointment.update({

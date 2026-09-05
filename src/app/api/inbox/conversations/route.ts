@@ -25,7 +25,18 @@ export async function GET(req: Request) {
       orderBy: { lastMessageAt: "desc" },
     });
 
-    return NextResponse.json({ conversations });
+    // Ensure conversation.lastMessageAt reflects the actual latest WhatsApp message timestamp
+    const synchronizedConversations = conversations
+      .map((c) => {
+        const latestMessageDate = c.messages?.[0]?.createdAt;
+        return {
+          ...c,
+          lastMessageAt: latestMessageDate ? new Date(latestMessageDate).toISOString() : c.lastMessageAt,
+        };
+      })
+      .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+    return NextResponse.json({ conversations: synchronizedConversations });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

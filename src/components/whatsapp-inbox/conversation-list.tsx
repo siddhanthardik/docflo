@@ -2,7 +2,25 @@
 
 import { useState } from "react"
 import { Search } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { format, isToday, isYesterday, differenceInCalendarDays } from "date-fns"
+
+function formatWhatsAppDate(dateStr?: string | Date | null): string {
+  if (!dateStr) return ""
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ""
+
+  if (isToday(date)) {
+    return format(date, "h:mm a")
+  }
+  if (isYesterday(date)) {
+    return "Yesterday"
+  }
+  const daysDiff = differenceInCalendarDays(new Date(), date)
+  if (daysDiff > 0 && daysDiff < 7) {
+    return format(date, "EEEE")
+  }
+  return format(date, "dd/MM/yyyy")
+}
 
 interface Conversation {
   id: string
@@ -135,7 +153,7 @@ export function ConversationList({
                         {name}
                       </p>
                       <span className="text-xs text-gray-400 flex-shrink-0">
-                        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: false })}
+                        {formatWhatsAppDate(conv.lastMessageAt)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-1">

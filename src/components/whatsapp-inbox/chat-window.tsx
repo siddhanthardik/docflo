@@ -2,7 +2,15 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Send, MessageSquare, Phone, ArrowLeft } from "lucide-react"
-import { format } from "date-fns"
+import { format, isToday, isYesterday } from "date-fns"
+
+function getChatDateDivider(dateStr: string): string {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ""
+  if (isToday(date)) return "Today"
+  if (isYesterday(date)) return "Yesterday"
+  return format(date, "d MMMM yyyy")
+}
 
 interface Message {
   id: string
@@ -135,31 +143,41 @@ export function ChatWindow({
             <p className="text-xs text-gray-400">No messages yet. Start the conversation below.</p>
           </div>
         )}
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
           const isOut = msg.direction === "OUTGOING"
+          const currentMsgDate = format(new Date(msg.createdAt), "yyyy-MM-dd")
+          const prevMsgDate = index > 0 ? format(new Date(messages[index - 1].createdAt), "yyyy-MM-dd") : null
+          const showDateDivider = currentMsgDate !== prevMsgDate
+
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isOut ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[72%] px-4 py-2.5 shadow-sm ${
-                  isOut
-                    ? "bg-indigo-600 text-white rounded-2xl rounded-br-sm"
-                    : "bg-white text-gray-800 rounded-2xl rounded-bl-sm border border-gray-100"
-                }`}
-              >
-                {msg.senderName && !isOut && (
-                  <p className="text-xs font-semibold text-indigo-600 mb-0.5">{msg.senderName}</p>
-                )}
-                <p className="text-sm leading-relaxed">{msg.content}</p>
-                <p
-                  className={`text-xs mt-1.5 ${
-                    isOut ? "text-indigo-200 text-right" : "text-gray-400"
+            <div key={msg.id} className="space-y-3">
+              {showDateDivider && (
+                <div className="flex justify-center my-3">
+                  <span className="bg-white/95 text-slate-500 border border-slate-200/80 shadow-xs px-3 py-1 rounded-lg text-xs font-semibold tracking-wide">
+                    {getChatDateDivider(msg.createdAt)}
+                  </span>
+                </div>
+              )}
+              <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[72%] px-4 py-2.5 shadow-sm ${
+                    isOut
+                      ? "bg-indigo-600 text-white rounded-2xl rounded-br-sm"
+                      : "bg-white text-gray-800 rounded-2xl rounded-bl-sm border border-gray-100"
                   }`}
                 >
-                  {format(new Date(msg.createdAt), "h:mm a")}
-                </p>
+                  {msg.senderName && !isOut && (
+                    <p className="text-xs font-semibold text-indigo-600 mb-0.5">{msg.senderName}</p>
+                  )}
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p
+                    className={`text-xs mt-1.5 ${
+                      isOut ? "text-indigo-200 text-right" : "text-gray-400"
+                    }`}
+                  >
+                    {format(new Date(msg.createdAt), "h:mm a")}
+                  </p>
+                </div>
               </div>
             </div>
           )
