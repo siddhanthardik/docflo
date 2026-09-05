@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck, Compass, Target, Radar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -206,12 +206,12 @@ export default function AIAgentsHubPage() {
     },
     {
       type: "LOCAL_SEO_COPILOT",
-      name: "Local SEO Optimizer",
+      name: "Google Maps & Local Growth Copilot",
       icon: TrendingUp,
       color: "text-amber-600",
       bg: "bg-amber-50 border-amber-100",
-      desc: "Conducts weekly local search audits and generates prioritized 1-click execution tasks to help your clinic outrank nearby competitors.",
-      metrics: "Weekly Rank Audit",
+      desc: "Conducts weekly Google Maps rank audits, monitors nearby competitors, and generates prioritized 1-click execution tasks to help your clinic rank #1 in local patient searches.",
+      metrics: "Weekly Map Rank Audits",
     }
   ];
 
@@ -1221,38 +1221,275 @@ export default function AIAgentsHubPage() {
               </div>
             )}
 
-            {/* 4. LOCAL SEO COPILOT AGENT CONFIG */}
+            {/* 4. GOOGLE MAPS & LOCAL GROWTH COPILOT AGENT CONFIG */}
             {activeAgent?.type === "LOCAL_SEO_COPILOT" && (
-              <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
-                  Local Search Audit Preferences
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-1.5 min-w-0">
-                    <Label className="text-xs font-bold text-slate-700">Audit Focus Priority</Label>
-                    <Select 
-                      value={configDraft.focus || "all"} 
-                      onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
-                    >
-                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0"><SelectValue className="truncate" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Balanced (Relevancy, Prominence, Citations)</SelectItem>
-                        <SelectItem value="relevancy">Focus on Relevancy & Content</SelectItem>
-                        <SelectItem value="prominence">Focus on Prominence & Reviews</SelectItem>
-                      </SelectContent>
-                    </Select>
+              <div className="space-y-4">
+                {/* Section Header Card */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
+                        Google Maps Ranking & Competitor Radar
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Configure how the copilot audits local competitors, tracks Map Pack rankings, and generates prioritized growth tasks.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 self-start sm:self-auto">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                      Autonomous Audit Engine Active
+                    </span>
                   </div>
 
-                  <div className="space-y-1.5 min-w-0">
-                    <Label className="text-xs font-bold text-slate-700">Target Search Keywords</Label>
+                  {/* Strategy Overview Banner */}
+                  <div className="p-3.5 sm:p-4 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/50 rounded-xl border border-amber-100/90 text-slate-700 text-xs space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-amber-950 text-xs sm:text-sm">
+                        Local SEO Ranking Engine & 1-Click Action Tasks
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed pl-8">
+                      The Copilot continuously monitors your Google Business Profile performance against top local clinics in your neighborhood. When gaps are detected—such as falling behind in review velocity, missing secondary categories, or lagging in post activity—it generates high-impact, 1-click execution cards in your Local SEO dashboard.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pl-8">
+                      <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-amber-950 block font-bold mb-0.5">⭐ Review Velocity Gap</strong>
+                        Tracks top competitors and computes exact review gaps to bridge.
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-amber-950 block font-bold mb-0.5">🔍 Search Relevancy</strong>
+                        Ensures profile categories and services match high-intent queries.
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-amber-950 block font-bold mb-0.5">⚡ 1-Click Action Cards</strong>
+                        Direct links to pre-fill targeted Google Updates and AI review replies.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1. AUDIT CADENCE & STRATEGY */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-amber-600 shrink-0" />
+                      1. Audit Cadence & Growth Strategy
+                    </h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Strategy Focus */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Audit Focus Strategy</Label>
+                      <Select 
+                        value={configDraft.focus || "all"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, focus: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select strategy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Balanced Growth (Rank, Reviews & Content)</SelectItem>
+                          <SelectItem value="prominence">Reputation & Review Velocity Focus</SelectItem>
+                          <SelectItem value="relevancy">Search Relevancy & Clinical Services Focus</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Prioritizes corresponding execution cards in your Local SEO hub.</p>
+                    </div>
+
+                    {/* Audit Cadence */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Audit Frequency</Label>
+                      <Select 
+                        value={configDraft.cadence || "weekly"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, cadence: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select cadence" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Weekly (Every Monday Morning - Recommended)</SelectItem>
+                          <SelectItem value="biweekly">Bi-weekly (Every 2 Weeks)</SelectItem>
+                          <SelectItem value="monthly">Monthly Audit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">How frequently the ranking engine audits local competitor signals.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. TARGET PATIENT SEARCH CONCEPTS */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Target className="w-4 h-4 text-amber-600 shrink-0" />
+                      2. Target Patient Search Concepts
+                    </h5>
+                    <span className="text-[10px] text-slate-400 font-medium">Core Queries</span>
+                  </div>
+
+                  <div className="space-y-2">
                     <Input 
-                      placeholder="E.g., Best dentist near me, root canal, emergency clinic"
+                      placeholder="E.g., Best clinic near me, doctor consultation, specialist care, clinic in city"
                       value={configDraft.keywords || ""}
                       onChange={(e) => setConfigDraft({...configDraft, keywords: e.target.value})}
-                      className="h-10 text-xs sm:text-sm bg-white border-slate-200"
+                      className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-amber-500/20"
                     />
+                    <p className="text-[10px] text-slate-400 leading-normal">
+                      Comma-separated patient queries you want to rank #1 for. The Copilot audits competitor visibility for these exact terms.
+                    </p>
+
+                    {/* Quick Pick Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[11px] text-slate-400 font-medium mr-1">Quick Add:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const add = "Doctor consultation near me";
+                          const curr = configDraft.keywords ? configDraft.keywords.trim() + ", " : "";
+                          setConfigDraft({ ...configDraft, keywords: curr + add });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Doctor near me
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const add = "Specialist clinic in city";
+                          const curr = configDraft.keywords ? configDraft.keywords.trim() + ", " : "";
+                          setConfigDraft({ ...configDraft, keywords: curr + add });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Specialist clinic
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const add = "Emergency medical walk-in";
+                          const curr = configDraft.keywords ? configDraft.keywords.trim() + ", " : "";
+                          setConfigDraft({ ...configDraft, keywords: curr + add });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Emergency walk-in
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const add = "Preventive health checkup";
+                          const curr = configDraft.keywords ? configDraft.keywords.trim() + ", " : "";
+                          setConfigDraft({ ...configDraft, keywords: curr + add });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Health checkup
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. COMPETITOR RADAR & PROXIMITY */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Radar className="w-4 h-4 text-amber-600 shrink-0" />
+                      3. Competitor Radar & Neighborhood Radius
+                    </h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Monitoring Radius</Label>
+                      <Select 
+                        value={configDraft.radius || "5km"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, radius: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select radius" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3km">Within 3 km (Immediate Neighborhood)</SelectItem>
+                          <SelectItem value="5km">Within 5 km (Standard City Radius - Recommended)</SelectItem>
+                          <SelectItem value="10km">Within 10 km (Extended Metro Area)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Restricts competitive comparison to clinics in your immediate patient catchment area.</p>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Competitor Activity Notifications</Label>
+                      <Select 
+                        value={configDraft.competitorAlerts || "weekly_digest"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, competitorAlerts: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select alert preference" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly_digest">Include in Weekly Audit Summary</SelectItem>
+                          <SelectItem value="urgent_only">Only when a competitor overtakes ranking</SelectItem>
+                          <SelectItem value="silent">Silent (Dashboard only)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Controls how competitor ranking movements are presented.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. INTERACTIVE SAMPLE AUDIT TASK PREVIEW */}
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-amber-50/30 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                      <Sparkles className="w-3 h-3" />
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Sample Prioritized 1-Click Execution Tasks</h5>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Here is an example of the high-impact tasks generated on your Local SEO dashboard based on your settings:
+                  </p>
+
+                  <div className="space-y-2.5 pt-1">
+                    {/* Sample Task 1 */}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded">
+                            CRITICAL
+                          </span>
+                          <h6 className="text-xs font-bold text-slate-900">Close Review Gap vs Top Competitor</h6>
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          Top competitor leads by 34 reviews. Accelerate patient feedback using automated WhatsApp review invites.
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0 self-start sm:self-auto">
+                        +30% Map Pack Rank
+                      </span>
+                    </div>
+
+                    {/* Sample Task 2 */}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
+                            HIGH
+                          </span>
+                          <h6 className="text-xs font-bold text-slate-900">Publish Google Update targeting Patient Search</h6>
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          Share a weekly patient care advisory to outrank nearby clinics for core treatment keywords.
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 shrink-0 self-start sm:self-auto">
+                        +18% Search Visibility
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

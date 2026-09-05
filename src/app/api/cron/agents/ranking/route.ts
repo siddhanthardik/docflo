@@ -37,19 +37,46 @@ export async function GET(req: Request) {
 
       const hasAccess = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT");
       if (!hasAccess) continue;
-      // For cron purposes, we pass minimal dummy profile data or ideally fetch it.
-      // Since this is just a stub for now:
-      const dummyProfileData = { locationName: "Cron Sync" };
-      
-      const tasks = await AIAgentsService.runLocalSeoCopilot(dummyProfileData, config.config);
-      
-      if (tasks && tasks.length > 0) {
-        console.log(`[Copilot Agent] SEO Tasks generated for doctor ${config.doctorId}:`);
-        console.log(tasks);
+
+      const gbpAccount = await prisma.gbpAccount.findFirst({
+        where: { doctorId: config.doctorId },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      if (!gbpAccount) continue;
+
+      const { generateAlgorithmicTasks } = await import("@/app/api/local-seo/recommendations/route");
+      const tasks = await generateAlgorithmicTasks(config.doctorId, gbpAccount.id);
+
+      // Save new tasks to DB if not already pending
+      for (const task of tasks) {
+        const existing = await prisma.seoRecommendation.findFirst({
+          where: {
+            gbpAccountId: gbpAccount.id,
+            title: task.title,
+            status: "PENDING",
+          },
+        });
+
+        if (!existing) {
+          await prisma.seoRecommendation.create({
+            data: {
+              gbpAccountId: gbpAccount.id,
+              category: task.category,
+              title: task.title,
+              description: task.description,
+              priority: task.priority,
+              impact: task.impact,
+              status: "PENDING",
+            },
+          }).catch((e) => console.warn("Could not save cron recommendation:", e));
+        }
       }
+
+      console.log(`[Copilot Agent] Generated ${tasks.length} local growth tasks for doctor ${config.doctorId}`);
     }
 
-    return NextResponse.json({ success: true, message: "Local SEO Copilot CRON finished" });
+    return NextResponse.json({ success: true, message: "Google Maps & Local Growth Copilot CRON finished" });
   } catch (error: any) {
     console.error("[CRON] Ranking Engine error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

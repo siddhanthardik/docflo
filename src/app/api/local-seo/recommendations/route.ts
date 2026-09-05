@@ -3,15 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { AIAgentsService } from "@/services/ai-agents.service";
 
-async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) {
-  const doctor = await prisma.doctor.findUnique({
-    where: { id: doctorId },
-    select: { specialty: true, name: true, clinicName: true }
-  });
-
-  const account = await prisma.gbpAccount.findUnique({
-    where: { id: gbpAccountId }
-  });
+export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) {
+  const [doctor, account, agentConfig] = await Promise.all([
+    prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { specialty: true, name: true, clinicName: true, city: true }
+    }),
+    prisma.gbpAccount.findUnique({
+      where: { id: gbpAccountId }
+    }),
+    prisma.aIAgentConfig.findFirst({
+      where: { doctorId, agentType: "LOCAL_SEO_COPILOT" }
+    })
+  ]);
 
   if (!account) return [];
 
@@ -28,6 +32,12 @@ async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) 
   const insights = (account.insightsData as any) || {};
   const profileData = (profileSnap?.json as any) || {};
   const competitors = (competitorSnap?.json as any[]) || [];
+
+  const config = (agentConfig?.config as any) || {};
+  const focusStrategy = config.focus || "all"; // "all" (balanced), "prominence" (reviews), "relevancy" (keywords/content)
+  const userKeywords = config.keywords
+    ? config.keywords.split(",").map((k: string) => k.trim()).filter(Boolean)
+    : [];
 
   const primaryCategory = profileData.primaryCategory || insights.primaryCategory || doctor?.specialty || "Obstetrician-gynecologist";
   const secondaryCats: string[] = profileData.categories || insights.categories || [];
@@ -132,14 +142,43 @@ async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) 
     });
   }
 
-  // 7. Weekly Google Post (MEDIUM)
+  // 7. Weekly Google Post targeting user keyword or primary category
+  const targetPostKeyword = userKeywords[0] || primaryCategory;
   tasks.push({
     category: "CONTENT",
-    title: `Publish GMB Post for "${primaryCategory}"`,
-    description: `Keep your clinic active on Google. Sharing weekly health tips targeting "${primaryCategory}" signals high practice activity to Google.`,
-    priority: "MEDIUM",
-    impact: "+12% Patient Engagement",
+    title: `Publish GMB Post for "${targetPostKeyword}"`,
+    description: `Keep your clinic active on Google Maps. Sharing weekly health updates targeting "${targetPostKeyword}" signals high local relevance and patient engagement.`,
+    priority: focusStrategy === "relevancy" ? "HIGH" : "MEDIUM",
+    impact: "+15% Local Search Engagement",
   });
+
+  // 8. Custom Target Keyword Optimization Task (if keywords configured)
+  if (userKeywords.length > 1) {
+    const additionalKeywords = userKeywords.slice(1, 3).join(", ");
+    tasks.push({
+      category: "SEARCH_RANK",
+      title: `Optimize Map Pack Relevancy for "${additionalKeywords}"`,
+      description: `Counter-target nearby competitors for ${additionalKeywords}. Incorporate these concepts in patient reviews and Google update updates.`,
+      priority: focusStrategy === "relevancy" ? "HIGH" : "MEDIUM",
+      impact: "+20% Patient Search Reach",
+    });
+  }
+
+  // Adjust priorities based on focus strategy
+  if (focusStrategy === "prominence") {
+    // Elevate all review and competitor gap tasks to top priority
+    tasks.forEach(t => {
+      if (t.category === "REVIEWS") {
+        t.priority = "CRITICAL";
+      }
+    });
+  } else if (focusStrategy === "relevancy") {
+    tasks.forEach(t => {
+      if (t.category === "PROFILE" || t.category === "CONTENT") {
+        if (t.priority !== "CRITICAL") t.priority = "HIGH";
+      }
+    });
+  }
 
   return tasks;
 }
