@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +20,6 @@ import { PostingActivity } from "./PostingActivity";
 import { KeywordInsights } from "./KeywordInsights";
 import { CompetitorInsights } from "./CompetitorInsights";
 import { AiSearchReadiness } from "./AiSearchReadiness";
-import { OverviewQuickActions } from "./OverviewQuickActions";
 import ServiceInsights from "./ServiceInsights";
 import { SearchGrid } from "./SearchGrid";
 import { RecommendationsList } from "./RecommendationsList";
@@ -257,35 +257,6 @@ function ProfileCompletenessMini({ profileData }: { profileData: any }) {
   );
 }
 
-// ── Sync Status Sidebar Card ──────────────────────────────────────────────
-function SyncStatus({ lastSynced }: { lastSynced: string | null }) {
-  const timeAgo = lastSynced
-    ? (() => {
-        const diff = Date.now() - new Date(lastSynced).getTime();
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        return h > 0 ? `${h}h ago` : `${m}m ago`;
-      })()
-    : "Never";
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-      <h3 className="text-sm font-bold text-gray-900 mb-3">Sync Status</h3>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-          </span>
-          <span className="text-sm font-bold text-emerald-700">Connected</span>
-        </div>
-        <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-          Last synced {timeAgo}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // ── Main Dashboard ──────────────────────────────────────────────────────────
 export function LocalSeoDashboard() {
@@ -301,6 +272,7 @@ export function LocalSeoDashboard() {
   const { data: keywordData } = useLocalSeoModule<any>("keywords");
   const { data: postData } = useLocalSeoModule<any>("posts");
 
+  const queryClient = useQueryClient();
   const loading = contextLoading || overviewLoading;
 
   const runAnalysis = async () => {
@@ -308,7 +280,9 @@ export function LocalSeoDashboard() {
     setRunningAnalysis(true);
     try {
       const res = await fetch(`/api/local-seo/sync`, { method: "POST" });
-      if (res.ok) await refetchOverview();
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: ["local-seo"] });
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -390,7 +364,7 @@ export function LocalSeoDashboard() {
   return (
     <div className="max-w-7xl mx-auto pb-16">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Local SEO Intelligence</h1>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
@@ -399,15 +373,29 @@ export function LocalSeoDashboard() {
             <span>{overviewData.primaryCategory || "Medical Clinic"}</span>
           </p>
         </div>
-        <Button
-          onClick={runAnalysis}
-          disabled={runningAnalysis}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold"
-        >
-          {runningAnalysis
-            ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" />Syncing...</>
-            : <><RefreshCw className="mr-2 h-4 w-4" />Sync Data</>}
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 text-xs font-medium">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>Connected {lastSyncedStr ? (() => {
+              const diff = Date.now() - new Date(lastSyncedStr).getTime();
+              const h = Math.floor(diff / 3600000);
+              const m = Math.floor((diff % 3600000) / 60000);
+              return h > 0 ? `· ${h}h ago` : m > 0 ? `· ${m}m ago` : "· Just now";
+            })() : ""}</span>
+          </div>
+          <Button
+            onClick={runAnalysis}
+            disabled={runningAnalysis}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold"
+          >
+            {runningAnalysis
+              ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" />Syncing...</>
+              : <><RefreshCw className="mr-2 h-4 w-4" />Sync Data</>}
+          </Button>
+        </div>
       </div>
 
       {/* Tab Navigation Segmented Control */}
@@ -446,15 +434,9 @@ export function LocalSeoDashboard() {
             </div>
           </div>
 
-          {/* Middle Row: Growth Shortcuts & Sync (1/3) + Posting Activity (2/3) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 flex flex-col gap-6">
-              <OverviewQuickActions onSwitchTab={(tab: any) => setActiveTab(tab)} />
-              <SyncStatus lastSynced={lastSyncedStr} />
-            </div>
-            <div className="lg:col-span-2">
-              <PostingActivity />
-            </div>
+          {/* Middle Row: Google Posts & Activity (Full Width) */}
+          <div className="w-full">
+            <PostingActivity />
           </div>
 
           {/* Third Row: Reputation (1/2) + Keywords (1/2) */}

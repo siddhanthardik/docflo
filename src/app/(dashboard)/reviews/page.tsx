@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, MessageSquare, CheckCircle, Clock, Search, ExternalLink, Bot, ThumbsUp, Send } from "lucide-react";
+import { Star, MessageSquare, CheckCircle, Clock, Search, ExternalLink, Bot, ThumbsUp, Send, Sparkles } from "lucide-react";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { toast } from "sonner";
 
@@ -56,6 +56,17 @@ export default function ReviewsPage() {
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const [pipelineMetrics, setPipelineMetrics] = useState<any>(null);
+  const [targetKeyword, setTargetKeyword] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const kw = params.get("targetKeyword");
+      if (kw) {
+        setTargetKeyword(kw);
+      }
+    }
+  }, []);
 
   const fetchReviews = async () => {
     if (contextLoading) return;
@@ -162,11 +173,15 @@ export default function ReviewsPage() {
     setReplyText("Analyzing review and generating contextual reply...");
     
     try {
-      // 1. Dynamic Keyword Extraction
+      // 1. Dynamic Keyword Extraction with active targetKeyword priority
       let availableKeywords: string[] = [];
+      if (targetKeyword) {
+        availableKeywords.push(targetKeyword);
+      }
       
       if (insights?.searchKeywords && insights.searchKeywords.length > 0) {
-        availableKeywords = insights.searchKeywords.map((k: any) => typeof k === "string" ? k : k.keyword);
+        const extracted = insights.searchKeywords.map((k: any) => typeof k === "string" ? k : k.keyword);
+        availableKeywords = [...availableKeywords, ...extracted.filter((k: string) => k !== targetKeyword)];
       } 
       
       if (insights?.categories) {
@@ -255,6 +270,34 @@ export default function ReviewsPage() {
           </Button>
         )}
       </div>
+
+      {/* ACTIVE SEO KEYWORD TARGET BANNER */}
+      {targetKeyword && (
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200/80 rounded-2xl shadow-xs text-blue-900 text-sm animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-semibold text-blue-950">Targeting Search Term:</span>{" "}
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-700 text-white shadow-2xs">
+                "{targetKeyword}"
+              </span>
+              <span className="text-xs text-blue-700 ml-2 hidden sm:inline">
+                · AI will naturally weave this patient search term into draft replies to strengthen your Google Maps ranking.
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTargetKeyword(null)}
+            className="text-xs text-blue-600 hover:text-blue-900 hover:bg-blue-100/60 font-semibold ml-3 h-8 rounded-lg"
+          >
+            Clear Target
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* TOP PANEL - WHATSAPP PIPELINE METRICS */}
