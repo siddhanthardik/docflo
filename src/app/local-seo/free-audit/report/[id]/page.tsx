@@ -6,11 +6,13 @@ import {
   Activity, CheckCircle2, XCircle, Star, MapPin, Phone, Globe,
   AlertTriangle, Trophy, ChevronDown, ChevronUp, ArrowRight, X,
   Building2, TrendingUp, Search, ShieldAlert, ShieldCheck, Sparkles, Download,
-  ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw
+  ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw,
+  Map, LayoutGrid, Compass
 } from "lucide-react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Google3PackPreview } from "@/components/audit/google-3pack-preview";
 import { MedicalEEATScorecard } from "@/components/audit/medical-eeat-scorecard";
+import { RankTrackerMap } from "@/app/(dashboard)/local-seo/components/RankTrackerMap";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompetitorRow {
@@ -246,48 +248,90 @@ function SearchGridVisualization({
   mapRank = 5, 
   reviewsCount = 45,
   gridData = null,
-  searchContext = ""
+  searchContext = "",
+  centerLat,
+  centerLng,
+  spacingMeters = 500
 }: { 
   specialty: string; 
   city: string; 
   businessName?: string; 
   mapRank?: number; 
   reviewsCount?: number; 
-  gridData?: { rank: number; row: number; col: number }[] | null;
+  gridData?: { rank: number; row: number; col: number; lat?: number; lng?: number; found?: boolean }[] | null;
   searchContext?: string;
+  centerLat?: number;
+  centerLng?: number;
+  spacingMeters?: number;
 }) {
-  const gridRanks = useMemo(() => {
-    // If we have real backend grid data, map it directly
+  const [viewMode, setViewMode] = useState<"map" | "grid">("map");
+
+  // Determine center coordinates
+  const resolvedCenter = useMemo(() => {
+    if (centerLat && centerLng && !isNaN(centerLat) && !isNaN(centerLng)) {
+      return { lat: centerLat, lng: centerLng };
+    }
+    const centerNode = gridData?.find(n => n.row === 2 && n.col === 2) || gridData?.[12];
+    if (centerNode?.lat && centerNode?.lng && !isNaN(centerNode.lat) && !isNaN(centerNode.lng)) {
+      return { lat: centerNode.lat, lng: centerNode.lng };
+    }
+    return { lat: 28.5672, lng: 77.2100 }; // Fallback
+  }, [centerLat, centerLng, gridData]);
+
+  // Normalized 25-cell grid for Map & Matrix
+  const normalizedGrid = useMemo(() => {
     if (gridData && gridData.length > 0) {
       return gridData.map(node => {
         const rank = node.rank;
         const status: "good" | "avg" | "poor" = rank <= 5 ? "good" : rank <= 20 ? "avg" : "poor";
-        return { rank, status, row: node.row, col: node.col };
+        return {
+          row: node.row,
+          col: node.col,
+          lat: node.lat || resolvedCenter.lat,
+          lng: node.lng || resolvedCenter.lng,
+          rank: node.rank,
+          found: node.found !== undefined ? node.found : node.rank <= 20,
+          status
+        };
       }).sort((a, b) => {
-        // Sort by row then col so it lays out in a 5x5 grid
         if (a.row !== b.row) return a.row - b.row;
         return a.col - b.col;
       });
     }
 
-    // Fallback if no grid data available (should not happen with new logic, but safe to keep as simple fallback)
-    const nodes: { rank: number; status: "good" | "avg" | "poor" }[] = [];
+    // Deterministic radius decay fallback (no random numbers)
+    const nodes: any[] = [];
+    const R = 6378137;
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 5; c++) {
-        let rank = r === 2 && c === 2 ? mapRank : mapRank + Math.floor(Math.random() * 5);
-        if (rank > 21) rank = 21;
+        const dRow = 2 - r;
+        const dCol = c - 2;
+        const distSteps = Math.sqrt(dRow * dRow + dCol * dCol);
+        let rank = r === 2 && c === 2 ? mapRank : Math.min(21, mapRank + Math.round(distSteps * 3));
         const status: "good" | "avg" | "poor" = rank <= 5 ? "good" : rank <= 20 ? "avg" : "poor";
-        nodes.push({ rank, status });
+        
+        const dNorth = dRow * spacingMeters;
+        const dEast = dCol * spacingMeters;
+        const lat = resolvedCenter.lat + (dNorth / R) * (180 / Math.PI);
+        const lng = resolvedCenter.lng + (dEast / (R * Math.cos((Math.PI * resolvedCenter.lat) / 180))) * (180 / Math.PI);
+
+        nodes.push({ row: r, col: c, lat, lng, rank, found: rank <= 20, status });
       }
     }
     return nodes;
-  }, [businessName, specialty, mapRank, reviewsCount]);
+  }, [gridData, resolvedCenter, mapRank, spacingMeters]);
 
-  const goodCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "good").length;
-  const avgCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "avg").length;
-  const poorCount = gridRanks.filter((r: { rank: number; status: string }) => r.status === "poor").length;
-  const totalGrid = gridRanks.length;
+  const goodCount = normalizedGrid.filter(r => r.status === "good").length;
+  const avgCount = normalizedGrid.filter(r => r.status === "avg").length;
+  const poorCount = normalizedGrid.filter(r => r.status === "poor").length;
+  const totalGrid = normalizedGrid.length;
   const searchKeyword = specialty ? `${specialty} near me` : "Doctor & Clinic near me";
+
+  // Build rows for 5x5 matrix
+  const matrixRows: typeof normalizedGrid[] = [];
+  for (let r = 0; r < 5; r++) {
+    matrixRows[r] = normalizedGrid.filter(c => c.row === r).sort((a, b) => a.col - b.col);
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
@@ -303,21 +347,23 @@ function SearchGridVisualization({
             Local 5×5 map search radius around <span className="font-semibold text-slate-800">"{searchKeyword}"</span>
           </p>
         </div>
+        
+        {/* Top Badges */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
           <span 
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-emerald-800"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-emerald-800 font-semibold"
             style={{ backgroundColor: "#ecfdf5", borderColor: "#a7f3d0" }}
           >
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#10b981" }} /> Top 5 ({goodCount})
           </span>
           <span 
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-amber-800"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-amber-800 font-semibold"
             style={{ backgroundColor: "#fffbeb", borderColor: "#fde68a" }}
           >
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#f59e0b" }} /> 6–20 ({avgCount})
           </span>
           <span 
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-rose-800"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-rose-800 font-semibold"
             style={{ backgroundColor: "#fff1f2", borderColor: "#fecdd3" }}
           >
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#f43f5e" }} /> &gt;20 ({poorCount})
@@ -325,31 +371,123 @@ function SearchGridVisualization({
         </div>
       </div>
 
-      <div className="p-6">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 relative overflow-hidden mb-5">
-          <div className="relative z-10 grid grid-cols-5 gap-3 max-w-sm mx-auto">
-            {gridRanks.map((item: { rank: number; status: string }, idx: number) => {
-              const isGood = item.status === "good";
-              const isAvg = item.status === "avg";
-              const bgStyle = isGood
-                ? { backgroundColor: "#10b981", color: "#ffffff", borderColor: "#059669" }
-                : isAvg
-                ? { backgroundColor: "#f59e0b", color: "#ffffff", borderColor: "#d97706" }
-                : { backgroundColor: "#ffffff", color: "#64748b", borderColor: "#cbd5e1" };
+      <div className="p-6 space-y-4">
+        {/* View Mode Toggle Header (Hidden in Print) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "map"
+                  ? "bg-white text-indigo-700 shadow-xs border border-slate-200"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Map className="w-3.5 h-3.5 text-indigo-600" />
+              Interactive Google Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "grid"
+                  ? "bg-white text-indigo-700 shadow-xs border border-slate-200"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-indigo-600" />
+              5×5 Matrix Layout
+            </button>
+          </div>
 
-              return (
-                <div
-                  key={idx}
-                  style={bgStyle}
-                  className="aspect-square rounded-xl flex items-center justify-center font-bold text-sm shadow-sm border transition-all cursor-default select-none"
-                >
-                  {item.rank}
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <Compass className="w-4 h-4 text-indigo-500" />
+            <span>Center: <strong className="text-slate-700 font-semibold">{businessName}</strong> ({city})</span>
           </div>
         </div>
 
+        {/* View 1: Interactive Google Map (Screen only) */}
+        {viewMode === "map" && (
+          <div className="print:hidden">
+            <RankTrackerMap
+              grid={normalizedGrid}
+              centerLat={resolvedCenter.lat}
+              centerLng={resolvedCenter.lng}
+              businessName={businessName}
+              spacingMeters={spacingMeters}
+              keyword={searchKeyword}
+            />
+          </div>
+        )}
+
+        {/* View 2: Structured 5x5 Matrix (Active in Grid mode OR when printing) */}
+        <div className={`${viewMode === "map" ? "hidden print:block" : "block"} bg-slate-50/80 border border-slate-200 rounded-2xl p-6 relative overflow-hidden`}>
+          {/* North Indicator */}
+          <div className="text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3">
+            <span className="text-indigo-600 text-xs">▲</span> North <span className="text-indigo-600 text-xs">▲</span>
+          </div>
+
+          {/* Grid with West/East labels */}
+          <div className="flex items-center justify-center gap-3 min-w-[320px]">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest writing-mode-vertical rotate-180 flex items-center gap-1">
+              <span>◀</span> West
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {matrixRows.map((row, rIdx) => (
+                <div key={rIdx} className="flex gap-2.5 justify-center">
+                  {row.map((cell, cIdx) => {
+                    const isCenter = cell.row === 2 && cell.col === 2;
+                    const isGood = cell.status === "good";
+                    const isAvg = cell.status === "avg";
+                    const bgStyle = isCenter
+                      ? { backgroundColor: "#4f46e5", color: "#ffffff", borderColor: "#3730a3" }
+                      : isGood
+                      ? { backgroundColor: "#10b981", color: "#ffffff", borderColor: "#059669" }
+                      : isAvg
+                      ? { backgroundColor: "#f59e0b", color: "#ffffff", borderColor: "#d97706" }
+                      : { backgroundColor: "#ef4444", color: "#ffffff", borderColor: "#dc2626" };
+
+                    const dRow = 2 - cell.row;
+                    const dCol = cell.col - 2;
+                    const approxDist = Math.round(Math.sqrt(dRow * dRow + dCol * dCol) * spacingMeters);
+                    const rankLabel = !cell.found || cell.rank === 0 ? ">20" : cell.rank > 15 ? ">15" : String(cell.rank);
+
+                    return (
+                      <div
+                        key={cIdx}
+                        style={bgStyle}
+                        title={isCenter ? `${businessName} (Clinic Location)` : `Rank ${rankLabel} (${approxDist}m from clinic)`}
+                        className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm shadow-xs border transition-all cursor-default select-none ${isCenter ? 'scale-105 ring-2 ring-indigo-200' : ''}`}
+                      >
+                        {isCenter ? (
+                          <>
+                            <MapPin className="w-4 h-4 fill-white text-white" />
+                            <span className="text-[8px] font-semibold opacity-90">You</span>
+                          </>
+                        ) : (
+                          <span>{rankLabel}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+              East <span>▶</span>
+            </div>
+          </div>
+
+          {/* South Indicator */}
+          <div className="text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mt-3">
+            <span className="text-indigo-600 text-xs">▼</span> South <span className="text-indigo-600 text-xs">▼</span>
+          </div>
+        </div>
+
+        {/* Diagnosis Status Box */}
         {goodCount === totalGrid ? (
           <div 
             className="p-4 rounded-xl flex items-start gap-3 border text-emerald-900"
@@ -771,6 +909,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               reviewsCount={Number(reviewsCount) || 0} 
               gridData={compIntel?.gridData}
               searchContext={compIntel?.searchContext || city}
+              centerLat={compIntel?.centerLat || reportData?.lat}
+              centerLng={compIntel?.centerLng || reportData?.lng}
+              spacingMeters={compIntel?.spacingMeters || 500}
             />
 
             {/* ── SECTION 2.5: Live Google 3-Pack SERP Visual Preview ──── */}

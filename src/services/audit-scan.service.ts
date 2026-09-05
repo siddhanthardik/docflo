@@ -329,6 +329,9 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
           gridData: gridData ? gridData.ranks : null,
           compositeData,
           searchContext: locationContext || cityStr,
+          centerLat: targetLocation?.lat || extracted?.lat || null,
+          centerLng: targetLocation?.lng || extracted?.lng || null,
+          spacingMeters: 500,
           competitors: [
             ...competitorsData.map((c, i) => ({
               name: c.name,
