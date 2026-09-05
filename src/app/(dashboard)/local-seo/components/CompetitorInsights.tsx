@@ -58,6 +58,137 @@ function formatDistance(meters: number | null) {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+interface CompetitorAnalysis {
+  signalBadge: {
+    label: string;
+    color: string;
+  };
+  explanation: string;
+  detectedKeywords: string[];
+  primaryCounterKeyword: string;
+  counterActionNote: string;
+  reviewGap: number;
+}
+
+function getCompetitorIntelligence(
+  comp: Competitor,
+  doctorReviewCount: number,
+  doctorRating: number,
+  primaryCategory: string
+): CompetitorAnalysis {
+  const name = comp.name || "";
+
+  // 1. Extract specific keywords & localities from the competitor's title
+  const detectedKeywords: string[] = [];
+  
+  // Split by common title delimiters: |, -, –, ,, /
+  const rawSegments = name.split(/[|\-–,/·]/).map(s => s.trim()).filter(Boolean);
+  
+  for (const seg of rawSegments) {
+    const l = seg.toLowerCase();
+    // Exclude basic doctor names unless combined with medical keyword
+    if ((l.startsWith("dr ") || l.startsWith("dr.") || l.startsWith("prof")) && !l.includes("gynec") && !l.includes("clinic")) {
+      continue;
+    }
+    if (
+      l.includes("gynec") || 
+      l.includes("obste") || 
+      l.includes("clinic") || 
+      l.includes("hospital") || 
+      l.includes("centre") || 
+      l.includes("center") || 
+      l.includes("care") || 
+      l.includes("specialist") || 
+      l.includes("best") || 
+      l.includes("maternity") ||
+      l.includes("abortion") ||
+      l.includes("doctor in") ||
+      l.includes("market") ||
+      l.includes("park") ||
+      l.includes("delhi") ||
+      l.includes("gk") ||
+      l.includes("kalkaji") ||
+      l.includes("alaknanda")
+    ) {
+      const cleaned = seg.replace(/^[-|–,.\s]+|[-|–,.\s]+$/g, "").trim();
+      if (cleaned.length > 2 && !detectedKeywords.includes(cleaned)) {
+        detectedKeywords.push(cleaned);
+      }
+    }
+  }
+
+  // Determine Primary Counter Keyword
+  let primaryCounterKeyword = detectedKeywords[0] || `${primaryCategory} near me`;
+  if (primaryCounterKeyword.length > 30) {
+    const subParts = primaryCounterKeyword.split(/[,|\-]/);
+    primaryCounterKeyword = subParts[0].trim();
+  }
+
+  const reviewGap = Math.max(0, comp.reviewCount - doctorReviewCount);
+
+  // 2. Identify Primary Ranking Signal
+  const hasKeywordInTitle = detectedKeywords.length > 0;
+  const isHighVolumeLeader = comp.reviewCount >= 450;
+  const isHighRatingLeader = comp.rating >= 4.9 && comp.reviewCount >= 200;
+
+  if (hasKeywordInTitle && detectedKeywords.some(k => {
+    const l = k.toLowerCase();
+    return l.includes("best") || l.includes("market") || l.includes("delhi") || l.includes("near me") || l.includes("gk") || l.includes("kalkaji");
+  })) {
+    return {
+      signalBadge: {
+        label: "Title Keyword & Location Dominance",
+        color: "bg-purple-50 text-purple-700 border-purple-200",
+      },
+      explanation: `This clinic directly includes high-intent patient search terms in its title (${detectedKeywords.slice(0, 3).join(", ")}), giving it a strong boost in local Map Pack queries.`,
+      detectedKeywords,
+      primaryCounterKeyword,
+      counterActionNote: `Counter their title keyword reach by posting Google Updates targeting "${primaryCounterKeyword}" and requesting reviews mentioning this phrase.`,
+      reviewGap
+    };
+  }
+
+  if (isHighVolumeLeader) {
+    return {
+      signalBadge: {
+        label: "Review Volume Authority Leader",
+        color: "bg-amber-50 text-amber-700 border-amber-200",
+      },
+      explanation: `Ranks high due to an accumulated base of ${comp.reviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${primaryCategory} Clinic`, "Patient Care"],
+      primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
+      counterActionNote: `Close their review lead by sending automated WhatsApp review requests to your recent patients. Weekly reviews beat older static volumes.`,
+      reviewGap
+    };
+  }
+
+  if (isHighRatingLeader) {
+    return {
+      signalBadge: {
+        label: "High Sentiment & Quality Trust",
+        color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      },
+      explanation: `Maintains a strong ${comp.rating.toFixed(1)}★ rating across ${comp.reviewCount} reviews, earning high algorithmic trust for positive patient outcomes.`,
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${primaryCategory}`, "5 Star Care"],
+      primaryCounterKeyword: detectedKeywords[0] || `Top ${primaryCategory}`,
+      counterActionNote: `Showcase your patient success stories in Google Updates and keep collecting 5-star feedback to rival their sentiment score.`,
+      reviewGap
+    };
+  }
+
+  return {
+    signalBadge: {
+      label: "Local Specialty Competitor",
+      color: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    explanation: `Consistently visible for ${primaryCategory} in your local search radius (${formatDistance(comp.distanceMeters)} away).`,
+    detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [primaryCategory, `${primaryCategory} near me`],
+    primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
+    counterActionNote: `Target nearby patient searches by publishing weekly updates highlighting your clinic's services and location.`,
+    reviewGap
+  };
+}
+
 // Interactive Competitor Keyword Targeting Block
 function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { competitors: Competitor[]; primaryCategory: string; keywordsData: any }) {
   const router = useRouter();
@@ -538,63 +669,120 @@ export function CompetitorInsights() {
               </div>
 
               {/* Expandable Strategy & Details Drawer */}
-              {isExpanded && (
-                <div className="mx-2 mb-2 p-4 bg-white rounded-xl border border-gray-200/90 shadow-2xs space-y-3 animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">
-                        {comp.reviewCount} patient reviews · {comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"} · {formatDistance(comp.distanceMeters)} away
+              {isExpanded && (() => {
+                const intel = getCompetitorIntelligence(comp, doctorReviewCount, doctorRating, primaryCategory);
+
+                return (
+                  <div className="mx-2 mb-3 p-4 bg-white rounded-2xl border border-gray-200/90 shadow-xs space-y-3.5 animate-in fade-in duration-200">
+                    {/* Top Bar: Clinic Name + Google Maps Button */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
+                        </div>
+                        <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2">
+                          <span>{comp.reviewCount} patient reviews</span>
+                          <span>·</span>
+                          <span>{comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"}</span>
+                          {comp.distanceMeters != null && (
+                            <>
+                              <span>·</span>
+                              <span>{formatDistance(comp.distanceMeters)} away</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-700 shadow-2xs transition-colors shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                        View on Google Maps
+                      </a>
+                    </div>
+
+                    {/* Identified Ranking Signal */}
+                    <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${intel.signalBadge.color}`}>
+                          <Sparkles className="w-3 h-3" />
+                          {intel.signalBadge.label}
+                        </span>
+                        {intel.reviewGap > 0 && (
+                          <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                            +{intel.reviewGap} reviews ahead
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-700 leading-relaxed">
+                        {intel.explanation}
                       </p>
                     </div>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-lg text-xs font-semibold text-gray-700 hover:text-indigo-700 shadow-2xs transition-colors shrink-0"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
-                      View on Google Maps
-                    </a>
-                  </div>
 
-                  <div className="p-3 bg-gray-50/70 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <span className="text-gray-700 font-medium text-xs">
-                        Counter-target this competitor&apos;s patient search reach with an active Google Update or targeted Review reply:
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(primaryCategory)}`);
-                        }}
-                        className="text-xs h-8 border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold rounded-lg"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 mr-1" />
-                        Draft Post
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/reviews?targetKeyword=${encodeURIComponent(primaryCategory)}`);
-                        }}
-                        className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-lg"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                        Target in Reviews
-                      </Button>
+                    {/* Extracted Search Keywords for THIS Competitor */}
+                    {intel.detectedKeywords.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                          Detected Search Terms in Listing
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {intel.detectedKeywords.map((kw, kIdx) => (
+                            <button
+                              key={kIdx}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-medium border border-indigo-100 transition-colors"
+                              title={`Draft Google Post targeting "${kw}"`}
+                            >
+                              <Target className="w-3 h-3 text-indigo-500" />
+                              {kw}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Plan & Targeted Buttons */}
+                    <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-indigo-950">Recommended Counter-Action:</p>
+                        <p className="text-gray-600 mt-0.5">{intel.counterActionNote}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                          }}
+                          className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex-1 sm:flex-initial"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 mr-1" />
+                          Draft Post ({intel.primaryCounterKeyword.slice(0, 16)}...)
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/reviews?targetKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                          }}
+                          className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-xl flex-1 sm:flex-initial"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                          Target in Reviews
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}
