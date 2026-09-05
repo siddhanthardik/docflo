@@ -7,7 +7,7 @@ import {
   Send, CheckCheck, Phone, Video, 
   MoreVertical, ArrowLeft, Stethoscope, ChevronRight, 
   QrCode, User, Mail, Building2, Sparkles, Bot, Check, Smartphone, 
-  RefreshCw, PowerOff, ShieldCheck, Clock, CheckCircle2, AlertCircle
+  RefreshCw, PowerOff, ShieldCheck, Clock, CheckCircle2, AlertCircle, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +91,7 @@ export function AIRepceptionistSimulator() {
     {
       id: "init-1",
       sender: "ai",
-      text: `Namaste! 🙏 Welcome to ${ALL_SPECIALTIES[0].defaultClinic}.\n\nI am Mona, the 24/7 AI Receptionist for ${ALL_SPECIALTIES[0].defaultDoc}. How can I assist you with your appointment or visit today?`,
+      text: `Namaste! 🙏 Welcome to ${ALL_SPECIALTIES[0].defaultClinic}.\n\nI am Mona, practice assistant for ${ALL_SPECIALTIES[0].defaultDoc}. How can I assist you with your appointment or consultation today?`,
       time: "10:30 AM"
     }
   ]);
@@ -203,7 +203,7 @@ export function AIRepceptionistSimulator() {
       {
         id: `init-${Date.now()}`,
         sender: "ai",
-        text: `Namaste! 🙏 Welcome to ${newClinic || "our clinic"}.\n\nI am ${newAssistant || "Mona"}, the 24/7 AI Receptionist for ${newDoc || "the Doctor"} (${newSpecName}). How can I assist you with your appointment or consultation today?`,
+        text: `Namaste! 🙏 Welcome to ${newClinic || "our clinic"}.\n\nI am ${newAssistant || "Mona"}, practice assistant for ${newDoc || "the Doctor"} (${newSpecName}). How can I assist you with your appointment or consultation today?`,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       }
     ]);
@@ -369,13 +369,13 @@ export function AIRepceptionistSimulator() {
   }).toString();
 
   return (
-    <section className="py-16 sm:py-20 bg-slate-50 border-y border-slate-200/80 relative" id="ai-simulator">
+    <section className="py-16 sm:py-20 bg-slate-50 border-y border-slate-200/80 relative" id="receptionist-simulator">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-10">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Test Your Clinic&apos;s AI Receptionist in 60 Seconds
+            Test Your 24/7 Practice Receptionist in 60 Seconds
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
             Enter your doctor profile below to generate your live WhatsApp QR code. Test real patient interactions on your own phone with 100% automatic session logout.
@@ -393,7 +393,7 @@ export function AIRepceptionistSimulator() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   <User className="w-4 h-4 text-blue-600" />
-                  1. Setup Your Clinic AI
+                  1. Setup Practice Assistant
                 </span>
                 <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" /> Auto-Logout Sandbox
@@ -437,7 +437,7 @@ export function AIRepceptionistSimulator() {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    AI Assistant Name
+                    Practice Assistant Name
                   </label>
                   <Input
                     type="text"
@@ -576,7 +576,7 @@ export function AIRepceptionistSimulator() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Bot className="w-3.5 h-3.5 text-blue-600" />
+                <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
                 On-Screen Chat Mockup
               </button>
             </div>
@@ -599,7 +599,7 @@ export function AIRepceptionistSimulator() {
                   </div>
                   <h3 className="font-extrabold text-slate-900 text-base sm:text-lg">
                     {connectionStatus === "CONNECTED" 
-                      ? "🟢 AI Receptionist is Live!" 
+                      ? "🟢 Practice Receptionist is Live!" 
                       : `Link WhatsApp to Test ${assistantName}`}
                   </h3>
                 </div>
@@ -615,7 +615,7 @@ export function AIRepceptionistSimulator() {
                         Your WhatsApp is Linked to {assistantName}
                       </h4>
                       <p className="text-xs text-slate-600 leading-relaxed max-w-[320px] mx-auto">
-                        Send any test inquiry from another phone to your WhatsApp number. {assistantName} will reply as your 24/7 AI Receptionist!
+                        Send any test inquiry from another phone to your WhatsApp number. {assistantName} will reply as your 24/7 practice assistant!
                       </p>
                     </div>
 
@@ -711,7 +711,7 @@ export function AIRepceptionistSimulator() {
                         </Badge>
                       </div>
                       <div className="text-[11px] text-emerald-100 leading-tight truncate">
-                        online • 24/7 AI Receptionist
+                        online • 24/7 Practice Assistant
                       </div>
                     </div>
                   </div>

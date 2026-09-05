@@ -19,24 +19,21 @@ export function LandingHeader() {
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center gap-7">
+          <nav className="hidden lg:flex items-center gap-3 xl:gap-5">
             {[
-              { label: "Local Rank Grid", href: "/#local-grid" },
+              { label: "Local Rank Tracker", href: "/#local-grid" },
+              { label: "WhatsApp Receptionist", href: "/#receptionist-simulator" },
+              { label: "Specialty Websites", href: "/#clinic-websites" },
               { label: "Features", href: "/#features" },
-              { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
-              { label: "WhatsApp AI", href: "/#whatsapp-engine" },
-              { label: "Compare", href: "/#comparison" },
+              { label: "Booking Demo", href: "/#whatsapp-demo" },
+              { label: "Revenue Calculator", href: "/#roi-calculator" },
+              { label: "Comparison", href: "/#comparison" },
               { label: "Pricing", href: "/#pricing" },
-              { label: "ROI Calculator", href: "/#roi-calculator" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`text-sm font-semibold transition-colors ${
-                  item.label.includes("Demo") 
-                    ? "text-emerald-700 hover:text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60" 
-                    : "text-slate-600 hover:text-blue-600"
-                }`}
+                className="text-xs xl:text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors whitespace-nowrap"
               >
                 {item.label}
               </Link>
@@ -53,7 +50,7 @@ export function LandingHeader() {
               </Button>
             </Link>
             <button 
-              className="md:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
+              className="lg:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open mobile menu"
             >
@@ -65,7 +62,7 @@ export function LandingHeader() {
 
       {/* ── MOBILE MENU OVERLAY ── */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
+        <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 lg:hidden">
           <div className="flex items-center justify-between mb-8">
             <Link href="/">
               <GyrexLogo size="md" />
@@ -78,23 +75,22 @@ export function LandingHeader() {
             </button>
           </div>
           
-          <nav className="flex flex-col gap-5 text-lg font-semibold text-slate-700">
+          <nav className="flex flex-col gap-4 text-base font-semibold text-slate-700">
             {[
-              { label: "Local Rank Grid", href: "/#local-grid" },
+              { label: "Local Rank Tracker", href: "/#local-grid" },
+              { label: "WhatsApp Receptionist", href: "/#receptionist-simulator" },
+              { label: "Specialty Websites", href: "/#clinic-websites" },
               { label: "Features", href: "/#features" },
-              { label: "AI Receptionist Demo", href: "/ai-receptionist-demo" },
-              { label: "WhatsApp AI", href: "/#whatsapp-engine" },
-              { label: "Compare", href: "/#comparison" },
+              { label: "Patient Booking Demo", href: "/#whatsapp-demo" },
+              { label: "Comparison", href: "/#comparison" },
               { label: "Pricing", href: "/#pricing" },
-              { label: "ROI Calculator", href: "/#roi-calculator" },
+              { label: "Revenue Calculator", href: "/#roi-calculator" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`transition-colors border-b border-slate-100 pb-3.5 ${
-                  item.label.includes("Demo") ? "text-emerald-700 font-bold" : "hover:text-blue-600"
-                }`}
+                className="transition-colors border-b border-slate-100 pb-3 hover:text-blue-600"
               >
                 {item.label}
               </Link>

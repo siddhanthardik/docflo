@@ -169,7 +169,7 @@ const SPECIALTY_THEMES = [
     heroImage: "/images/themes/ivf-hero.jpg",
     specialty: "IVF & Reproductive Health",
     headline: "Compassionate, Science-Driven Fertility Care on Your Journey to Parenthood",
-    badges: ["🌸 78% First-Cycle Success", "🔬 AI Blastocyst Scoring", "🤝 100% Confidential Care"],
+    badges: ["🌸 78% First-Cycle Success", "✨ Advanced Embryo Scoring", "🤝 100% Confidential Care"],
     services: ["Advanced IVF / ICSI Cycles", "Egg & Embryo Freezing", "PCOS Management Clinic", "Recurrent Loss Support"],
   },
   {
@@ -246,7 +246,7 @@ export default function LandingPage() {
 
   // Rotating Hero Punchlines
   const punchlines = [
-    "24/7 WhatsApp AI Receptionist That Books Appointments",
+    "24/7 Automated WhatsApp Appointment Booking",
     "Rank #1 on Google Maps in Your Neighborhood",
     "Instant 5-Star Reviews on WhatsApp",
     "Tailored Websites for 20 Medical Specialties",
@@ -311,10 +311,10 @@ export default function LandingPage() {
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
-                <Link href="#ai-simulator">
+                <Link href="#receptionist-simulator">
                   <Button variant="outline" className="h-13 px-6 rounded-2xl border-emerald-500/40 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-950 font-bold text-sm shadow-xs flex items-center gap-2 transition-transform hover:scale-105">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span>AI Receptionist Demo</span>
+                    <span>Practice Reception Demo</span>
                   </Button>
                 </Link>
                 <Link href="#clinic-websites">
@@ -370,7 +370,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Floating Badge 1: Live WhatsApp AI Booking */}
+              {/* Floating Badge 1: Live WhatsApp Booking */}
               <div className="absolute -top-3 -right-3 sm:-right-5 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-emerald-100 flex items-center gap-3 z-20 max-w-[240px]">
                 <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0 relative">
                   <MessageSquare className="w-4 h-4 fill-white" />
@@ -380,7 +380,7 @@ export default function LandingPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 leading-none">24/7 AI Receptionist</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 leading-none">24/7 Practice Assistant</span>
                   <p className="text-xs font-bold text-slate-900 leading-tight mt-0.5">Appointment Confirmed (4:30 PM)</p>
                 </div>
               </div>
@@ -407,7 +407,7 @@ export default function LandingPage() {
       {/* ── INTERACTIVE 60-SECOND AI RECEPTIONIST SIMULATOR LEAD MAGNET ── */}
       <AIRepceptionistSimulator />
 
-      {/* ── GREXA-INSPIRED 4-AGENT MODULAR BENTO GRID (THE CONNECTED PRACTICE OS) ── */}
+      {/* ── 4-PILLAR MODULAR BENTO GRID (THE CONNECTED PRACTICE OS) ── */}
       <section ref={bentoRef} className="py-16 bg-white border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
@@ -416,13 +416,13 @@ export default function LandingPage() {
               Meet Your Complete Digital Practice Growth Team
             </h2>
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              4 specialized AI engines working seamlessly together to rank your clinic, build your brand, and automate patient communication.
+              4 unified practice systems working seamlessly together to rank your clinic, build your brand, and automate patient communication.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             
-            {/* Agent 1: Google Maps SEO & GBP Booster (Amber / Orange) */}
+            {/* Pillar 1: Google Maps Visibility System (Amber / Orange) */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4 }}
               className="rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
               style={{ backgroundImage: "linear-gradient(135deg, #FFF9F2 0%, #FFFFFF 100%)" }}>
@@ -432,7 +432,7 @@ export default function LandingPage() {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900">Google Maps SEO Engine</h3>
+                    <h3 className="text-base font-black text-slate-900">Google Maps Visibility System</h3>
                     <span className="text-[11px] font-bold text-amber-700">Local Catchment Domination</span>
                   </div>
                 </div>
@@ -441,7 +441,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Simulates 25 virtual searchers across a 5km radius to identify exact competitor gaps and rank your clinic at the top of Google Maps.
+                Tracks 25 local neighborhood search points across a 5km radius to identify exact competitor gaps and rank your clinic at the top of Google Maps.
               </p>
               <div className="bg-white p-3.5 rounded-2xl border border-amber-100 flex items-center justify-between shadow-2xs">
                 <span className="text-xs font-bold text-slate-700">5×5 Geo-Rank Coverage</span>
@@ -449,18 +449,18 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Agent 2: 24/7 WhatsApp AI Receptionist (Emerald / Green) */}
+            {/* Pillar 2: 24/7 WhatsApp Receptionist (Emerald / Green) */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.1 }}
               className="rounded-3xl p-6 sm:p-7 border border-emerald-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
               style={{ backgroundImage: "linear-gradient(135deg, #F2FFFA 0%, #FFFFFF 100%)" }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
-                    <Bot className="w-5 h-5" />
+                    <MessageSquare className="w-5 h-5 fill-white" />
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-900">24/7 WhatsApp Receptionist</h3>
-                    <span className="text-[11px] font-bold text-emerald-700">Multilingual AI Booking</span>
+                    <span className="text-[11px] font-bold text-emerald-700">Multilingual Patient Scheduling</span>
                   </div>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200">
@@ -476,7 +476,7 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Agent 3: Healthcare Website Builder (Indigo / Purple) */}
+            {/* Pillar 3: Healthcare Website Builder (Indigo / Purple) */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.2 }}
               className="rounded-3xl p-6 sm:p-7 border border-indigo-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
               style={{ backgroundImage: "linear-gradient(135deg, #FAF8FF 0%, #FFFFFF 100%)" }}>
@@ -503,7 +503,7 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Agent 4: 5-Star WhatsApp Review Engine (Blue / Cyan) */}
+            {/* Pillar 4: 5-Star WhatsApp Review System (Blue / Cyan) */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={bentoInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4, delay: 0.3 }}
               className="rounded-3xl p-6 sm:p-7 border border-blue-200/80 shadow-md space-y-4 hover:shadow-xl transition-all duration-300"
               style={{ backgroundImage: "linear-gradient(135deg, #F0F7FF 0%, #FFFFFF 100%)" }}>
@@ -513,7 +513,7 @@ export default function LandingPage() {
                     <Star className="w-5 h-5 fill-white" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900">5-Star Review Engine</h3>
+                    <h3 className="text-base font-black text-slate-900">5-Star Review System</h3>
                     <span className="text-[11px] font-bold text-blue-700">Automated Patient Feedback</span>
                   </div>
                 </div>
@@ -613,9 +613,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
                 2
               </div>
-              <h3 className="text-base font-black text-slate-900">AI Activates Practice Platform</h3>
+              <h3 className="text-base font-black text-slate-900">Instant Practice Platform Setup</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Gyrex instantly deploys your custom specialty website, clinical procedures menu, and 24/7 AI chat receptionist.
+                Gyrex instantly deploys your custom specialty website, clinical procedures menu, and 24/7 patient booking assistant.
               </p>
               <div className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
                 <Sparkles className="w-3.5 h-3.5" /> Auto-Configured CMS
@@ -830,7 +830,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-base font-bold text-slate-900">5×5 Geo-Rank Heatmap Tracker</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Simulates 25 virtual searchers across a 5km radius to show your clinic&apos;s exact Google Maps position for keywords like &quot;Dermatologist near me&quot;.
+                  Audits 25 local search positions across a 5km radius to show your clinic&apos;s exact Google Maps position for keywords like &quot;Dermatologist near me&quot;.
                 </p>
                 <div className="pt-1 flex items-center gap-1.5 text-[11px] font-bold text-blue-700">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Real-time Google Map Pack Audit
@@ -841,7 +841,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                   <Star className="w-5 h-5 fill-emerald-600" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">5-Star WhatsApp Review Engine</h3>
+                <h3 className="text-base font-bold text-slate-900">5-Star WhatsApp Review System</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Automatically dispatches 2-step feedback surveys via WhatsApp after consultations. Converts 70%+ of happy patients into 5-star Google reviews.
                 </p>
@@ -1161,7 +1161,7 @@ export default function LandingPage() {
                           let featureList = [
                             "5×5 Geo-Rank Google Maps (5 Keywords)",
                             "Automated 5-Star WhatsApp Reviews",
-                            "AI Google Review Auto-Responder",
+                            "Google Review Auto-Responder",
                             "Google Business Profile Optimizer",
                             "4 Scheduled Google Posts / Month",
                             "Patient CRM & Direct QR WhatsApp"
@@ -1172,19 +1172,19 @@ export default function LandingPage() {
                               "Everything in Starter, plus:",
                               "Custom Specialty Website (20 Themes)",
                               "Connect Custom Domain (drname.com)",
-                              "Web Appointment Booking Engine",
+                              "Web Appointment Booking System",
                               "WhatsApp CRM & Unified Inbox",
-                              "AI Google Business Posts (15 Posts/mo)",
+                              "Automated Google Business Posts (15 Posts/mo)",
                               "Digital Invoicing & WhatsApp Sharing",
                               "Medical SEO Schema & Meta Tags"
                             ];
                           } else if (slug.includes("premium")) {
                             featureList = [
                               "Everything in Growth, plus:",
-                              "24/7 Multilingual WhatsApp AI Receptionist",
+                              "24/7 Multilingual WhatsApp Assistant",
                               "Doctor WhatsApp Delegation Assistant",
-                              "Automated WhatsApp Review & Feedback Engine",
-                              "Unlimited Google Posts & AI Creator",
+                              "Automated WhatsApp Review & Feedback System",
+                              "Unlimited Google Posts & Scheduling",
                               "24h & 2h Automated WhatsApp Reminders",
                               "Multi-Doctor Practice Scheduling & VIP Support"
                             ];
@@ -1302,8 +1302,8 @@ export default function LandingPage() {
                 a: "Yes! You can connect any custom domain (e.g. yourclinic.com) with 1 click. We provide automated free SSL certification and high-speed global CDN hosting.",
               },
               {
-                q: "How does the WhatsApp AI Receptionist work?",
-                a: "Our AI Receptionist connects to your WhatsApp Business number via QR code. It answers patient inquiries 24/7 in 6+ languages, explains your treatments, and books appointments directly into your clinic schedule.",
+                q: "How does the WhatsApp Practice Receptionist work?",
+                a: "Our automated receptionist connects to your WhatsApp Business number via QR code. It answers patient inquiries 24/7 in 6+ languages, explains your treatments, and books appointments directly into your clinic schedule.",
               },
               {
                 q: "How does the 5×5 Geo Heatmap improve my Google Maps ranking?",

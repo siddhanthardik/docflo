@@ -15,7 +15,7 @@ export function Footer() {
               <GyrexLogo size="md" lightText />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              The complete practice growth platform for modern doctors and specialty clinics. Automated Google Maps SEO, custom clinic websites, 24/7 WhatsApp AI receptionist, and 5-star review growth.
+              The complete practice growth platform for modern doctors and specialty clinics. Automated Google Maps SEO, custom clinic websites, 24/7 WhatsApp practice receptionist, and 5-star review growth.
             </p>
           </div>
           
@@ -38,12 +38,12 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/#features" className="hover:text-white transition-colors">
-                  5-Star WhatsApp Review Engine
+                  5-Star WhatsApp Review System
                 </Link>
               </li>
               <li>
-                <Link href="/#whatsapp-engine" className="hover:text-white transition-colors">
-                  24/7 WhatsApp AI Receptionist
+                <Link href="/#receptionist-simulator" className="hover:text-white transition-colors">
+                  24/7 WhatsApp Practice Assistant
                 </Link>
               </li>
               <li>

@@ -258,7 +258,7 @@ export function ComparisonTable() {
             How Gyrex Compares to Traditional Alternatives
           </h2>
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-            See why forward-thinking medical clinics choose Gyrex AI over full-time staff payroll, generic chatbots, and high-commission aggregator portals.
+            See why forward-thinking medical clinics choose Gyrex over full-time staff payroll, generic chatbots, and high-commission aggregator portals.
           </p>
         </div>
 
@@ -279,7 +279,7 @@ export function ComparisonTable() {
                         <Sparkles className="w-3 h-3 text-amber-300" /> Recommended
                       </span>
                       <span className="text-base font-black text-slate-900 flex items-center justify-center gap-1.5">
-                        Gyrex AI Practice
+                        Gyrex Platform
                       </span>
                       <p className="text-xs font-extrabold text-emerald-700">
                         Flat ₹3,999 / mo
@@ -388,11 +388,11 @@ export function ComparisonTable() {
             <div className="flex items-center gap-3 text-slate-700 text-xs">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>
-                <strong>Zero Setup Fees • No Credit Card Required</strong> — Try the full AI assistant in our live sandbox.
+                <strong>Zero Setup Fees • No Credit Card Required</strong> — Test the practice assistant in our live interactive demo.
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/ai-receptionist-demo">
+              <Link href="#receptionist-simulator">
                 <Button variant="outline" className="text-xs h-10 px-4 rounded-xl border-slate-300">
                   Open Interactive Demo
                 </Button>
@@ -477,7 +477,7 @@ export function ComparisonTable() {
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                       <span className="text-xs font-extrabold text-emerald-950">
-                        Gyrex AI Practice Engine (₹3,999/mo)
+                        Gyrex Practice Platform (₹3,999/mo)
                       </span>
                     </div>
                     <p className="text-xs font-bold text-slate-900 pl-6">
@@ -526,7 +526,7 @@ export function ComparisonTable() {
               Flat ₹3,999 / month with zero patient commissions.
             </p>
             <div className="flex flex-col gap-2 pt-1">
-              <Link href="/ai-receptionist-demo">
+              <Link href="#receptionist-simulator">
                 <Button variant="outline" className="w-full text-xs h-10 rounded-xl">
                   Try Live Simulator
                 </Button>

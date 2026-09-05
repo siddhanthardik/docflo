@@ -309,7 +309,7 @@ export function LiveWhatsAppChatMockup() {
         </Badge>
         
         <h3 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Watch Gyrex AI Handle Patient Bookings & Doctor Delegation Live
+          Watch Gyrex Handle Patient Bookings & Doctor Delegation Live
         </h3>
         
         <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
@@ -397,7 +397,7 @@ export function LiveWhatsAppChatMockup() {
                         ? "typing..." 
                         : isDoctorDelegation 
                         ? "Doctor Copilot • Action Ready" 
-                        : "Online • 24/7 AI Receptionist"}
+                        : "Online • 24/7 Practice Assistant"}
                     </span>
                   </div>
                 </div>
@@ -636,7 +636,7 @@ export function LiveWhatsAppChatMockup() {
               <strong>Patient Mode:</strong> Courteous, warm, multilingual guide answering patient questions, quoting fees, and booking slots 24/7.
             </p>
             <p className="text-[11px] text-indigo-950/80 leading-relaxed">
-              <strong>Doctor Delegation Mode:</strong> Direct, concise executive copilot. The doctor can text simple instructions (mass rescheduling, notifying patients, report updates) and the AI executes backend actions in seconds.
+              <strong>Doctor Delegation Mode:</strong> Direct, concise executive assistant. The doctor can text simple instructions (mass rescheduling, notifying patients, report updates) and the system executes backend actions in seconds.
             </p>
           </div>
 
@@ -664,7 +664,7 @@ export function LiveWhatsAppChatMockup() {
               <div>
                 <p className="text-xs font-bold text-slate-900">Clean Appointment Confirmation</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Instant card sharing Doctor, Specialty, Clinic, Patient Name, Date & Time, and Consultation Fee without false EMR claims.
+                  Instant card sharing Doctor, Specialty, Clinic, Patient Name, Date & Time, and Consultation Fee without false claims.
                 </p>
               </div>
             </div>
@@ -695,13 +695,13 @@ export function LiveWhatsAppChatMockup() {
               </div>
             </div>
 
-            {/* 5. Google 5-Star Review Autopilot */}
+            {/* 5. Google 5-Star Review Funnel */}
             <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 font-black text-xs">
                 5
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900">Google 5-Star Review Autopilot</p>
+                <p className="text-xs font-bold text-slate-900">Google 5-Star Review Funnel</p>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                   Automated review collection on your Google Business Profile after visits to dominate the local Google Maps 3-Pack.
                 </p>
@@ -710,17 +710,19 @@ export function LiveWhatsAppChatMockup() {
 
           </div>
 
-          {/* Animation Controls & CTAs */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+          {/* Quick Interaction Bar & CTA */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
-                variant="outline"
+                variant={isPlaying ? "default" : "outline"}
                 size="sm"
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="text-xs h-10 px-3 rounded-xl border-slate-300 gap-1.5 flex-1 sm:flex-initial"
+                className={`text-xs h-10 px-4 rounded-xl gap-1.5 flex-1 sm:flex-initial ${
+                  isPlaying ? "bg-slate-900 hover:bg-slate-800 text-white" : "border-slate-300"
+                }`}
               >
-                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                <span>{isPlaying ? "Pause" : "Play"}</span>
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                <span>{isPlaying ? "Pause Demo" : "Play Demo"}</span>
               </Button>
 
               <Button
@@ -737,7 +739,7 @@ export function LiveWhatsAppChatMockup() {
               </Button>
             </div>
 
-            <Link href="/ai-receptionist-demo" className="w-full sm:flex-1">
+            <Link href="#receptionist-simulator" className="w-full sm:flex-1">
               <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-4 rounded-xl shadow-md shadow-emerald-600/20">
                 Try Live Simulator
               </Button>
