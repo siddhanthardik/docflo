@@ -13,44 +13,41 @@ export function LandingHeader() {
     <>
       <header className="fixed top-0 z-50 w-full border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <GyrexLogo size="md" />
+          <div className="flex items-center gap-3 shrink-0">
+            <Link href="/" className="shrink-0 flex items-center">
+              <GyrexLogo size="xl" />
             </Link>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-3 xl:gap-5">
+          <nav className="hidden md:flex items-center gap-5 lg:gap-7 xl:gap-8">
             {[
               { label: "Local Rank Tracker", href: "/#local-grid" },
               { label: "WhatsApp Receptionist", href: "/#receptionist-simulator" },
-              { label: "Specialty Websites", href: "/#clinic-websites" },
               { label: "Features", href: "/#features" },
               { label: "Booking Demo", href: "/#whatsapp-demo" },
-              { label: "Revenue Calculator", href: "/#roi-calculator" },
-              { label: "Comparison", href: "/#comparison" },
               { label: "Pricing", href: "/#pricing" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-xs xl:text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors whitespace-nowrap"
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors hidden sm:block">
+          <div className="flex items-center gap-4 shrink-0">
+            <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors hidden sm:block whitespace-nowrap">
               Sign In
             </Link>
-            <Link href="/local-seo/free-audit">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 h-11 text-sm font-semibold shadow-md shadow-blue-500/20 transition-all border border-blue-500/30">
+            <Link href="/local-seo/free-audit" className="shrink-0">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 h-11 text-sm font-semibold shadow-md shadow-blue-500/20 transition-all border border-blue-500/30 whitespace-nowrap">
                 Get Free Audit
               </Button>
             </Link>
             <button 
-              className="lg:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
+              className="md:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open mobile menu"
             >
@@ -62,10 +59,10 @@ export function LandingHeader() {
 
       {/* ── MOBILE MENU OVERLAY ── */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 lg:hidden">
+        <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-right-full duration-300 md:hidden">
           <div className="flex items-center justify-between mb-8">
-            <Link href="/">
-              <GyrexLogo size="md" />
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+              <GyrexLogo size="xl" />
             </Link>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
@@ -79,12 +76,9 @@ export function LandingHeader() {
             {[
               { label: "Local Rank Tracker", href: "/#local-grid" },
               { label: "WhatsApp Receptionist", href: "/#receptionist-simulator" },
-              { label: "Specialty Websites", href: "/#clinic-websites" },
               { label: "Features", href: "/#features" },
-              { label: "Patient Booking Demo", href: "/#whatsapp-demo" },
-              { label: "Comparison", href: "/#comparison" },
+              { label: "Booking Demo", href: "/#whatsapp-demo" },
               { label: "Pricing", href: "/#pricing" },
-              { label: "Revenue Calculator", href: "/#roi-calculator" },
             ].map((item) => (
               <Link
                 key={item.label}
