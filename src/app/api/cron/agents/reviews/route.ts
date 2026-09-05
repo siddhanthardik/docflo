@@ -62,7 +62,9 @@ export async function GET(req: Request) {
         const aiReply = await AIAgentsService.runReviewAgent(
           review.comment || "",
           review.rating,
-          config.config
+          config.config,
+          config.doctorId,
+          review.reviewerName || undefined
         );
 
         const agentConfig = (config.config as any) || {};

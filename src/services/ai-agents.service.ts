@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { memoryCache } from "@/lib/memory-cache";
 import { resolveClinicTimezone } from "@/lib/timezone";
+import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
 // Prioritized Gemini models: Primary gemini-3.7-flash (Low Thinking) -> Fallbacks: 3.6-flash -> 3.5-flash-lite
 const CANDIDATE_MODELS = [
@@ -12,18 +13,8 @@ const CANDIDATE_MODELS = [
   "gemini-3.5-flash-lite"  // Fallback 2
 ];
 
-// Clean and format doctor display name without repetitive "Dr." prefixes
-export function formatDoctorDisplayName(rawName?: string): string {
-  if (!rawName || rawName.trim() === "" || rawName.toLowerCase() === "doctor") {
-    return "the Doctor";
-  }
-  // Strip all leading "Dr.", "Dr", "Doctor", "Dr. Dr" case-insensitively
-  let clean = rawName.trim();
-  while (/^(dr\.?|doctor)\s+/i.test(clean)) {
-    clean = clean.replace(/^(dr\.?|doctor)\s+/i, "").trim();
-  }
-  return clean ? `Dr. ${clean}` : "the Doctor";
-}
+import { formatDoctorDisplayName } from "@/lib/utils";
+export { formatDoctorDisplayName };
 
 export interface ClinicPractitionerInfo {
   id?: string;
@@ -1497,27 +1488,57 @@ Write your professional, direct, concise administrative response directly to Doc
   /**
    * 2. REVIEW MANAGER AGENT
    */
-  static async runReviewAgent(reviewText: string, rating: number, config: any) {
+  static async runReviewAgent(
+    reviewText: string,
+    rating: number,
+    config: any,
+    doctorId?: string,
+    reviewerName?: string
+  ) {
     try {
-      const instructions = config?.instructions || "Always thank the patient by name, mention clinic, and invite negative reviewers to contact us privately.";
-      const targetKeywords = config?.targetKeywords || "Root Canal, Laser Treatment, Pediatric Care";
-      
+      if (doctorId) {
+        try {
+          const res = await ReviewReplyService.generateReply({
+            doctorId,
+            reviewText,
+            rating,
+            authorName: reviewerName,
+            customInstructions: config?.instructions,
+          });
+          if (res.reply) return res.reply;
+        } catch (svcErr) {
+          console.warn("[runReviewAgent] ReviewReplyService primary attempt failed, falling back to local prompt:", svcErr);
+        }
+      }
+
+      const instructions =
+        config?.instructions ||
+        "Thank the patient sincerely, acknowledge their feedback, and invite negative reviewers to contact our clinic desk directly.";
+      const targetKeywords = config?.targetKeywords || "";
+
       const prompt = `
-        You are an elite Reputation Management Specialist replying to a Google Business Review on behalf of the clinic owner using Gemini API.
+        You are a warm, attentive clinic care coordinator replying to a Google Business Review for our medical practice.
         
+        Patient Name: ${reviewerName || "Valued Patient"}
         Review Rating: ${rating} Stars
-        Review Text: "${reviewText}"
+        Review Text: "${reviewText || "[The patient gave a star rating with no written review text]"}"
         
-        Custom Guidelines: ${instructions}
-        Target Keywords to Weave In Naturally (if relevant): ${targetKeywords}
+        ${instructions ? `Custom Guidelines: ${instructions}` : ""}
+        ${targetKeywords ? `Target Concepts to Weave In Naturally (if relevant): ${targetKeywords}` : ""}
         
-        Respond ONLY with the exact text of the reply. No markdown quotes or extra filler.
+        CRITICAL RULES:
+        1. Write in a natural, genuine human tone like a caring clinic staff member.
+        2. STRICTLY FORBIDDEN WORDS: Do NOT use "thrilled", "delighted", "excited", "overjoyed", "testament", "beacon", "unwavering commitment".
+        3. If star-only without review text, keep it to 1-2 sentences thanking them for the rating and wishing them good health.
+        4. If 4-5 stars with text, keep it warm and concise (2-3 sentences).
+        5. If 1-3 stars, be humble, empathetic, and invite them to speak with our clinic desk directly.
+        6. Respond ONLY with the exact text of the reply. Plain text only. No quotes or markdown.
       `;
 
       return await generateWithFallback(prompt);
     } catch (error) {
       console.error("Error in Review Agent:", error);
-      return "Thank you for your review and feedback.";
+      return "Thank you for sharing your feedback with our clinic team. Wishing you the best of health.";
     }
   }
 

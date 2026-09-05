@@ -767,10 +767,25 @@ export default function AIAgentsHubPage() {
             {/* 2. REVIEW MANAGER AGENT CONFIG */}
             {activeAgent?.type === "REVIEW" && (
               <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-indigo-600 shrink-0" />
-                  Review Reply Rules & Keyword Targeting
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                    Review Reply Rules & Human Staff Voice
+                  </h4>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Human Staff Persona
+                  </span>
+                </div>
+
+                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-slate-700 text-xs space-y-1">
+                  <p className="font-bold text-emerald-950 flex items-center gap-1.5 text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Human Clinic Staff Voice & Anti-Robotic Guardrails:
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Replies are generated from the perspective of your clinic care coordinator or practice manager. Exaggerated AI clichés (like &ldquo;thrilled&rdquo;, &ldquo;delighted&rdquo;, &ldquo;unwavering commitment&rdquo;) are strictly banned to ensure every reply sounds authentic, warm, and distinctly written by your team.
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-1.5 min-w-0">
@@ -792,7 +807,7 @@ export default function AIAgentsHubPage() {
                   <div className="space-y-1.5 min-w-0">
                     <Label className="text-xs font-bold text-slate-700">Target Keywords for Google Maps SEO</Label>
                     <Input 
-                      placeholder="Root Canal, Laser Treatment, Pediatric Care, Orthodontist"
+                      placeholder="E.g., Consultation, General Checkup, Preventive Care, Treatment Planning"
                       value={configDraft.targetKeywords || ""}
                       onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
                       className="h-10 text-xs sm:text-sm bg-white border-slate-200"
@@ -804,7 +819,7 @@ export default function AIAgentsHubPage() {
                 <div className="space-y-1.5 min-w-0">
                   <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
                   <Textarea 
-                    placeholder="E.g., Always thank the patient by name, mention our clinic name, and invite negative reviewers to contact our clinic desk privately."
+                    placeholder="E.g., Thank patients warmly, mention our clinic team, and invite any unhappy patients to contact our clinic desk directly so our practice manager can address their concerns."
                     value={configDraft.instructions || ""}
                     onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
                     className="resize-none text-xs sm:text-sm bg-white border-slate-200"

@@ -41,3 +41,15 @@ export function getLocalDateString(date: Date | string = new Date()): string {
     day: "2-digit"
   }).format(d);
 }
+
+/** Formats a doctor display name cleanly with proper Dr. prefix */
+export function formatDoctorDisplayName(rawName?: string): string {
+  if (!rawName || rawName.trim() === "" || rawName.toLowerCase() === "doctor") {
+    return "the Doctor";
+  }
+  let clean = rawName.trim();
+  while (/^(dr\.?|doctor)\s+/i.test(clean)) {
+    clean = clean.replace(/^(dr\.?|doctor)\s+/i, "").trim();
+  }
+  return clean ? `Dr. ${clean}` : "the Doctor";
+}

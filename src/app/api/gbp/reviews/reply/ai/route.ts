@@ -4,6 +4,7 @@ import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
 import { AIService } from "@/services/ai/AIService";
 import { AIFeature } from "@/services/ai/types";
+import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
 export async function POST(req: Request) {
   try {
@@ -20,20 +21,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Review text is required" }, { status: 400 });
     }
 
-    // 2. Generate Review Reply using AIService
-    const prompt = `You are a professional, empathetic doctor replying to a patient review.
-    Patient Name: ${patientName || 'Anonymous'}
-    Rating: ${reviewRating || 'Not specified'}
-    Review: "${reviewText}"
-    
-    Write a polite, professional, and empathetic response. If it's a negative review, be constructive and ask them to contact the clinic. Keep it under 3 sentences. Do not include placeholders.`;
-
-    const aiResult = await AIService.generate(
-      doctorId, 
-      AIFeature.REVIEW_REPLY,
-      prompt,
-      { temperature: 0.7 }
-    );
+    // 2. Generate Review Reply using ReviewReplyService
+    const result = await ReviewReplyService.generateReply({
+      doctorId,
+      reviewText,
+      rating: Number(reviewRating) || 5,
+      authorName: patientName,
+    });
 
     // Audit the AI action
     await prisma.auditLog.create({
@@ -41,15 +35,15 @@ export async function POST(req: Request) {
         userId: doctorId,
         userType: "CLINIC",
         action: "AI_GENERATE",
-        details: { feature: AIFeature.REVIEW_REPLY, creditsUsed: aiResult.creditsUsed },
+        details: { feature: AIFeature.REVIEW_REPLY, creditsUsed: result.creditsUsed },
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1"
       }
     });
 
     return NextResponse.json({
-      reply: aiResult.content,
-      creditsUsed: aiResult.creditsUsed,
-      remainingCredits: aiResult.remainingCredits
+      reply: result.reply,
+      creditsUsed: result.creditsUsed,
+      remainingCredits: result.remainingCredits
     });
 
   } catch (error: any) {
