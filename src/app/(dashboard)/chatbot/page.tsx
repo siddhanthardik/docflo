@@ -106,7 +106,7 @@ export default function AIAgentsHubPage() {
     if (!isAllowed) {
       toast({
         title: "🔒 Package Upgrade Required",
-        description: `The ${agentType === "APPOINTMENT" ? "AI Receptionist & Booking Assistant" : "selected AI agent"} is available in the ${requiredPackage} package.`,
+        description: `The ${agentType === "APPOINTMENT" ? "WhatsApp Clinic Receptionist" : "selected AI agent"} is available in the ${requiredPackage} package.`,
         variant: "destructive"
       });
       router.push("/subscription");
@@ -174,7 +174,7 @@ export default function AIAgentsHubPage() {
   const agentDefinitions = [
     {
       type: "APPOINTMENT",
-      name: "AI Receptionist & Booking Assistant",
+      name: "WhatsApp Clinic Receptionist",
       icon: PhoneCall,
       color: "text-blue-600",
       bg: "bg-blue-50 border-blue-100",

@@ -37,10 +37,10 @@ const LIMITS = [
 ];
 
 const AI_AGENT_FEATURES = [
-  { key: "AI_RECEPTIONIST", name: "AI Receptionist & Booking Assistant", desc: "24/7 Live WhatsApp AI assistant for patient inquiries & calendar bookings." },
+  { key: "AI_RECEPTIONIST", name: "WhatsApp Clinic Receptionist", desc: "24/7 Live WhatsApp AI assistant for patient inquiries & calendar bookings." },
   { key: "AI_REVIEW_REPLY", name: "Review Manager Assistant", desc: "Auto-drafting & live publishing of HIPAA-compliant Google Review replies." },
   { key: "AI_POST_CREATOR", name: "Google Updates Assistant", desc: "AI creation of Google Business Profile update posts & clinical content." },
-  { key: "AI_SEO_COPILOT", name: "Local SEO Optimizer", desc: "Weekly local search audits and prioritized execution tasks." }
+  { key: "AI_SEO_COPILOT", name: "Google Maps Rank Assistant", desc: "Weekly local search audits and prioritized execution tasks." }
 ];
 
 export function PackagesClient({ initialPackages, doctors }: { initialPackages: any[], doctors: any[] }) {

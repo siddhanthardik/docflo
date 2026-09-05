@@ -144,7 +144,7 @@ export async function PUT(req: Request) {
 
     if (enabled && !allowed) {
       return NextResponse.json({ 
-        error: `The ${agentType === "APPOINTMENT" ? "AI Receptionist & Booking Assistant" : agentType} requires the ${reqPkg} package.` 
+        error: `The ${agentType === "APPOINTMENT" ? "WhatsApp Clinic Receptionist" : agentType} requires the ${reqPkg} package.` 
       }, { status: 403 });
     }
 
