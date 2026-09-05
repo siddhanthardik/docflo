@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -22,6 +22,7 @@ export default function AIAgentsHubPage() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [configDraft, setConfigDraft] = useState<any>({});
   const [savingConfig, setSavingConfig] = useState(false);
+  const [reviewPreviewTab, setReviewPreviewTab] = useState<"star_only" | "positive" | "critical">("positive");
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
@@ -766,132 +767,361 @@ export default function AIAgentsHubPage() {
 
             {/* 2. REVIEW MANAGER AGENT CONFIG */}
             {activeAgent?.type === "REVIEW" && (
-              <div className="space-y-4 p-4 sm:p-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                      Review Reply Rules & Human Staff Voice
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Configure how AI automatically drafts authentic, human responses to your Google reviews.
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Human Staff Persona Active
-                  </span>
-                </div>
-
-                {/* Human Care Coordinator Voice & Anti-Robotic Guardrails */}
-                <div className="p-4 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-emerald-50/50 rounded-xl border border-emerald-100/90 text-slate-700 text-xs space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                      <Sparkles className="w-3.5 h-3.5" />
+              <div className="space-y-4">
+                {/* Section Header Card */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs min-w-0 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                        Review Reply Rules & Human Staff Voice
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Configure how AI drafts authentic, thoughtful responses to your Google Business Profile reviews.
+                      </p>
                     </div>
-                    <span className="font-bold text-emerald-950 text-xs sm:text-sm">
-                      Human Care Coordinator Voice & Active Anti-Robotic Guardrails
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Human Staff Persona Active
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed pl-8">
-                    Replies are generated from the perspective of your clinic care coordinator or practice manager. Exaggerated AI clichés (like &ldquo;thrilled&rdquo;, &ldquo;delighted&rdquo;, &ldquo;unwavering commitment&rdquo;) are strictly banned to ensure every reply sounds authentic, warm, and distinctly written by your team.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pl-8">
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                      <strong className="text-emerald-950 block font-bold mb-0.5">⭐ Star-Only Reviews</strong>
-                      1-2 concise, sincere sentences. No hallucinated medical procedures.
+
+                  {/* Human Care Coordinator Voice & Anti-Robotic Guardrails Info */}
+                  <div className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-emerald-50/50 rounded-xl border border-emerald-100/90 text-slate-700 text-xs space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-emerald-950 text-xs sm:text-sm">
+                        Human Care Coordinator Voice & Active Anti-Robotic Guardrails
+                      </span>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                      <strong className="text-emerald-950 block font-bold mb-0.5">💬 Positive Reviews</strong>
-                      Reflects specific patient praise and concludes with a health wish.
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
-                      <strong className="text-emerald-950 block font-bold mb-0.5">🤝 1-3 Star Reviews</strong>
-                      Humble, non-defensive, and invites private manager resolution.
+                    <p className="text-xs text-slate-600 leading-relaxed pl-8">
+                      Replies are generated from the perspective of your clinic care coordinator or practice manager. Over-the-top corporate clichés (like &ldquo;thrilled&rdquo;, &ldquo;delighted&rdquo;, &ldquo;unwavering commitment&rdquo;) are strictly banned to ensure every reply sounds authentic, warm, and distinctly written by your team.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 pl-8">
+                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-emerald-950 block font-bold mb-0.5">⭐ Star-Only Reviews</strong>
+                        1-2 concise, sincere sentences. No hallucinated medical procedures.
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-emerald-950 block font-bold mb-0.5">💬 Positive Reviews</strong>
+                        Reflects specific patient praise and concludes with a health wish.
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs text-[11px] text-slate-600">
+                        <strong className="text-emerald-950 block font-bold mb-0.5">🤝 1-3 Star Reviews</strong>
+                        Humble, non-defensive, and invites private manager resolution.
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                  <div className="space-y-1.5 min-w-0">
-                    <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
-                    <Select 
-                      value={configDraft.autoPublish || "none"} 
-                      onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
-                    >
-                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
-                        <SelectValue placeholder="Select threshold" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
-                        <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
-                        <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[11px] text-slate-500 leading-normal">Reviews below threshold will wait in your Reviews inbox for approval before posting.</p>
-                  </div>
-
-                  <div className="space-y-1.5 min-w-0">
-                    <Label className="text-xs font-bold text-slate-700">Target Keywords for Google Maps SEO</Label>
-                    <Input 
-                      placeholder="E.g., Consultation, General Checkup, Preventive Care, Treatment Planning"
-                      value={configDraft.targetKeywords || ""}
-                      onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
-                      className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                    <p className="text-[11px] text-slate-500 leading-normal">Keywords naturally woven into replies to boost local Google search rankings.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1">
+                {/* 1. AUTOMATION & VOICE SETTINGS */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-slate-700">Custom Training & Response Guidelines</Label>
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      1. Tone & Publishing Preferences
+                    </h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {/* Auto-Publish */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Auto-Publish Threshold</Label>
+                      <Select 
+                        value={configDraft.autoPublish || "none"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, autoPublish: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select threshold" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Draft All (Manual approval required)</SelectItem>
+                          <SelectItem value="five_star">Auto-Publish 5-Star Reviews Only</SelectItem>
+                          <SelectItem value="positive">Auto-Publish 4 & 5-Star Reviews</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Reviews below threshold will wait in inbox for approval.</p>
+                    </div>
+
+                    {/* Tone Style */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Conversational Tone</Label>
+                      <Select 
+                        value={configDraft.toneStyle || "warm"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, toneStyle: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select tone style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="warm">Warm & Attentive (Recommended)</SelectItem>
+                          <SelectItem value="professional">Polite & Professional</SelectItem>
+                          <SelectItem value="friendly_family">Friendly Family Clinic</SelectItem>
+                          <SelectItem value="concise">Concise & Direct (1-2 sentences)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Sets the interpersonal temperature of replies.</p>
+                    </div>
+
+                    {/* Sign-off Format */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Reply Sign-Off</Label>
+                      <Select 
+                        value={configDraft.signOffFormat || "team_clinic"} 
+                        onValueChange={(v) => setConfigDraft({...configDraft, signOffFormat: v})}
+                      >
+                        <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0">
+                          <SelectValue placeholder="Select sign-off" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="team_clinic">Team [Clinic Name] (Recommended)</SelectItem>
+                          <SelectItem value="doctor_team">Dr. [Name] & Team</SelectItem>
+                          <SelectItem value="manager_team">Practice Manager & Team</SelectItem>
+                          <SelectItem value="care_coordinator">Patient Care Coordinator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-400">Who the patient sees signing off the message.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. OFFLINE RESOLUTION DESK & SEO KEYWORDS */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      2. Critical Feedback Resolution & Local SEO
+                    </h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Private Resolution Contact */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          Critical Review Resolution Desk (1–3 Stars)
+                        </Label>
+                        <span className="text-[10px] text-slate-400 font-medium">Recommended</span>
+                      </div>
+                      <Input 
+                        placeholder="e.g., +91 98765 43210 or desk@clinic.com"
+                        value={configDraft.resolutionContact || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, resolutionContact: e.target.value})}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-normal">
+                        When a patient leaves a critical review, the AI includes this direct helpline so concerns can be resolved privately offline.
+                      </p>
+                    </div>
+
+                    {/* SEO Target Keywords */}
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-bold text-slate-700">Target Keywords for Google Maps SEO</Label>
+                      <Input 
+                        placeholder="E.g., Consultation, General Checkup, Preventive Care, Treatment"
+                        value={configDraft.targetKeywords || ""}
+                        onChange={(e) => setConfigDraft({...configDraft, targetKeywords: e.target.value})}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-normal">
+                        Comma-separated keywords naturally woven into replies to boost local Google Maps relevancy.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. CUSTOM CLINIC GUIDELINES */}
+                <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                      3. Custom Instructions & Clinic Rules
+                    </h5>
                     <span className="text-[10px] text-slate-400 font-medium">Optional</span>
                   </div>
-                  <Textarea 
-                    placeholder="E.g., Thank patients warmly, mention our clinic team, and invite any unhappy patients to contact our clinic desk directly so our practice manager can address their concerns."
-                    value={configDraft.instructions || ""}
-                    onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
-                    className="resize-none text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20 leading-relaxed font-normal"
-                    rows={4}
-                  />
 
-                  {/* Quick Suggestions Chips */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-slate-400 font-medium mr-1">Quick Suggestions:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const append = "Always thank the patient warmly by name.";
-                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
-                        setConfigDraft({ ...configDraft, instructions: current + append });
-                      }}
-                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
-                    >
-                      + Thank by name
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const append = "Mention that our doctor and clinical team are grateful for their trust.";
-                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
-                        setConfigDraft({ ...configDraft, instructions: current + append });
-                      }}
-                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
-                    >
-                      + Mention Dr. & team
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const append = "For dissatisfied reviews, invite them to speak with our clinic desk or manager directly.";
-                        const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
-                        setConfigDraft({ ...configDraft, instructions: current + append });
-                      }}
-                      className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
-                    >
-                      + Private manager resolution
-                    </button>
+                  <div className="space-y-2">
+                    <Textarea 
+                      placeholder="E.g., Thank patients warmly, mention our clinic team, and invite any unhappy patients to contact our clinic desk directly so our practice manager can address their concerns."
+                      value={configDraft.instructions || ""}
+                      onChange={(e) => setConfigDraft({...configDraft, instructions: e.target.value})}
+                      className="resize-none text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-emerald-500/20 leading-relaxed font-normal"
+                      rows={3}
+                    />
+
+                    {/* Quick Suggestions Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[11px] text-slate-400 font-medium mr-1">Quick Suggestions:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const append = "Always thank the patient warmly by name.";
+                          const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                          setConfigDraft({ ...configDraft, instructions: current + append });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Thank by name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const append = "Mention that our doctor and clinical team are grateful for their trust.";
+                          const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                          setConfigDraft({ ...configDraft, instructions: current + append });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Mention Dr. & team
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const append = "For dissatisfied reviews, invite them to speak with our clinic desk or manager directly.";
+                          const current = configDraft.instructions ? configDraft.instructions.trim() + " " : "";
+                          setConfigDraft({ ...configDraft, instructions: current + append });
+                        }}
+                        className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-md border border-slate-200 transition-colors"
+                      >
+                        + Private manager resolution
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. LIVE HUMAN REPLY PREVIEW */}
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-emerald-50/30 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                        <MessageSquare className="w-3 h-3" />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-900">Live Reply Preview (Sample Output)</h5>
+                    </div>
+
+                    {/* Preview Switch Tabs */}
+                    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setReviewPreviewTab("positive")}
+                        className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors ${
+                          reviewPreviewTab === "positive" ? "bg-white text-emerald-700 font-bold shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        5-Star Praise
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReviewPreviewTab("star_only")}
+                        className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors ${
+                          reviewPreviewTab === "star_only" ? "bg-white text-emerald-700 font-bold shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Star-Only (No Text)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReviewPreviewTab("critical")}
+                        className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors ${
+                          reviewPreviewTab === "critical" ? "bg-white text-rose-700 font-bold shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        1–3 Star Issue
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sample Card */}
+                  <div className="bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-2xs space-y-2.5">
+                    {reviewPreviewTab === "positive" && (
+                      <>
+                        <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">Pooja S.</span>
+                            <div className="flex text-amber-400">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-slate-400">Google Review</span>
+                        </div>
+                        <p className="text-xs text-slate-600 italic">
+                          &ldquo;Dr. gave plenty of time and explained everything so well. Staff was very helpful.&rdquo;
+                        </p>
+                        <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 text-xs text-slate-700 leading-relaxed space-y-1">
+                          <span className="text-[10px] font-bold text-emerald-800 block uppercase tracking-wider">Generated Reply:</span>
+                          <p>
+                            Hi Pooja, thank you so much for taking the time to share your experience with us! We are glad to know that the consultation was clear and comfortable for you. Wishing you great health ahead!
+                          </p>
+                          <p className="font-semibold text-slate-800 text-[11px] pt-1">
+                            — {configDraft.signOffFormat === "doctor_team" ? "Doctor & the Clinic Team" : configDraft.signOffFormat === "manager_team" ? "Practice Manager & Care Team" : configDraft.signOffFormat === "care_coordinator" ? "Patient Care Coordinator" : "Team Clinic"}
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {reviewPreviewTab === "star_only" && (
+                      <>
+                        <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">Amit Kumar</span>
+                            <div className="flex text-amber-400">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-slate-400">Rating Only</span>
+                        </div>
+                        <p className="text-xs text-slate-400 italic">
+                          [Patient gave a 5-star rating without written comments]
+                        </p>
+                        <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 text-xs text-slate-700 leading-relaxed space-y-1">
+                          <span className="text-[10px] font-bold text-emerald-800 block uppercase tracking-wider">Generated Reply (Concise & Honest):</span>
+                          <p>
+                            Thank you Amit for your 5-star rating! We truly appreciate your support and wish you the very best of health.
+                          </p>
+                          <p className="font-semibold text-slate-800 text-[11px] pt-1">
+                            — {configDraft.signOffFormat === "doctor_team" ? "Doctor & the Clinic Team" : configDraft.signOffFormat === "manager_team" ? "Practice Manager & Care Team" : configDraft.signOffFormat === "care_coordinator" ? "Patient Care Coordinator" : "Team Clinic"}
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    {reviewPreviewTab === "critical" && (
+                      <>
+                        <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">Rahul Verma</span>
+                            <div className="flex text-amber-400">
+                              {[...Array(2)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              ))}
+                              {[...Array(3)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 text-slate-200" />
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-rose-500 font-medium">Critical Feedback</span>
+                        </div>
+                        <p className="text-xs text-slate-600 italic">
+                          &ldquo;Had to wait 45 minutes past my scheduled slot.&rdquo;
+                        </p>
+                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1">
+                          <span className="text-[10px] font-bold text-slate-800 block uppercase tracking-wider">Generated Reply (Humble & Resolution-Focused):</span>
+                          <p>
+                            Hi Rahul, thank you for bringing this to our attention. We understand how valuable your time is and sincerely apologize for the unexpected delay during your visit. We would appreciate the opportunity to make this right—please reach out to us at {configDraft.resolutionContact ? `our desk directly at ${configDraft.resolutionContact}` : "our clinic desk"} so we can personally assist you.
+                          </p>
+                          <p className="font-semibold text-slate-800 text-[11px] pt-1">
+                            — {configDraft.signOffFormat === "doctor_team" ? "Doctor & the Clinic Team" : configDraft.signOffFormat === "manager_team" ? "Practice Manager & Care Team" : configDraft.signOffFormat === "care_coordinator" ? "Patient Care Coordinator" : "Team Clinic"}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

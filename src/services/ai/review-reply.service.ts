@@ -61,6 +61,9 @@ export class ReviewReplyService {
     const savedConfig = (agentConfig?.config as any) || {};
     const instructions =
       customInstructions || savedConfig.instructions || savedConfig.customRules || "";
+    const toneStyle = savedConfig.toneStyle || "warm";
+    const signOffFormat = savedConfig.signOffFormat || "team_clinic";
+    const resolutionContact = (savedConfig.resolutionContact || "").trim();
     
     // Combine explicit keywords with saved keywords
     const savedKeywords = savedConfig.targetKeywords
@@ -69,6 +72,26 @@ export class ReviewReplyService {
     const allKeywords = Array.from(new Set([...(keywords || []), ...savedKeywords])).filter(
       Boolean
     );
+
+    // Format sign-off preference
+    let signOffGuideline = `Team ${clinicName}`;
+    if (signOffFormat === "manager_team") {
+      signOffGuideline = `Practice Manager & Care Team, ${clinicName}`;
+    } else if (signOffFormat === "doctor_team" && doctorName) {
+      signOffGuideline = `${doctorName} & the Team at ${clinicName}`;
+    } else if (signOffFormat === "care_coordinator") {
+      signOffGuideline = `Patient Care Coordinator, ${clinicName}`;
+    }
+
+    // Format tone guideline
+    let toneGuideline = "Warm, attentive, and polite medical care coordinator tone.";
+    if (toneStyle === "professional") {
+      toneGuideline = "Polite, dignified, and professional healthcare clinic tone.";
+    } else if (toneStyle === "friendly_family") {
+      toneGuideline = "Friendly, neighborly, and deeply reassuring family-clinic tone.";
+    } else if (toneStyle === "concise") {
+      toneGuideline = "Concise, respectful, and direct clinic response (1-2 sentences).";
+    }
 
     // Format author name respectfully
     let cleanAuthor = (authorName || "").trim();
@@ -101,27 +124,35 @@ export class ReviewReplyService {
      DO NOT invent, assume, or hallucinate specific medical procedures, consultations, or conditions they didn't mention.
      Keep your reply brief (1-2 sentences maximum):
      Express sincere thanks for their ${rating}-star rating and wish them good health and well-being.
-     Sign off warmly as the team at ${clinicName}.`;
+     Sign off warmly as "${signOffGuideline}".`;
     } else if (rating >= 4) {
       reviewTypeInstructions = `   - POSITIVE REVIEW (4-5 STARS):
      - Sincerely thank them for taking the time to share their feedback.
      - Specifically acknowledge what they praised (e.g. if they mentioned doctor's patience, staff friendliness, clinic cleanliness, or quick relief).
      - Keep it concise, genuine, and warm (2-3 sentences).
-     - Conclude with a thoughtful health wish and sign-off (e.g., "Wishing you good health ahead - Team ${clinicName}").`;
+     - Conclude with a thoughtful health wish and sign-off as "${signOffGuideline}".`;
     } else {
       reviewTypeInstructions = `   - CRITICAL / DISSATISFIED REVIEW (1-3 STARS):
      - Be deeply respectful, humble, and empathetic. NEVER argue, make excuses, or sound defensive or legalistic.
      - Validate that any wait, miscommunication, or discomfort is frustrating and falls short of the care your team aims to provide.
-     - Invite them to connect directly with the clinic desk or practice manager offline so their concerns can be understood and addressed properly.
-     - Keep it short, dignified, and supportive (2-3 sentences).`;
+     - Invite them to connect directly offline so their concerns can be understood and addressed properly.${
+       resolutionContact
+         ? ` Provide our clinic contact: "${resolutionContact}".`
+         : " Invite them to speak with our clinic desk or practice manager directly."
+     }
+     - Keep it short, dignified, and supportive (2-3 sentences).
+     - Sign off as "${signOffGuideline}".`;
     }
 
     // 2. Construct Grounded, Human-Centered Prompt
-    const prompt = `You are a warm, attentive member of the clinic care team (such as the practice manager or front-desk care coordinator) at "${clinicName}".
+    const prompt = `You are a member of the clinic care team (such as the practice manager or front-desk care coordinator) at "${clinicName}".
 ${doctorName ? `You work alongside ${doctorName}${specialty ? ` (${specialty})` : ""}.` : ""}
 ${city ? `Location: ${city}.` : ""}
 
 Task: Write a sincere, natural, and human reply to this Google Business Profile review.
+
+PREFERRED CLINIC TONE: ${toneGuideline}
+PREFERRED SIGN-OFF: "${signOffGuideline}"
 
 REVIEW DETAILS:
 - Patient Name: ${cleanAuthor || "Anonymous"}
