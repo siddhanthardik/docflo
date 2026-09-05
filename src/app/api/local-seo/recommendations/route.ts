@@ -3,6 +3,39 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { AIAgentsService } from "@/services/ai-agents.service";
 
+function getSuggestedCategories(specialtyOrCategory: string): string {
+  const s = (specialtyOrCategory || "").toLowerCase();
+  if (s.includes("pediat") || s.includes("child")) {
+    return "Pediatrician, Children's Health Clinic, Child Specialist";
+  }
+  if (s.includes("gynaec") || s.includes("gynec") || s.includes("obstetr") || s.includes("women")) {
+    return "Gynecologist, Women's Health Clinic, Maternity Hospital";
+  }
+  if (s.includes("derma") || s.includes("skin") || s.includes("hair")) {
+    return "Dermatologist, Skin Care Clinic, Cosmetology Clinic";
+  }
+  if (s.includes("dent") || s.includes("orthodont") || s.includes("teeth")) {
+    return "Dentist, Dental Clinic, Orthodontist";
+  }
+  if (s.includes("ortho") || s.includes("bone") || s.includes("joint")) {
+    return "Orthopedic Surgeon, Bone & Joint Clinic, Sports Medicine Clinic";
+  }
+  if (s.includes("cardio") || s.includes("heart")) {
+    return "Cardiologist, Heart Care Clinic";
+  }
+  if (s.includes("ent") || s.includes("ear") || s.includes("throat")) {
+    return "ENT Specialist, Ear Nose Throat Clinic";
+  }
+  if (s.includes("ophthal") || s.includes("eye") || s.includes("vision")) {
+    return "Ophthalmologist, Eye Care Clinic";
+  }
+  if (s.includes("physician") || s.includes("general") || s.includes("internal") || s.includes("family")) {
+    return "General Physician, Family Doctor, Medical Clinic";
+  }
+  const cleanName = specialtyOrCategory.replace(/clinic|doctor|specialist/gi, "").trim();
+  return `${cleanName || "Specialist"} Clinic, Healthcare Center`;
+}
+
 export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) {
   const [doctor, account, agentConfig] = await Promise.all([
     prisma.doctor.findUnique({
@@ -13,7 +46,14 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
       where: { id: gbpAccountId }
     }),
     prisma.aIAgentConfig.findFirst({
-      where: { doctorId, agentType: "LOCAL_SEO_COPILOT" }
+      where: {
+        doctorId,
+        OR: [
+          { agentType: "LOCAL_SEO" },
+          { agentType: "LOCAL_SEO_COPILOT" },
+          { agentType: "RANKING" }
+        ]
+      }
     })
   ]);
 
@@ -34,12 +74,12 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
   const competitors = (competitorSnap?.json as any[]) || [];
 
   const config = (agentConfig?.config as any) || {};
-  const focusStrategy = config.focus || "all"; // "all" (balanced), "prominence" (reviews), "relevancy" (keywords/content)
+  const focusStrategy = config.focus || "all";
   const userKeywords = config.keywords
     ? config.keywords.split(",").map((k: string) => k.trim()).filter(Boolean)
     : [];
 
-  const primaryCategory = profileData.primaryCategory || insights.primaryCategory || doctor?.specialty || "Obstetrician-gynecologist";
+  const primaryCategory = profileData.primaryCategory || insights.primaryCategory || doctor?.specialty || "Medical Clinic";
   const secondaryCats: string[] = profileData.categories || insights.categories || [];
   const description: string = profileData.description || insights.description || "";
   const phone: string = profileData.phone || insights.phone || "";
@@ -64,118 +104,111 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
     category: string;
     title: string;
     description: string;
-    priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    priority: "HIGH" | "MEDIUM" | "LOW";
     impact: string;
   }> = [];
 
-  // 1. Unanswered Reviews (HIGH / CRITICAL)
+  // 1. Unanswered Reviews
   if (unansweredCount > 0) {
     tasks.push({
       category: "REVIEWS",
-      title: `Reply to ${unansweredCount} Unanswered Patient Reviews`,
-      description: `You have ${unansweredCount} patient review${unansweredCount > 1 ? 's' : ''} waiting on Google. Replying with AI keywords boosts local ranking authority and patient trust.`,
-      priority: unansweredCount >= 5 ? "CRITICAL" : "HIGH",
-      impact: "+18% Local Trust Score",
+      title: `Reply to ${unansweredCount} unanswered patient review${unansweredCount > 1 ? 's' : ''}`,
+      description: `You have ${unansweredCount} patient review${unansweredCount > 1 ? 's' : ''} awaiting response on Google. Timely responses show attentiveness and improve your local profile engagement.`,
+      priority: unansweredCount >= 5 ? "HIGH" : "MEDIUM",
+      impact: "Builds patient trust & improves profile engagement",
     });
   }
 
-  // 2. Secondary Category Expansion (HIGH)
+  // 2. Secondary Category Expansion
   if (secondaryCats.length < 2) {
-    const suggested = primaryCategory.toLowerCase().includes("gynaecolog") || primaryCategory.toLowerCase().includes("obstetr")
-      ? "Gynecologist, Women's Health Clinic, Maternity Hospital"
-      : primaryCategory.toLowerCase().includes("pediat") || primaryCategory.toLowerCase().includes("child")
-      ? "Pediatrician, Child Specialist, Vaccination Center"
-      : primaryCategory.toLowerCase().includes("derma")
-      ? "Dermatologist, Skin Care Clinic, Hair Transplant Clinic"
-      : "Medical Clinic, Specialist Health Center";
-
+    const suggested = getSuggestedCategories(primaryCategory);
     tasks.push({
       category: "PROFILE",
-      title: "Add Secondary Categories to Google Profile",
-      description: `Your profile currently lists ${secondaryCats.length} secondary category. Expand reach by adding: ${suggested}.`,
+      title: "Add secondary categories to your Google profile",
+      description: `Your profile currently lists ${secondaryCats.length === 0 ? "no secondary categories" : "only 1 secondary category"}. Adding relevant categories like ${suggested} helps patients find you for specific clinical services.`,
       priority: "HIGH",
-      impact: "+25% Multi-Keyword Reach",
+      impact: "Expands search reach for relevant specialties",
     });
   }
 
-  // 3. Competitor Review Count Gap (HIGH / CRITICAL)
+  // 3. Competitor Review Count Gap
   if (compReviewGap > 20) {
     tasks.push({
       category: "REVIEWS",
-      title: `Close the ${compReviewGap} Review Gap vs Top Competitor`,
-      description: `Top local competitor (${topCompetitor?.name || 'Nearby Clinic'}) leads with ${topCompetitor?.reviewCount} reviews. Activate Auto-SMS Review Requests to accelerate patient feedback.`,
-      priority: compReviewGap > 100 ? "CRITICAL" : "HIGH",
-      impact: "+30% Map Pack Rank",
+      title: "Request reviews from recent patients",
+      description: `Top nearby clinic (${topCompetitor?.name || 'Nearby Clinic'}) has ${topCompetitor?.reviewCount} reviews compared to your ${totalReviews}. Request reviews from satisfied patients after consultations to close the gap.`,
+      priority: compReviewGap > 100 ? "HIGH" : "MEDIUM",
+      impact: "Strengthens search prominence in local map results",
     });
   }
 
-  // 4. Description Optimization (MEDIUM)
+  // 4. Description Optimization
   if (!description || description.length < 200) {
     tasks.push({
       category: "PROFILE",
-      title: "Expand Clinic Description for Search AI",
-      description: `Your business description is short (${description.length} chars). Expand it to 250+ characters with specialty keywords to help Google Gemini index your clinic.`,
+      title: "Complete your clinic overview description",
+      description: `Your profile description is currently ${description.length ? `brief (${description.length} characters)` : "empty"}. A complete 250+ character overview detailing your clinical specialties, doctor qualifications, and available facilities helps prospective patients choose your practice.`,
       priority: "MEDIUM",
-      impact: "+15% AI Search Indexing",
+      impact: "Helps patients understand your full scope of care",
     });
   }
 
-  // 5. Appointment Link (HIGH)
+  // 5. Appointment Link
   if (!appointmentUrl) {
     tasks.push({
       category: "PROFILE",
-      title: "Add Direct Online Appointment Link",
-      description: "Patients searching on Google Maps expect 1-click booking. Add your appointment URL to increase patient conversions.",
+      title: "Add an online appointment booking link",
+      description: "Patients searching on Google Maps prefer direct booking options. Adding your booking link helps convert profile viewers into booked appointments.",
       priority: "HIGH",
-      impact: "+40% Booking Conversion",
+      impact: "Makes it easy for patients to book consultations",
     });
   }
 
-  // 6. Contact & Hours (HIGH)
+  // 6. Contact & Hours
   if (!phone || !website || !hours) {
+    const missing = [!phone && "phone number", !website && "website", !hours && "operating hours"].filter(Boolean).join(", ");
     tasks.push({
       category: "PROFILE",
-      title: "Complete Core Contact & Schedule Details",
-      description: "Ensure phone number, website link, and weekly opening hours are verified to prevent losing open-now searches.",
+      title: "Complete essential contact and schedule details",
+      description: `Ensure your ${missing || "contact details and consultation schedule"} are verified on Google to prevent patients from calling during closed hours.`,
       priority: "HIGH",
-      impact: "+20% Map Pack Visibility",
+      impact: "Ensures patients can reach and visit your practice",
     });
   }
 
-  // 7. Weekly Google Post targeting user keyword or primary category
+  // 7. Weekly Google Update
   const targetPostKeyword = userKeywords[0] || primaryCategory;
   tasks.push({
     category: "CONTENT",
-    title: `Publish GMB Post for "${targetPostKeyword}"`,
-    description: `Keep your clinic active on Google Maps. Sharing weekly health updates targeting "${targetPostKeyword}" signals high local relevance and patient engagement.`,
-    priority: focusStrategy === "relevancy" ? "HIGH" : "MEDIUM",
-    impact: "+15% Local Search Engagement",
+    title: `Publish a Google update about "${targetPostKeyword}"`,
+    description: `Sharing regular clinic announcements or health advice keeps your Google profile active and signals to local patients that your practice is open and engaged.`,
+    priority: focusStrategy === "relevancy" ? "HIGH" : "LOW",
+    impact: "Maintains an active presence on Google Maps",
   });
 
-  // 8. Custom Target Keyword Optimization Task (if keywords configured)
+  // 8. Custom Target Keyword Optimization
   if (userKeywords.length > 1) {
     const additionalKeywords = userKeywords.slice(1, 3).join(", ");
     tasks.push({
-      category: "SEARCH_RANK",
-      title: `Optimize Map Pack Relevancy for "${additionalKeywords}"`,
-      description: `Counter-target nearby competitors for ${additionalKeywords}. Incorporate these concepts in patient reviews and Google update updates.`,
+      category: "PROFILE",
+      title: `Focus updates on "${additionalKeywords}"`,
+      description: `Incorporate mentions of ${additionalKeywords} in your Google Updates and patient reviews to rank higher for these common patient inquiries.`,
       priority: focusStrategy === "relevancy" ? "HIGH" : "MEDIUM",
-      impact: "+20% Patient Search Reach",
+      impact: "Improves relevance for target patient searches",
     });
   }
 
   // Adjust priorities based on focus strategy
   if (focusStrategy === "prominence") {
-    // Elevate all review and competitor gap tasks to top priority
     tasks.forEach(t => {
       if (t.category === "REVIEWS") {
-        t.priority = "CRITICAL";
+        t.priority = "HIGH";
       }
     });
   } else if (focusStrategy === "relevancy") {
     tasks.forEach(t => {
       if (t.category === "PROFILE" || t.category === "CONTENT") {
-        if (t.priority !== "CRITICAL") t.priority = "HIGH";
+        t.priority = "HIGH";
       }
     });
   }
@@ -224,7 +257,7 @@ export async function GET(req: Request) {
       ]
     });
 
-    // Auto-generate initial real-data recommendations if 0 tasks exist
+    // Auto-generate initial recommendations if 0 tasks exist
     if (recommendations.length === 0) {
       const initialTasks = await generateAlgorithmicTasks(session.doctorId, gbpAccount.id);
 
@@ -286,13 +319,14 @@ export async function POST(req: Request) {
     // Generate real-data algorithmic tasks
     const freshTasks = await generateAlgorithmicTasks(doctorId, gbpAccount.id);
 
-    // Save to DB (avoid duplicates for existing pending tasks with same title)
+    // Save or update tasks
     const savedRecs = [];
     for (const task of freshTasks) {
+      // Find matching pending task by title or category/intent
       const existing = await prisma.seoRecommendation.findFirst({
         where: {
           gbpAccountId: gbpAccount.id,
-          title: task.title,
+          category: task.category,
           status: "PENDING"
         }
       });
@@ -310,6 +344,17 @@ export async function POST(req: Request) {
           }
         });
         savedRecs.push(created);
+      } else {
+        // Refresh existing task details to remove any legacy robotic text
+        await prisma.seoRecommendation.update({
+          where: { id: existing.id },
+          data: {
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            impact: task.impact
+          }
+        });
       }
     }
 
