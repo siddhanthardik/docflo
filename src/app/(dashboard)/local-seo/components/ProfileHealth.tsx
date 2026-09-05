@@ -38,7 +38,33 @@ export function ProfileHealth() {
 
   const secondaryCount = profileData.categories ? profileData.categories.length : 0;
   const descLength = profileData.description ? profileData.description.length : 0;
-  const primaryCat = profileData.primaryCategory || overviewData?.primaryCategory || "Doctor";
+  const primaryCat = profileData.primaryCategory || profileData.doctorSpecialty || overviewData?.primaryCategory || "Doctor";
+
+  const getSecondaryCategoryAdvice = (specialty: string, count: number): string => {
+    if (count >= 2) {
+      return "Good coverage. Having multiple secondary categories helps patients find your clinic across diverse search terms.";
+    }
+    const s = (specialty || "").toLowerCase();
+    let example = "Child Specialist, Children's Health Clinic";
+    if (s.includes("gynaec") || s.includes("gynec") || s.includes("obstetr") || s.includes("women")) {
+      example = "Women's Health Clinic, Maternity Hospital";
+    } else if (s.includes("derma") || s.includes("skin") || s.includes("hair")) {
+      example = "Skin Care Clinic, Hair Specialist Clinic";
+    } else if (s.includes("dent") || s.includes("teeth") || s.includes("orthodont")) {
+      example = "Dental Clinic, Orthodontist";
+    } else if (s.includes("ortho") || s.includes("bone") || s.includes("joint")) {
+      example = "Bone & Joint Clinic, Sports Medicine Clinic";
+    } else if (s.includes("cardio") || s.includes("heart")) {
+      example = "Heart Care Clinic, Cardiologist";
+    } else if (s.includes("ent") || s.includes("ear") || s.includes("throat")) {
+      example = "Ear Nose Throat Clinic, ENT Specialist";
+    } else if (s.includes("ophthal") || s.includes("eye")) {
+      example = "Eye Care Clinic, Eye Specialist";
+    } else if (s.includes("physician") || s.includes("general")) {
+      example = "Family Doctor, Medical Clinic";
+    }
+    return `Add at least 2 secondary categories (e.g. ${example}) to expand your visibility for specialized patient inquiries.`;
+  };
 
   const fields: AuditField[] = [
     {
@@ -49,17 +75,17 @@ export function ProfileHealth() {
       isComplete: !!profileData.name,
       valueDisplay: profileData.name || "Missing",
       currentValue: profileData.name || "",
-      advice: "Your official practice or clinic title registered with Google.",
+      advice: "Your official practice or clinic title registered on Google Maps.",
     },
     {
       key: "primaryCategory",
-      label: "Primary Business Category",
+      label: "Primary Category",
       category: "seo",
       impact: "High Impact",
       isComplete: !!profileData.primaryCategory,
       valueDisplay: profileData.primaryCategory || "Not Set",
       currentValue: profileData.primaryCategory || "",
-      advice: "Primary factor used by Google algorithm to index your clinic for local searches.",
+      advice: "Primary medical category used by Google to match your clinic to local patient searches.",
     },
     {
       key: "categories",
@@ -69,31 +95,29 @@ export function ProfileHealth() {
       isComplete: secondaryCount >= 1,
       valueDisplay: secondaryCount > 0 ? `${secondaryCount} Added` : "None Added",
       currentValue: profileData.categories || [],
-      advice: secondaryCount >= 2
-        ? "Great coverage! Secondary categories increase local keyword visibility by up to 35%."
-        : "Add at least 2 secondary categories (e.g. Gynecologist, Women's Health Clinic) to expand keyword reach.",
+      advice: getSecondaryCategoryAdvice(primaryCat, secondaryCount),
     },
     {
       key: "description",
-      label: "Business Description",
+      label: "Clinic Overview & Description",
       category: "seo",
       impact: "High Impact",
       isComplete: descLength >= 100,
       valueDisplay: descLength > 0 ? `${descLength} characters` : "Missing",
       currentValue: profileData.description || "",
       advice: descLength >= 250
-        ? "Comprehensive description loaded with specialty keywords."
-        : "A rich 250+ character description containing specialty & neighborhood keywords boosts local AI indexing.",
+        ? "Comprehensive description detailing your clinical specialties and practice overview."
+        : "A complete 250+ character description detailing your clinical specialties, qualifications, and facilities helps prospective patients choose your clinic.",
     },
     {
       key: "appointmentUrl",
-      label: "Appointment Booking URL",
+      label: "Online Appointment Booking Link",
       category: "conversion",
       impact: "High Impact",
       isComplete: !!profileData.appointmentUrl,
       valueDisplay: profileData.appointmentUrl ? "Configured" : "Missing Link",
       currentValue: profileData.appointmentUrl || "",
-      advice: "Direct appointment links increase patient conversion rates by 40% on Google Maps.",
+      advice: "Direct appointment links make it easy for patients searching on Google to schedule consultations.",
     },
     {
       key: "hours",
@@ -103,7 +127,7 @@ export function ProfileHealth() {
       isComplete: !!profileData.hours,
       valueDisplay: profileData.hours ? "Active Schedule" : "Missing Hours",
       currentValue: profileData.hours || "",
-      advice: "Accurate operating hours prevent lost bookings and improve Google's 'Open Now' filter ranking.",
+      advice: "Accurate operating hours ensure patients know when your clinic is open and prevent missed visits.",
     },
     {
       key: "phone",
@@ -113,27 +137,27 @@ export function ProfileHealth() {
       isComplete: !!profileData.phone,
       valueDisplay: profileData.phone || "Missing",
       currentValue: profileData.phone || "",
-      advice: "Enables 1-click patient call actions directly from Google Search & Maps results.",
+      advice: "Allows patients searching on Google to call your clinic directly.",
     },
     {
       key: "website",
-      label: "Official Website Link",
+      label: "Clinic Website Link",
       category: "foundation",
       impact: "Core Requirement",
       isComplete: !!profileData.website,
       valueDisplay: profileData.website || "Missing",
       currentValue: profileData.website || "",
-      advice: "Connects your GBP listing to your domain authority for higher Google Maps ranking.",
+      advice: "Connects your Google listing to your clinic website for verification and authority.",
     },
     {
       key: "attributes",
-      label: "Profile Attributes & Amenities",
+      label: "Clinic Amenities & Attributes",
       category: "conversion",
       impact: "Medium Impact",
       isComplete: !!(profileData.attributes && (Array.isArray(profileData.attributes) ? profileData.attributes.length > 0 : Object.keys(profileData.attributes).length > 0)),
-      valueDisplay: profileData.attributes ? "Attributes Configured" : "None Set",
+      valueDisplay: profileData.attributes ? "Configured" : "None Set",
       currentValue: profileData.attributes || [],
-      advice: "Highlights accessibility (wheelchair accessible, care types) for filtering patients.",
+      advice: "Highlights accessibility, amenities, and consultation options for prospective patients.",
     },
   ];
 
@@ -171,20 +195,20 @@ export function ProfileHealth() {
   return (
     <div className="space-y-6">
       {/* Overview Score Dashboard */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6">
+      <div className="bg-white rounded-2xl shadow-2xs border border-gray-200 p-6 md:p-8 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-gray-100">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-indigo-600" />
-              <h2 className="text-xl font-bold text-gray-900">Profile Health & Completeness Audit</h2>
+              <ShieldCheck className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-xl font-bold text-gray-900">Profile Health & Completeness</h2>
             </div>
             <p className="text-xs text-gray-500 max-w-xl leading-relaxed">
-              Google algorithms favor complete profiles with high information density. Maintaining a 90%+ health score directly correlates with top 3 Google Map Pack rankings.
+              Complete, verified profile information ensures patients can find accurate clinic details across Google Search and Maps.
             </p>
           </div>
 
           {/* Radial / Score Badge */}
-          <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 shrink-0">
+          <div className="flex items-center gap-4 bg-gray-50/90 p-4 rounded-xl border border-gray-200/80 shrink-0">
             <div className="relative flex items-center justify-center">
               <svg className="w-16 h-16 transform -rotate-90">
                 <circle cx="32" cy="32" r="26" stroke="#e2e8f0" strokeWidth="6" fill="transparent" />
@@ -205,51 +229,51 @@ export function ProfileHealth() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900">
-                {healthScore >= 85 ? "Excellent Health" : healthScore >= 60 ? "Good — Needs Tweak" : "Critical Fixes Needed"}
+                {healthScore >= 85 ? "Well-Optimized" : healthScore >= 60 ? "Partially Complete" : "Action Recommended"}
               </p>
-              <p className="text-xs text-gray-500">{completedCount} of {fields.length} pillars verified</p>
+              <p className="text-xs text-gray-500">{completedCount} of {fields.length} details verified</p>
             </div>
           </div>
         </div>
 
         {/* 3 Core Pillar Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1">
+          <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200/70 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-gray-500 font-semibold">
               <span>Foundation & Contact</span>
               <PhoneCall className="w-3.5 h-3.5 text-blue-500" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-black text-gray-900">{foundationScore}%</span>
-              <span className="text-[11px] font-semibold text-emerald-600">Verified</span>
+              <span className="text-lg font-bold text-gray-900">{foundationScore}%</span>
+              <span className="text-[11px] font-semibold text-emerald-600">Core Details</span>
             </div>
             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full" style={{ width: `${foundationScore}%` }} />
             </div>
           </div>
 
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1">
+          <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200/70 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-gray-500 font-semibold">
-              <span>Search Reach & Categories</span>
+              <span>Categories & Description</span>
               <Layers className="w-3.5 h-3.5 text-indigo-500" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-black text-gray-900">{seoScore}%</span>
-              <span className="text-[11px] font-semibold text-indigo-600">Keyword Index</span>
+              <span className="text-lg font-bold text-gray-900">{seoScore}%</span>
+              <span className="text-[11px] font-semibold text-indigo-600">Search Reach</span>
             </div>
             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${seoScore}%` }} />
             </div>
           </div>
 
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1">
+          <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200/70 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-gray-500 font-semibold">
-              <span>Patient Booking Readiness</span>
+              <span>Patient Booking & Schedule</span>
               <CalendarCheck className="w-3.5 h-3.5 text-emerald-500" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-black text-gray-900">{conversionScore}%</span>
-              <span className="text-[11px] font-semibold text-emerald-600">Conversion</span>
+              <span className="text-lg font-bold text-gray-900">{conversionScore}%</span>
+              <span className="text-[11px] font-semibold text-emerald-600">Patient Access</span>
             </div>
             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${conversionScore}%` }} />
@@ -259,9 +283,9 @@ export function ProfileHealth() {
       </div>
 
       {/* Categorized Audit List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-4">
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-400 mb-2">
-          Detailed Profile Audit & Optimization Recommendations
+      <div className="bg-white rounded-2xl shadow-2xs border border-gray-200 p-6 md:p-8 space-y-4">
+        <h3 className="text-base font-bold text-gray-900 mb-1">
+          Profile Pillars & Audit Checklist
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -270,23 +294,23 @@ export function ProfileHealth() {
               key={field.key}
               className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
                 field.isComplete
-                  ? "bg-white border-gray-100 hover:border-gray-200"
-                  : "bg-amber-50/30 border-amber-200/80 hover:border-amber-300"
+                  ? "bg-white border-gray-200/70 hover:border-gray-300"
+                  : "bg-amber-50/30 border-amber-200/70 hover:border-amber-300"
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2.5">
                     {field.isComplete ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
                     )}
                     <span className="font-bold text-sm text-gray-900">{field.label}</span>
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
                       field.impact === "High Impact"
                         ? "bg-indigo-50 text-indigo-700 border-indigo-100"
                         : field.impact === "Core Requirement"
@@ -298,23 +322,23 @@ export function ProfileHealth() {
                   </span>
                 </div>
 
-                <p className="text-xs text-gray-500 leading-relaxed pl-7">{field.advice}</p>
+                <p className="text-xs text-gray-500 leading-relaxed pl-6">{field.advice}</p>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs pl-7">
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs pl-6">
                 <span className="text-gray-400 font-medium">Status: <strong className="text-gray-700">{field.valueDisplay}</strong></span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleOpenFixModal(field)}
-                  className={`h-7 text-xs font-bold px-2.5 rounded-lg transition-all ${
+                  className={`h-7 text-xs font-semibold px-2.5 rounded-lg transition-all ${
                     field.isComplete
                       ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
-                      : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 shadow-2xs"
+                      : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100"
                   }`}
                 >
                   <Edit3 className="mr-1 h-3.5 w-3.5 text-indigo-500" />
-                  {field.isComplete ? "Edit" : "Optimize"}
+                  {field.isComplete ? "Edit" : "Update"}
                 </Button>
               </div>
             </div>

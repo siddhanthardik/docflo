@@ -84,11 +84,18 @@ export async function POST(req: Request) {
       data: { insightsData: JSON.parse(JSON.stringify(insightsData)) },
     });
 
+    if (field === "phone" && typeof value === "string") {
+      await prisma.doctor.update({
+        where: { id: session.doctorId },
+        data: { phone: value.trim() }
+      }).catch(e => console.warn("Could not sync phone to doctor:", e));
+    }
+
     return NextResponse.json({
       success: true,
       field,
       value,
-      message: `${field} updated and synced to profile snapshot.`,
+      message: `${field} updated successfully.`,
     });
   } catch (error: any) {
     console.error("Profile Health Update API Error:", error);

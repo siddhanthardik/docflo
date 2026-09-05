@@ -25,13 +25,13 @@ export async function GET(request: Request) {
 
     const doctor = await prisma.doctor.findUnique({
       where: { id: session.doctorId },
-      select: { workingHoursStart: true, workingHoursEnd: true, phone: true, name: true },
+      select: { workingHoursStart: true, workingHoursEnd: true, phone: true, name: true, specialty: true, clinicName: true },
     });
 
     const insights = (account.insightsData as any) || {};
     const snapshotData = (snapshot?.json as any) || {};
 
-    // Dynamic Doctor Hours Fallback (e.g. 5:30 PM - 7:30 PM)
+    // Dynamic Doctor Hours from snapshot, insights, or doctor's verified clinic timings
     let hours = snapshotData.hours || insights.hours || insights.regularHours;
     if (!hours && doctor?.workingHoursStart && doctor?.workingHoursEnd) {
       hours = `Mon-Sat ${doctor.workingHoursStart} - ${doctor.workingHoursEnd}`;
@@ -40,8 +40,11 @@ export async function GET(request: Request) {
     const mergedData = {
       ...insights,
       ...snapshotData,
-      hours: hours || snapshotData.hours || insights.hours || insights.regularHours || "Mon-Sat 5:30 PM - 7:30 PM",
+      hours: hours || null,
       attributes: snapshotData.attributes || insights.attributes || [],
+      doctorName: doctor?.name || "Doctor",
+      doctorSpecialty: doctor?.specialty || "Specialist",
+      clinicName: doctor?.clinicName || account.locationName || "Clinic",
     };
 
     return NextResponse.json({

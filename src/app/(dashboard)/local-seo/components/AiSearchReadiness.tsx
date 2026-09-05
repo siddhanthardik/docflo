@@ -20,6 +20,7 @@ export function AiSearchReadiness() {
   if (!profileData) return null;
 
   const primaryCat = profileData.primaryCategory || overviewData?.primaryCategory || "Doctor";
+  const doctorName = profileData.doctorName || overviewData?.doctorName || "your clinic";
 
   const queries = [
     {
@@ -29,10 +30,10 @@ export function AiSearchReadiness() {
       question: "Can I book an appointment online with this clinic?",
       ready: !!profileData.appointmentUrl,
       source: profileData.appointmentUrl ? "Appointment Link verified" : "Missing Appointment URL",
-      impact: "High AI Conversational Rank",
+      impact: "High Booking Conversion",
       tip: profileData.appointmentUrl
-        ? "Google Gemini will directly present your booking link when patients ask to schedule."
-        : "Add your online booking or WhatsApp link so AI search agents can convert patients instantly.",
+        ? "Google Search & Maps presents your booking link when patients ask to schedule."
+        : "Add your online booking or WhatsApp link so patients can book appointments directly.",
     },
     {
       fieldKey: "categories",
@@ -44,7 +45,7 @@ export function AiSearchReadiness() {
         ? `${profileData.primaryCategory} + ${profileData.categories?.length || 0} sub-specialties`
         : "Categories incomplete",
       impact: "Broad Search Reach",
-      tip: "AI search engines construct treatment maps using your primary and secondary categories.",
+      tip: "Search engines match patient symptom queries against your primary and secondary clinical categories.",
     },
     {
       fieldKey: "hours",
@@ -53,8 +54,8 @@ export function AiSearchReadiness() {
       question: "What are the clinic's operating hours and weekend availability?",
       ready: !!profileData.hours,
       source: profileData.hours ? "Structured Hours Verified" : "Hours not specified",
-      impact: "Emergency & Urgent Discovery",
-      tip: "Google AI relies on structured hours to answer queries like 'Is Dr. Vinay Kumar Rai open right now?'.",
+      impact: "Open Now Discovery",
+      tip: `Google relies on verified hours to answer patient queries like "Is ${doctorName} open right now?".`,
     },
     {
       fieldKey: "phone",
@@ -62,9 +63,9 @@ export function AiSearchReadiness() {
       fieldValue: profileData.phone || "",
       question: "Where is the clinic located and how can I reach them?",
       ready: !!(profileData.phone && profileData.address),
-      source: profileData.phone && profileData.address ? "Direct Phone & Geocoded Address" : "Incomplete Contact Data",
-      impact: "Maps Route Generation",
-      tip: "Complete contact info allows Google Maps AI to generate 1-tap navigation and direct call prompts.",
+      source: profileData.phone && profileData.address ? "Direct Phone & Clinic Address" : "Incomplete Contact Data",
+      impact: "Directions & Direct Calls",
+      tip: "Complete contact info allows Google Maps to provide 1-tap calling and accurate driving directions.",
     },
   ];
 
@@ -81,40 +82,40 @@ export function AiSearchReadiness() {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6">
+    <div className="bg-white rounded-2xl shadow-2xs border border-gray-200 p-6 md:p-8 space-y-6">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Bot className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <HelpCircle className="w-4 h-4" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">Google AI & Ask Maps Search Readiness</h2>
-            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-indigo-500" /> AI Ready
+            <h2 className="text-lg font-bold text-gray-900">Patient Search Queries</h2>
+            <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+              Search Readiness
             </span>
           </div>
           <p className="text-xs text-gray-500 max-w-2xl leading-relaxed">
-            Google has shifted from static Q&A to conversational AI search (Ask Maps & Gemini). This tool checks how accurately Google AI agents can synthesize and answer patient queries for your clinic.
+            How search engines and conversational voice assistants answer common patient inquiries using your profile data.
           </p>
         </div>
 
         {/* Readiness Badge Score */}
-        <div className="flex items-center gap-3 bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-4 rounded-xl shadow-sm shrink-0">
+        <div className="flex items-center gap-4 bg-gray-50/90 p-4 rounded-xl border border-gray-200/80 shrink-0">
           <div className="text-right">
-            <p className="text-[10px] uppercase font-bold text-indigo-300 tracking-wider">AI Search Score</p>
-            <p className="text-2xl font-black text-white">{aiReadinessScore}%</p>
+            <p className="text-[11px] font-semibold text-gray-500">Query Readiness</p>
+            <p className="text-2xl font-bold text-gray-900">{aiReadinessScore}%</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center font-bold text-indigo-300 text-sm">
-            {aiReadinessScore >= 75 ? "A+" : aiReadinessScore >= 50 ? "B" : "C"}
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 text-xs">
+            {readyCount}/{queries.length}
           </div>
         </div>
       </div>
 
       {/* Simulated Conversational Queries */}
       <div className="space-y-4">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-400">
-          Simulated Google AI Patient Queries
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+          Common Patient Queries & Coverage
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -123,8 +124,8 @@ export function AiSearchReadiness() {
               key={idx}
               className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
                 q.ready
-                  ? "bg-gray-50/60 border-gray-100 hover:border-gray-200"
-                  : "bg-amber-50/40 border-amber-200/60 hover:border-amber-300"
+                  ? "bg-gray-50/50 border-gray-200/70 hover:border-gray-300"
+                  : "bg-amber-50/30 border-amber-200/70 hover:border-amber-300"
               }`}
             >
               <div>
@@ -134,12 +135,12 @@ export function AiSearchReadiness() {
                     <p className="text-xs font-bold text-gray-900 leading-snug">&ldquo;{q.question}&rdquo;</p>
                   </div>
                   {q.ready ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> AI Verified
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
-                      <AlertCircle className="w-3 h-3 text-amber-600" /> Action Needed
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
+                      <AlertCircle className="w-3 h-3 text-amber-600" /> Incomplete
                     </span>
                   )}
                 </div>
@@ -148,19 +149,19 @@ export function AiSearchReadiness() {
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-200/50 text-[11px] pl-6">
-                <span className="text-gray-400 font-medium">Source: {q.source}</span>
+                <span className="text-gray-400 font-medium">Status: {q.source}</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleOpenFix(q)}
-                  className={`h-6 text-[11px] font-bold px-2.5 rounded-lg transition-all ${
+                  className={`h-6 text-[11px] font-semibold px-2.5 rounded-lg transition-all ${
                     q.ready
                       ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
                       : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100"
                   }`}
                 >
                   <Edit3 className="w-3 h-3 mr-1 text-indigo-500" />
-                  {q.ready ? "Edit" : "Fix Inline"}
+                  {q.ready ? "Edit" : "Update"}
                 </Button>
               </div>
             </div>

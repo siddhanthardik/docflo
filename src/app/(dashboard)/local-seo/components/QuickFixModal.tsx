@@ -54,26 +54,36 @@ export function QuickFixModal({
 
   // Category suggestions based on specialty
   const getCategorySuggestions = () => {
-    const p = primaryCategory.toLowerCase();
-    if (p.includes("gynaecolog") || p.includes("obstetr")) {
+    const p = (primaryCategory || "").toLowerCase();
+    if (p.includes("gynaecolog") || p.includes("obstetr") || p.includes("women")) {
       return ["Gynecologist", "Women's Health Clinic", "Maternity Hospital", "Fertility Clinic", "Ultrasound Scan Center"];
     } else if (p.includes("pediat") || p.includes("child")) {
-      return ["Pediatrician", "Child Specialist", "Vaccination Center", "Pediatric Care Clinic"];
-    } else if (p.includes("derma") || p.includes("skin")) {
-      return ["Dermatologist", "Skin Care Clinic", "Hair Transplant Clinic", "Laser Hair Removal Service"];
-    } else if (p.includes("denta") || p.includes("teeth")) {
-      return ["Dental Clinic", "Orthodontist", "Cosmetic Dentist", "Teeth Whitening Service"];
+      return ["Pediatrician", "Children's Health Clinic", "Child Specialist", "Vaccination Center", "Pediatric Care Clinic"];
+    } else if (p.includes("derma") || p.includes("skin") || p.includes("hair")) {
+      return ["Dermatologist", "Skin Care Clinic", "Hair Specialist Clinic", "Cosmetology Clinic"];
+    } else if (p.includes("denta") || p.includes("teeth") || p.includes("orthodont")) {
+      return ["Dental Clinic", "Dentist", "Orthodontist", "Cosmetic Dentist", "Pediatric Dentist"];
+    } else if (p.includes("ortho") || p.includes("bone") || p.includes("joint")) {
+      return ["Orthopedic Surgeon", "Bone & Joint Clinic", "Sports Medicine Clinic", "Spine Specialist"];
+    } else if (p.includes("cardio") || p.includes("heart")) {
+      return ["Cardiologist", "Heart Care Clinic", "Cardiovascular Center"];
+    } else if (p.includes("ent") || p.includes("ear") || p.includes("throat")) {
+      return ["ENT Specialist", "Ear Nose Throat Clinic", "Audiology Center"];
+    } else if (p.includes("ophthal") || p.includes("eye") || p.includes("vision")) {
+      return ["Ophthalmologist", "Eye Care Clinic", "Eye Specialist"];
+    } else if (p.includes("physician") || p.includes("general") || p.includes("internal")) {
+      return ["General Physician", "Family Doctor", "Medical Clinic", "Consultant Physician"];
     }
-    return ["Medical Clinic", "Specialist Clinic", "Urgent Care Center", "Wellness Center"];
+    return ["Medical Clinic", "Specialist Clinic", "Healthcare Center", "Wellness Clinic"];
   };
 
   const attributeOptions = [
     "Wheelchair Accessible Entrance",
     "Wheelchair Accessible Restroom",
     "Appointments Recommended",
-    "Women-Led Practice",
-    "Online Care & Telehealth",
+    "Online Consultations Available",
     "Restroom Available",
+    "Emergency Care Available",
   ];
 
   const handleToggleCategory = (cat: string) => {
@@ -92,14 +102,14 @@ export function QuickFixModal({
     }
   };
 
-  const handleAiGenerateDescription = async () => {
+  const handleDraftDescription = () => {
     try {
       setAiGenerating(true);
-      const generated = `Leading ${primaryCategory} clinic providing comprehensive medical care, patient consultations, and specialized treatment programs. Dedicated to clinical excellence and compassionate patient outcome delivery in modern, fully equipped facilities.`;
+      const generated = `${primaryCategory} practice dedicated to delivering compassionate, evidence-based medical care and specialized treatment. Offering patient-centered consultations in a well-equipped clinical facility.`;
       setTextVal(generated);
       toast({
-        title: "AI Description Generated!",
-        description: "Review and click 'Save & Sync to Google' to update your profile.",
+        title: "Draft Description Created",
+        description: "Review or personalize the text, then click 'Save Changes'.",
       });
     } finally {
       setAiGenerating(false);
@@ -130,8 +140,8 @@ export function QuickFixModal({
 
       if (res.ok) {
         toast({
-          title: "Profile Health Updated! 🎉",
-          description: `"${fieldLabel}" has been saved and synced to your Google Business Profile.`,
+          title: "Profile Updated",
+          description: `"${fieldLabel}" has been saved to your clinic profile.`,
         });
         onSaved();
         onClose();
@@ -145,7 +155,7 @@ export function QuickFixModal({
         description: e.message || "Could not save profile update.",
         variant: "destructive",
       });
-    } fontally: {
+    } finally {
       setSaving(false);
     }
   };
@@ -170,8 +180,8 @@ export function QuickFixModal({
               )}
             </div>
             <div>
-              <h3 className="font-bold text-base text-gray-900">Optimize {fieldLabel}</h3>
-              <p className="text-[11px] text-gray-500">Instant in-page update · Synced to Google</p>
+              <h3 className="font-bold text-base text-gray-900">Update {fieldLabel}</h3>
+              <p className="text-[11px] text-gray-500">Update clinic profile · Reflected in local SEO audit</p>
             </div>
           </div>
           <button
@@ -196,7 +206,7 @@ export function QuickFixModal({
                 className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden"
               />
               <p className="text-[11px] text-gray-500 leading-relaxed">
-                Direct booking links allow patients searching on Google Maps to schedule appointments in 1 click.
+                Direct booking links allow patients searching on Google Maps to schedule appointments quickly.
               </p>
             </div>
           )}
@@ -208,12 +218,12 @@ export function QuickFixModal({
                 <label className="text-xs font-bold text-gray-700">Business Description</label>
                 <button
                   type="button"
-                  onClick={handleAiGenerateDescription}
+                  onClick={handleDraftDescription}
                   disabled={aiGenerating}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 transition-all"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 transition-all"
                 >
                   <Sparkles className="w-3 h-3 text-indigo-500" />
-                  {aiGenerating ? "Generating..." : "AI Auto-Generate"}
+                  {aiGenerating ? "Drafting..." : "Draft Overview"}
                 </button>
               </div>
               <textarea
@@ -339,26 +349,30 @@ export function QuickFixModal({
               />
             </div>
           )}
+
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed">
+            Changes update your clinic profile and Local SEO audit. To push these updates live on Google Maps, also verify them in your <a href="/gbp" className="text-indigo-600 underline font-medium hover:text-indigo-700">Google Profile settings</a>.
+          </div>
         </div>
 
         {/* Footer Actions */}
         <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving} className="text-xs font-semibold">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving} className="text-xs font-medium text-gray-600">
             Cancel
           </Button>
           <Button
             size="sm"
             onClick={handleSave}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs"
+            className="bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-2xs px-4"
           >
             {saving ? (
               <>
-                <RefreshCcw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving & Syncing...
+                <RefreshCcw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...
               </>
             ) : (
               <>
-                <Save className="w-3.5 h-3.5 mr-1.5" /> Save & Sync to Google
+                <Save className="w-3.5 h-3.5 mr-1.5" /> Save Changes
               </>
             )}
           </Button>
