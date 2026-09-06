@@ -39,10 +39,23 @@ export interface DiscoveredClinicLead {
   createdAt: string;
 }
 
+export interface ProspectorDiscoveryMeta {
+  batch: number;
+  totalDiscoveredThisRun: number;
+  skippedExistingCount: number;
+  hasMore: boolean;
+  totalFreshAvailable: number;
+}
+
+export interface DiscoveryResult {
+  leads: DiscoveredClinicLead[];
+  meta: ProspectorDiscoveryMeta;
+}
+
 export class ProspectorService {
   /**
    * PHASE 1 — Fast discovery (returns in ~5–10s for 20 clinics).
-   * Each clinic's audit is queued in the DB for background processing.
+   * Supports automatic database deduplication, batch pagination, and Google next_page_token traversal.
    */
   static async discoverClinics(params: {
     areaOrPincode: string;
@@ -50,11 +63,23 @@ export class ProspectorService {
     city?: string;
     country?: string;
     limit?: number;
-  }): Promise<DiscoveredClinicLead[]> {
-    const { areaOrPincode, specialty, city = "New Delhi", country = "India", limit = 10 } = params;
+    batch?: number;
+    excludeExisting?: boolean;
+    excludePlaceIds?: string[];
+  }): Promise<DiscoveryResult> {
+    const {
+      areaOrPincode,
+      specialty,
+      city = "New Delhi",
+      country = "India",
+      limit = 10,
+      batch = 1,
+      excludeExisting = true,
+      excludePlaceIds = [],
+    } = params;
     const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
 
-    console.log(`[PROSPECTOR] Searching: ${specialty} in ${areaOrPincode}, ${city}`);
+    console.log(`[PROSPECTOR] Searching: ${specialty} in ${areaOrPincode}, ${city} (Batch: ${batch}, Limit: ${limit}, ExcludeExisting: ${excludeExisting})`);
 
     if (!apiKey) {
       throw new Error("GOOGLE_PLACES_API_KEY is required for clinic discovery.");
@@ -63,22 +88,100 @@ export class ProspectorService {
     // ── STEP 1: Text search ─────────────────────────────────────────────────
     const searchQuery = `${specialty} in ${areaOrPincode} ${city} ${country}`;
     let rawPlaces: any[] = [];
+    let nextPageToken: string | null = null;
 
-    const placesRes = await fetch(
-      `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    const placesData = await placesRes.json();
-    if (placesData.results && Array.isArray(placesData.results)) {
-      rawPlaces = placesData.results;
+    try {
+      const placesRes = await fetch(
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      const placesData = await placesRes.json();
+      if (placesData.results && Array.isArray(placesData.results)) {
+        rawPlaces = placesData.results;
+        nextPageToken = placesData.next_page_token || null;
+      }
+    } catch (fetchErr) {
+      console.error("[PROSPECTOR] Failed to fetch Google Places:", fetchErr);
     }
 
     if (rawPlaces.length === 0) {
       console.log(`[PROSPECTOR] No results for: ${searchQuery}`);
-      return [];
+      return {
+        leads: [],
+        meta: {
+          batch,
+          totalDiscoveredThisRun: 0,
+          skippedExistingCount: 0,
+          hasMore: false,
+          totalFreshAvailable: 0,
+        },
+      };
     }
 
-    const targetPlaces = rawPlaces.slice(0, Math.min(rawPlaces.length, limit));
+    // ── STEP 1.5: Query existing DB leads to deduplicate ─────────────────────
+    const existingPlaceIdSet = new Set<string>();
+
+    if (excludeExisting) {
+      try {
+        const existingLeads = await prisma.auditLead.findMany({
+          where: {
+            placeId: { not: null },
+          },
+          select: { placeId: true },
+        });
+        for (const lead of existingLeads) {
+          if (lead.placeId) {
+            existingPlaceIdSet.add(lead.placeId);
+          }
+        }
+      } catch (dbErr) {
+        console.warn("[PROSPECTOR] Could not query existing audit leads for deduplication:", dbErr);
+      }
+    }
+
+    // Add any placeIds passed explicitly by client
+    if (Array.isArray(excludePlaceIds)) {
+      for (const id of excludePlaceIds) {
+        if (id) existingPlaceIdSet.add(id);
+      }
+    }
+
+    // Filter fresh places not already discovered in Gyrex DB
+    let freshPlaces = excludeExisting
+      ? rawPlaces.filter((item) => !item.place_id || !existingPlaceIdSet.has(item.place_id))
+      : rawPlaces;
+
+    const skippedCount = rawPlaces.length - freshPlaces.length;
+
+    // If fresh places on page 1 are fewer than requested limit, and Google has next_page_token:
+    if (freshPlaces.length < limit && nextPageToken) {
+      try {
+        console.log(`[PROSPECTOR] Fresh places on page 1 (${freshPlaces.length}) < limit (${limit}). Fetching page 2 via next_page_token...`);
+        // Mandatory Google Places 2-second activation delay for next_page_token
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const page2Res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${nextPageToken}&key=${apiKey}`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        const page2Data = await page2Res.json();
+        if (page2Data.results && Array.isArray(page2Data.results)) {
+          nextPageToken = page2Data.next_page_token || null;
+          const page2Fresh = excludeExisting
+            ? page2Data.results.filter((item: any) => !item.place_id || !existingPlaceIdSet.has(item.place_id))
+            : page2Data.results;
+          freshPlaces.push(...page2Fresh);
+        }
+      } catch (tokenErr) {
+        console.warn("[PROSPECTOR] Failed fetching page 2 of Google Places:", tokenErr);
+      }
+    }
+
+    // Slicing:
+    // If excludeExisting is true, freshPlaces already excludes past leads, so we take the top `limit` fresh items.
+    // If excludeExisting is false, we use standard pagination offset: (batch - 1) * limit.
+    const startIndex = excludeExisting ? 0 : Math.max(0, (batch - 1) * limit);
+    const targetPlaces = freshPlaces.slice(startIndex, startIndex + limit);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://gyrex.in";
 
     // ── STEP 2: Parallel Place Details (all clinics at once) ─────────────────
@@ -195,8 +298,17 @@ export class ProspectorService {
       });
     }
 
-    console.log(`[PROSPECTOR] Discovered ${leads.length} clinics. Audits queued for background processing.`);
-    return leads;
+    console.log(`[PROSPECTOR] Discovered ${leads.length} clinics (Skipped ${skippedCount} existing). Audits queued.`);
+    return {
+      leads,
+      meta: {
+        batch,
+        totalDiscoveredThisRun: leads.length,
+        skippedExistingCount: skippedCount,
+        hasMore: freshPlaces.length > (startIndex + limit) || !!nextPageToken,
+        totalFreshAvailable: freshPlaces.length,
+      },
+    };
   }
 
   /**

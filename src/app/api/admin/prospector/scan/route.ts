@@ -11,20 +11,25 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { areaOrPincode, specialty, city, country, limit = 10 } = body;
+    const { areaOrPincode, specialty, city, country, limit = 10, batch = 1, excludeExisting = true, excludePlaceIds = [] } = body;
 
     if (!areaOrPincode || !specialty) {
       return NextResponse.json({ error: "Area / PIN code and Specialty are required" }, { status: 400 });
     }
 
-    // 1. Discover clinics & extract emails
-    const leads = await ProspectorService.discoverClinics({
+    // 1. Discover clinics & extract emails (with auto deduplication & next_page_token)
+    const discoveryResult = await ProspectorService.discoverClinics({
       areaOrPincode,
       specialty,
       city,
       country,
       limit: Number(limit),
+      batch: Number(batch || 1),
+      excludeExisting: Boolean(excludeExisting),
+      excludePlaceIds: Array.isArray(excludePlaceIds) ? excludePlaceIds : [],
     });
+
+    const leads = discoveryResult.leads;
 
     // 2. Sync lead rows to Google Sheet
     const sheetSync = await GoogleSheetsService.syncLeadsToSheet(leads);
@@ -33,6 +38,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: `Discovered ${leads.length} doctor leads and synced to Google Sheets.`,
       leads,
+      meta: discoveryResult.meta,
       sheetSync,
     });
   } catch (error: any) {

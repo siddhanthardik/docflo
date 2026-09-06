@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { DiscoveredClinicLead } from "@/lib/prospector";
+import { DiscoveredClinicLead, ProspectorDiscoveryMeta } from "@/lib/prospector";
 
 const MEDICAL_SPECIALTIES = [
   { value: "physician", label: "Physician / General Medicine" },
@@ -49,6 +49,11 @@ export default function AdminProspectorPage() {
   const [specialty, setSpecialty] = useState("dentist");
   const [city, setCity] = useState("New Delhi");
   const [limit, setLimit] = useState(10);
+
+  const [currentBatch, setCurrentBatch] = useState(1);
+  const [excludeExisting, setExcludeExisting] = useState(true);
+  const [appendMode, setAppendMode] = useState(true);
+  const [discoveryMeta, setDiscoveryMeta] = useState<ProspectorDiscoveryMeta | null>(null);
 
   const [scanning, setScanning] = useState(false);
   const [scanStep, setScanStep] = useState(0);
@@ -110,9 +115,11 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
     "Step 5/5: Syncing Discovered Rows to Google Sheets...",
   ];
 
-  const handleRunScan = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRunScan = async (e?: React.FormEvent, nextBatchOverride?: number) => {
+    if (e) e.preventDefault();
     if (!areaOrPincode || !specialty) return;
+
+    const targetBatch = nextBatchOverride !== undefined ? nextBatchOverride : 1;
 
     try {
       setScanning(true);
@@ -122,10 +129,23 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
         setScanStep((prev) => (prev < 4 ? prev + 1 : prev));
       }, 1500);
 
+      // Collect placeIds currently in local state to ensure client-side deduplication as well
+      const excludePlaceIds = excludeExisting 
+        ? leads.map((l) => l.googlePlaceId).filter((id): id is string => Boolean(id)) 
+        : [];
+
       const res = await fetch("/api/admin/prospector/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ areaOrPincode, specialty, city, limit }),
+        body: JSON.stringify({
+          areaOrPincode,
+          specialty,
+          city,
+          limit,
+          batch: targetBatch,
+          excludeExisting,
+          excludePlaceIds,
+        }),
       });
 
       clearInterval(stepInterval);
@@ -134,14 +154,31 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Scan failed");
 
-      setLeads(data.leads || []);
+      const newLeads: DiscoveredClinicLead[] = data.leads || [];
+
+      if (targetBatch > 1 && appendMode) {
+        setLeads((prev) => [...prev, ...newLeads]);
+      } else {
+        setLeads(newLeads);
+      }
+
+      setCurrentBatch(targetBatch);
+      if (data.meta) {
+        setDiscoveryMeta(data.meta);
+      }
       if (data.sheetSync?.spreadsheetUrl) {
         setSheetUrl(data.sheetSync.spreadsheetUrl);
       }
 
+      const skippedMsg = data.meta?.skippedExistingCount 
+        ? ` (${data.meta.skippedExistingCount} duplicates skipped)` 
+        : "";
+
       toast({
-        title: data.sheetSync?.success ? "AI Prospecting & Google Sheet Sync Complete! 🎯" : "AI Prospecting Scan Complete! 🎯",
-        description: `Discovered ${data.leads?.length || 0} authentic clinic leads. ${data.sheetSync?.message || ""}`,
+        title: targetBatch > 1 
+          ? `Batch #${targetBatch} Discovered! 🎯` 
+          : (data.sheetSync?.success ? "AI Prospecting & Google Sheet Sync Complete! 🎯" : "AI Prospecting Scan Complete! 🎯"),
+        description: `Discovered ${newLeads.length} authentic clinic leads${skippedMsg}. ${data.sheetSync?.message || ""}`,
         variant: data.sheetSync?.success === false ? "destructive" : "default",
       });
     } catch (error: any) {
@@ -153,6 +190,10 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleFetchNextBatch = () => {
+    handleRunScan(undefined, currentBatch + 1);
   };
 
   const handleOpenEmailPreview = (lead: DiscoveredClinicLead) => {
@@ -323,10 +364,24 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Outreach Domain Isolation Active (<span className="font-semibold text-slate-700">getgyrex.com</span>)
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={excludeExisting}
+                onChange={(e) => setExcludeExisting(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+              />
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Deduplication Shield: Skip previously discovered clinics in CRM (Never fetch duplicates)
+              </span>
+            </label>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 pl-6">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Outreach Domain Isolation Active (<span className="font-semibold text-slate-700">getgyrex.com</span>)
+            </div>
           </div>
 
           <Button
@@ -348,10 +403,22 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
         <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden space-y-4 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Discovered Authentic Doctor Leads</h3>
-              <p className="text-xs text-gray-500">{leads.length} official clinic listings parsed and synced to Google Sheets CRM</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-gray-900">Discovered Authentic Doctor Leads</h3>
+                <span className="bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-100">
+                  Batch #{currentBatch}
+                </span>
+                {discoveryMeta?.skippedExistingCount ? (
+                  <span className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-amber-200">
+                    {discoveryMeta.skippedExistingCount} duplicates excluded
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {leads.length} unique clinic listings parsed and synced to Google Sheets CRM
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {sheetUrl && (
                 <a
                   href={sheetUrl}
@@ -362,9 +429,15 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> View in Google Sheets <ExternalLink className="w-3 h-3" />
                 </a>
               )}
-              <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full border border-indigo-100">
-                {leads.length} Leads Ready
-              </span>
+              <Button
+                onClick={handleFetchNextBatch}
+                disabled={scanning}
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold h-8 px-3.5 rounded-full shadow-2xs cursor-pointer flex items-center gap-1.5"
+              >
+                {scanning ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-amber-300" />}
+                <span>Fetch Next {limit} Fresh Doctors</span>
+              </Button>
             </div>
           </div>
 
@@ -523,6 +596,49 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Table Bottom: Batch Pagination & Deduplication Toolbar */}
+          <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
+                Batch #{currentBatch}
+              </span>
+              <span>•</span>
+              <span>Showing {leads.length} unique doctor leads</span>
+              {discoveryMeta?.skippedExistingCount ? (
+                <>
+                  <span>•</span>
+                  <span className="text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                    {discoveryMeta.skippedExistingCount} previously prospected clinics excluded
+                  </span>
+                </>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-slate-600 flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={appendMode}
+                  onChange={(e) => setAppendMode(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                />
+                <span>Append to current list</span>
+              </label>
+
+              <Button
+                onClick={handleFetchNextBatch}
+                disabled={scanning}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-sm flex items-center gap-2 cursor-pointer"
+              >
+                {scanning ? (
+                  <><RefreshCcw className="w-3.5 h-3.5 animate-spin" /> Fetching Next Batch...</>
+                ) : (
+                  <><Sparkles className="w-3.5 h-3.5 text-amber-300" /> Fetch Next {limit} Fresh Doctors (Batch #{currentBatch + 1})</>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
