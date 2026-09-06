@@ -54,9 +54,9 @@ export function MedicalEEATScorecard({
   const reviewGap = Math.max(0, compAvgReviews - reviewsCount);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold">
@@ -72,7 +72,7 @@ export function MedicalEEATScorecard({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <div className="text-2xl font-extrabold text-emerald-600 leading-none">{eeatScore}/100</div>
             <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider mt-0.5">
               {eeatScore >= 80 ? "High Trust Rating" : eeatScore >= 60 ? "Moderate Trust" : "Trust Deficit"}
@@ -82,7 +82,7 @@ export function MedicalEEATScorecard({
       </div>
 
       {/* 6 Core EEAT Trust Badges Grid */}
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           
           {/* 1. Category Precision */}

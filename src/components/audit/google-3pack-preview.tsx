@@ -37,9 +37,9 @@ export function Google3PackPreview({
     : "Your Clinic";
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold">
@@ -70,8 +70,8 @@ export function Google3PackPreview({
       </div>
 
       {/* Google Mobile SERP Container */}
-      <div className="p-6 bg-slate-50/60">
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
+      <div className="p-3.5 sm:p-6 bg-slate-50/60 w-full min-w-0">
+        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden w-full min-w-0">
           
           {/* Simulated Google Search Bar */}
           <div className="p-3.5 bg-white border-b border-slate-100 flex items-center gap-2.5 text-xs text-slate-700 shadow-2xs">

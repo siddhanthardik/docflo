@@ -369,7 +369,7 @@ export function RankTrackerMap({
       </div>
 
       {/* Floating Legend Overlay Bottom-Left */}
-      <div className="absolute bottom-3 left-3 z-1000 bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-md border border-gray-100 text-[11px] text-gray-600 flex flex-wrap items-center gap-3">
+      <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-1000 bg-white/95 backdrop-blur-md rounded-xl p-2.5 sm:p-3 shadow-md border border-gray-100 text-[10px] sm:text-[11px] text-gray-600 flex flex-wrap items-center gap-2 sm:gap-3 max-w-[calc(100%-1.5rem)]">
         <div className="flex items-center gap-1.5 font-medium">
           <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-[8px]">1-3</span>
           Top 3 Pack

@@ -167,7 +167,7 @@ function MobileTrialSpotlight({ businessName }: { businessName: string }) {
   const visibleFeatures = showAll ? TRIAL_FEATURES : TRIAL_FEATURES.slice(0, 4);
 
   return (
-    <div className="lg:hidden rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 p-5 sm:p-6 shadow-xs space-y-4 print:hidden">
+    <div className="lg:hidden rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 p-4 sm:p-6 shadow-xs space-y-4 print:hidden w-full min-w-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
@@ -423,8 +423,8 @@ function SearchGridVisualization({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
-      <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50">
+    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
+      <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
@@ -460,7 +460,7 @@ function SearchGridVisualization({
         </div>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {/* View Mode Toggle Header (Hidden in Print) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
           <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
@@ -511,62 +511,64 @@ function SearchGridVisualization({
         )}
 
         {/* View 2: Structured 5x5 Matrix (Active in Grid mode OR when printing) */}
-        <div className={`${viewMode === "map" ? "hidden print:block" : "block"} bg-slate-50/80 border border-slate-200 rounded-2xl p-6 relative overflow-hidden`}>
+        <div className={`${viewMode === "map" ? "hidden print:block" : "block"} bg-slate-50/80 border border-slate-200 rounded-2xl p-3 sm:p-6 relative overflow-hidden`}>
           {/* North Indicator */}
-          <div className="text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3">
+          <div className="text-center text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-2 sm:mb-3">
             <span className="text-indigo-600 text-xs">▲</span> North <span className="text-indigo-600 text-xs">▲</span>
           </div>
 
           {/* Grid with West/East labels */}
-          <div className="flex items-center justify-center gap-3 min-w-[320px]">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 select-none">
-              <span>◀</span> West
-            </div>
+          <div className="w-full overflow-x-auto py-2">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-3 min-w-max mx-auto">
+              <div className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 select-none">
+                <span>◀</span> West
+              </div>
 
-            <div className="flex flex-col gap-2.5">
-              {matrixRows.map((row, rIdx) => (
-                <div key={rIdx} className="flex gap-2.5 justify-center">
-                  {row.map((cell, cIdx) => {
-                    const isCenter = cell.row === 2 && cell.col === 2;
-                    const isGood = cell.status === "good";
-                    const isAvg = cell.status === "avg";
-                    const bgStyle = isCenter
-                      ? { backgroundColor: "#4f46e5", color: "#ffffff", borderColor: "#3730a3" }
-                      : isGood
-                      ? { backgroundColor: "#10b981", color: "#ffffff", borderColor: "#059669" }
-                      : isAvg
-                      ? { backgroundColor: "#f59e0b", color: "#ffffff", borderColor: "#d97706" }
-                      : { backgroundColor: "#ef4444", color: "#ffffff", borderColor: "#dc2626" };
+              <div className="flex flex-col gap-1.5 sm:gap-2.5">
+                {matrixRows.map((row, rIdx) => (
+                  <div key={rIdx} className="flex gap-1.5 sm:gap-2.5 justify-center">
+                    {row.map((cell, cIdx) => {
+                      const isCenter = cell.row === 2 && cell.col === 2;
+                      const isGood = cell.status === "good";
+                      const isAvg = cell.status === "avg";
+                      const bgStyle = isCenter
+                        ? { backgroundColor: "#4f46e5", color: "#ffffff", borderColor: "#3730a3" }
+                        : isGood
+                        ? { backgroundColor: "#10b981", color: "#ffffff", borderColor: "#059669" }
+                        : isAvg
+                        ? { backgroundColor: "#f59e0b", color: "#ffffff", borderColor: "#d97706" }
+                        : { backgroundColor: "#ef4444", color: "#ffffff", borderColor: "#dc2626" };
 
-                    const dRow = 2 - cell.row;
-                    const dCol = cell.col - 2;
-                    const approxDist = Math.round(Math.sqrt(dRow * dRow + dCol * dCol) * spacingMeters);
-                    const rankLabel = !cell.found || cell.rank === 0 ? ">20" : cell.rank > 15 ? ">15" : String(cell.rank);
+                      const dRow = 2 - cell.row;
+                      const dCol = cell.col - 2;
+                      const approxDist = Math.round(Math.sqrt(dRow * dRow + dCol * dCol) * spacingMeters);
+                      const rankLabel = !cell.found || cell.rank === 0 ? ">20" : cell.rank > 15 ? ">15" : String(cell.rank);
 
-                    return (
-                      <div
-                        key={cIdx}
-                        style={bgStyle}
-                        title={isCenter ? `${businessName} (Clinic Location)` : `Rank ${rankLabel} (${approxDist}m from clinic)`}
-                        className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm shadow-xs border transition-all cursor-default select-none ${isCenter ? 'scale-105 ring-2 ring-indigo-200' : ''}`}
-                      >
-                        {isCenter ? (
-                          <>
-                            <MapPin className="w-4 h-4 fill-white text-white" />
-                            <span className="text-[8px] font-semibold opacity-90">You</span>
-                          </>
-                        ) : (
-                          <span>{rankLabel}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+                      return (
+                        <div
+                          key={cIdx}
+                          style={bgStyle}
+                          title={isCenter ? `${businessName} (Clinic Location)` : `Rank ${rankLabel} (${approxDist}m from clinic)`}
+                          className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex flex-col items-center justify-center font-bold text-xs sm:text-sm shadow-xs border transition-all cursor-default select-none ${isCenter ? 'scale-105 ring-2 ring-indigo-200' : ''}`}
+                        >
+                          {isCenter ? (
+                            <>
+                              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white text-white" />
+                              <span className="text-[7px] sm:text-[8px] font-semibold opacity-90">You</span>
+                            </>
+                          ) : (
+                            <span>{rankLabel}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
 
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              East <span>▶</span>
+              <div className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 select-none">
+                East <span>▶</span>
+              </div>
             </div>
           </div>
 
@@ -897,7 +899,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 print:pb-0 print:bg-white">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 print:pb-0 print:bg-white w-full max-w-[100vw] overflow-x-clip">
       {/* ── High-Definition Print Stylesheet ─────────────────────────────── */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -932,22 +934,23 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       `}} />
 
       {/* ── Top Navigation Bar ───────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:static print:border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:static print:border-b w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between w-full min-w-0">
+          <Link href="/" className="flex items-center gap-2 min-w-0 shrink">
             <GyrexLogo size="md" />
-            <span className="text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1">Audit Report</span>
+            <span className="hidden sm:inline text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1 truncate">Audit Report</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3 print:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 print:hidden">
             <Link
               href="/register"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white transition-colors shadow-2xs shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white transition-colors shadow-2xs shrink-0"
             >
               <span>14-Day Free Trial</span>
             </Link>
             <button
               onClick={handleDownloadPDF}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+              title="Download PDF"
             >
               <Download className="w-3.5 h-3.5 text-slate-500" />
               <span className="hidden sm:inline">PDF</span>
@@ -956,7 +959,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out the Google Business Profile Audit Report for ${businessName}: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs shrink-0"
+              className="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs shrink-0"
+              title="Share on WhatsApp"
             >
               <WhatsAppSVG />
               <span className="hidden sm:inline">Share</span>
@@ -966,45 +970,45 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       </header>
 
       {/* ── Main Container (Mobile First Spacing) ─────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 sm:pb-36 lg:pb-12 print:py-4 print:px-0 print:max-w-none">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 sm:pb-36 lg:pb-12 min-w-0 print:py-4 print:px-0 print:max-w-none">
         
         {/* Two Column Layout */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start print:block">
+        <div className="flex flex-col lg:flex-row gap-8 items-start w-full min-w-0 max-w-full print:block">
 
           {/* ════ LEFT MAIN CONTENT ════════════════════════════════════════ */}
-          <div className="flex-1 min-w-0 space-y-6 print:w-full print:max-w-none">
+          <div className="flex-1 min-w-0 max-w-full space-y-6 print:w-full print:max-w-none">
 
             {/* ── SECTION 1: Hero Diagnostic Banner ─────────────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
               
               {/* Business Info Header */}
-              <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
-                <div className="flex items-center gap-4">
+              <div className="p-4 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 border-b border-slate-100 w-full min-w-0">
+                <div className="flex items-center gap-3.5 sm:gap-4 w-full min-w-0">
                   {overview?.photoUrl ? (
                     <img 
                       src={overview.photoUrl} 
                       alt={businessName} 
-                      className="w-16 h-16 rounded-2xl object-cover shrink-0 shadow-xs border border-slate-200"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 shadow-xs border border-slate-200"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-2xl shrink-0 shadow-xs">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-xl sm:text-2xl shrink-0 shadow-xs">
                       {getInitials(businessName)}
                     </div>
                   )}
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">{businessName}</h1>
-                    <div className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500 font-normal">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h1 className="text-lg sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight break-words hyphens-auto">{businessName}</h1>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-[13px] text-slate-500 font-normal min-w-0">
                       {address && (
-                        <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 border border-slate-200/60 rounded-lg text-slate-600">
+                        <span className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-slate-100/80 border border-slate-200/60 rounded-lg text-slate-600 break-words max-w-full">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {address}
                         </span>
                       )}
                       {isUnrated ? (
-                        <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 border border-slate-200/70 rounded-lg text-slate-600 font-medium">
+                        <span className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-slate-100 border border-slate-200/70 rounded-lg text-slate-600 font-medium shrink-0">
                           <Star className="w-3.5 h-3.5 text-slate-400" /> Unrated (0 Reviews)
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-lg text-amber-800 font-medium">
+                        <span className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-lg text-amber-800 font-medium shrink-0">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {rating} ({reviewsCount} reviews)
                         </span>
                       )}
@@ -1014,16 +1018,16 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Red Warning Bar */}
-              <div className="px-5 sm:px-6 py-3 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3">
+              <div className="px-4 sm:px-6 py-2.5 sm:py-3 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3 w-full min-w-0">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
-                  <span className="text-[13px] font-semibold text-rose-700">Diagnostic Complete · {issueCount} Ranking Obstacles Found</span>
+                  <span className="text-xs sm:text-[13px] font-semibold text-rose-700">Diagnostic Complete · {issueCount} Ranking Obstacles Found</span>
                 </div>
               </div>
 
               {/* Core Diagnosis Headline & Metrics */}
-              <div className="p-5 sm:p-8">
-                <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug mb-3 tracking-tight">
+              <div className="p-4 sm:p-8 w-full min-w-0">
+                <h2 className="text-lg sm:text-3xl font-extrabold text-slate-900 leading-snug mb-3 tracking-tight break-words">
                   {userRankNum === 1 ? (
                     <>
                       <span className="text-indigo-600">{cleanName}</span> is currently the{" "}
@@ -1041,29 +1045,29 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </p>
 
                 {/* 3 Metric Cards */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-                  <div className="p-3.5 sm:p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-2xl sm:text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
-                    <div className="text-[10px] sm:text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-6 w-full min-w-0">
+                  <div className="p-2 sm:p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs min-w-0 overflow-hidden">
+                    <div className="text-xl sm:text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
+                    <div className="text-[9px] sm:text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1 line-clamp-2">Competitors Ahead</div>
                   </div>
-                  <div className="p-3.5 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-2xl sm:text-4xl font-extrabold text-amber-600">{issueCount}</div>
-                    <div className="text-[10px] sm:text-[11px] font-semibold text-amber-700 uppercase tracking-wider mt-1">Ranking Obstacles</div>
+                  <div className="p-2 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs min-w-0 overflow-hidden">
+                    <div className="text-xl sm:text-4xl font-extrabold text-amber-600">{issueCount}</div>
+                    <div className="text-[9px] sm:text-[11px] font-semibold text-amber-700 uppercase tracking-wider mt-1 line-clamp-2">Ranking Obstacles</div>
                   </div>
-                  <div className="p-3.5 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-2xl sm:text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
-                    <div className="text-[10px] sm:text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
+                  <div className="p-2 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs min-w-0 overflow-hidden">
+                    <div className="text-xl sm:text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
+                    <div className="text-[9px] sm:text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1 line-clamp-2">Completeness</div>
                   </div>
                 </div>
 
                 {/* Estimated Monthly Revenue & Patient Loss Card */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-indigo-50/90 border border-rose-200/80 mb-6 shadow-2xs">
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-indigo-50/90 border border-rose-200/80 mb-6 shadow-2xs w-full min-w-0">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                         <TrendingUp className="w-5 h-5 rotate-180" />
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-bold text-slate-900">
                           Estimated Monthly Revenue & Patient Opportunity Gap
                         </h3>
@@ -1078,7 +1082,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </div>
                     <Link
                       href="/register"
-                      className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shrink-0 transition-all shadow-xs flex items-center gap-1.5 active:scale-95 print:hidden"
+                      className="w-full sm:w-auto px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shrink-0 transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 print:hidden"
                     >
                       <span>Reclaim Lost Patients</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1127,8 +1131,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             />
 
             {/* ── SECTION 3: Live Competitor Comparison Table ─────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
-              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full min-w-0">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
@@ -1151,14 +1155,14 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 )}
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto w-full min-w-0">
+                <table className="w-full text-sm min-w-[500px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-500 tracking-wider">
-                      <th className="px-6 py-3.5 text-left">Business Name</th>
-                      <th className="px-4 py-3.5 text-left">Rating</th>
-                      <th className="px-4 py-3.5 text-left">Reviews</th>
-                      <th className="px-6 py-3.5 text-right">Map Rank</th>
+                      <th className="px-4 sm:px-6 py-3.5 text-left">Business Name</th>
+                      <th className="px-3 sm:px-4 py-3.5 text-left">Rating</th>
+                      <th className="px-3 sm:px-4 py-3.5 text-left">Reviews</th>
+                      <th className="px-4 sm:px-6 py-3.5 text-right">Map Rank</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1166,7 +1170,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       if (c.isYou) {
                         return (
                           <tr key={`you-${i}`} className="bg-indigo-50/60 border-t-2 border-b-2 border-indigo-100">
-                            <td className="px-6 py-4 font-bold text-indigo-950 text-sm">
+                            <td className="px-4 sm:px-6 py-4 font-bold text-indigo-950 text-sm">
                               <div className="flex items-center gap-2">
                                 <div className="relative flex h-2 w-2">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -1181,7 +1185,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                                 </p>
                               )}
                             </td>
-                            <td className="px-4 py-4">
+                            <td className="px-3 sm:px-4 py-4">
                               {c.rating === "Unrated" ? (
                                 <span className="inline-flex items-center gap-1 text-slate-600 font-medium text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                   Unrated
@@ -1192,8 +1196,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-4 font-bold text-slate-800 text-sm">{c.reviewCount || 0} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-3 sm:px-4 py-4 font-bold text-slate-800 text-sm">{c.reviewCount || 0} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
+                            <td className="px-4 sm:px-6 py-4 text-right">
                               <span className={`inline-flex items-center gap-1 font-bold text-sm px-2.5 py-1 rounded-lg border ${
                                 userRankNum === 1 
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
@@ -1207,7 +1211,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       }
                       return (
                         <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-800">
+                          <td className="px-4 sm:px-6 py-4 font-medium text-slate-800">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold text-slate-900">{c.name}</span>
                               {Number(c.reviewCount) <= 5 ? (
@@ -1218,13 +1222,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
                             </div>
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-3 sm:px-4 py-4">
                             <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-xs">
                               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
                             </span>
                           </td>
-                          <td className="px-4 py-4 font-semibold text-emerald-600">{c.reviewCount} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-3 sm:px-4 py-4 font-semibold text-emerald-600">{c.reviewCount} <span className="font-normal text-slate-400 text-[11px]">reviews</span></td>
+                          <td className="px-4 sm:px-6 py-4 text-right">
                             <span className="inline-flex items-center justify-center w-6 h-6 font-bold text-slate-600 text-xs bg-slate-100 rounded-md border border-slate-200">
                               #{c.rank}
                             </span>
@@ -1254,8 +1258,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             />
 
             {/* ── SECTION 4: Why You're Losing Patients (Issues) ───────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
-              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full min-w-0">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 font-bold">
@@ -1274,16 +1278,16 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </span>
               </div>
 
-              <div className="p-6 space-y-3 bg-slate-50/50">
+              <div className="p-4 sm:p-6 space-y-3 bg-slate-50/50 w-full min-w-0">
                 {issues.map((item, i) => (
-                  <div key={i} className="p-4 rounded-2xl bg-white border border-rose-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                    <div className="flex items-start gap-3">
+                  <div key={i} className="p-3.5 sm:p-4 rounded-2xl bg-white border border-rose-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs w-full min-w-0">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
                         <XCircle className="w-4 h-4" />
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-slate-900">{item.issue}</p>
-                        <p className="text-[13px] text-slate-600 mt-1 leading-relaxed font-normal">{item.evidence}</p>
+                        <p className="text-[13px] text-slate-600 mt-1 leading-relaxed font-normal break-words">{item.evidence}</p>
                       </div>
                     </div>
                     <Link
@@ -1299,8 +1303,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 4.5: Treatment & Category Coverage Gap Card ───── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 font-bold">
                     <Sparkles className="w-4 h-4" />
@@ -1311,7 +1315,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 w-full min-w-0">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Evaluated Treatment Keywords</p>
                 <div className="flex flex-wrap gap-2">
                   {keywords.map((kw: string, i: number) => (
@@ -1325,8 +1329,8 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 5: Profile Completeness Checklist ───────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
-              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid w-full min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full min-w-0">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
@@ -1342,7 +1346,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6 w-full min-w-0">
                 {/* Progress bar */}
                 <div className="relative pt-1 mb-6">
                   <div className="overflow-hidden h-3 text-xs flex rounded-full bg-slate-100">
@@ -1391,7 +1395,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 5.5: Executive Doctor Growth Consultation & WhatsApp Action Block ── */}
-            <div className="print-card print:break-inside-avoid rounded-3xl bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 border border-indigo-100 p-6 sm:p-8 shadow-xs relative print:bg-white print:border-slate-300">
+            <div className="print-card print:break-inside-avoid rounded-3xl bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 border border-indigo-100 p-4 sm:p-8 shadow-xs relative print:bg-white print:border-slate-300 w-full min-w-0">
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start sm:items-center gap-3.5">
@@ -1444,13 +1448,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Direct Action Buttons: WhatsApp & Call (Clean Single Phone Mention) */}
-                <div className="pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-3">
+                <div className="pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full min-w-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <a
                       href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Google Business Profile Audit for ${cleanName} and would like to speak with a healthcare specialist to fix our ranking obstacles.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
+                      className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
                     >
                       <WhatsAppSVG />
                       <span>Chat on WhatsApp</span>
@@ -1458,7 +1462,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
                     <a
                       href="tel:+919717228528"
-                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm border border-slate-200 shadow-2xs transition-all active:scale-95"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm border border-slate-200 shadow-2xs transition-all active:scale-95 w-full sm:w-auto"
                     >
                       <Phone className="w-4 h-4 text-indigo-600" />
                       <span>Call Specialist</span>
@@ -1478,14 +1482,14 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 6: FAQ Accordion (Hidden on Print & Downloaded PDF) ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm print:hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm print:hidden w-full min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center gap-3 w-full min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <span className="font-serif text-base font-semibold italic">?</span>
                 </div>
                 <h2 className="text-lg font-semibold text-slate-800">Frequently Asked Questions</h2>
               </div>
-              <div className="px-6 py-2">
+              <div className="px-4 sm:px-6 py-2 w-full min-w-0">
                 {FAQ_ITEMS.map((faq, i) => (
                   <FAQItem key={i} q={faq.q} a={faq.a} />
                 ))}
@@ -1502,7 +1506,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* ── Report Bottom Footer (Both Web & Print) ── */}
-        <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 print:mt-6 print:pt-4 print:border-slate-200">
+        <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 print:mt-6 print:pt-4 print:border-slate-200 w-full min-w-0">
           <div className="flex items-center gap-2">
             <GyrexLogo size="sm" />
             <span>Healthcare Practice Growth Platform</span>
@@ -1519,7 +1523,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ── Native App Mobile Sticky Bottom Bar (App-like UX) ─────────────── */}
-      <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3.5 py-3 shadow-2xl flex items-center justify-between gap-3">
+      <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-2 sm:gap-3 w-full max-w-[100vw]">
         <div className="flex items-center gap-2 shrink-0">
           <a
             href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Audit Report for ${cleanName} and need assistance.`)}`}
