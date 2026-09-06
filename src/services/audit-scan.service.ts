@@ -288,19 +288,12 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
                       "Google Maps rewards practices that publish weekly health posts, clinic announcements, and photos with higher 3-pack search placement.",
                     impact: "Medium",
                   },
-                  placeData?.name && (placeData.name.includes("|") || placeData.name.includes(" - ") || placeData.name.toLowerCase().includes("near me") || placeData.name.toLowerCase().includes("best"))
-                    ? {
-                        issue: "Google Guideline Risk: Keyword stuffing detected in business title.",
-                        evidence:
-                          "Adding marketing tags or location keywords to your Google profile name violates Google Business Profile policies and risks profile suspension. Shift these specialty terms into your official Services Catalog and Secondary Categories instead.",
-                        impact: "High",
-                      }
-                    : {
-                        issue: "0% Patient Review Response Rate.",
-                        evidence:
-                          "Google explicitly confirms that responding promptly to patient reviews builds higher local authority and engagement signals.",
-                        impact: "Medium",
-                      },
+                  {
+                    issue: "0% Patient Review Response Rate (Low Engagement Signal).",
+                    evidence:
+                      "Google explicitly confirms that responding promptly to patient reviews builds higher local authority and engagement signals. Unanswered reviews signal an inactive listing.",
+                    impact: "Medium",
+                  },
                   !placeData?.website
                     ? {
                         issue: "No website link found on Google Maps.",

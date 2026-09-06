@@ -117,7 +117,133 @@ function GoogleGSVG() {
   );
 }
 
-// ─── Gyrex Platform Features Sticky Sidebar ────────────────────────────────
+// ─── 14-Day Trial Features Definition ──────────────────────────────────────────
+const TRIAL_FEATURES = [
+  {
+    title: "Automated WhatsApp Reviews",
+    desc: "Post-consultation WhatsApp review invites with 1-tap Google Maps rating link.",
+    icon: <WhatsAppSVG />
+  },
+  {
+    title: "AI Review Auto-Responder (24/7)",
+    desc: "Instant, medically-empathetic replies to all Google patient reviews 24/7.",
+    icon: <Zap className="w-4 h-4 text-amber-500" />
+  },
+  {
+    title: "Multi-Specialty Category Optimizer",
+    desc: "Map 3–4 high-intent secondary categories to dominate multi-specialty local searches.",
+    icon: <Sparkles className="w-4 h-4 text-indigo-600" />
+  },
+  {
+    title: "Native Treatments Catalog Indexer",
+    desc: "Publish procedures, consultation fees, and health packages directly into Google Maps.",
+    icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+  },
+  {
+    title: "Weekly Google Profile Health Posts",
+    desc: "Automated weekly medical tips & practice updates to maintain high ranking signals.",
+    icon: <GoogleGSVG />
+  },
+  {
+    title: "Competitor Geo-Grid Rank Tracker",
+    desc: "Real-time 3-pack rank tracking across nearby PIN codes with competitor movement alerts.",
+    icon: <TrendingUp className="w-4 h-4 text-blue-600" />
+  },
+  {
+    title: "WhatsApp Clinic Reception Assistant",
+    desc: "Convert high-intent Google Maps searchers into booked consultations on WhatsApp.",
+    icon: <Activity className="w-4 h-4 text-violet-600" />
+  },
+  {
+    title: "Doctor Practice Growth CRM",
+    desc: "Unified patient communication inbox, follow-ups, and review audit trail.",
+    icon: <BarChart3 className="w-4 h-4 text-cyan-600" />
+  }
+];
+
+// ─── Mobile 14-Day Free Trial Spotlight (Mobile First View) ───────────────────
+function MobileTrialSpotlight({ businessName }: { businessName: string }) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleFeatures = showAll ? TRIAL_FEATURES : TRIAL_FEATURES.slice(0, 4);
+
+  return (
+    <div className="lg:hidden rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 p-5 sm:p-6 shadow-xs space-y-4 print:hidden">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+            G
+          </div>
+          <span className="font-bold text-base text-slate-900 tracking-tight">Gyrex Pro</span>
+        </div>
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+          14-Day Free Trial
+        </span>
+      </div>
+
+      <div>
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+          Automate Your Clinic Growth with Gyrex
+        </h3>
+        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+          Everything included to outrank local competitors and double your Google Maps patient consultations.
+        </p>
+      </div>
+
+      <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between">
+        <div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">₹0</span>
+            <span className="text-xs text-slate-600 font-medium">for 14 days</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            <span className="line-through">₹5,000</span> <span className="text-rose-600 font-bold">₹2,499/mo</span> after trial
+          </p>
+        </div>
+        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg text-[10px]">
+          100% Risk Free
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            All Features Included in 14-Day Trial:
+          </p>
+          <button
+            onClick={() => setShowAll(s => !s)}
+            className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            {showAll ? "Show Less" : `View All (${TRIAL_FEATURES.length})`}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {visibleFeatures.map((feat, idx) => (
+            <div key={idx} className="flex items-start gap-2 p-2.5 rounded-xl bg-white border border-slate-100 shadow-2xs">
+              <div className="shrink-0 mt-0.5">{feat.icon}</div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 leading-tight">{feat.title}</p>
+                <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{feat.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Link
+        href="/register"
+        className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-2xl transition-all shadow-md active:scale-98"
+      >
+        <span>Start 14-Day Free Trial (₹0)</span>
+        <ArrowRight className="w-4 h-4" />
+      </Link>
+      <p className="text-center text-[11px] text-slate-400 font-normal">
+        No credit card required • 2-minute instant setup • Cancel anytime
+      </p>
+    </div>
+  );
+}
+
+// ─── Gyrex Platform Features Sticky Sidebar (Desktop View) ───────────────────
 function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
   return (
     <div className="sticky top-24 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all print:hidden">
@@ -126,111 +252,67 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-3">
             <span className="font-bold text-lg text-white tracking-tight">Gyrex Pro</span>
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500 text-xs font-medium text-indigo-50 border border-indigo-400">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500 text-xs font-semibold text-white border border-indigo-400">
               14-Day Free Trial
             </span>
           </div>
           <h3 className="text-xl font-bold leading-tight mb-2">Automate Your Clinic Growth with Gyrex</h3>
           <p className="text-sm text-indigo-100 leading-relaxed font-normal">
-            To increase patient flow and outrank local competition.
+            Everything included to outrank local competition and double your Google Maps patient consultations.
           </p>
         </div>
       </div>
 
       {/* Pricing / Trial offer */}
-      <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+      <div className="p-5 border-b border-slate-100 bg-slate-50/50">
         <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-3xl font-bold text-slate-900 tracking-tight">₹0</span>
+          <span className="text-3xl font-extrabold text-slate-900 tracking-tight">₹0</span>
           <span className="text-sm font-medium text-slate-600">for 14 days</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span className="line-through decoration-slate-300 font-normal">Regular ₹5,000/mo</span>
           <span className="text-rose-600 font-bold text-sm">₹2,499/mo</span>
-          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded-md text-[10px] ml-auto">Risk Free</span>
+          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-md text-[10px] ml-auto">100% Risk Free</span>
         </div>
       </div>
 
-      {/* 2x2 Feature Cards Grid */}
-      <div className="p-6 space-y-4 border-b border-slate-100 bg-white">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">Features</p>
+      {/* Comprehensive Features List */}
+      <div className="p-5 space-y-3 border-b border-slate-100 bg-white">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Included in Your 14-Day Trial:
+        </p>
         
-        <div className="grid grid-cols-2 gap-3">
-          {/* Tile 1: WhatsApp Reviews */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
-            <div className="flex items-center gap-1.5 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              </div>
-              <WhatsAppSVG />
-            </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
-              Automated WhatsApp Reviews
-            </p>
-          </div>
-
-          {/* Tile 2: Review Auto-Responder */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
-            <div className="flex items-center gap-1.5 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-blue-500 text-white flex items-center justify-center">
-                <Activity className="w-3.5 h-3.5" />
-              </div>
-              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center">
-                <Zap className="w-3.5 h-3.5" />
+        <div className="space-y-2.5 max-h-[22rem] overflow-y-auto pr-1">
+          {TRIAL_FEATURES.map((feat, idx) => (
+            <div key={idx} className="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200/70 hover:border-indigo-200 transition-colors">
+              <div className="shrink-0 mt-0.5">{feat.icon}</div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 leading-tight">{feat.title}</p>
+                <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{feat.desc}</p>
               </div>
             </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
-              Review Auto-Responder
-            </p>
-          </div>
-
-          {/* Tile 3: Weekly Google Profile Optimizer */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
-            <div className="flex items-center gap-1.5 mb-3">
-              <GoogleGSVG />
-            </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
-              Weekly Google Profile Optimizer
-            </p>
-          </div>
-
-          {/* Tile 4: Competitor Rank Tracker */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between hover:border-indigo-200 transition-colors">
-            <div className="flex items-center gap-1.5 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
-                <TrendingUp className="w-3.5 h-3.5" />
-              </div>
-              <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                <BarChart3 className="w-3.5 h-3.5" />
-              </div>
-            </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
-              Competitor Rank Tracker
-            </p>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* CTA Button */}
-      <div className="p-6 bg-slate-50/50">
+      <div className="p-5 bg-slate-50/50 space-y-3">
         <Link
           href="/register"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm"
+          className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-98"
         >
           <span>Start 14-Day Free Trial</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
-        <Link
-          href="/register"
-          className="text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors text-center block mt-2"
-        >
-          Learn More &gt;
-        </Link>
-        <div className="mt-3 pt-3 border-t border-slate-200/80 flex items-center justify-center gap-3 text-xs">
+        <p className="text-center text-[11px] text-slate-400 font-normal">
+          No credit card required • 2-min setup • Cancel anytime
+        </p>
+        <div className="pt-2 border-t border-slate-200/80 flex items-center justify-center gap-3 text-xs">
           <a
             href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I need help with my Google Profile Audit for ${businessName}.`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
+            className="inline-flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 font-semibold"
           >
             <WhatsAppSVG />
             <span>WhatsApp</span>
@@ -636,8 +718,12 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       let cleanIssue = item.issue;
       let cleanEvidence = item.evidence;
 
-      // Filter out the contradictory "not found in business title" legacy check
-      if (cleanIssue.toLowerCase().includes("not found in business title")) {
+      // Filter out contradictory / non-ranking factors (keyword stuffing, title checks)
+      if (
+        cleanIssue.toLowerCase().includes("not found in business title") ||
+        cleanIssue.toLowerCase().includes("keyword stuffing") ||
+        cleanIssue.toLowerCase().includes("guideline risk")
+      ) {
         continue;
       }
 
@@ -711,23 +797,13 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       });
     }
 
-    // 6. Google Guideline Compliance / Review Response Gap
-    if (isKeywordStuffed) {
-      if (!issues.some(i => i.issue.toLowerCase().includes("guideline") || i.issue.toLowerCase().includes("keyword stuffing"))) {
-        issues.push({
-          issue: "Google Guidelines Risk: Keyword-stuffed business title",
-          evidence: "Adding marketing keywords ('Best Doctor', 'Near Me', etc.) to your business name violates Google Business Profile naming policies and risks sudden suspension. Shift these high-intent terms into your official Categories and Services Catalog instead.",
-          impact: "High"
-        });
-      }
-    } else {
-      if (!issues.some(i => i.issue.toLowerCase().includes("response"))) {
-        issues.push({
-          issue: "0% Patient Review Response Rate",
-          evidence: "Google explicitly confirms that responding promptly to patient reviews builds higher local authority and user engagement signals.",
-          impact: "Medium"
-        });
-      }
+    // 6. 0% Patient Review Response Rate (Low Engagement & Authority Signal)
+    if (!issues.some(i => i.issue.toLowerCase().includes("response") || i.issue.toLowerCase().includes("repl"))) {
+      issues.push({
+        issue: "0% Patient Review Response Rate (Low Profile Engagement)",
+        evidence: "Google's local ranking algorithms explicitly favor verified listings that respond actively to patient reviews. Profiles with 0% response activity forfeit key engagement authority signals.",
+        impact: "Medium"
+      });
     }
   }
 
@@ -875,35 +951,35 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             <GyrexLogo size="md" />
             <span className="text-slate-400 font-normal text-sm border-l border-slate-200 pl-2.5 ml-1">Audit Report</span>
           </Link>
-          <div className="flex items-center gap-3 print:hidden">
+          <div className="flex items-center gap-2 sm:gap-3 print:hidden">
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white transition-colors shadow-2xs shrink-0"
+            >
+              <span>14-Day Free Trial</span>
+            </Link>
             <button
               onClick={handleDownloadPDF}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
             >
               <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden sm:inline">Download PDF</span>
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <a
               href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out the Google Business Profile Audit Report for ${businessName}: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-2xs shrink-0"
             >
               <WhatsAppSVG />
-              <span className="hidden sm:inline">Share Report</span>
+              <span className="hidden sm:inline">Share</span>
             </a>
-            <Link
-              href="/local-seo/free-audit"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors pl-2"
-            >
-              Audit Another Clinic
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* ── Main Container ────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:py-4 print:px-0 print:max-w-none">
+      {/* ── Main Container (Mobile First Spacing) ─────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 sm:pb-36 lg:pb-12 print:py-4 print:px-0 print:max-w-none">
         
         {/* Two Column Layout */}
         <div className="flex flex-col lg:flex-row gap-8 items-start print:block">
@@ -915,7 +991,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
               
               {/* Business Info Header */}
-              <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
+              <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-100">
                 <div className="flex items-center gap-4">
                   {overview?.photoUrl ? (
                     <img 
@@ -929,14 +1005,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </div>
                   )}
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 tracking-tight">{businessName}</h1>
-                    {isKeywordStuffed && (
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                          ⚠️ Google Guideline Risk: Title Keyword Stuffing
-                        </span>
-                      </div>
-                    )}
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">{businessName}</h1>
                     <div className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500 font-normal">
                       {address && (
                         <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 border border-slate-200/60 rounded-lg text-slate-600">
@@ -958,7 +1027,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Red Warning Bar */}
-              <div className="px-6 py-3 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3">
+              <div className="px-5 sm:px-6 py-3 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
                   <span className="text-[13px] font-semibold text-rose-700">Diagnostic Complete · {issueCount} Ranking Obstacles Found</span>
@@ -966,7 +1035,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Core Diagnosis Headline & Metrics */}
-              <div className="p-6 sm:p-8">
+              <div className="p-5 sm:p-8">
                 <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug mb-3 tracking-tight">
                   {userRankNum === 1 ? (
                     <>
@@ -985,23 +1054,23 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 </p>
 
                 {/* 3 Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
-                    <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitor{clinicsAheadStr === "1" ? "" : "s"} Ahead</div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+                  <div className="p-3.5 sm:p-5 rounded-2xl bg-rose-50/70 border border-rose-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-2xl sm:text-4xl font-extrabold text-rose-600">{clinicsAheadStr}</div>
+                    <div className="text-[10px] sm:text-[11px] font-semibold text-rose-700 uppercase tracking-wider mt-1">Competitors Ahead</div>
                   </div>
-                  <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-4xl font-extrabold text-amber-600">{issueCount}</div>
-                    <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider mt-1">Ranking Issues</div>
+                  <div className="p-3.5 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-2xl sm:text-4xl font-extrabold text-amber-600">{issueCount}</div>
+                    <div className="text-[10px] sm:text-[11px] font-semibold text-amber-700 uppercase tracking-wider mt-1">Ranking Obstacles</div>
                   </div>
-                  <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs">
-                    <div className="text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
-                    <div className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
+                  <div className="p-3.5 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center transition-all hover:shadow-xs">
+                    <div className="text-2xl sm:text-4xl font-extrabold text-indigo-600">{profilePct}%</div>
+                    <div className="text-[10px] sm:text-[11px] font-semibold text-indigo-700 uppercase tracking-wider mt-1">Completeness</div>
                   </div>
                 </div>
 
                 {/* Estimated Monthly Revenue & Patient Loss Card */}
-                <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-indigo-50/90 border border-rose-200/80 mb-6 shadow-2xs">
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-indigo-50/90 border border-rose-200/80 mb-6 shadow-2xs">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -1035,11 +1104,14 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                   href="/register"
                   className="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-[0.99] print:hidden"
                 >
-                  <span>Fix My Google Profile</span>
+                  <span>Start 14-Day Free Trial</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </div>
+
+            {/* ── Mobile 14-Day Free Trial Spotlight (Mobile First View) ── */}
+            <MobileTrialSpotlight businessName={businessName} />
 
             {/* ── SECTION 2: Local Search Rank Grid Visualization ───────── */}
             <SearchGridVisualization 
@@ -1332,94 +1404,91 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* ── SECTION 5.5: Executive Doctor Growth Consultation & WhatsApp Action Block ── */}
-            <div className="print-card print:break-inside-avoid rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-indigo-500/30 overflow-hidden relative print:bg-white print:text-slate-900 print:border-slate-300 print:shadow-none">
-              {/* Decorative background glow for web */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none print:hidden" />
-              
-              <div className="relative z-10 space-y-5">
+            <div className="print-card print:break-inside-avoid rounded-3xl bg-gradient-to-b from-indigo-50/70 via-white to-slate-50 border border-indigo-100 p-6 sm:p-8 shadow-xs relative print:bg-white print:border-slate-300">
+              <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 print:bg-emerald-50 print:border-emerald-200 print:text-emerald-700 shrink-0">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                       <Sparkles className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 print:text-emerald-700 bg-emerald-500/10 print:bg-emerald-50 border border-emerald-500/20 print:border-emerald-200 px-2 py-0.5 rounded-full">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100/80 border border-indigo-200/60 px-2.5 py-0.5 rounded-full">
                           Action Plan & Doctor Support
                         </span>
                       </div>
-                      <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-1 text-white print:text-slate-900">
+                      <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                         Ready to Fix These Ranking Obstacles for {cleanName}?
                       </h2>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm sm:text-[15px] text-slate-300 print:text-slate-600 leading-relaxed max-w-3xl">
-                  Your Google Business Profile has immediate growth opportunities in category accuracy, review generation, and Google compliance. Connect directly with our healthcare growth specialists to implement these recommendations and outrank local competitors.
+                <p className="text-sm sm:text-[15px] text-slate-600 leading-relaxed font-normal max-w-3xl">
+                  Your Google Business Profile has immediate high-impact opportunities in category precision, automated review generation, and treatment catalog indexing. Connect with our healthcare growth specialists to implement these recommendations and outrank local competitors.
                 </p>
 
                 {/* Key Solutions Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
-                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-indigo-200 transition-colors">
+                    <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs mb-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
                       <span>Category Precision</span>
                     </div>
-                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       Align primary and secondary categories to {specialty} so Google stops ranking tertiary hospitals over your clinic.
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
-                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-indigo-200 transition-colors">
+                    <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs mb-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>WhatsApp Review Engine</span>
                     </div>
-                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       Automate 5-star Google review collection from your consultations to close the {compAvgReviews}+ competitor review deficit.
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
-                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
-                      <span>Policy Suspension Shield</span>
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-indigo-200 transition-colors">
+                    <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs mb-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span>Native Treatments Catalog</span>
                     </div>
-                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
-                      {isKeywordStuffed ? "Fix title keyword stuffing to protect your listing against Google suspensions." : "Optimize description and services following strict Google Healthcare guidelines."}
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Publish medical treatments, chronic disease care, and consultation packages into Google's native services catalog.
                     </p>
                   </div>
                 </div>
 
-                {/* Direct Action Buttons: WhatsApp & Call */}
-                <div className="pt-3 border-t border-white/10 print:border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                {/* Direct Action Buttons: WhatsApp & Call (Clean Single Phone Mention) */}
+                <div className="pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <a
                       href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Google Business Profile Audit for ${cleanName} and would like to speak with a healthcare specialist to fix our ranking obstacles.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+                      className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
                     >
                       <WhatsAppSVG />
-                      <span>Chat on WhatsApp (+91-9717228528)</span>
+                      <span>Chat on WhatsApp</span>
                     </a>
 
                     <a
                       href="tel:+919717228528"
-                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm border border-white/20 transition-all active:scale-95 print:bg-slate-100 print:text-slate-800 print:border-slate-300"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm border border-slate-200 shadow-2xs transition-all active:scale-95"
                     >
-                      <Phone className="w-4 h-4 text-indigo-300 print:text-indigo-600" />
-                      <span>Call: +91-9717228528</span>
+                      <Phone className="w-4 h-4 text-indigo-600" />
+                      <span>Call Specialist</span>
                     </a>
                   </div>
 
                   <div className="text-left sm:text-right">
-                    <p className="text-xs text-slate-300 print:text-slate-600 font-medium">
-                      Direct Healthcare Support: <span className="font-bold text-white print:text-slate-900">+91-9717228528</span>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Direct Doctor Support: <span className="font-bold text-slate-900">+91 97172 28528</span>
                     </p>
-                    <p className="text-[11px] text-slate-400 print:text-slate-500 mt-0.5">
-                      Mon – Sat: 9:30 AM – 7:30 PM IST • Instant Response
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Mon – Sat: 9:30 AM – 7:30 PM IST • Instant Doctor Assistance
                     </p>
                   </div>
                 </div>
@@ -1468,29 +1537,29 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ── Native App Mobile Sticky Bottom Bar (App-like UX) ─────────────── */}
-      <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3.5 py-3 shadow-2xl flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <a
             href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Audit Report for ${cleanName} and need assistance.`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0"
-            title="Chat on WhatsApp (+91-9717228528)"
+            className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0 active:scale-95"
+            title="Chat on WhatsApp"
           >
             <WhatsAppSVG />
           </a>
           <a
             href="tel:+919717228528"
-            className="p-2.5 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 flex items-center justify-center shrink-0"
-            title="Call Support (+91-9717228528)"
+            className="p-2.5 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 flex items-center justify-center shrink-0 active:scale-95"
+            title="Call Helpline"
           >
             <Phone className="w-4 h-4 text-slate-600" />
           </a>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-baseline gap-1.5">
             <span className="text-base font-bold text-slate-900">₹0</span>
-            <span className="text-[11px] text-slate-500 font-normal">for 14 days</span>
+            <span className="text-[11px] text-slate-500 font-normal truncate">for 14 days</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px]">
             <span className="line-through text-slate-400 font-normal">₹5,000</span>
@@ -1500,9 +1569,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
         </div>
         <Link
           href="/register"
-          className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md flex items-center gap-1.5 shrink-0 transition-transform active:scale-95"
+          className="py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-md flex items-center gap-1.5 shrink-0 transition-transform active:scale-95 whitespace-nowrap"
         >
-          <span>Start 14-Day Free Trial</span>
+          <span>Start Free Trial</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
