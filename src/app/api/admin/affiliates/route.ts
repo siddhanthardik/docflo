@@ -26,14 +26,29 @@ export async function GET() {
         kycStatus: true,
         bankDetails: true,
         kycDocuments: true,
+        createdAt: true,
         referredDoctors: {
           select: {
             id: true,
             clinicName: true,
-            package: { select: { name: true } },
+            name: true,
+            email: true,
+            phone: true,
+            createdAt: true,
+            subscriptionStatus: true,
+            subscriptionExpiry: true,
+            billingPeriod: true,
+            package: { select: { id: true, name: true, priceMonthly: true, priceYearly: true } },
             paymentTransactions: {
               where: { status: "SUCCESS" },
-              select: { amount: true }
+              select: { 
+                id: true, 
+                amount: true,
+                currency: true,
+                createdAt: true,
+                razorpayPaymentId: true,
+              },
+              orderBy: { createdAt: "desc" }
             }
           }
         },
@@ -44,18 +59,62 @@ export async function GET() {
             status: true,
             paidAt: true,
             referenceId: true,
+            notes: true,
             createdAt: true
           },
           orderBy: { createdAt: "desc" }
         }
-      }
+      },
+      orderBy: { createdAt: "desc" }
     });
 
+    const now = new Date();
     const enrichedAffiliates = affiliates.map(affiliate => {
       let totalRevenueGenerated = 0;
-      affiliate.referredDoctors.forEach(doc => {
+      const allTransactions: any[] = [];
+
+      const enrichedDoctors = affiliate.referredDoctors.map(doc => {
         const revenue = doc.paymentTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
         totalRevenueGenerated += revenue;
+
+        let subscriptionStatusLabel = "Active";
+        if (doc.paymentTransactions.length === 0) {
+          const daysSinceJoined = Math.floor((now.getTime() - new Date(doc.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          subscriptionStatusLabel = daysSinceJoined <= 14 ? "14-Day Free Trial" : "Trial Expired";
+        } else if (doc.subscriptionStatus === "CANCELED") {
+          subscriptionStatusLabel = "Canceled";
+        } else if (doc.subscriptionStatus === "PAST_DUE" || (doc.subscriptionExpiry && new Date(doc.subscriptionExpiry) < now)) {
+          subscriptionStatusLabel = "Past Due";
+        } else {
+          subscriptionStatusLabel = "Active (Paid)";
+        }
+
+        doc.paymentTransactions.forEach(tx => {
+          allTransactions.push({
+            id: tx.id,
+            clinicName: doc.clinicName || doc.name || "Clinic",
+            doctorName: doc.name,
+            amount: tx.amount,
+            date: tx.createdAt,
+            packageName: doc.package?.name || "Subscription",
+            commission: (tx.amount || 0) * ((affiliate.commissionPercentage || 0) / 100),
+            razorpayPaymentId: tx.razorpayPaymentId
+          });
+        });
+
+        return {
+          id: doc.id,
+          name: doc.name,
+          email: doc.email,
+          phone: doc.phone,
+          clinicName: doc.clinicName,
+          dateJoined: doc.createdAt,
+          package: doc.package?.name || "None",
+          billingPeriod: doc.billingPeriod || "monthly",
+          status: subscriptionStatusLabel,
+          revenue,
+          commission: revenue * ((affiliate.commissionPercentage || 0) / 100),
+        };
       });
 
       const totalEarnings = totalRevenueGenerated * ((affiliate.commissionPercentage || 0) / 100);
@@ -63,13 +122,24 @@ export async function GET() {
         .filter(p => p.status === "PAID")
         .reduce((sum, p) => sum + p.amount, 0);
       
-      const pendingPayout = totalEarnings - totalPaidOut;
+      const pendingPayout = Math.max(0, totalEarnings - totalPaidOut);
+      const pendingPayoutRequest = affiliate.affiliatePayouts.find(p => p.status === "PENDING") || null;
+      
+      const bank = (affiliate.bankDetails as any) || {};
+      const hasBankingDetails = Boolean(
+        (bank.accountNumber && (bank.ifscCode || bank.routingNumber)) || bank.upiId
+      );
 
       return {
         ...affiliate,
+        referredDoctors: enrichedDoctors,
+        transactions: allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        totalRevenueGenerated,
         totalEarnings,
         totalPaidOut,
         pendingPayout,
+        pendingPayoutRequest,
+        hasBankingDetails,
       };
     });
 
