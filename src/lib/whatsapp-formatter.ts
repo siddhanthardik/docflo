@@ -102,7 +102,7 @@ export function formatAppointmentConfirmationCard(params: AppointmentCardParams)
     : `Aapka appointment schedule ho gaya hai 🙏 Visit se 2 ghante pehle aapko WhatsApp reminder mil jayega. Koi query ho toh aap yahan pooch sakte hain!`;
 
   return (
-`✓ *APPOINTMENT CONFIRMED* • *Gyrex WhatsApp*
+`✓ *APPOINTMENT CONFIRMED*
 ────────────────────────────
 *${exactDateTime}*
 ────────────────────────────
