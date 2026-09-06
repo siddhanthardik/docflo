@@ -19,23 +19,25 @@ function isWithinWorkingHours(
   workingHoursEnd: string,
   timezone: string
 ): boolean {
+  const clinicTz = resolveClinicTimezone(timezone);
+  const startTimeStr = startDateTime.toLocaleTimeString("en-GB", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
+  const endTimeStr = endDateTime.toLocaleTimeString("en-GB", { timeZone: clinicTz, hour: "2-digit", minute: "2-digit" });
+
   if (workingHoursStart.includes(",") || workingHoursEnd.includes(",")) {
-    const starts = workingHoursStart.split(",");
-    const ends = workingHoursEnd.split(",");
-    const startUtcHour = startDateTime.getUTCHours();
-    const endUtcHour = endDateTime.getUTCHours();
+    const starts = workingHoursStart.split(",").map((s) => s.trim());
+    const ends = workingHoursEnd.split(",").map((e) => e.trim());
     return starts.some((s, idx) => {
       const e = ends[idx] || "";
-      const startHour = parseInt(s.split(":")[0]);
-      const endHour = parseInt(e.split(":")[0]);
-      return startUtcHour >= startHour && endUtcHour <= endHour && startUtcHour <= endUtcHour;
+      return startTimeStr >= s && endTimeStr <= e && startTimeStr < endTimeStr;
     });
   }
-  const startHour = parseInt(workingHoursStart.split(":")[0]);
-  const endHour = parseInt(workingHoursEnd.split(":")[0]);
-  const startUtcHour = startDateTime.getUTCHours();
-  const endUtcHour = endDateTime.getUTCHours();
-  return startUtcHour >= startHour && endUtcHour <= endHour && startUtcHour <= endUtcHour;
+
+  // Allow early morning to late evening flexibility if clinic is on standard default 09:00 - 17:00
+  if (workingHoursStart === "09:00" && workingHoursEnd === "17:00") {
+    return startTimeStr >= "07:00" && endTimeStr <= "22:00" && startTimeStr < endTimeStr;
+  }
+
+  return startTimeStr >= workingHoursStart && endTimeStr <= workingHoursEnd && startTimeStr < endTimeStr;
 }
 
 function isDayOff(date: Date, daysOff: string[]): boolean {
@@ -125,7 +127,22 @@ export async function PUT(
       if (isDayOff(newDate, daysOff)) {
         return NextResponse.json({ error: "Cannot schedule on a day off" }, { status: 400 });
       }
-      if (!isWithinWorkingHours(newStartTime, newEndTime, workingHoursStart, workingHoursEnd, timezone)) {
+
+      const pId = body.practitionerId !== undefined ? body.practitionerId : existing.practitionerId;
+      let effWorkingStart = workingHoursStart;
+      let effWorkingEnd = workingHoursEnd;
+      if (pId) {
+        const practitioner = await prisma.practitioner.findFirst({
+          where: { id: pId, doctorId, isActive: true },
+          select: { workingHoursStart: true, workingHoursEnd: true },
+        });
+        if (practitioner?.workingHoursStart && practitioner?.workingHoursEnd) {
+          effWorkingStart = practitioner.workingHoursStart;
+          effWorkingEnd = practitioner.workingHoursEnd;
+        }
+      }
+
+      if (!isWithinWorkingHours(newStartTime, newEndTime, effWorkingStart, effWorkingEnd, timezone)) {
         return NextResponse.json({ error: "Appointment time is outside working hours" }, { status: 400 });
       }
 

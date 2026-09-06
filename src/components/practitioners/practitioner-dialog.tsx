@@ -295,16 +295,16 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[92vh] overflow-y-auto p-5 sm:p-7 rounded-3xl bg-white shadow-2xl border border-slate-200/90">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl md:max-w-3xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200/90 overflow-hidden">
         
-        {/* Modal Header */}
-        <DialogHeader className="pb-3 border-b border-slate-100 space-y-1">
+        {/* Modal Header (Pinned) */}
+        <div className="shrink-0 px-5 sm:px-7 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                 {practitioner ? "Edit Doctor Profile" : "Add New Doctor"}
               </DialogTitle>
               <p className="text-xs text-slate-500 font-normal">
@@ -312,9 +312,9 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-3">
+        <form id="practitioner-form" onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-7 py-5 space-y-6">
           
           {/* SECTION 1: BASIC & CREDENTIALS */}
           <div className="space-y-4">
@@ -814,27 +814,27 @@ export function PractitionerDialog({ isOpen, onClose, practitioner, onSuccess }:
               </div>
             </div>
           </div>
-
-          {/* Modal Footer */}
-          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t border-slate-100">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose} 
-              className="w-full sm:w-auto h-11 rounded-xl font-bold border-slate-200"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full sm:w-auto h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20"
-            >
-              {loading ? "Saving..." : (practitioner ? "Update Doctor Profile" : "Save & Add Doctor")}
-            </Button>
-          </DialogFooter>
-
         </form>
+
+        {/* Modal Footer (Pinned) */}
+        <div className="shrink-0 px-5 sm:px-7 py-3 sm:py-3.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-end gap-2.5 sm:gap-3">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose} 
+            className="h-10 px-5 rounded-xl font-bold border-slate-200 text-slate-600 hover:bg-slate-100 text-xs sm:text-sm transition-all"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            form="practitioner-form"
+            disabled={loading} 
+            className="h-10 px-6 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 text-xs sm:text-sm transition-all"
+          >
+            {loading ? "Saving..." : (practitioner ? "Update Doctor Profile" : "Save & Add Doctor")}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

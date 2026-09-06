@@ -276,10 +276,10 @@ export function PatientForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-[95vw] sm:max-w-2xl md:max-w-3xl p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
+        className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl md:max-w-3xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
       >
-        {/* Aesthetic Header */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 flex items-center justify-between">
+        {/* Aesthetic Header (Pinned) */}
+        <div className="shrink-0 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
               <UserPlus className="w-5 h-5 text-white" />
@@ -306,7 +306,7 @@ export function PatientForm({
           </button>
         </div>
 
-        {/* Spacious Balanced 2-Column Form (4 Rows × 4 Rows) */}
+        {/* Spacious Balanced 2-Column Form (Scrollable body) */}
         <form
           id="patient-form"
           onSubmit={(e) => {
@@ -314,7 +314,7 @@ export function PatientForm({
             e.stopPropagation();
             handleSubmit(e);
           }}
-          className="px-6 py-5 max-h-[80vh] sm:max-h-none overflow-y-auto sm:overflow-visible"
+          className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-7 gap-y-4">
             {/* ════════════ LEFT COLUMN: IDENTITY & CONTACT ════════════ */}
@@ -664,8 +664,8 @@ export function PatientForm({
           </div>
         </form>
 
-        {/* Spacious Footer */}
-        <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-3">
+        {/* Spacious Footer (Pinned) */}
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-3.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-end gap-2.5 sm:gap-3">
           <Button
             type="button"
             variant="outline"

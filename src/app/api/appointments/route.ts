@@ -20,12 +20,16 @@ function isWithinWorkingHours(
   endTimeStr: string
 ): boolean {
   if (workingHoursStart.includes(",") || workingHoursEnd.includes(",")) {
-    const starts = workingHoursStart.split(",");
-    const ends = workingHoursEnd.split(",");
+    const starts = workingHoursStart.split(",").map((s) => s.trim());
+    const ends = workingHoursEnd.split(",").map((e) => e.trim());
     return starts.some((s, idx) => {
       const e = ends[idx] || "";
       return startTimeStr >= s && endTimeStr <= e && startTimeStr < endTimeStr;
     });
+  }
+  // Allow early morning to late evening flexibility if clinic is on standard default 09:00 - 17:00
+  if (workingHoursStart === "09:00" && workingHoursEnd === "17:00") {
+    return startTimeStr >= "07:00" && endTimeStr <= "22:00" && startTimeStr < endTimeStr;
   }
   return startTimeStr >= workingHoursStart && endTimeStr <= workingHoursEnd && startTimeStr < endTimeStr;
 }
@@ -160,8 +164,19 @@ export async function POST(req: Request) {
 
     const doctorTimezone = resolveClinicTimezone(doctor?.timezone);
     const daysOff = doctor?.daysOff || [];
-    const workingStart = doctor?.workingHoursStart || "09:00";
-    const workingEnd = doctor?.workingHoursEnd || "17:00";
+    let workingStart = doctor?.workingHoursStart || "09:00";
+    let workingEnd = doctor?.workingHoursEnd || "17:00";
+
+    if (practitionerId) {
+      const practitioner = await prisma.practitioner.findFirst({
+        where: { id: practitionerId, doctorId, isActive: true },
+        select: { workingHoursStart: true, workingHoursEnd: true },
+      });
+      if (practitioner?.workingHoursStart && practitioner?.workingHoursEnd) {
+        workingStart = practitioner.workingHoursStart;
+        workingEnd = practitioner.workingHoursEnd;
+      }
+    }
 
     // Extract exact YYYY-MM-DD date string in clinic timezone
     const dateStr = getClinicDateOnlyString(date, doctorTimezone);
