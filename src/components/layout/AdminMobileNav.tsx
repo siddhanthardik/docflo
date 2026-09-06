@@ -19,18 +19,20 @@ import {
   Settings,
   LogOut,
   X,
-  ChevronRight,
   ShieldAlert,
   Cpu,
   LifeBuoy,
   FileSpreadsheet,
+  IndianRupee,
+  BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 
 const primaryMobileTabs = [
-  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
+  { name: "Overview", href: "/admin", icon: BarChart3 },
+  { name: "Revenue", href: "/admin/revenue", icon: TrendingUp },
   { name: "Clinics", href: "/admin/clinics", icon: Building },
   { name: "Leads", href: "/admin/leads", icon: UserPlus },
 ];
@@ -44,7 +46,7 @@ const secondaryMobileMenu = [
   { name: "Support Tickets", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Sales Prospector", href: "/admin/prospector", icon: Bot },
   { name: "Team", href: "/admin/team", icon: Users },
-  { name: "Affiliates", href: "/admin/affiliates", icon: DollarSign },
+  { name: "Affiliates", href: "/admin/affiliates", icon: IndianRupee },
   { name: "Settings", href: "/admin/settings", icon: Settings },
   { name: "System Errors", href: "/admin/system-errors", icon: ShieldAlert },
 ];

@@ -22,6 +22,7 @@ import {
   Cpu,
   LifeBuoy,
   FileSpreadsheet,
+  IndianRupee,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
@@ -40,7 +41,7 @@ const navigation = [
   { name: "Support Tickets", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Blog Publishing", href: "/admin/blogs", icon: Newspaper },
   { name: "Team", href: "/admin/team", icon: Users },
-  { name: "Affiliates", href: "/admin/affiliates", icon: DollarSign },
+  { name: "Affiliates", href: "/admin/affiliates", icon: IndianRupee },
   { name: "Settings", href: "/admin/settings", icon: Settings },
   { name: "System Errors", href: "/admin/system-errors", icon: ShieldAlert },
 ];
