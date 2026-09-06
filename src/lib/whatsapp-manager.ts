@@ -601,6 +601,8 @@ class WhatsAppManager {
                 name: true,
                 clinicName: true,
                 specialty: true,
+                address: true,
+                city: true,
                 createdAt: true,
                 subscriptionStatus: true,
                 subscriptionExpiry: true,
