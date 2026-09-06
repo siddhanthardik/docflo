@@ -14,7 +14,7 @@ import {
   User,
   Edit,
   Activity,
-  Plus,
+  MessageSquare,
   Users,
   CheckCircle2,
   XCircle,
@@ -107,6 +107,27 @@ const getActivityColor = (type: string, status?: string) => {
   }
 };
 
+function calculateAge(dateOfBirth: string | Date | null | undefined): string {
+  if (!dateOfBirth) return "—";
+  const dob = new Date(dateOfBirth);
+  if (isNaN(dob.getTime())) return "—";
+
+  const today = new Date();
+  let years = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    years--;
+  }
+
+  if (years < 0) return "—";
+  if (years === 0) {
+    const months = (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
+    if (months <= 0) return "< 1 mo";
+    return `${months} ${months === 1 ? "mo" : "mos"}`;
+  }
+  return `${years} ${years === 1 ? "yr" : "yrs"}`;
+}
+
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -114,28 +135,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [sendingReview, setSendingReview] = useState(false);
   const [showCooldownOverride, setShowCooldownOverride] = useState(false);
-  const [isAddingTag, setIsAddingTag] = useState(false);
-  const [newTagInput, setNewTagInput] = useState("");
 
   const [pendingType, setPendingType] = useState<"SURVEY" | "GOOGLE_REVIEW">("GOOGLE_REVIEW");
-
-  const handleAddTag = async () => {
-    if (!newTagInput.trim() || !patient) {
-      setIsAddingTag(false);
-      return;
-    }
-    const cleanTag = newTagInput.trim();
-    if (patient.tags?.includes(cleanTag)) {
-      setNewTagInput("");
-      setIsAddingTag(false);
-      return;
-    }
-    
-    const newTags = [...(patient.tags || []), cleanTag];
-    await updatePatient({ tags: newTags });
-    setNewTagInput("");
-    setIsAddingTag(false);
-  };
 
   const handleToggleBlock = async () => {
     if (!patient) return;
@@ -219,274 +220,243 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const displayStatus = isInactive && patient.patientType !== "LEAD" && patient.patientType !== "ARCHIVED" ? "INACTIVE" : patient.patientType;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-32 md:pb-12">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-16 py-2.5 items-center justify-between gap-3">
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => router.push("/patients")}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 shrink-0"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Patient Profile</h1>
+    <div className="space-y-6 pb-24 lg:pb-12">
+      {/* Patient Profile Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/patients")}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 shrink-0 border border-gray-200/60"
+            aria-label="Back to Patients"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">Patient Profile</h1>
+              <span className="text-xs text-gray-400 font-mono">#{patient.id.slice(-6).toUpperCase()}</span>
             </div>
-
-            {/* Desktop & Tablet actions (sm:flex) */}
-            <div className="hidden sm:flex items-center gap-2 lg:gap-3 shrink-0 flex-wrap justify-end">
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 shadow-xs transition-colors hover:bg-gray-50 shrink-0"
-              >
-                <Edit className="h-4 w-4" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={() => handleSendReviewRequest(false, "SURVEY")}
-                disabled={sendingReview}
-                className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-indigo-600 border border-indigo-600 shadow-xs transition-colors hover:bg-indigo-50 disabled:opacity-50 shrink-0"
-              >
-                <Star className="h-4 w-4" />
-                <span>{sendingReview && pendingType === "SURVEY" ? "Sending..." : "Send Survey"}</span>
-              </button>
-              <button
-                onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
-                disabled={sendingReview}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors hover:bg-indigo-700 disabled:opacity-50 shrink-0"
-              >
-                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                <span>{sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending..." : "Send Google Review"}</span>
-              </button>
-              <button
-                onClick={handleToggleBlock}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium shadow-xs transition-colors shrink-0 ${
-                  patient.isBlocked 
-                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
-                  : "bg-red-50 text-red-700 hover:bg-red-100"
-                }`}
-              >
-                <Ban className="h-4 w-4" />
-                <span>{patient.isBlocked ? "Unblock" : "Block"}</span>
-              </button>
-            </div>
-
-            {/* Mobile actions (<sm) */}
-            <div className="flex sm:hidden items-center gap-2">
-              <button
-                onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
-                disabled={sendingReview}
-                className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xs"
-              >
-                <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                <span>Review</span>
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50">
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-                    <Edit className="h-4 w-4 mr-2" /> Edit Patient
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSendReviewRequest(false, "SURVEY")}>
-                    <Star className="h-4 w-4 mr-2" /> Send Survey
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleToggleBlock} className={patient.isBlocked ? "" : "text-red-600"}>
-                    <Ban className="h-4 w-4 mr-2" /> {patient.isBlocked ? "Unblock Patient" : "Block Patient"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <p className="text-xs text-gray-500 truncate">View and manage clinical history and patient communications</p>
           </div>
+        </div>
+
+        {/* Desktop & Tablet actions (sm:flex) */}
+        <div className="hidden sm:flex items-center gap-2 lg:gap-2.5 shrink-0 flex-wrap justify-end">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-medium text-gray-700 shadow-xs transition-colors hover:bg-gray-50 shrink-0"
+          >
+            <Edit className="h-4 w-4" />
+            <span>Edit Profile</span>
+          </button>
+          <button
+            onClick={() => handleSendReviewRequest(false, "SURVEY")}
+            disabled={sendingReview}
+            className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs sm:text-sm font-medium text-indigo-600 border border-indigo-200 shadow-xs transition-colors hover:bg-indigo-50 disabled:opacity-50 shrink-0"
+          >
+            <Star className="h-4 w-4" />
+            <span>{sendingReview && pendingType === "SURVEY" ? "Sending..." : "Send Survey"}</span>
+          </button>
+          <button
+            onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
+            disabled={sendingReview}
+            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors hover:bg-indigo-700 disabled:opacity-50 shrink-0"
+          >
+            <Star className="h-4 w-4 text-amber-300 fill-amber-300" />
+            <span>{sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending..." : "Send Google Review"}</span>
+          </button>
+          <button
+            onClick={handleToggleBlock}
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium shadow-xs transition-colors shrink-0 ${
+              patient.isBlocked 
+              ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+              : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-100"
+            }`}
+          >
+            <Ban className="h-4 w-4" />
+            <span>{patient.isBlocked ? "Unblock" : "Block"}</span>
+          </button>
+        </div>
+
+        {/* Mobile actions (<sm) */}
+        <div className="flex sm:hidden items-center gap-2 justify-end">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-xs"
+          >
+            <Edit className="h-3.5 w-3.5" />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
+            disabled={sendingReview}
+            className="flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs"
+          >
+            <Star className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
+            <span>Review</span>
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-xs">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => handleSendReviewRequest(false, "SURVEY")}>
+                <Star className="h-4 w-4 mr-2 text-indigo-500" /> Send Survey
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleToggleBlock} className={patient.isBlocked ? "" : "text-red-600"}>
+                <Ban className="h-4 w-4 mr-2" /> {patient.isBlocked ? "Unblock Patient" : "Block Patient"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          
-          {/* Left Column: Sticky Profile Sidebar */}
-          <div className="lg:col-span-4">
-            <div className="sticky top-24 space-y-6">
-              
-              {/* Profile Card */}
-              <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-                <div className="relative h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-                <div className="px-6 pb-6 relative">
-                  <div className="-mt-12 mb-4 flex justify-between items-end">
-                    <div className={`flex h-24 w-24 items-center justify-center rounded-2xl ${avatarColor} text-3xl font-bold shadow-lg ring-4 ring-white`}>
-                      {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
-                    </div>
-                    {displayStatus && (
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                        ${patient.isBlocked ? "bg-gray-900 text-white" :
-                          displayStatus === "LEAD" ? "bg-purple-100 text-purple-700" :
-                          displayStatus === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
-                          displayStatus === "INACTIVE" ? "bg-amber-100 text-amber-700" :
-                          "bg-red-100 text-red-700"}`}>
-                        {patient.isBlocked ? "BLOCKED" : displayStatus}
-                      </span>
-                    )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left Column: Profile Sidebar */}
+        <div className="lg:col-span-4">
+          <div className="space-y-6">
+            
+            {/* Profile Card */}
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+              <div className="relative h-28 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+              <div className="px-5 sm:px-6 pb-6 relative">
+                <div className="-mt-12 mb-4 flex justify-between items-end">
+                  <div className={`flex h-20 w-20 sm:h-22 sm:w-22 items-center justify-center rounded-2xl ${avatarColor} text-2xl sm:text-3xl font-bold shadow-lg ring-4 ring-white`}>
+                    {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
                   </div>
-
-                  <h2 className="text-2xl font-bold text-gray-900">{fullName}</h2>
-                  
-                  {patient.primaryPractitioner && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg w-fit">
-                      <Users className="h-4 w-4" />
-                      Assigned to {patient.primaryPractitioner.name}
-                    </div>
+                  {displayStatus && (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                      ${patient.isBlocked ? "bg-gray-900 text-white" :
+                        displayStatus === "LEAD" ? "bg-purple-100 text-purple-700" :
+                        displayStatus === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
+                        displayStatus === "INACTIVE" ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-700"}`}>
+                      {patient.isBlocked ? "BLOCKED" : displayStatus}
+                    </span>
                   )}
+                </div>
 
-                  {/* Mobile Action Buttons */}
-                  <div className="mt-6 flex md:hidden items-center gap-2 w-full">
-                    <button
-                      onClick={() => handleSendReviewRequest(false, "SURVEY")}
-                      disabled={sendingReview}
-                      className="flex-1 flex justify-center items-center gap-2 rounded-xl border border-indigo-600 bg-white px-4 py-3 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50 transition-colors"
-                    >
-                      <Star className="h-4 w-4" />
-                      {sendingReview && pendingType === "SURVEY" ? "Sending..." : "Send Survey"}
-                    </button>
-                    <button
-                      onClick={() => handleSendReviewRequest(false, "GOOGLE_REVIEW")}
-                      disabled={sendingReview}
-                      className="flex-1 flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                    >
-                      <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                      {sendingReview && pendingType === "GOOGLE_REVIEW" ? "Sending..." : "Google Review"}
-                    </button>
-                    <button
-                      onClick={() => setIsEditModalOpen(true)}
-                      className="shrink-0 flex justify-center items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-                      aria-label="Edit Patient"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{fullName}</h2>
+                
+                {patient.primaryPractitioner && (
+                  <div className="mt-2 flex items-center gap-2 text-xs sm:text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg w-fit">
+                    <Users className="h-4 w-4" />
+                    Assigned to {patient.primaryPractitioner.name}
                   </div>
+                )}
 
-                  <div className="mt-6 space-y-4">
+                {/* Quick contact / direct communications */}
+                {patient.phone && (
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+                    <a
+                      href={`tel:${patient.phone}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium transition-colors border border-gray-200/60 shadow-2xs"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-gray-500" />
+                      Call
+                    </a>
+                    <a
+                      href={`https://wa.me/${patient.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors border border-emerald-200/60 shadow-2xs"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                      WhatsApp
+                    </a>
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{patient.phone}</span>
+                  </div>
+                  
+                  {patient.email && (
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400">
-                        <Phone className="h-4 w-4" />
+                        <Mail className="h-4 w-4" />
                       </div>
-                      <span className="font-medium">{patient.phone}</span>
+                      <span className="font-medium truncate">{patient.email}</span>
                     </div>
-                    
-                    {patient.email && (
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400">
-                          <Mail className="h-4 w-4" />
-                        </div>
-                        <span className="font-medium truncate">{patient.email}</span>
-                      </div>
-                    )}
-                    
-                    {(patient.gender || patient.dateOfBirth || patient.bloodGroup) && (
-                      <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-                        {patient.gender && (
-                          <div>
-                            <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Gender</p>
-                            <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                              <User className="h-4 w-4 text-gray-400" />
-                              {patient.gender}
-                            </div>
-                          </div>
-                        )}
-                        {patient.dateOfBirth && (
-                          <div>
-                            <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Age</p>
-                            <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              {Math.floor((new Date().getTime() - new Date(patient.dateOfBirth).getTime()) / 31557600000)} yrs
-                            </div>
-                          </div>
-                        )}
-                        {patient.bloodGroup && (
-                          <div>
-                            <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Blood Group</p>
-                            <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                              <Droplets className="h-4 w-4 text-rose-400" />
-                              {patient.bloodGroup}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Tags Card */}
-              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Tags</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {patient.tags?.map((tag: string) => (
-                    <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200">
-                      {tag}
-                      <button
-                        onClick={async () => {
-                          const newTags = patient.tags.filter((t: string) => t !== tag);
-                          await updatePatient({ tags: newTags });
-                        }}
-                        className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <XCircle className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
+                  )}
                   
-                  {isAddingTag ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={newTagInput}
-                        onChange={(e) => setNewTagInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleAddTag();
-                          if (e.key === "Escape") {
-                            setIsAddingTag(false);
-                            setNewTagInput("");
-                          }
-                        }}
-                        onBlur={handleAddTag}
-                        placeholder="Tag name"
-                        className="h-6 w-24 px-2 text-xs rounded-md border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
+                  {(patient.gender || patient.dateOfBirth || patient.bloodGroup) && (
+                    <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+                      {patient.gender && (
+                        <div>
+                          <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Gender</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                            <User className="h-4 w-4 text-gray-400" />
+                            {patient.gender}
+                          </div>
+                        </div>
+                      )}
+                      {patient.dateOfBirth && (
+                        <div>
+                          <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Age</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            {calculateAge(patient.dateOfBirth)}
+                          </div>
+                        </div>
+                      )}
+                      {patient.bloodGroup && (
+                        <div>
+                          <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Blood Group</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                            <Droplets className="h-4 w-4 text-rose-400" />
+                            {patient.bloodGroup}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsAddingTag(true)}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      New tag
-                    </button>
                   )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column: Timeline & Content */}
-          <div className="lg:col-span-8 space-y-8">
-            
-            {/* Quick Actions Bar */}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              <button 
-                onClick={() => router.push(`/billing/new?patient=${patient.id}`)}
-                className="shrink-0 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 transition-all"
+          </div>
+        </div>
+
+        {/* Right Column: Timeline & Content */}
+        <div className="lg:col-span-8 space-y-6">
+          
+          {/* Quick Actions Bar */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            <button 
+              onClick={() => router.push(`/billing/new?patient=${patient.id}`)}
+              className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs ring-1 ring-gray-200/80 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 transition-all"
+            >
+              <FileText className="h-4 w-4 text-indigo-600" />
+              Create Invoice
+            </button>
+            {patient.phone && (
+              <a
+                href={`https://wa.me/${patient.phone.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs ring-1 ring-gray-200/80 hover:bg-gray-50 hover:text-emerald-600 hover:ring-emerald-200 transition-all"
               >
-                <FileText className="h-4 w-4" />
-                Create Invoice
-              </button>
-            </div>
+                <MessageSquare className="h-4 w-4 text-emerald-600" />
+                WhatsApp Patient
+              </a>
+            )}
+            {patient.phone && (
+              <a
+                href={`tel:${patient.phone}`}
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs ring-1 ring-gray-200/80 hover:bg-gray-50 hover:text-indigo-600 hover:ring-indigo-200 transition-all"
+              >
+                <Phone className="h-4 w-4 text-gray-500" />
+                Call Patient
+              </a>
+            )}
+          </div>
 
             {/* Medical Notes */}
             {patient.medicalNotes && (
@@ -549,7 +519,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
           </div>
         </div>
-      </div>
 
       {/* Patient Edit Modal */}
       <PatientForm

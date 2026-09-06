@@ -35,16 +35,32 @@ export async function POST(req: Request) {
     let finalBuffer = rawBuffer;
     let filename: string;
 
-    // Convert all images to high-performance WebP
+    // Handle Google Business Profile (GBP) uploads: Google strictly requires JPG or PNG
     if (file.type.startsWith("image/")) {
-      try {
-        finalBuffer = Buffer.from(await sharp(rawBuffer)
-          .webp({ quality: 85, effort: 4 })
-          .toBuffer());
-        filename = `${session.user.id}-${Date.now()}.webp`;
-      } catch (sharpError) {
-        console.warn("Sharp conversion fallback to raw buffer:", sharpError);
-        filename = `${session.user.id}-${Date.now()}.png`;
+      if (type === "gbp") {
+        try {
+          // Google Business Profile Local Posts require JPG or PNG.
+          // Convert to optimized progressive JPEG with Google recommended 1200x900 bounds.
+          finalBuffer = Buffer.from(await sharp(rawBuffer)
+            .resize({ width: 1200, height: 900, fit: "inside", withoutEnlargement: false })
+            .jpeg({ quality: 90, progressive: true })
+            .toBuffer());
+          filename = `${session.user.id}-${Date.now()}.jpg`;
+        } catch (sharpError) {
+          console.warn("Sharp JPEG conversion fallback to raw buffer:", sharpError);
+          filename = `${session.user.id}-${Date.now()}.jpg`;
+        }
+      } else {
+        // Standard high-performance WebP for internal website/app usage
+        try {
+          finalBuffer = Buffer.from(await sharp(rawBuffer)
+            .webp({ quality: 85, effort: 4 })
+            .toBuffer());
+          filename = `${session.user.id}-${Date.now()}.webp`;
+        } catch (sharpError) {
+          console.warn("Sharp conversion fallback to raw buffer:", sharpError);
+          filename = `${session.user.id}-${Date.now()}.png`;
+        }
       }
     } else {
       filename = `${session.user.id}-${Date.now()}.pdf`;
@@ -55,6 +71,8 @@ export async function POST(req: Request) {
       uploadDir = path.join(process.cwd(), "public", "uploads", "logos");
     } else if (type === "blog" || type === "website" || type === "hero" || type === "gallery") {
       uploadDir = path.join(process.cwd(), "public", "uploads", "blogs");
+    } else if (type === "gbp") {
+      uploadDir = path.join(process.cwd(), "public", "uploads", "gbp");
     }
 
     await mkdir(uploadDir, { recursive: true }).catch(() => {});
@@ -62,10 +80,11 @@ export async function POST(req: Request) {
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, finalBuffer);
 
-    const folder = type === "logo" ? "logos/" : (type === "blog" || type === "website" || type === "hero" || type === "gallery") ? "blogs/" : "";
+    const folder = type === "logo" ? "logos/" : (type === "blog" || type === "website" || type === "hero" || type === "gallery") ? "blogs/" : (type === "gbp") ? "gbp/" : "";
     const url = `/api/uploads/${folder}${filename}`;
 
-    return NextResponse.json({ url, format: "webp", size: finalBuffer.length });
+    const outputFormat = type === "gbp" ? "jpeg" : "webp";
+    return NextResponse.json({ url, format: outputFormat, size: finalBuffer.length });
   } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: error.message || "Upload failed" }, { status: 500 });

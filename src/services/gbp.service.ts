@@ -83,6 +83,140 @@ export function sanitizeGbpPostSummary(summary: string): { cleanSummary: string;
   return { cleanSummary: clean, hadPhone };
 }
 
+export interface GbpErrorInterpretation {
+  friendlyMessage: string;
+  policyViolationType: "MEDIA" | "PHONE" | "URL" | "LENGTH" | "POLICY" | "INTERNAL" | "AUTH" | "GENERAL";
+  suggestedFix: string;
+  field?: string;
+  rawDetails?: any;
+}
+
+export function interpretGbpError(status: number, errorText: string): GbpErrorInterpretation {
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(errorText);
+  } catch (_) {
+    parsed = null;
+  }
+
+  const code = parsed?.error?.code || status;
+  const statusStr = parsed?.error?.status || "";
+  const rawMsg = parsed?.error?.message || errorText;
+  const details = parsed?.error?.details || [];
+
+  let violatedField = "";
+  let fieldDescription = "";
+  for (const detail of details) {
+    if (detail?.fieldViolations && Array.isArray(detail.fieldViolations)) {
+      for (const fv of detail.fieldViolations) {
+        violatedField = fv.field || "";
+        fieldDescription = fv.description || "";
+        break;
+      }
+    }
+  }
+
+  const combinedText = `${rawMsg} ${fieldDescription} ${violatedField} ${errorText}`.toLowerCase();
+
+  // 1. Media / Image Rejection
+  if (
+    combinedText.includes("media") ||
+    combinedText.includes("photo") ||
+    combinedText.includes("image") ||
+    combinedText.includes("sourceurl") ||
+    combinedText.includes("source_url") ||
+    combinedText.includes("fetching image failed") ||
+    combinedText.includes("media format")
+  ) {
+    return {
+      friendlyMessage: "Google could not process the attached image.",
+      policyViolationType: "MEDIA",
+      suggestedFix: "Google Business Profile strictly requires photos in JPG or PNG format with a minimum size of 250×250 px (recommended 1200×900 px, 4:3 ratio) and under 5MB. Try uploading a standard JPG/PNG photo or publish as text-only.",
+      field: "imageUrl",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 2. Phone number in summary policy
+  if (
+    combinedText.includes("phone") ||
+    combinedText.includes("contact") ||
+    combinedText.includes("phone_number")
+  ) {
+    return {
+      friendlyMessage: "Google policy prohibits phone numbers in the update text.",
+      policyViolationType: "PHONE",
+      suggestedFix: "Google Business Profile anti-spam policy strictly forbids typing phone numbers in the post body. Please remove the phone number from the text and select the 'Call now' button below instead.",
+      field: "content",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 3. Action Button (CTA) / URL issues
+  if (
+    combinedText.includes("calltoaction") ||
+    combinedText.includes("actiontype") ||
+    combinedText.includes("cta") ||
+    combinedText.includes("url must be") ||
+    violatedField.includes("calltoaction") ||
+    violatedField.includes("url")
+  ) {
+    return {
+      friendlyMessage: "Missing or invalid Action Button link.",
+      policyViolationType: "URL",
+      suggestedFix: "You selected an action button (like 'Book' or 'Learn more'), but Google requires a valid secure link starting with 'https://'. Please provide a full link (e.g. https://gyrex.in/book/...) or switch the button to 'None'.",
+      field: "ctaLink",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 4. Content length / policy violation
+  if (
+    combinedText.includes("summary") ||
+    combinedText.includes("too long") ||
+    combinedText.includes("length") ||
+    combinedText.includes("maximum")
+  ) {
+    return {
+      friendlyMessage: "Update text exceeds Google's length limit.",
+      policyViolationType: "LENGTH",
+      suggestedFix: "Google Business Profile allows a maximum of 1,500 characters (150–300 characters recommended). Please shorten your post text and try again.",
+      field: "content",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 5. Auth / Permission issues
+  if (code === 401 || code === 403 || combinedText.includes("permission") || combinedText.includes("unauthorized")) {
+    return {
+      friendlyMessage: "Google authorization required or location permissions expired.",
+      policyViolationType: "AUTH",
+      suggestedFix: "Your Google Business Profile connection may need to be refreshed. Please go to Settings > Google Profile and reconnect your Google account.",
+      field: "auth",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 6. Google Internal (500) / Quota / Unverified location
+  if (code === 500 || statusStr === "INTERNAL" || combinedText.includes("internal")) {
+    return {
+      friendlyMessage: "Google returned a service error (HTTP 500).",
+      policyViolationType: "INTERNAL",
+      suggestedFix: "This occurs if your Google location is still pending verification with Google, or Google experienced a temporary service glitch. You can use the 'Copy Post & Open Google' button below to publish directly on Google Maps.",
+      field: "general",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  return {
+    friendlyMessage: rawMsg || "Failed to publish update to Google Business Profile.",
+    policyViolationType: "GENERAL",
+    suggestedFix: "Please review the post text, ensure there are no phone numbers or invalid links in the body, and try again.",
+    field: "general",
+    rawDetails: parsed || errorText,
+  };
+}
+
 export class GBPService {
   private accessToken: string;
   private doctorId: string;
@@ -668,10 +802,14 @@ export class GBPService {
           body.callToAction = {
             actionType: "CALL",
           };
-        } else if (ctaLink) {
+        } else if (ctaLink && ctaLink.trim()) {
+          let cleanLink = ctaLink.trim();
+          if (!cleanLink.startsWith("http://") && !cleanLink.startsWith("https://")) {
+            cleanLink = `https://${cleanLink}`;
+          }
           body.callToAction = {
             actionType: effectiveCtaType,
-            url: ctaLink,
+            url: cleanLink,
           };
         }
       }
@@ -694,17 +832,10 @@ export class GBPService {
         const errorText = await response.text();
         console.error("GBP createPost error:", response.status, errorText);
 
-        let friendlyMessage = `Failed to create post on Google Business Profile: ${errorText}`;
-        try {
-          const parsed = JSON.parse(errorText);
-          if (parsed?.error?.code === 500 || parsed?.error?.status === "INTERNAL") {
-            friendlyMessage = "Google returned an internal error (HTTP 500). This occurs when Google requires API approval for publishing posts on this Cloud project, if the profile has unverified status, or if Google experienced a temporary service glitch. You can also copy and publish this update directly on Google Maps/Search.";
-          } else if (parsed?.error?.message) {
-            friendlyMessage = `Google Business Profile error: ${parsed.error.message}`;
-          }
-        } catch (_) {}
-
-        throw new Error(friendlyMessage);
+        const interpretation = interpretGbpError(response.status, errorText);
+        const err: any = new Error(interpretation.friendlyMessage);
+        err.interpretation = interpretation;
+        throw err;
       }
       return await response.json();
     } catch (error) {

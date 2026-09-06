@@ -16,6 +16,8 @@ import {
   formatInClinicDate,
   getClinicDateOnlyString
 } from '@/lib/timezone';
+import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
+import { formatPatientSalutation } from '@/lib/salutation';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -1692,9 +1694,8 @@ class WhatsAppManager {
                        // Notify patient via WhatsApp
                        if (apt.patient?.phone) {
                           const docName = formatDoctorDisplayName(doctorInfo?.name);
-                          const msg = `Hi ${apt.patient.firstName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.
-
-We sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
+                          const salutation = formatPatientSalutation(apt.patient || {});
+                          const msg = `Hi ${salutation.greetingName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
                           await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
                         }
                     } else if (!apt) {
@@ -1748,7 +1749,8 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                         // Notify patient via WhatsApp
                         if (apt.patient?.phone) {
                           const patientJid = `${apt.patient.phone.replace(/\D/g, '')}@s.whatsapp.net`;
-                          const msg = `🔄 *Appointment Rescheduled*\n\nHi ${apt.patient.firstName}, the clinic has rescheduled your appointment to *${dateLabel} at ${timeLabel}*. Reply here if this time does not work for you.`;
+                          const salutation = formatPatientSalutation(apt.patient || {});
+                          const msg = `🔄 *Appointment Rescheduled*\n\nHi ${salutation.greetingName}, the clinic has rescheduled your appointment to *${dateLabel} at ${timeLabel}*. Reply here if this time does not work for you.`;
                           await sock.sendMessage(patientJid, { text: msg });
                           console.log(`[WhatsAppManager] Sent reschedule to ${patientJid}`);
                         }
@@ -1845,10 +1847,20 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                       await prisma.appointment.create({
                         data: { patientId: newPatient.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                       });
-                      const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
-                      const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                      const ptMsg = formatAppointmentConfirmationCard({
+                        patient: newPatient,
+                        doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name,
+                        specialty: matchedPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                        clinicName: doctorInfo?.clinicName,
+                        startTime: startTime,
+                        clinicTz: clinicTz,
+                        consultationFee: doctorInfo?.consultationFee,
+                        address: clinicAddress || doctorInfo?.address,
+                        city: doctorInfo?.city,
+                        mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                      });
                       await this.sendOutboundPatientMessage(sock, doctorId, prefilledPhone, ptMsg, newPatient.id, `${newPatient.firstName} ${newPatient.lastName}`.trim());
-                      finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
+                      finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation card has been sent to them.`;
                     } else {
                       // No phone provided upfront: search by name
                       const nameParts2 = cleanName.split(' ');
@@ -1872,12 +1884,20 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           data: { patientId: pt.id, doctorId, practitionerId: matchedPractitioner?.id || null, date: appointmentDate, startTime, endTime, status: 'CONFIRMED', type: 'IN_CLINIC', notes: 'Booked via Staff AI Assistant' }
                         });
                         if (pt.phone) {
-                          const docName = formatDoctorDisplayName(staffName || doctorInfo?.name);
-                          const dateLabel = appointmentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-                          const timeLabel = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                          const ptMsg = `Hi ${pt.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                          const ptMsg = formatAppointmentConfirmationCard({
+                            patient: pt,
+                            doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name,
+                            specialty: matchedPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                            clinicName: doctorInfo?.clinicName,
+                            startTime: startTime,
+                            clinicTz: clinicTz,
+                            consultationFee: doctorInfo?.consultationFee,
+                            address: clinicAddress || doctorInfo?.address,
+                            city: doctorInfo?.city,
+                            mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                          });
                           await this.sendOutboundPatientMessage(sock, doctorId, pt.phone, ptMsg, pt.id, `${pt.firstName} ${pt.lastName}`.trim());
-                          finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
+                          finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation card.`;
                         }
 
                       } else if (exactMatches.length > 1) {
@@ -1972,9 +1992,10 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
 
                       // Notify Doctor on WhatsApp immediately so doctor knows slot is now open
                       if (doctorInfo?.phone) {
+                        const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                         const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
-                        const dateLabel = activeApt.date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-                        const timeLabel = activeApt.startTime ? activeApt.startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time';
+                        const dateLabel = (activeApt.startTime || activeApt.date).toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
+                        const timeLabel = activeApt.startTime ? activeApt.startTime.toLocaleTimeString('en-IN', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time';
                         const cleanPtName = activeApt.patient ? `${activeApt.patient.firstName} ${activeApt.patient.lastName}`.trim() : (patient ? `${patient.firstName} ${patient.lastName}`.trim() : 'Patient');
                         
                         const docAlert = `🔔 *Patient Appointment Cancelled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 Cancelled Slot: *${dateLabel} at ${timeLabel}*\n\n✨ This slot is now *OPEN & Available* for new bookings in your Gyrex calendar.`;
@@ -2258,7 +2279,7 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                           });
 
                           // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
-                          const isTele = /tele|video|online|virtual|remote/i.test(sessionStr);
+                          const isTele = /tele|video|online|virtual|remote/i.test(`${sessionStr} ${textMessage} ${aiReply}`);
                           const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
                           const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                           let chosenPractitioner = defaultPractitioner;
@@ -2284,13 +2305,35 @@ We sincerely apologize for any inconvenience this may cause you. Please reply to
                               startTime: startTime,
                               endTime: endTime,
                               status: "CONFIRMED",
-                              notes: `Booked via WhatsApp AI Assistant (${sessionStr.trim()})`,
+                              notes: isTele 
+                                ? `Booked via WhatsApp AI Assistant (Tele-Consultation / ${sessionStr.trim()})`
+                                : `Booked via WhatsApp AI Assistant (${sessionStr.trim()})`,
                               type: appointmentType
                             }
                           });
 
                           console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hour}:${minute} in ${clinicTz}`);
-                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                          
+                          // Format patient confirmation card matching reference design
+                          finalAiReply = formatAppointmentConfirmationCard({
+                            patient: {
+                              firstName: targetPatient.firstName,
+                              lastName: targetPatient.lastName,
+                              gender: targetPatient.gender,
+                              age: parsedAge,
+                              dateOfBirth: targetPatient.dateOfBirth
+                            },
+                            doctorName: chosenPractitioner?.name || doctorInfo?.name,
+                            specialty: chosenPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                            clinicName: doctorInfo?.clinicName,
+                            startTime: startTime,
+                            clinicTz: clinicTz,
+                            consultationFee: doctorInfo?.consultationFee,
+                            isTele: isTele,
+                            address: clinicAddress || doctorInfo?.address,
+                            city: doctorInfo?.city,
+                            mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                          });
 
                           // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
                           if (doctorInfo?.phone) {

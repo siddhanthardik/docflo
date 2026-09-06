@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2, Ban } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrencySymbol } from "@/lib/currency";
@@ -24,6 +24,11 @@ export default function InvoiceDetailsPage() {
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [referenceId, setReferenceId] = useState("");
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Cancellation Modal State
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
@@ -47,6 +52,10 @@ export default function InvoiceDetailsPage() {
   };
 
   const handleSendWhatsApp = async () => {
+    if (invoice?.status === "CANCELLED") {
+      toast({ title: "Action Blocked", description: "Cannot send reminders for a cancelled invoice.", variant: "destructive" });
+      return;
+    }
     setSending(true);
     try {
       const res = await fetch(`/api/billing/invoices/${params.id}/send`, { method: "POST" });
@@ -65,6 +74,10 @@ export default function InvoiceDetailsPage() {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (invoice?.status === "CANCELLED") {
+      toast({ title: "Action Blocked", description: "Cannot record payments on a cancelled invoice.", variant: "destructive" });
+      return;
+    }
     setProcessingPayment(true);
     try {
       const res = await fetch(`/api/billing/invoices/${params.id}/pay`, {
@@ -87,17 +100,46 @@ export default function InvoiceDetailsPage() {
     }
   };
 
+  const handleCancelInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancellationReason.trim() || cancellationReason.trim().length < 3) {
+      toast({ title: "Reason Required", description: "Please enter a valid cancellation reason (min 3 characters).", variant: "destructive" });
+      return;
+    }
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/billing/invoices/${params.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancellationReason.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Invoice Cancelled", description: "Invoice marked as CANCELLED and excluded from clinic revenue." });
+        setShowCancelModal(false);
+        fetchInvoice(); // Refresh invoice data
+      } else {
+        toast({ title: "Cancellation Failed", description: data.error || "Failed to cancel invoice", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: any = {
       PAID: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
       UNPAID: "bg-amber-50 text-amber-700 ring-amber-600/20",
       PARTIALLY_PAID: "bg-blue-50 text-blue-700 ring-blue-600/20",
-      CANCELLED: "bg-gray-50 text-gray-700 ring-gray-600/20",
+      CANCELLED: "bg-rose-50 text-rose-700 ring-rose-600/20 font-bold",
       OVERDUE: "bg-rose-50 text-rose-700 ring-rose-600/20",
       DRAFT: "bg-gray-50 text-gray-700 ring-gray-600/20"
     };
     return (
-      <span className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold ring-1 ring-inset ${styles[status]}`}>
+      <span className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold ring-1 ring-inset ${styles[status] || styles.DRAFT}`}>
+        {status === "CANCELLED" && <Ban className="w-3.5 h-3.5 mr-1.5 text-rose-600 inline" />}
         {status.replace("_", " ")}
       </span>
     );
@@ -113,9 +155,10 @@ export default function InvoiceDetailsPage() {
 
   if (!invoice) return null;
 
-  const totalPaid = invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
+  const totalPaid = invoice.payments ? invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0) : 0;
   const balanceDue = Math.max(0, invoice.totalAmount - totalPaid);
   const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);
+  const isCancelled = invoice.status === "CANCELLED";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-12 animate-in fade-in zoom-in-95 duration-500 print:bg-white print:min-h-0 print:pb-0 print:p-0">
@@ -166,31 +209,88 @@ export default function InvoiceDetailsPage() {
           >
             <Printer className="w-4 h-4" /> Print
           </button>
-          
-          <button
-            onClick={handleSendWhatsApp}
-            disabled={sending}
-            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-            Send WhatsApp
-          </button>
-          
-          {balanceDue > 0 && (
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <CreditCard className="w-4 h-4" /> Record Payment
-            </button>
+
+          {!isCancelled && (
+            <>
+              <button
+                onClick={handleSendWhatsApp}
+                disabled={sending}
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                Send WhatsApp
+              </button>
+              
+              {balanceDue > 0 && (
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <CreditCard className="w-4 h-4" /> Record Payment
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setCancellationReason("");
+                  setShowCancelModal(true);
+                }}
+                className="px-4 py-2 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <Ban className="w-4 h-4" /> Cancel Invoice
+              </button>
+            </>
           )}
         </div>
       </div>
 
+      {/* Cancelled / Void Alert Banner */}
+      {isCancelled && (
+        <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 mb-8 text-rose-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-rose-100 rounded-xl text-rose-700 shrink-0 mt-0.5 sm:mt-0">
+              <Ban className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-base text-rose-950 tracking-tight">
+                  INVOICE CANCELLED & VOIDED
+                </h4>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-200 text-rose-800">
+                  Zero Revenue
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-rose-900 mt-1">
+                Reason: &ldquo;{invoice.cancellationReason || "Cancelled by doctor"}&rdquo;
+              </p>
+              <p className="text-xs text-rose-700 mt-0.5">
+                {invoice.cancelledAt && `Cancelled on ${format(new Date(invoice.cancelledAt), "MMMM dd, yyyy 'at' h:mm a")}`}
+                {invoice.cancelledBy && ` • Authorized by ${invoice.cancelledBy}`}
+                {" • Strictly excluded from all clinic revenue calculations"}
+              </p>
+            </div>
+          </div>
+          <div className="text-left sm:text-right shrink-0 bg-white/80 backdrop-blur-sm border border-rose-200 px-4 py-2 rounded-xl">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Revenue Impact</p>
+            <p className="text-base font-black text-rose-600">₹0.00 (Voided)</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Invoice A4 Preview */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-8 sm:p-12 shadow-[0_2px_15px_-3px_rgba(6,81,237,0.05)] print:shadow-none print:border-none print:p-0">
-          
+        <div className="relative lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-8 sm:p-12 shadow-[0_2px_15px_-3px_rgba(6,81,237,0.05)] print:shadow-none print:border-none print:p-0 overflow-hidden">
+          {/* Cancelled Diagonal Watermark Stamp */}
+          {isCancelled && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10 overflow-hidden">
+              <div className="border-8 border-rose-500/25 rounded-3xl px-12 py-6 -rotate-[28deg] transform shadow-sm">
+                <span className="text-6xl sm:text-8xl font-black tracking-widest text-rose-500/25 uppercase">
+                  CANCELLED
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Clinic Header (Print & Screen View) */}
           <div className="flex flex-col sm:flex-row justify-between items-start border-b border-gray-100 pb-6 sm:pb-8 mb-6 sm:mb-8 gap-4">
             <div>
@@ -208,11 +308,22 @@ export default function InvoiceDetailsPage() {
             </div>
             
             <div className="text-left sm:text-right">
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">{invoice.status === "PAID" ? "RECEIPT" : "INVOICE"}</h3>
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
+                {isCancelled ? "VOID INVOICE" : invoice.status === "PAID" ? "RECEIPT" : "INVOICE"}
+              </h3>
               <p className="text-sm font-semibold text-gray-500">#{invoice.invoiceNumber}</p>
               <div className="mt-4">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Amount Due</p>
-                <p className={`text-3xl font-black ${balanceDue > 0.01 ? "text-rose-600" : "text-emerald-600"} print:text-black`}>{sym}{balanceDue.toFixed(2)}</p>
+                {isCancelled ? (
+                  <div>
+                    <p className="text-xl font-bold text-gray-400 line-through">{sym}{balanceDue.toFixed(2)}</p>
+                    <p className="text-2xl font-black text-rose-600">₹0.00 (Void)</p>
+                  </div>
+                ) : (
+                  <p className={`text-3xl font-black ${balanceDue > 0.01 ? "text-rose-600" : "text-emerald-600"} print:text-black`}>
+                    {sym}{balanceDue.toFixed(2)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -304,7 +415,11 @@ export default function InvoiceDetailsPage() {
               <hr className="border-gray-200 my-2 border-dashed" />
               <div className="flex justify-between text-lg">
                 <span className="font-bold text-gray-900">Balance Due</span>
-                <span className="font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</span>
+                {isCancelled ? (
+                  <span className="font-black text-rose-600 print:text-black">₹0.00 (Cancelled)</span>
+                ) : (
+                  <span className="font-black text-indigo-600 print:text-black">{sym}{balanceDue.toFixed(2)}</span>
+                )}
               </div>
             </div>
           </div>
@@ -317,9 +432,22 @@ export default function InvoiceDetailsPage() {
             </p>
           </div>
 
+          {isCancelled && invoice.cancellationReason && (
+            <div className="mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-900">
+              <p className="font-bold uppercase tracking-wider text-xs text-rose-700 mb-1 flex items-center gap-1.5">
+                <Ban className="w-3.5 h-3.5" /> Official Cancellation Record
+              </p>
+              <p className="font-semibold text-rose-900">{invoice.cancellationReason}</p>
+              <p className="text-xs text-rose-600 mt-1">
+                {invoice.cancelledAt && `Cancelled: ${format(new Date(invoice.cancelledAt), "MMM dd, yyyy h:mm a")}`}
+                {invoice.cancelledBy && ` • Authorized by: ${invoice.cancelledBy}`}
+              </p>
+            </div>
+          )}
+
           {invoice.notes && (
-            <div className="mt-12 pt-8 border-t border-gray-100 text-sm text-gray-500">
-              <p className="font-semibold uppercase tracking-wider text-xs mb-2">Notes</p>
+            <div className="mt-8 pt-6 border-t border-gray-100 text-sm text-gray-500">
+              <p className="font-semibold uppercase tracking-wider text-xs mb-2">Notes & Activity</p>
               <p className="whitespace-pre-wrap">{invoice.notes}</p>
             </div>
           )}
@@ -429,6 +557,107 @@ export default function InvoiceDetailsPage() {
               >
                 {processingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Save Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Invoice Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-[calc(100vw-1.5rem)] sm:w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border border-rose-100 animate-in zoom-in-95 duration-200">
+            {/* Pinned Header */}
+            <div className="shrink-0 p-5 sm:p-6 border-b border-gray-100 bg-rose-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-100 text-rose-700 rounded-xl">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-rose-950">Cancel & Void Invoice</h3>
+                  <p className="text-xs text-rose-700 mt-0.5">
+                    Invoice #{invoice.invoiceNumber} will be voided and removed from clinic revenue.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form id="cancel-invoice-form" onSubmit={handleCancelInvoice} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                  Quick Select Reason
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {[
+                    "Created by mistake",
+                    "Duplicate invoice",
+                    "Incorrect patient / items",
+                    "Patient treatment cancelled",
+                    "Billing dispute / fee waived"
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setCancellationReason(preset)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                        cancellationReason === preset
+                          ? "bg-rose-100 border-rose-400 text-rose-900 font-bold"
+                          : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  Mandatory Cancellation Reason <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="Explain why this invoice is being cancelled (minimum 3 characters)..."
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all resize-none"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  * Must be authorized by Clinic Owner, Doctor, or Manager. An audit record is permanently stored.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200/60 text-rose-800 text-xs space-y-1">
+                <p className="font-bold flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" /> What happens after cancellation:
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5 text-rose-700">
+                  <li>Excluded from Total Revenue and outstanding balance totals.</li>
+                  <li>WhatsApp reminders and payment recordings are disabled.</li>
+                  <li>Official PDF will be stamped with CANCELLED / VOID.</li>
+                </ul>
+              </div>
+            </form>
+
+            {/* Pinned Action Footer */}
+            <div className="shrink-0 p-4 border-t border-gray-100 bg-slate-50 flex gap-2.5 sm:gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                className="h-10 px-4 rounded-xl text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition-colors"
+              >
+                Keep Invoice
+              </button>
+              <button
+                type="submit"
+                form="cancel-invoice-form"
+                disabled={cancelling || !cancellationReason.trim() || cancellationReason.trim().length < 3}
+                className="h-10 px-5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors disabled:opacity-60 flex justify-center items-center gap-2 shadow-md shadow-rose-600/20"
+              >
+                {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                Confirm Cancellation
               </button>
             </div>
           </div>

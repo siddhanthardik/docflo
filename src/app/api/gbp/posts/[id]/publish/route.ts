@@ -108,8 +108,15 @@ export async function POST(
     return NextResponse.json({ success: true, post: updatedPost });
   } catch (error: any) {
     console.error("Error publishing draft post to GBP:", error);
+    const interpretation = error.interpretation;
     return NextResponse.json(
-      { error: error.message || "Failed to publish post to Google Business Profile." },
+      {
+        error: error.message || "Failed to publish post to Google Business Profile.",
+        friendlyMessage: interpretation?.friendlyMessage || error.message,
+        suggestedFix: interpretation?.suggestedFix || "Please check your post details and try again.",
+        policyViolationType: interpretation?.policyViolationType || "GENERAL",
+        field: interpretation?.field || "general",
+      },
       { status: 400 }
     );
   }

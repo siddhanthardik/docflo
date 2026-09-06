@@ -5,6 +5,7 @@ import { entitlementGuard } from "@/lib/withEntitlements";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { generateInvoicePDF } from "@/lib/pdf";
 import { getCurrencySymbol } from "@/lib/currency";
+import { formatPatientSalutation } from "@/lib/salutation";
 
 export async function POST(
   req: Request,
@@ -35,6 +36,10 @@ export async function POST(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
+    if (invoice.status === "CANCELLED") {
+      return NextResponse.json({ error: "Cannot share reminders or receipts for a cancelled invoice." }, { status: 400 });
+    }
+
     if (!invoice.patient.phone) {
       return NextResponse.json({ error: "Patient has no phone number" }, { status: 400 });
     }
@@ -42,26 +47,19 @@ export async function POST(
     // Generate PDF
     const pdfBuffer = await generateInvoicePDF(invoice as any);
 
-    // Construct Real Patient Name
-    let patientGreetingName = "";
-    const fn = (invoice.patient.firstName || "").trim();
-    const ln = (invoice.patient.lastName || "").trim();
-    if (fn && fn.toLowerCase() !== "patient") {
-      patientGreetingName = (ln && !ln.startsWith("+")) ? `${fn} ${ln}` : fn;
-    } else if (ln && !ln.startsWith("+")) {
-      patientGreetingName = ln;
-    } else {
+    // Construct Real Patient Name with Salutation
+    const salutation = formatPatientSalutation(invoice.patient);
+    let patientGreetingName = salutation.greetingName;
+    if (!patientGreetingName || patientGreetingName === "Patient") {
       const conv = await prisma.conversation.findUnique({
         where: { doctorId_patientPhone: { doctorId, patientPhone: invoice.patient.phone } },
         select: { patientName: true }
       });
       if (conv?.patientName && conv.patientName.toLowerCase() !== "patient" && !conv.patientName.startsWith("+")) {
         patientGreetingName = conv.patientName;
+      } else {
+        patientGreetingName = "Valued Patient";
       }
-    }
-
-    if (!patientGreetingName) {
-      patientGreetingName = "Valued Patient";
     }
 
     const sym = invoice.currencySymbol || getCurrencySymbol(invoice.currencyCode);

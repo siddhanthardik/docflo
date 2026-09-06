@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AsyncPatientSelect } from "@/components/ui/async-patient-select";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Patient {
   id: string;
@@ -38,6 +39,48 @@ interface Patient {
   lastName: string;
   phone: string;
   patientType?: string;
+}
+
+export function isSlotInPast(timeStr: string, dateInput: Date | string): boolean {
+  if (!timeStr || !dateInput) return false;
+  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const today = new Date();
+  const isToday = d.toDateString() === today.toDateString();
+  if (!isToday) {
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const selectedStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return selectedStart < startOfToday;
+  }
+  const [h, m] = timeStr.split(":").map(Number);
+  const slotMinutes = h * 60 + m;
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+  return slotMinutes <= nowMinutes;
+}
+
+export function getNextAvailableTimeSlot(slots: string[], selectedDate: Date = new Date()): string {
+  const today = new Date();
+  const isToday = selectedDate.toDateString() === today.toDateString();
+  if (!isToday) {
+    return slots[0] || "09:00";
+  }
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+  for (const slot of slots) {
+    const [h, m] = slot.split(":").map(Number);
+    if (h * 60 + m > nowMinutes) {
+      return slot;
+    }
+  }
+  return slots[slots.length - 1] || "09:00";
+}
+
+export function getInitialAppointmentDate(): Date {
+  const now = new Date();
+  if (now.getHours() >= 21) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  }
+  return now;
 }
 
 interface AppointmentFormProps {
@@ -112,19 +155,23 @@ export function AppointmentForm({
   initialData,
   mode,
 }: AppointmentFormProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [converting, setConverting] = useState(false);
   const [selectedPatientObj, setSelectedPatientObj] = useState<Patient | null>(null);
-  const [formData, setFormData] = useState({
-    patientId: "",
-    date: new Date(),
-    startTime: "09:00",
-    duration: 30,
-    reason: "",
-    notes: "",
-    practitionerId: "",
-    isWalkIn: false,
-    type: "IN_CLINIC",
+  const [formData, setFormData] = useState(() => {
+    const initDate = getInitialAppointmentDate();
+    return {
+      patientId: "",
+      date: initDate,
+      startTime: "09:00",
+      duration: 30,
+      reason: "",
+      notes: "",
+      practitionerId: "",
+      isWalkIn: false,
+      type: "IN_CLINIC",
+    };
   });
 
   const [practitioners, setPractitioners] = useState<any[]>([]);
@@ -193,10 +240,12 @@ export function AppointmentForm({
         type: initialData.type || "IN_CLINIC",
       });
     } else {
+      const initialDate = getInitialAppointmentDate();
+      const initialSlot = getNextAvailableTimeSlot(timeSlots, initialDate);
       setFormData(prev => ({
         patientId: "",
-        date: new Date(),
-        startTime: "09:00",
+        date: initialDate,
+        startTime: initialSlot,
         duration: 30,
         reason: "",
         notes: "",
@@ -236,6 +285,17 @@ export function AppointmentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate past date & time client-side
+    if (isSlotInPast(formData.startTime, formData.date)) {
+      toast({
+        title: "Invalid Appointment Time",
+        description: "Appointment cannot be scheduled in the past. Please select an upcoming date and time.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const endTime = calculateEndTime(formData.startTime, formData.duration);
@@ -360,12 +420,19 @@ export function AppointmentForm({
                 <Calendar
                   mode="single"
                   selected={formData.date}
-                  onSelect={(date) =>
-                    date && setFormData({ ...formData, date })
-                  }
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
+                  onSelect={(date) => {
+                    if (!date) return;
+                    let nextSlot = formData.startTime;
+                    if (isSlotInPast(nextSlot, date)) {
+                      nextSlot = getNextAvailableTimeSlot(timeSlots, date);
+                    }
+                    setFormData({ ...formData, date, startTime: nextSlot });
+                  }}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                  }}
                 />
               </PopoverContent>
             </Popover>
@@ -405,11 +472,19 @@ export function AppointmentForm({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-56">
-                  {timeSlots.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
+                  {timeSlots.map((time) => {
+                    const isPastSlot = isSlotInPast(time, formData.date);
+                    return (
+                      <SelectItem
+                        key={time}
+                        value={time}
+                        disabled={isPastSlot}
+                        className={isPastSlot ? "opacity-35 line-through cursor-not-allowed text-gray-400" : ""}
+                      >
+                        {time} {isPastSlot ? "(Past)" : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

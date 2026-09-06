@@ -86,7 +86,7 @@ model Doctor {
   // Granular Automated Message Toggles
   enableBookingConfirmation      Boolean @default(true)
   enable24hReminder              Boolean @default(true)
-  enable2hReminder               Boolean @default(false)
+  enable2hReminder               Boolean @default(true)
   enableGoogleReviewAutoDispatch Boolean @default(true)
   enableInvoiceMessages          Boolean @default(true)
   enablePaymentReceipts          Boolean @default(true)
@@ -754,7 +754,11 @@ model Invoice {
   currencyCode   String @default("INR")
   currencySymbol String @default("₹")
 
-  notes     String?
+  notes              String?
+  cancellationReason String?
+  cancelledAt        DateTime?
+  cancelledBy        String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

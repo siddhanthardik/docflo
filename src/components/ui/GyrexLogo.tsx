@@ -4,6 +4,7 @@ import React from "react";
 
 interface GyrexLogoProps {
   className?: string;
+  imageClassName?: string;
   iconOnly?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "1.5x";
   lightText?: boolean;
@@ -11,6 +12,7 @@ interface GyrexLogoProps {
 
 export function GyrexLogo({
   className = "",
+  imageClassName = "",
   iconOnly = false,
   size = "md",
   lightText = false,
@@ -30,7 +32,7 @@ export function GyrexLogo({
       <img
         src="/logo-icon.png"
         alt="Gyrex"
-        className={`h-8 w-8 object-contain shrink-0 ${className}`}
+        className={`h-8 w-8 object-contain shrink-0 ${imageClassName || ""} ${className}`}
         width={32}
         height={32}
       />
@@ -42,7 +44,7 @@ export function GyrexLogo({
       <img
         src={lightText ? "/logo-dark-background.svg" : "/logo.svg"}
         alt="Gyrex"
-        className={`${hClass} w-auto object-contain`}
+        className={`${imageClassName || hClass} w-auto object-contain`}
       />
     </div>
   );

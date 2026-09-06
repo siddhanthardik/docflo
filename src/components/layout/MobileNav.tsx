@@ -47,7 +47,7 @@ const allNavItems = [
   { name: "Google Updates", href: "/gbp/posts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Smart Automation", href: "/ai-agents", icon: Zap },
-  { name: "Download App", href: "/download", icon: Download },
+  { name: "Download App", href: "/download/Gyrex-Clinic-Setup.bat", icon: Download },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -174,6 +174,20 @@ export function MobileNav() {
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"
                     : pathname === item.href || pathname.startsWith(item.href + "/");
+
+                if (item.href.endsWith(".bat") || item.href.startsWith("http")) {
+                  return (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      download="Gyrex-Clinic-Setup.bat"
+                      className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-150 text-slate-700 hover:bg-slate-100/80 hover:text-slate-900"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0 text-slate-400" />
+                      <span>{item.name}</span>
+                    </a>
+                  );
+                }
 
                 return (
                   <Link

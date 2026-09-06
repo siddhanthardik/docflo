@@ -311,7 +311,7 @@ export function ThemeRenderer({
 
   return (
     <div
-      className={`min-h-screen flex flex-col selection:bg-blue-500 selection:text-white ${
+      className={`min-h-screen flex flex-col relative selection:bg-blue-500 selection:text-white ${
         data.fontHeading === "Playfair Display" ? "font-serif" : "font-sans"
       } ${
         themeId === "endometabolic-care" || themeId === "kinetic-physio" || themeId === "gastrosurg-advanced"
@@ -1396,7 +1396,11 @@ export function ThemeRenderer({
 
       {/* ── MOBILE STICKY ACTION BAR ── */}
       {data.showStickyBar && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 p-2.5 px-4 flex items-center justify-between gap-2 shadow-2xl">
+        <div
+          className={`md:hidden ${
+            composerMode ? "sticky bottom-0 left-0 right-0 z-20" : "fixed bottom-0 left-0 right-0 z-50"
+          } bg-white border-t border-slate-200 p-2.5 px-4 flex items-center justify-between gap-2 shadow-2xl`}
+        >
           {phone && (
             <a
               href={`tel:${phone}`}
@@ -1433,7 +1437,10 @@ export function ThemeRenderer({
 
       {/* ── FLOATING WHATSAPP RECEPTIONIST WIDGET ── */}
       {cleanWaNumber && (
-        <aside aria-label="WhatsApp Contact" className="fixed bottom-6 right-6 z-40">
+        <aside
+          aria-label="WhatsApp Contact"
+          className={composerMode ? "absolute bottom-6 right-6 z-20" : "fixed bottom-6 right-6 z-40"}
+        >
           <a
             href={`https://wa.me/${cleanWaNumber}?text=${encodeURIComponent(`Hello, I would like to book an appointment with ${data.doctor?.name || data.siteTitle || "the Doctor"}.`)}`}
             target="_blank"

@@ -87,8 +87,15 @@ export async function POST(req: Request) {
         publishedAt = new Date();
       } catch (e: any) {
         console.error("GBP API error during Publish Now:", e);
+        const interpretation = e.interpretation;
         return NextResponse.json(
-          { error: e.message || "Failed to publish post to Google Business Profile." },
+          {
+            error: e.message || "Failed to publish post to Google Business Profile.",
+            friendlyMessage: interpretation?.friendlyMessage || e.message,
+            suggestedFix: interpretation?.suggestedFix || "Please check your post details and try again.",
+            policyViolationType: interpretation?.policyViolationType || "GENERAL",
+            field: interpretation?.field || "general",
+          },
           { status: 400 }
         );
       }

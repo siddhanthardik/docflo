@@ -167,9 +167,24 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
 
       // 2. Invoice Details (Right Column: positioned at x: 340, width: 210, right aligned)
       const isPaid = invoice.status === 'PAID';
-      const docTypeTitle = isPaid ? 'RECEIPT' : 'INVOICE';
+      const isCancelled = invoice.status === 'CANCELLED';
+      const docTypeTitle = isCancelled ? 'VOID INVOICE' : isPaid ? 'RECEIPT' : 'INVOICE';
 
-      doc.fontSize(22).font('Roboto-Bold').fillColor('#0F172A').text(docTypeTitle, 340, 45, { align: 'right', width: 210 });
+      // Watermark for Cancelled / Void invoices
+      if (isCancelled) {
+        try {
+          doc.save();
+          doc.rotate(-35, { origin: [300, 420] });
+          doc.fontSize(68).font('Roboto-Bold').fillColor('#DC2626').fillOpacity(0.09);
+          doc.text('CANCELLED / VOID', 50, 390, { align: 'center', width: 500 });
+          doc.restore();
+          doc.fillOpacity(1);
+        } catch (wmErr) {
+          console.warn('Watermark rendering skipped:', wmErr);
+        }
+      }
+
+      doc.fontSize(22).font('Roboto-Bold').fillColor(isCancelled ? '#DC2626' : '#0F172A').text(docTypeTitle, 340, 45, { align: 'right', width: 210 });
       doc.fontSize(9).font('Roboto').fillColor('#64748B')
          .text(`Invoice Number: ${invoice.invoiceNumber}`, 340, 72, { align: 'right', width: 210 })
          .text(`Date: ${new Date(invoice.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`, 340, 86, { align: 'right', width: 210 });
@@ -181,7 +196,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
         UNPAID: { label: 'Unpaid', color: '#D97706' },
         OVERDUE: { label: 'Overdue', color: '#DC2626' },
         DRAFT: { label: 'Draft', color: '#64748B' },
-        CANCELLED: { label: 'Cancelled', color: '#94A3B8' },
+        CANCELLED: { label: 'Cancelled (Void)', color: '#DC2626' },
       };
       const currentStatus = statusConfig[invoice.status] || {
         label: (invoice.status || 'UNPAID').replace(/_/g, ' '),
@@ -301,7 +316,11 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       y += 18;
 
       // BALANCE DUE IN BOLD RED COLOR
-      if (balanceDue > 0.01) {
+      if (isCancelled) {
+        doc.fontSize(10).font('Roboto-Bold').fillColor('#DC2626');
+        doc.text('Balance Due:', 340, y, { width: 120, align: 'right' });
+        doc.text(`${sym}0.00 (Cancelled)`, 440, y, { width: 110, align: 'right' });
+      } else if (balanceDue > 0.01) {
         doc.fontSize(11).font('Roboto-Bold').fillColor('#DC2626'); // Red color for outstanding due!
         doc.text('Balance Due:', 340, y, { width: 120, align: 'right' });
         doc.text(`${sym}${balanceDue.toFixed(2)}`, 470, y, { width: 80, align: 'right' });
@@ -319,7 +338,13 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<B
       y += 32;
 
       // ════════════ FOOTER ════════════
-      let footerY = 710;
+      let footerY = 690;
+      if (isCancelled && (invoice as any).cancellationReason) {
+        doc.fontSize(9).font('Roboto-Bold').fillColor('#DC2626').text('Cancellation Record:', 50, footerY);
+        doc.font('Roboto').fillColor('#991B1B').text(`Reason: ${(invoice as any).cancellationReason}`, 50, footerY + 12, { width: 500 });
+        footerY += 28;
+      }
+
       if (invoice.notes) {
         doc.fontSize(9).font('Roboto-Bold').fillColor('#0F172A').text('Notes:', 50, footerY);
         doc.font('Roboto').fillColor('#475569').text(invoice.notes, 50, footerY + 12, { width: 500 });

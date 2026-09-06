@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { formatDoctorDisplayName } from "@/services/ai-agents.service";
 import { resolveClinicTimezone } from "@/lib/timezone";
+import { formatPatientSalutation } from "@/lib/salutation";
 
 export class ReminderService {
   /**
@@ -62,9 +63,20 @@ export class ReminderService {
               });
 
               const docName = formatDoctorDisplayName(appointment.practitioner?.name || doctor.name);
-              const clinicLabel = doctor.clinicName || `${docName}'s Clinic`;
+              const hasDistinctClinic = Boolean(
+                doctor.clinicName && 
+                doctor.clinicName.trim() && 
+                doctor.clinicName.trim().toLowerCase() !== docName.toLowerCase() &&
+                !doctor.clinicName.trim().toLowerCase().includes(docName.toLowerCase().replace(/^dr\.?\s*/i, ''))
+              );
+              const fromClinicPrefix = hasDistinctClinic ? `from *${doctor.clinicName!.trim()}* ` : "";
+              const salutation = formatPatientSalutation(appointment.patient);
+              const isTeleConsultation = appointment.type === "TELE_CONSULTATION" || 
+                (appointment.notes && /tele|online|video/i.test(appointment.notes));
 
-              const msg = `Hi ${appointment.patient.firstName}! 👋\n\nJust a friendly reminder from *${clinicLabel}* about your upcoming consultation with *${docName}* on *${dateStr} at ${timeStr}*.\n\n📍 Please arrive 5-10 minutes early. If you need to reschedule, reply directly to this message. See you soon! 😊`;
+              const msg = isTeleConsultation
+                ? `Hi ${salutation.greetingName}! 👋\n\nJust a friendly reminder ${fromClinicPrefix}about your upcoming online consultation with *${docName}* on *${dateStr} at ${timeStr}*.\n\n💻 This is an online consultation. We will connect with you digitally (via video/call link) at the scheduled time. If you need to reschedule, reply directly to this message. See you soon! 😊`
+                : `Hi ${salutation.greetingName}! 👋\n\nJust a friendly reminder ${fromClinicPrefix}about your upcoming consultation with *${docName}* on *${dateStr} at ${timeStr}*.\n\n📍 Please arrive 5-10 minutes early. If you need to reschedule, reply directly to this message. See you soon! 😊`;
 
               await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 
@@ -83,8 +95,8 @@ export class ReminderService {
           }
         }
 
-        // 2. SAME-DAY / 2-HOUR PRIOR REMINDERS (If enable2hReminder is true)
-        if (doctor.enable2hReminder === true) {
+        // 2. SAME-DAY / 2-HOUR PRIOR REMINDERS (Active for every patient unless explicitly disabled)
+        if (doctor.enable2hReminder !== false) {
           const upcoming2hAppointments = await prisma.appointment.findMany({
             where: {
               doctorId: doctor.id,
@@ -120,9 +132,20 @@ export class ReminderService {
               });
 
               const docName = formatDoctorDisplayName(appointment.practitioner?.name || doctor.name);
-              const clinicLabel = doctor.clinicName || `${docName}'s Clinic`;
+              const hasDistinctClinic = Boolean(
+                doctor.clinicName && 
+                doctor.clinicName.trim() && 
+                doctor.clinicName.trim().toLowerCase() !== docName.toLowerCase() &&
+                !doctor.clinicName.trim().toLowerCase().includes(docName.toLowerCase().replace(/^dr\.?\s*/i, ''))
+              );
+              const atClinicSuffix = hasDistinctClinic ? ` at *${doctor.clinicName!.trim()}*` : "";
+              const salutation = formatPatientSalutation(appointment.patient);
+              const isTeleConsultation = appointment.type === "TELE_CONSULTATION" || 
+                (appointment.notes && /tele|online|video/i.test(appointment.notes));
 
-              const msg = `Hi ${appointment.patient.firstName}! 🔔\n\nFriendly reminder: Your appointment with *${docName}* at *${clinicLabel}* is today in 2 hours at *${timeStr}*.\n\nWe look forward to seeing you shortly! 🩺`;
+              const msg = isTeleConsultation
+                ? `Hi ${salutation.greetingName}! 🔔\n\nFriendly reminder: Your online consultation with *${docName}* is today in 2 hours at *${timeStr}*.\n\n💻 We will connect with you digitally. Please be ready with your reports/prescriptions at the scheduled time! 🩺`
+                : `Hi ${salutation.greetingName}! 🔔\n\nFriendly reminder: Your appointment with *${docName}*${atClinicSuffix} is today in 2 hours at *${timeStr}*.\n\nWe look forward to seeing you shortly! 🩺`;
 
               await whatsappManager.sendMessage(doctor.id, appointment.patient.phone, msg);
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString, getClinicDayBounds } from "@/lib/timezone";
+import { formatAppointmentConfirmationCard } from "@/lib/whatsapp-formatter";
 
 // ---------- Helper functions ----------
 
@@ -185,21 +186,16 @@ export async function POST(req: Request) {
     const startDateTime = new Date(`${dateStr}T${startTime}:00${tzOffset}`);
     const endDateTime = new Date(`${dateStr}T${endTime}:00${tzOffset}`);
 
-    // 2. Validate past dates & times (in clinic timezone)
+    // 2. Validate past dates & times (strictly in clinic timezone)
     const todayClinicStr = new Date().toLocaleDateString("en-CA", { timeZone: doctorTimezone });
-    const nowClinicTimeStr = new Date().toLocaleTimeString("en-GB", { timeZone: doctorTimezone, hour: "2-digit", minute: "2-digit" });
+    const isToday = dateStr === todayClinicStr;
 
     let isAppointmentPast = false;
     if (dateStr < todayClinicStr) {
       isAppointmentPast = true;
-    } else if (dateStr === todayClinicStr) {
-      const [startH, startM] = startTime.split(":").map(Number);
-      const [nowH, nowM] = nowClinicTimeStr.split(":").map(Number);
-      const startTotalM = startH * 60 + startM;
-      const nowTotalM = nowH * 60 + nowM;
-
-      // Allow 15 minute grace period for booking current slot
-      if (startTotalM + 15 < nowTotalM) {
+    } else if (isToday) {
+      // Reject any slot that started in the past (allow 1 minute buffer for client-server clock drift/network latency)
+      if (startDateTime.getTime() < Date.now() - 60000) {
         isAppointmentPast = true;
       }
     }
@@ -294,11 +290,14 @@ export async function POST(req: Request) {
             firstName: true,
             lastName: true,
             phone: true,
+            gender: true,
+            dateOfBirth: true,
           },
         },
         practitioner: {
           select: {
             name: true,
+            specialty: true,
             calendarColor: true,
           },
         },
@@ -307,39 +306,34 @@ export async function POST(req: Request) {
 
     // --- WhatsApp Notification Logic ---
     try {
-      const doctor = await prisma.doctor.findUnique({
+      const doctorRecord = await prisma.doctor.findUnique({
         where: { id: doctorId },
-        select: { clinicName: true, address: true, city: true, enableBookingConfirmation: true }
+        select: {
+          name: true,
+          clinicName: true,
+          address: true,
+          city: true,
+          consultationFee: true,
+          googleMapsUri: true,
+          enableBookingConfirmation: true,
+          specialty: true
+        }
       });
 
-      if (!isWalkIn && whatsappManager.isConnected(doctorId) && doctor?.enableBookingConfirmation !== false && appointment.patient.phone && status === "CONFIRMED") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        let messageText = "";
-        const formattedDate = appointmentDate.toLocaleDateString("en-US", {
-          weekday: 'long', month: 'short', day: 'numeric'
+      if (!isWalkIn && whatsappManager.isConnected(doctorId) && doctorRecord?.enableBookingConfirmation !== false && appointment.patient.phone && status === "CONFIRMED") {
+        const messageText = formatAppointmentConfirmationCard({
+          patient: appointment.patient,
+          doctorName: appointment.practitioner?.name || doctorRecord?.name,
+          specialty: appointment.practitioner?.specialty || doctorRecord?.specialty || "General Physician",
+          clinicName: doctorRecord?.clinicName,
+          startTime: startDateTime,
+          clinicTz: doctorTimezone,
+          consultationFee: doctorRecord?.consultationFee,
+          isTele: type === "TELE_CONSULTATION",
+          address: doctorRecord?.address,
+          city: doctorRecord?.city,
+          mapsUrl: doctorRecord?.googleMapsUri,
         });
-        
-        const clinicName = doctor?.clinicName || "our clinic";
-        const locationDetails = [doctor?.address, doctor?.city].filter(Boolean).join(", ");
-        const locationString = locationDetails ? ` at ${locationDetails}` : "";
-
-        if (type === "TELE_CONSULTATION") {
-          if (appointmentDate.getTime() === today.getTime()) {
-            messageText = `Hi ${appointment.patient.firstName}, your tele-consultation with ${clinicName} is confirmed for today at ${startTime}.\n\nThe doctor will call you or share a meeting link at the scheduled time. Please reply 'CONFIRM' to acknowledge.`;
-          } else {
-            messageText = `Hi ${appointment.patient.firstName}! Your upcoming tele-consultation with ${clinicName} is scheduled for ${formattedDate} at ${startTime}.\n\nThe doctor will call you or share a meeting link at the scheduled time. Please reply 'CONFIRM' to acknowledge.`;
-          }
-        } else {
-          if (appointmentDate.getTime() === today.getTime()) {
-            // Same Day
-            messageText = `Hi ${appointment.patient.firstName}, this is a quick message from ${clinicName}. Your appointment is confirmed for today at ${startTime}${locationString}.\n\nCould you please reply with 'CONFIRM' to let us know you're still coming? If you need to reschedule, just let us know. We look forward to seeing you! 🌟`;
-          } else {
-            // Future
-            messageText = `Hi ${appointment.patient.firstName}! Your upcoming appointment with ${clinicName} is scheduled for ${formattedDate} at ${startTime}${locationString}.\n\nPlease reply 'CONFIRM' to secure your slot, or let us know if you need to make any changes. Have a wonderful day! ✨`;
-          }
-        }
 
         const patientPhone = appointment.patient.phone;
         await whatsappManager.sendMessage(doctorId, patientPhone, messageText, "Clinic");

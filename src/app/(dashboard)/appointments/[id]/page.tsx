@@ -37,6 +37,40 @@ function getAvatarColor(name: string) {
   return colors[code % colors.length];
 }
 
+function formatAppointmentDate(date: string | Date | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(d);
+}
+
+function formatAppointmentShortDate(date: string | Date | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(d);
+}
+
+function formatAppointmentTime(date: string | Date | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
 export default function AppointmentDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -129,9 +163,7 @@ export default function AppointmentDetailPage() {
               Appointment Details
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {appointment.date
-                ? format(new Date(appointment.date), "EEEE, MMMM d, yyyy")
-                : "—"}
+              {formatAppointmentDate(appointment.startTime || appointment.date)}
             </p>
           </div>
         </div>
@@ -198,9 +230,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-xs text-gray-500">Date</p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {appointment.date
-                    ? format(new Date(appointment.date), "MMMM d, yyyy")
-                    : "—"}
+                  {formatAppointmentShortDate(appointment.startTime || appointment.date)}
                 </p>
               </div>
             </div>
@@ -210,13 +240,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-xs text-gray-500">Time</p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {appointment.startTime
-                    ? format(new Date(appointment.startTime), "h:mm a")
-                    : "—"}{" "}
-                  —{" "}
-                  {appointment.endTime
-                    ? format(new Date(appointment.endTime), "h:mm a")
-                    : "—"}
+                  {formatAppointmentTime(appointment.startTime)} — {formatAppointmentTime(appointment.endTime)}
                 </p>
               </div>
             </div>

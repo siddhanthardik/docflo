@@ -4,11 +4,10 @@ import { getSessionData, isDoctor } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString } from "@/lib/timezone";
 
-// Helper to check if a date is in the past (using clinic timezone)
+// Helper to check if a date is in the past
 function isPast(date: Date, timezone: string): boolean {
-  // Simple UTC check for now; you can enhance with proper timezone handling
-  const now = new Date();
-  return date < now;
+  // Allow at most 1 minute buffer for client-server drift
+  return date.getTime() < Date.now() - 60000;
 }
 
 // Check if time falls within working hours
@@ -194,15 +193,30 @@ export async function PUT(
 
         // Check if Cancelled
         if (body.status === "CANCELLED" && existing.status !== "CANCELLED") {
-          messageText = `Hi ${updated.patient.firstName}, this is ${clinicName}. We are writing to let you know that your appointment on ${updated.date.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric' })} has been cancelled.\n\nIf you would like to reschedule for another day, simply reply to this message and we'll be happy to assist you!`;
+          const formattedDate = existing.startTime.toLocaleDateString("en-US", {
+            timeZone: clinicTz,
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric'
+          });
+          messageText = `Hi ${updated.patient.firstName}, this is ${clinicName}. We are writing to let you know that your appointment on ${formattedDate} has been cancelled.\n\nIf you would like to reschedule for another day, simply reply to this message and we'll be happy to assist you!`;
         } 
         // Check if Rescheduled (Date or time changed, and not completed/cancelled/checked in)
         else if (
           updated.status === "CONFIRMED" &&
           (existing.date.getTime() !== updated.date.getTime() || existing.startTime.getTime() !== updated.startTime.getTime())
         ) {
-          const formattedDate = updated.date.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric' });
-          const formattedTime = updated.startTime.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+          const formattedDate = updated.startTime.toLocaleDateString("en-US", {
+            timeZone: clinicTz,
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric'
+          });
+          const formattedTime = updated.startTime.toLocaleTimeString("en-US", {
+            timeZone: clinicTz,
+            hour: '2-digit',
+            minute: '2-digit'
+          });
           messageText = `Hi ${updated.patient.firstName}, this is an update regarding your appointment at ${clinicName}. Your visit has been successfully rescheduled to ${formattedDate} at ${formattedTime}.\n\nPlease reply 'CONFIRM' to lock in this new time. Let us know if you have any questions!`;
         }
 

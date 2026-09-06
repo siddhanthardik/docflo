@@ -639,7 +639,14 @@ export default function ElementorComposerPage() {
     <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
       {/* ── TOP CLEAN WEBSITE STUDIO HEADER ── */}
       <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link
+            href="/dashboard"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors shrink-0"
+            title="Back to Dashboard"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
           <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5 shrink-0">
             <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
               <Globe className="w-4 h-4" />

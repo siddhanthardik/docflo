@@ -11,6 +11,7 @@ import {
   CalendarDays,
   X,
   MoreVertical,
+  MessageSquare,
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { AppointmentForm } from "@/components/appointments/appointment-form";
@@ -474,10 +475,36 @@ export default function AppointmentsPage() {
                             </div>
                           )}
 
-                          {/* Phone */}
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                            <Phone className="h-3 w-3" />
-                            {apt.patient.phone}
+                          {/* Phone & Quick Actions */}
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 flex-wrap">
+                            <div className="flex items-center gap-1 font-medium">
+                              <Phone className="h-3 w-3 text-gray-400" />
+                              <span>{apt.patient.phone}</span>
+                            </div>
+                            {apt.patient.phone && (
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={`https://wa.me/${apt.patient.phone.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium transition-colors border border-emerald-200/60 shadow-2xs"
+                                  title="Chat on WhatsApp"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MessageSquare className="h-3 w-3 text-emerald-600" />
+                                  <span>WhatsApp</span>
+                                </a>
+                                <a
+                                  href={`tel:${apt.patient.phone}`}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 font-medium transition-colors border border-gray-200 shadow-2xs"
+                                  title="Call Patient"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3 w-3 text-gray-500" />
+                                  <span>Call</span>
+                                </a>
+                              </div>
+                            )}
                           </div>
 
                           {/* Reason */}

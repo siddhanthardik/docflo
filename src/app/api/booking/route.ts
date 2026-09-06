@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { resolveClinicTimezone, createClinicAppointmentDateTimes } from "@/lib/timezone"
+import { whatsappManager } from "@/lib/whatsapp-manager"
+import { formatAppointmentConfirmationCard } from "@/lib/whatsapp-formatter"
 
 export async function POST(req: Request) {
   try {
@@ -43,7 +45,17 @@ export async function POST(req: Request) {
     // Fetch doctor's clinic timezone
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      select: { timezone: true }
+      select: {
+        timezone: true,
+        name: true,
+        clinicName: true,
+        specialty: true,
+        address: true,
+        city: true,
+        googleMapsUri: true,
+        consultationFee: true,
+        enableBookingConfirmation: true
+      }
     });
     const clinicTz = resolveClinicTimezone(doctor?.timezone);
 
@@ -57,6 +69,13 @@ export async function POST(req: Request) {
       timezone: clinicTz
     });
 
+    if (startTime.getTime() < Date.now() - 60000) {
+      return NextResponse.json(
+        { error: "Cannot book an appointment in the past. Please choose a future slot." },
+        { status: 400 }
+      );
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         patientId: patient.id,
@@ -67,7 +86,33 @@ export async function POST(req: Request) {
         reason: service.name,
         status: "CONFIRMED",
       },
-    })
+    });
+
+    // Send formatted WhatsApp appointment confirmation if connected
+    try {
+      if (whatsappManager.isConnected(doctorId) && doctor?.enableBookingConfirmation !== false && patient.phone) {
+        const messageText = formatAppointmentConfirmationCard({
+          patient: {
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            gender: patient.gender,
+            dateOfBirth: patient.dateOfBirth
+          },
+          doctorName: doctor?.name,
+          specialty: doctor?.specialty || "Medical Specialist",
+          clinicName: doctor?.clinicName,
+          startTime,
+          clinicTz,
+          consultationFee: service.price || doctor?.consultationFee,
+          address: doctor?.address,
+          city: doctor?.city,
+          mapsUrl: doctor?.googleMapsUri
+        });
+        await whatsappManager.sendMessage(doctorId, patient.phone, messageText, "Clinic");
+      }
+    } catch (waErr) {
+      console.error("[Booking] Failed to send WhatsApp confirmation:", waErr);
+    }
 
     return NextResponse.json({ success: true, appointment })
   } catch (error: any) {

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye, Sparkles, Bot } from "lucide-react"
+import { Image as ImageIcon, Calendar, Send, Upload, Globe, MoreVertical, X, Clock, CheckCircle2, Eye, Sparkles, Bot, AlertTriangle, AlertCircle, Phone, Copy, Check, ExternalLink, ShieldCheck } from "lucide-react"
 import { format } from "date-fns"
 
 export function PostScheduler() {
@@ -41,6 +41,15 @@ export function PostScheduler() {
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
   const [publishedPostData, setPublishedPostData] = useState<any>(null)
   const [overlayMessage, setOverlayMessage] = useState("")
+
+  // Error & Policy Guidance State
+  const [publishingError, setPublishingError] = useState<{
+    friendlyMessage: string;
+    suggestedFix: string;
+    policyViolationType?: string;
+    field?: string;
+  } | null>(null)
+  const [copiedFallback, setCopiedFallback] = useState(false)
 
   // AI Generation State
   const [showAIDialog, setShowAIDialog] = useState(false)
@@ -76,11 +85,14 @@ export function PostScheduler() {
 
       if (res.ok) {
         const autoCta = data.suggestedCtaType || "CALL";
+        const autoBookingUrl = activeAccount?.insightsData?.websiteUri || "";
         setForm(prev => ({ 
           ...prev, 
           content: data.content,
-          ctaType: autoCta
+          ctaType: autoCta,
+          ctaLink: (autoCta === "BOOK" || autoCta === "LEARN_MORE") && !prev.ctaLink ? autoBookingUrl : prev.ctaLink
         }));
+        setPublishingError(null);
         toast({ 
           title: "Update drafted with AI! ✨", 
           description: `Content generated and button set to "${autoCta === "CALL" ? "Call now" : autoCta === "BOOK" ? "Book" : "Learn more"}".` 
@@ -139,13 +151,82 @@ export function PostScheduler() {
     }
   }
 
+  // Real-time phone number detection for Google Policy anti-spam compliance
+  const phonePatternWithLabels = /(?:📞|☎️|📱|Tel|Phone|Call|Mobile|Contact)(?:\s*(?:us|today|now)?)?(?:\s*(?:at|on|:))?\s*(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,5}/gi;
+  const rawPhonePattern = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{4,5}/g;
+
+  const detectedPhones = form.content.match(rawPhonePattern) || [];
+  const hasPhoneInContent = phonePatternWithLabels.test(form.content) || detectedPhones.some(m => m.replace(/\D/g, "").length >= 10);
+  const urlPattern = /https?:\/\/[^\s]+/gi;
+  const hasUrlInContent = urlPattern.test(form.content);
+
+  const handleMovePhoneToCallButton = () => {
+    const cleaned = form.content
+      .replace(phonePatternWithLabels, "")
+      .replace(rawPhonePattern, "")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+
+    setForm(prev => ({
+      ...prev,
+      content: cleaned,
+      ctaType: "CALL",
+    }));
+
+    if (publishingError?.policyViolationType === "PHONE") {
+      setPublishingError(null);
+    }
+
+    toast({
+      title: "Updated for Google Policy ✨",
+      description: "Phone number removed from description and 'Call now' button activated."
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    setPublishingError(null)
+
+    // Google Business Profile strictly requires JPG or PNG
+    const validTypes = ["image/jpeg", "image/png", "image/jpg"]
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Google Requires JPG or PNG",
+        description: "Google Business Profile only accepts JPG or PNG photos. Please select a JPG or PNG image.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Image Exceeds 5MB Limit",
+        description: "Google Business Profile requires photos to be under 5MB for optimal quality.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Check dimensions in browser before uploading
+    const objectUrl = URL.createObjectURL(file)
+    const imgTest = new window.Image()
+    imgTest.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      if (imgTest.width < 250 || imgTest.height < 250) {
+        toast({
+          title: "Resolution Notice",
+          description: "Google recommends images at least 250×250 px (optimal: 1200×900 px). This image may appear small or blurry on Google Maps.",
+        })
+      }
+    }
+    imgTest.src = objectUrl
+
     setIsUploading(true)
     const formData = new FormData()
     formData.append("file", file)
+    formData.append("type", "gbp") // Ensures backend outputs progressive Google-compliant JPEG
 
     try {
       const res = await fetch("/api/upload", {
@@ -155,7 +236,7 @@ export function PostScheduler() {
       const data = await res.json()
       if (data.url) {
         setForm({ ...form, imageUrl: data.url })
-        toast({ title: "Image uploaded successfully!" })
+        toast({ title: "Google-ready photo uploaded!", description: "Formatted as progressive high-quality JPEG." })
       } else {
         throw new Error("No URL returned")
       }
@@ -167,12 +248,30 @@ export function PostScheduler() {
   }
 
   const handleSubmit = async (isScheduled: boolean) => {
-    if (!form.content) {
+    if (!form.content.trim()) {
       toast({ title: "Content is required", variant: "destructive" })
       return
     }
 
+    if (form.ctaType !== "NONE" && form.ctaType !== "CALL" && !form.ctaLink?.trim()) {
+      const missingLinkErr = {
+        friendlyMessage: `Link required for "${getCtaLabel(form.ctaType)}" button`,
+        suggestedFix: `Google requires a valid website address (starting with https://) when you add an action button. Please enter your link or switch button to "None".`,
+        policyViolationType: "URL",
+        field: "ctaLink"
+      }
+      setPublishingError(missingLinkErr)
+      toast({
+        title: "Action Button Link Missing",
+        description: missingLinkErr.suggestedFix,
+        variant: "destructive"
+      })
+      return
+    }
+
     setIsSubmitting(true)
+    setPublishingError(null)
+
     try {
       const payload: any = { ...form }
       if (!isScheduled) {
@@ -203,17 +302,30 @@ export function PostScheduler() {
         // Reset overlay after 3s
         setTimeout(() => {
           setShowSuccessOverlay(false)
-          setTimeout(() => setPublishedPostData(null), 300) // slight delay to prevent flicker during fade out
+          setTimeout(() => setPublishedPostData(null), 300)
         }, 3000)
       } else {
-        const data = await res.json().catch(() => ({}));
+        const data = await res.json().catch(() => ({}))
+        const errObj = {
+          friendlyMessage: data.friendlyMessage || data.error || data.message || "An error occurred while communicating with Google.",
+          suggestedFix: data.suggestedFix || "Please review your post text and settings, then try again.",
+          policyViolationType: data.policyViolationType || "GENERAL",
+          field: data.field || "general"
+        }
+        setPublishingError(errObj)
         toast({ 
-          title: isScheduled ? "Failed to schedule post" : "Failed to publish to Google", 
-          description: data.error || data.message || "An error occurred while communicating with Google.", 
+          title: isScheduled ? "Failed to schedule post" : "Google Rejected Update", 
+          description: errObj.friendlyMessage, 
           variant: "destructive" 
-        });
+        })
       }
     } catch (error) {
+      const fallbackErr = {
+        friendlyMessage: "Failed to communicate with publishing service.",
+        suggestedFix: "Please check your network connection and try again.",
+        policyViolationType: "GENERAL",
+      }
+      setPublishingError(fallbackErr)
       toast({ title: "Failed to publish", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
@@ -241,6 +353,7 @@ export function PostScheduler() {
 
   const handlePublishDraft = async (postId: string) => {
     setPublishingDraftId(postId);
+    setPublishingError(null);
     try {
       const res = await fetch(`/api/gbp/posts/${postId}/publish`, {
         method: "POST",
@@ -251,9 +364,16 @@ export function PostScheduler() {
         toast({ title: "Post Published to Google Live! 🚀", description: "Your post is now live on Google Search & Maps." });
         fetchHistory();
       } else {
+        const errObj = {
+          friendlyMessage: data.friendlyMessage || data.error || data.message || "Could not publish draft post to Google.",
+          suggestedFix: data.suggestedFix || "Please check your post text and images against Google policy and try again.",
+          policyViolationType: data.policyViolationType || "GENERAL",
+          field: data.field || "general"
+        };
+        setPublishingError(errObj);
         toast({
           title: "Publishing Failed",
-          description: data.error || data.message || "Could not publish draft post to Google.",
+          description: errObj.friendlyMessage,
           variant: "destructive"
         });
       }
@@ -356,8 +476,14 @@ export function PostScheduler() {
               ) : (
                 <div className="relative rounded-xl overflow-hidden border border-gray-200 w-full sm:w-1/2 group">
                   <img src={form.imageUrl} alt="Upload preview" className="w-full h-32 object-cover" />
+                  <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Google Format (JPG)
+                  </div>
                   <button 
-                    onClick={() => setForm({...form, imageUrl: ""})}
+                    onClick={() => {
+                      setForm({...form, imageUrl: ""});
+                      if (publishingError?.policyViolationType === "MEDIA") setPublishingError(null);
+                    }}
                     className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
                   >
                     <X className="h-4 w-4" />
@@ -387,18 +513,67 @@ export function PostScheduler() {
               </div>
               <Textarea 
                 value={form.content} 
-                onChange={(e) => setForm({...form, content: e.target.value.substring(0, 1500)})} 
+                onChange={(e) => {
+                  setForm({...form, content: e.target.value.substring(0, 1500)});
+                  if (publishingError?.field === "content") setPublishingError(null);
+                }} 
                 rows={5} 
                 placeholder={isGenerating ? "Google Updates Assistant is crafting your update..." : "What's new at your clinic?"}
                 className="resize-none focus:ring-indigo-500"
               />
             </div>
 
+            {/* Real-time Policy Auditor */}
+            {hasPhoneInContent && (
+              <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in duration-200">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h5 className="font-bold text-amber-900 text-sm">Google Policy Alert: Phone Number Detected in Text</h5>
+                  <p className="mt-1 text-amber-800 leading-relaxed">
+                    Google strictly forbids phone numbers in post descriptions (to prevent spam). If published with a phone number in the body, Google will reject the post. Phone numbers should be offered via the <strong>&quot;Call now&quot;</strong> button instead.
+                  </p>
+                  <div className="mt-2.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleMovePhoneToCallButton}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs h-8 rounded-lg shadow-xs"
+                    >
+                      <Phone className="h-3.5 w-3.5 mr-1.5" /> Auto-Move to &quot;Call Now&quot; Button
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasUrlInContent && (
+              <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-blue-900 shadow-xs">
+                <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold">Google Policy Tip: </span>
+                  Web links in body text are not clickable on Google Search or Maps. We recommend placing your link in the Action Button below (e.g. &quot;Book&quot; or &quot;Learn more&quot;) for the best patient conversion.
+                </div>
+              </div>
+            )}
+
             {/* CTA */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 font-semibold mb-2 block">Button (Optional)</Label>
-                <Select value={form.ctaType} onValueChange={(v) => setForm({...form, ctaType: v})}>
+                <Select
+                  value={form.ctaType}
+                  onValueChange={(v) => {
+                    const clinicUrl = activeAccount?.insightsData?.websiteUri || "";
+                    setForm(prev => ({
+                      ...prev,
+                      ctaType: v,
+                      ctaLink: (v === "BOOK" || v === "LEARN_MORE") && !prev.ctaLink ? clinicUrl : prev.ctaLink
+                    }));
+                    if (publishingError?.policyViolationType === "URL") {
+                      setPublishingError(null);
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -412,14 +587,29 @@ export function PostScheduler() {
                 </Select>
               </div>
               
-              {form.ctaType !== "NONE" && (
+              {form.ctaType !== "NONE" && form.ctaType !== "CALL" && (
                 <div>
-                  <Label className="text-gray-700 font-semibold mb-2 block">Link for your button</Label>
+                  <Label className="text-gray-700 font-semibold mb-2 block">
+                    Link for your button <span className="text-red-500">*</span>
+                  </Label>
                   <Input 
                     placeholder="https://yourclinic.com/booking"
                     value={form.ctaLink} 
-                    onChange={(e) => setForm({...form, ctaLink: e.target.value})} 
+                    onChange={(e) => {
+                      setForm({...form, ctaLink: e.target.value});
+                      if (publishingError?.policyViolationType === "URL") setPublishingError(null);
+                    }} 
                   />
+                  <p className="text-[11px] text-gray-400 mt-1">Must start with https:// for Google compliance</p>
+                </div>
+              )}
+              {form.ctaType === "CALL" && (
+                <div>
+                  <Label className="text-gray-700 font-semibold mb-2 block">Action</Label>
+                  <div className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-emerald-600" />
+                    <span>Patients will call your Google-verified clinic phone directly.</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -440,6 +630,73 @@ export function PostScheduler() {
               </div>
             </div>
           </div>
+
+          {/* IN-PAGE ACTIONABLE ERROR BANNER */}
+          {publishingError && (
+            <div className="mx-6 mb-4 bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-xs text-red-900 shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-red-900 text-sm">{publishingError.friendlyMessage}</h4>
+                    <p className="mt-1 text-red-700 leading-relaxed font-medium text-xs">{publishingError.suggestedFix}</p>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setPublishingError(null)}
+                  className="text-red-400 hover:text-red-600 p-1 rounded-lg"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-red-100 flex flex-wrap items-center gap-2">
+                {publishingError.policyViolationType === "PHONE" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleMovePhoneToCallButton}
+                    className="bg-red-600 hover:bg-red-700 text-white h-8 text-xs font-semibold rounded-lg shadow-xs"
+                  >
+                    <Phone className="h-3 w-3 mr-1" /> Fix: Move Phone to &quot;Call Now&quot;
+                  </Button>
+                )}
+                {publishingError.policyViolationType === "MEDIA" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setForm(prev => ({ ...prev, imageUrl: "" }));
+                      setPublishingError(null);
+                      toast({ title: "Photo removed", description: "You can now publish as a text update." });
+                    }}
+                    className="h-8 text-xs border-red-200 text-red-700 hover:bg-red-100/50 bg-white shadow-xs font-semibold"
+                  >
+                    Remove Photo & Post as Text
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(form.content);
+                    setCopiedFallback(true);
+                    setTimeout(() => setCopiedFallback(false), 3000);
+                    toast({ title: "Text copied to clipboard!", description: "Opening Google Business Profile manager..." });
+                    window.open("https://business.google.com/locations", "_blank");
+                  }}
+                  className="h-8 text-xs border-red-200 text-red-800 hover:bg-white bg-white shadow-xs font-medium"
+                >
+                  {copiedFallback ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 mr-1 text-red-600" />}
+                  {copiedFallback ? "Copied! Opening Google..." : "Copy Post & Open Google Profile"}
+                  <ExternalLink className="h-3 w-3 ml-1 opacity-70" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center justify-end gap-4">
             {form.scheduledDate ? (

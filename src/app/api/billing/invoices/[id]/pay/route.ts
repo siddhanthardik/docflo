@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { generateInvoicePDF } from "@/lib/pdf";
+import { formatPatientSalutation } from "@/lib/salutation";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,6 +25,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    if (invoice.status === "CANCELLED") {
+      return NextResponse.json({ error: "Cannot record payment on a cancelled invoice." }, { status: 400 });
     }
 
     // Record the payment
@@ -75,7 +80,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           const fileName = `Receipt_${updatedInvoice.invoiceNumber}.pdf`;
           const formattedAmount = parseFloat(amount).toLocaleString("en-IN");
           const formattedTotalPaid = totalPaid.toLocaleString("en-IN");
-          const caption = `Hi ${updatedInvoice.patient.firstName},\n\nThank you for your payment of ₹${formattedAmount}. Attached is your payment receipt from ${updatedInvoice.doctor.clinicName || "our clinic"}.\n\nTotal Amount Paid: ₹${formattedTotalPaid}\nInvoice Status: ${status === "PAID" ? "Fully Paid ✅" : "Partially Paid ⏳"}\n\nThank you for choosing us! 🌟`;
+          const salutation = formatPatientSalutation(updatedInvoice.patient);
+          const caption = `Hi ${salutation.greetingName},\n\nThank you for your payment of ₹${formattedAmount}. Attached is your payment receipt from ${updatedInvoice.doctor.clinicName || "our clinic"}.\n\nTotal Amount Paid: ₹${formattedTotalPaid}\nInvoice Status: ${status === "PAID" ? "Fully Paid ✅" : "Partially Paid ⏳"}\n\nThank you for choosing us! 🌟`;
 
           await whatsappManager.sendDocument(doctorId, updatedInvoice.patient.phone, pdfBuffer, fileName, caption);
 

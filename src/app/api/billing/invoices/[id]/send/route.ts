@@ -6,6 +6,7 @@ import { entitlementGuard } from "@/lib/withEntitlements";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { generateInvoicePDF } from "@/lib/pdf";
 import { getCurrencySymbol } from "@/lib/currency";
+import { formatPatientSalutation } from "@/lib/salutation";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,6 +30,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
+    if (invoice.status === "CANCELLED") {
+      return NextResponse.json({ error: "Cannot send a cancelled invoice to patient." }, { status: 400 });
+    }
+
     const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const balanceDue = Math.max(0, invoice.totalAmount - totalPaid);
 
@@ -36,15 +41,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const pdfBuffer = await generateInvoicePDF(invoice as any);
     const fileName = `Invoice_${invoice.invoiceNumber}.pdf`;
     
-    // Construct Real Patient Name
-    let patientGreetingName = "";
-    const fn = (invoice.patient.firstName || "").trim();
-    const ln = (invoice.patient.lastName || "").trim();
-    if (fn && fn.toLowerCase() !== "patient") {
-      patientGreetingName = (ln && !ln.startsWith("+")) ? `${fn} ${ln}` : fn;
-    } else if (ln && !ln.startsWith("+")) {
-      patientGreetingName = ln;
-    } else {
+    // Construct Real Patient Name with Salutation
+    const salutation = formatPatientSalutation(invoice.patient);
+    let patientGreetingName = salutation.greetingName;
+    if (!patientGreetingName || patientGreetingName === "Patient") {
       // Check if conversation has a recorded name
       const conv = await prisma.conversation.findUnique({
         where: { doctorId_patientPhone: { doctorId, patientPhone: invoice.patient.phone } },
@@ -52,11 +52,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
       if (conv?.patientName && conv.patientName.toLowerCase() !== "patient" && !conv.patientName.startsWith("+")) {
         patientGreetingName = conv.patientName;
+      } else {
+        patientGreetingName = "Valued Patient";
       }
-    }
-
-    if (!patientGreetingName) {
-      patientGreetingName = "Valued Patient";
     }
 
     // Construct WhatsApp Caption
