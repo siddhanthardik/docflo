@@ -99,15 +99,15 @@ export function formatPatientSalutation(
     else if (isFemale) salutation = "Ms.";
   }
 
-  // Full name with salutation
+  // Full name with salutation (or respectful "ji" if unconfirmed in Indian context)
   const fullNameWithSalutation = salutation 
     ? (baseName ? `${salutation} ${baseName}` : salutation)
-    : (baseName || "Patient");
+    : (baseName ? `${baseName} ji` : "Patient");
 
-  // Greeting short name: e.g. "Mr. Siddhant" or "Baby Aarav"
+  // Greeting short name: e.g. "Mr. Siddhant" or "Siddhant ji"
   const greetingName = salutation 
     ? `${salutation} ${firstNameOnly}`
-    : firstNameOnly;
+    : `${firstNameOnly} ji`;
 
   // Conversational greetings
   let conversationalGreeting = "";
@@ -126,7 +126,7 @@ export function formatPatientSalutation(
     if (salutation) {
       conversationalGreeting = `Hi ${salutation} ${firstNameOnly}`;
     } else {
-      conversationalGreeting = `Hi ${firstNameOnly}`;
+      conversationalGreeting = `Hi ${firstNameOnly} ji 🙏`;
     }
   }
 

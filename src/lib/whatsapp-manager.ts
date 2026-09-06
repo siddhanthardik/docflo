@@ -2083,36 +2083,82 @@ class WhatsAppManager {
                 }
 
                 // 3. Intercept Patient Booking Tag (with Name, Age, Gender, and Doctor support)
-                const bookingRegex = /\[(?:BOOK_APPOINTMENT|BOOK_NEW_APPOINTMENT):\s*([^,\]]+?)(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?(?:,\s*([^,\]]+?))?\]/i;
-                let match = aiReply.match(bookingRegex);
+                const bookingTagPattern = /\[(?:BOOK_APPOINTMENT|BOOK_NEW_APPOINTMENT):\s*([^\]]+)\]/i;
+                let rawTagMatch = aiReply.match(bookingTagPattern);
 
-                if (!match && !isStaff) {
+                let fullTag = "";
+                let dateStr = "";
+                let sessionStr = "";
+                let patientFullName = "";
+                let rawAgeStr = "";
+                let rawGenderStr = "";
+                let rawDoctorName = "";
+
+                if (rawTagMatch && !isStaff) {
+                  fullTag = rawTagMatch[0];
+                  const parts = rawTagMatch[1].split(',').map(s => s.trim());
+                  dateStr = parts[0] || "";
+                  sessionStr = parts[1] || "";
+                  patientFullName = parts[2] || "";
+                  rawAgeStr = parts[3] || "";
+                  rawGenderStr = parts[4] || "";
+                  rawDoctorName = parts[5] || "";
+
+                  // If doctor name was accidentally placed in age or gender slot
+                  if (!rawDoctorName) {
+                    if (/^(dr\.?|doctor)\b/i.test(rawGenderStr) || practitioners.some(p => p.name.toLowerCase().includes(rawGenderStr.toLowerCase()))) {
+                      rawDoctorName = rawGenderStr;
+                      rawGenderStr = "";
+                    } else if (/^(dr\.?|doctor)\b/i.test(rawAgeStr) || practitioners.some(p => p.name.toLowerCase().includes(rawAgeStr.toLowerCase()))) {
+                      rawDoctorName = rawAgeStr;
+                      rawAgeStr = "";
+                    }
+                  }
+                } else if (!rawTagMatch && !isStaff) {
                   // Safety net: Check if the AI textually confirmed an appointment but the tag was omitted or malformed
                   const isConfirmationReply = /(?:appointment\s*(?:is\s*)?confirm|slot\s*(?:is\s*)?confirm|request\s*note\s*kar\s*li|booked\s*(?:your\s*)?appointment|appointment\s*request\s*register|aapka\s*appointment\s*confirm|slot\s*reserve|booking\s*confirm)/i.test(aiReply);
                   if (isConfirmationReply) {
                     const clinicTzFallback = resolveClinicTimezone(doctorInfo?.timezone);
                     const todayStrFallback = getClinicDateOnlyString(new Date(), clinicTzFallback);
-                    let targetDateFallback = todayStrFallback;
+                    dateStr = todayStrFallback;
                     const combined = `${textMessage} ${aiReply}`.toLowerCase();
                     if (/\b(kal|tomorrow)\b/.test(combined)) {
                       const tm = new Date();
                       tm.setDate(tm.getDate() + 1);
-                      targetDateFallback = getClinicDateOnlyString(tm, clinicTzFallback);
+                      dateStr = getClinicDateOnlyString(tm, clinicTzFallback);
                     } else if (/\b(parso|day after)\b/.test(combined)) {
                       const da = new Date();
                       da.setDate(da.getDate() + 2);
-                      targetDateFallback = getClinicDateOnlyString(da, clinicTzFallback);
+                      dateStr = getClinicDateOnlyString(da, clinicTzFallback);
                     }
                     const timeM = combined.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
-                    const sessionFallback = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
-                    const nameFallback = (patient?.firstName && patient.firstName !== "Patient") ? `${patient.firstName} ${patient.lastName || ""}`.trim() : "Patient";
-                    match = [`[BOOK_APPOINTMENT: ${targetDateFallback}, ${sessionFallback}, ${nameFallback}]`, targetDateFallback, sessionFallback, nameFallback, "", "", ""];
+                    sessionStr = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
+                    patientFullName = (patient?.firstName && patient.firstName !== "Patient") ? `${patient.firstName} ${patient.lastName || ""}`.trim() : "Patient";
+                    fullTag = `[BOOK_APPOINTMENT: ${dateStr}, ${sessionStr}, ${patientFullName}]`;
                   }
                 }
-                
-                if (match && !isStaff) {
-                  let [fullTag, dateStr, sessionStr, patientFullName, rawAgeStr, rawGenderStr, rawDoctorName] = match;
-                  
+
+                if (fullTag && !isStaff) {
+                  // PROXY / FAMILY MEMBER INTERCEPTOR:
+                  // If patient says "apne papa ka", "father ke liye", "mummy ka" but no beneficiary name has been given yet,
+                  // DO NOT confirm or book on the sender's existing profile!
+                  const isProxyFamilyMessage = /\b(papa|father|pitaji|daddy|dad|mummy|mother|mataji|mom|wife|patni|husband|pati|beta|son|beti|daughter|brother|bhai|sister|behan|bhabhi)\b/i.test(textMessage);
+                  const isBeneficiaryUnspecified = !patientFullName || 
+                    patientFullName.toLowerCase() === "patient" || 
+                    (patient?.firstName && patientFullName.toLowerCase() === patient.firstName.toLowerCase()) ||
+                    /\b(papa|father|pitaji|daddy|dad|mummy|mother|mataji|mom|wife|patni|husband|pati|beta|son|beti|daughter|brother|bhai|sister|behan)\b/i.test(patientFullName);
+
+                  if (isProxyFamilyMessage && isBeneficiaryUnspecified) {
+                    const relation = textMessage.match(/\b(papa|father|pitaji|daddy|dad|mummy|mother|mataji|mom|wife|patni|husband|pati|beta|son|beti|daughter|brother|bhai|sister|behan)\b/i)?.[1]?.toLowerCase() || "family member";
+                    const relationLabel = ["papa", "father", "pitaji", "dad", "daddy"].includes(relation) ? "father / papa" : relation;
+                    console.log(`[WhatsAppManager] 🛑 Intercepted proxy family booking ("${textMessage}") without beneficiary name. Halting premature booking on sender's profile.`);
+                    
+                    finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                    finalAiReply = `Ji bilkul! Kripya apne ${relationLabel} ji ka Full Name aur Age share kar dijiye taaki main unke naam se appointment register kar sakoon. 🙏`;
+                    await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
+                    return;
+                  }
+
                   try {
                     const nameParts = (patientFullName || "Patient").trim().split(/\s+/);
                     const candidateFirstName = nameParts[0] || "Patient";
@@ -2293,19 +2339,44 @@ class WhatsAppManager {
                           // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
                           const isTele = /tele|video|online|virtual|remote/i.test(`${sessionStr} ${textMessage} ${aiReply}`);
                           const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
-                          const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
-                          let chosenPractitioner = defaultPractitioner;
+                          // Resolve Doctor for this Appointment (Strict Shift-Aware & Context-Aware Logic)
+                          const slotTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                          let chosenPractitioner = null;
 
+                          // 1. Check if doctor name was passed in the booking tag
                           if (rawDoctorName && rawDoctorName.trim()) {
                             const cleanDocTarget = rawDoctorName.trim().toLowerCase();
-                            const matched = practitioners.find(p => {
+                            chosenPractitioner = practitioners.find(p => {
                               const pName = p.name.toLowerCase();
                               const pBare = pName.replace(/^dr\.?\s*/i, '');
                               return pName.includes(cleanDocTarget) || cleanDocTarget.includes(pBare);
-                            });
-                            if (matched) {
-                              chosenPractitioner = matched;
-                            }
+                            }) || null;
+                          }
+
+                          // 2. If not specified in tag, check if any doctor is named in conversation or AI reply
+                          if (!chosenPractitioner) {
+                            const combinedText = `${aiReply} ${textMessage}`.toLowerCase();
+                            chosenPractitioner = practitioners.find(p => {
+                              const pName = p.name.toLowerCase();
+                              const pBare = pName.replace(/^dr\.?\s*/i, '');
+                              return combinedText.includes(pName) || (pBare.length > 3 && combinedText.includes(pBare));
+                            }) || null;
+                          }
+
+                          // 3. Match by shift working hours (e.g. 10:00 AM -> Morning doctor; 18:00 -> Evening doctor)
+                          const onDutyDoctor = practitioners.find(p => {
+                            if (!p.workingHoursStart || !p.workingHoursEnd) return false;
+                            return slotTimeStr >= p.workingHoursStart && slotTimeStr <= p.workingHoursEnd;
+                          });
+
+                          // If on-duty doctor is found and (no doctor chosen OR chosen doctor's shift doesn't match the slot time):
+                          if (onDutyDoctor && (!chosenPractitioner || (chosenPractitioner.workingHoursStart && chosenPractitioner.workingHoursEnd && (slotTimeStr < chosenPractitioner.workingHoursStart || slotTimeStr > chosenPractitioner.workingHoursEnd)))) {
+                            console.log(`[WhatsAppManager] 🕒 Slot time ${slotTimeStr} matches on-duty doctor ${onDutyDoctor.name} (replaces ${chosenPractitioner?.name || 'none'})`);
+                            chosenPractitioner = onDutyDoctor;
+                          }
+
+                          if (!chosenPractitioner) {
+                            chosenPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                           }
 
                           await prisma.appointment.create({
