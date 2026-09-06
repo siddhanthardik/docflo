@@ -1,25 +1,71 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   TrendingUp, Users, CheckCircle2, 
   ArrowRight, ChevronDown, Sparkles, Calculator, Briefcase, 
-  Building2, Clock, Wallet, Award, Check
+  Building2, Clock, Wallet, Award, Check, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Footer } from "@/components/layout/Footer";
 
+interface PackageItem {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  priceMonthly: number;
+  priceQuarterly?: number;
+  priceYearly?: number;
+  currency: string;
+  features?: string[];
+}
+
 export default function AffiliatesPublicPage() {
   // Calculator State
   const [clinicsReferred, setClinicsReferred] = useState<number>(10);
-  const [selectedPlan, setSelectedPlan] = useState<"growth" | "pro">("pro");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  const planPrice = selectedPlan === "growth" ? 3999 : 7999;
+  // Dynamic Packages fetched from Superadmin Package Manager (/api/packages)
+  const [packages, setPackages] = useState<PackageItem[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
+  useEffect(() => {
+    fetch("/api/packages")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Filter active paid packages
+          const paid = data.filter((p: any) => (p.priceMonthly ?? 0) > 0);
+          const list = paid.length > 0 ? paid : data;
+          setPackages(list);
+          // Prefer 'Growth' or first available package
+          const preferred = list.find((p: any) => 
+            (p.slug || "").toLowerCase().includes("growth") || (p.name || "").toLowerCase().includes("growth")
+          ) || list[0];
+          if (preferred) {
+            setSelectedPackageId(preferred.id);
+          }
+        }
+      })
+      .catch((err) => console.error("Failed to load packages for affiliates:", err))
+      .finally(() => setPackagesLoading(false));
+  }, []);
+
+  const selectedPackage = packages.find((p) => p.id === selectedPackageId) || packages[0];
+
+  const currentPlanMonthlyPrice = selectedPackage
+    ? (billingCycle === "yearly"
+        ? (selectedPackage.priceYearly ? Math.round(selectedPackage.priceYearly / 12) : Math.round(selectedPackage.priceMonthly * 0.8))
+        : selectedPackage.priceMonthly)
+    : 0;
+
   const commissionRate = 0.20; // 20%
-  const monthlyEarnings = Math.round(clinicsReferred * planPrice * commissionRate);
+  const monthlyEarnings = Math.round(clinicsReferred * currentPlanMonthlyPrice * commissionRate);
   const annualEarnings = monthlyEarnings * 12;
 
   const formatINR = (val: number) =>
@@ -152,7 +198,7 @@ export default function AffiliatesPublicPage() {
           </div>
         </section>
 
-        {/* ── INTERACTIVE COMMISSION CALCULATOR ── */}
+        {/* ── INTERACTIVE COMMISSION CALCULATOR (DYNAMIC FROM PACKAGE MANAGER) ── */}
         <section id="calculator" className="py-16 lg:py-24 bg-white border-b border-slate-200/80">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-12">
@@ -163,7 +209,7 @@ export default function AffiliatesPublicPage() {
                 How Much Can You Earn?
               </h2>
               <p className="text-sm sm:text-base text-slate-600 mt-2">
-                Use the interactive slider below to see how passive monthly commissions compound as your clinic network expands.
+                All package pricing is synchronized directly from our central Package Manager with zero ambiguity.
               </p>
             </div>
 
@@ -191,50 +237,105 @@ export default function AffiliatesPublicPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-bold text-slate-200 block mb-2">Average Clinic Plan</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPlan("growth")}
-                      className={`p-3.5 rounded-xl border text-left transition-all ${
-                        selectedPlan === "growth"
-                          ? "border-indigo-400 bg-indigo-500/20 text-white shadow-sm"
-                          : "border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600"
-                      }`}
-                    >
-                      <p className="text-xs font-bold uppercase tracking-wide">Growth Plan</p>
-                      <p className="text-lg font-black text-white mt-0.5">₹3,999<span className="text-xs text-slate-400 font-normal"> /mo</span></p>
-                      <p className="text-[11px] text-slate-400 mt-1">SEO + WhatsApp Receptionist</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPlan("pro")}
-                      className={`p-3.5 rounded-xl border text-left transition-all ${
-                        selectedPlan === "pro"
-                          ? "border-indigo-400 bg-indigo-500/20 text-white shadow-sm"
-                          : "border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold uppercase tracking-wide text-indigo-300">Scale / Pro</p>
-                        <span className="text-[9px] uppercase font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded">Most Popular</span>
-                      </div>
-                      <p className="text-lg font-black text-white mt-0.5">₹7,999<span className="text-xs text-slate-400 font-normal"> /mo</span></p>
-                      <p className="text-[11px] text-slate-400 mt-1">Full Suite + Custom Website</p>
-                    </button>
+                {/* Dynamic Packages from Superadmin Package Manager */}
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="text-sm font-bold text-slate-200">
+                      Clinic Subscription Package
+                    </label>
+                    
+                    {/* Billing Cycle Toggle */}
+                    <div className="inline-flex p-0.5 bg-slate-800 rounded-lg border border-slate-700 text-xs self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setBillingCycle("monthly")}
+                        className={`px-3 py-1 rounded-md font-bold transition-all ${
+                          billingCycle === "monthly" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Monthly
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBillingCycle("yearly")}
+                        className={`px-3 py-1 rounded-md font-bold transition-all ${
+                          billingCycle === "yearly" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Annual Plan
+                      </button>
+                    </div>
                   </div>
+
+                  {packagesLoading ? (
+                    <div className="py-8 text-center text-slate-400 font-medium text-xs flex items-center justify-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+                      <span>Loading official packages from Superadmin...</span>
+                    </div>
+                  ) : packages.length === 0 ? (
+                    <div className="p-4 bg-slate-800/80 rounded-xl text-slate-400 text-xs text-center border border-slate-700">
+                      No active paid packages configured in Superadmin yet.
+                    </div>
+                  ) : (
+                    <div className={`grid gap-3 ${packages.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+                      {packages.map((pkg) => {
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        const displayPrice = billingCycle === "yearly"
+                          ? (pkg.priceYearly ? Math.round(pkg.priceYearly / 12) : Math.round(pkg.priceMonthly * 0.8))
+                          : pkg.priceMonthly;
+
+                        return (
+                          <button
+                            key={pkg.id}
+                            type="button"
+                            onClick={() => setSelectedPackageId(pkg.id)}
+                            className={`p-3.5 rounded-xl border text-left transition-all relative ${
+                              isSelected
+                                ? "border-indigo-400 bg-indigo-500/20 text-white shadow-md ring-2 ring-indigo-400/30"
+                                : "border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-xs font-bold uppercase tracking-wide truncate max-w-[120px]">{pkg.name}</p>
+                              {isSelected && (
+                                <span className="text-[9px] uppercase font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded shrink-0">
+                                  Selected
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-lg font-black text-white mt-1">
+                              ₹{displayPrice.toLocaleString("en-IN")}
+                              <span className="text-xs text-slate-400 font-normal"> /mo</span>
+                            </p>
+                            {billingCycle === "yearly" && pkg.priceYearly && (
+                              <p className="text-[10px] text-emerald-400 font-medium">
+                                Billed ₹{pkg.priceYearly.toLocaleString("en-IN")}/yr
+                              </p>
+                            )}
+                            {pkg.description && (
+                              <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-tight">
+                                {pkg.description}
+                              </p>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                <div className="text-xs text-slate-400 space-y-1 pt-2 border-t border-slate-800">
+                <div className="text-xs text-slate-400 space-y-1.5 pt-2 border-t border-slate-800">
                   <p className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Calculated at 20% recurring monthly commission on subscription payments.</span>
+                    <span>Calculated at 20% recurring monthly commission on active clinic subscriptions.</span>
                   </p>
                   <p className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Payouts sent automatically on the 1st of every month via NEFT or UPI.</span>
+                    <span>Synchronized with official Superadmin package manager rates ({selectedPackage ? `${selectedPackage.name}: ₹${currentPlanMonthlyPrice.toLocaleString("en-IN")}/mo` : "live rates"}).</span>
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Payouts sent automatically on the 1st of every month via direct NEFT or UPI.</span>
                   </p>
                 </div>
               </div>
@@ -247,7 +348,9 @@ export default function AffiliatesPublicPage() {
                   <h3 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
                     {formatINR(monthlyEarnings)}
                   </h3>
-                  <p className="text-xs text-indigo-300 font-semibold mt-1">per month (Recurring)</p>
+                  <p className="text-xs text-indigo-300 font-semibold mt-1">
+                    per month ({clinicsReferred} clinics on {selectedPackage?.name || "Selected Plan"})
+                  </p>
                 </div>
 
                 <div className="py-3 px-4 bg-white/5 rounded-xl border border-white/10 text-xs">
@@ -466,7 +569,7 @@ export default function AffiliatesPublicPage() {
               {[
                 {
                   q: "How does the 20% recurring commission work?",
-                  a: "When a doctor subscribes through your referral link or introduction, you earn 20% of their subscription fee every single billing cycle (monthly or yearly). For example, if a clinic is on the ₹7,999/mo Pro plan, you earn ₹1,599 every month for as long as they remain active.",
+                  a: `When a doctor subscribes through your referral link or introduction, you earn 20% of their subscription fee every single billing cycle (monthly or yearly). Commissions apply directly to all active packages configured in Gyrex Package Manager${selectedPackage ? ` (for example, referring a clinic on the ${selectedPackage.name} plan at ₹${currentPlanMonthlyPrice.toLocaleString("en-IN")}/mo yields ₹${Math.round(currentPlanMonthlyPrice * 0.20).toLocaleString("en-IN")} every month)` : ""}. You earn for as long as the clinic remains active.`,
                 },
                 {
                   q: "How and when are payouts processed?",
