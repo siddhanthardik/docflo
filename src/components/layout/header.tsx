@@ -6,6 +6,7 @@ import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Bell, LifeBuoy, AlertTriangle } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { OPDStatusControl } from "@/components/dashboard/OPDStatusControl";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 function WhatsAppStatusBadge() {
@@ -48,11 +49,15 @@ function WhatsAppStatusBadge() {
 
 export function Header() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const isAdmin = pathname.startsWith("/admin");
+  const logoHref = isAdmin ? "/admin" : "/dashboard";
 
   const name = session?.user?.name || "Doctor";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -65,13 +70,15 @@ export function Header() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 shadow-xs print:hidden shrink-0">
-      {/* Left: Mobile Brand Logo or Welcome text */}
+      {/* Left: Mobile/Tablet Brand Logo or Welcome text */}
       <div className="flex items-center gap-2.5">
-        <Link href="/admin" className="lg:hidden flex items-center gap-2 shrink-0">
+        <Link href={logoHref} className="lg:hidden flex items-center gap-2 shrink-0">
           <GyrexLogo size="sm" />
-          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
-            Admin
-          </span>
+          {isAdmin && (
+            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
+              Admin
+            </span>
+          )}
         </Link>
 
         <div className="hidden sm:block">

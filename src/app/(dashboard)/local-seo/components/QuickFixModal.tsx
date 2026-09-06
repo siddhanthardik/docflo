@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Sparkles, Check, RefreshCcw, Save, Link2, FileText, Layers, Clock, Phone, Globe, ShieldCheck, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { formatOperatingHours } from "@/lib/operating-hours";
 
 interface QuickFixModalProps {
   isOpen: boolean;
@@ -44,6 +45,9 @@ export function QuickFixModal({
           ? Object.keys(currentValue)
           : [];
         setSelectedAttributes(initialAttrs);
+      } else if (fieldKey === "hours") {
+        const formatted = formatOperatingHours(currentValue);
+        setTextVal(formatted === "Not specified" ? "" : formatted);
       } else {
         setTextVal(typeof currentValue === "string" ? currentValue : "");
       }
@@ -126,7 +130,7 @@ export function QuickFixModal({
       } else if (fieldKey === "attributes") {
         payloadValue = selectedAttributes;
       } else if (fieldKey === "hours") {
-        payloadValue = textVal || "Mon-Sat 9:00 AM - 6:00 PM";
+        payloadValue = textVal;
       }
 
       const res = await fetch("/api/local-seo/profile-health/update", {
@@ -138,16 +142,23 @@ export function QuickFixModal({
         }),
       });
 
+      const resData = await res.json();
       if (res.ok) {
-        toast({
-          title: "Profile Updated",
-          description: `"${fieldLabel}" has been saved to your clinic profile.`,
-        });
+        if (resData.googleSynced) {
+          toast({
+            title: "Synced to Google Maps! 🚀",
+            description: `"${fieldLabel}" updated and pushed live to your Google listing.`,
+          });
+        } else {
+          toast({
+            title: "Profile Updated",
+            description: `"${fieldLabel}" saved to clinic profile.${resData.googleSyncError ? ` (Note: ${resData.googleSyncError})` : ""}`,
+          });
+        }
         onSaved();
         onClose();
       } else {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to update profile");
+        throw new Error(resData.error || "Failed to update profile");
       }
     } catch (e: any) {
       toast({
@@ -278,6 +289,33 @@ export function QuickFixModal({
             </div>
           )}
 
+          {/* PRIMARY CATEGORY */}
+          {fieldKey === "primaryCategory" && (
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-gray-700 block">Primary Medical Specialty / Category</label>
+              <input
+                type="text"
+                value={textVal}
+                onChange={(e) => setTextVal(e.target.value)}
+                placeholder="e.g. Physiotherapist, Pediatrician, Dental Clinic, Gynecologist"
+                className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-hidden"
+              />
+              <p className="text-[11px] text-gray-500 font-medium">Quick Suggestions:</p>
+              <div className="flex gap-2 flex-wrap">
+                {["Physiotherapist", "General Physician", "Dental Clinic", "Pediatrician", "Gynecologist", "Dermatologist", "Orthopedic Surgeon"].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setTextVal(preset)}
+                    className="text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-700 px-2.5 py-1 rounded-lg border border-gray-200 transition-all"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* OPENING HOURS */}
           {fieldKey === "hours" && (
             <div className="space-y-3">
@@ -286,11 +324,17 @@ export function QuickFixModal({
                 type="text"
                 value={textVal}
                 onChange={(e) => setTextVal(e.target.value)}
-                placeholder="Mon-Sat 9:00 AM - 6:00 PM"
+                placeholder="e.g. Mon–Sat: 9:00 AM – 6:00 PM, Sun: Closed"
                 className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-hidden"
               />
+              <p className="text-[11px] text-gray-500 font-medium">Common Clinical Presets:</p>
               <div className="flex gap-2 flex-wrap">
-                {["Mon-Sat 5:30 PM - 7:30 PM", "Mon-Sat 9AM-6PM", "Mon-Fri 10AM-8PM", "Open 24/7"].map((preset) => (
+                {[
+                  "Mon–Sat 9:00 AM - 6:00 PM",
+                  "Mon–Fri 9:00 AM - 5:00 PM",
+                  "Mon–Sat 10:00 AM - 7:00 PM",
+                  "Mon–Sun 24/7 (Emergency)"
+                ].map((preset) => (
                   <button
                     key={preset}
                     type="button"
@@ -344,14 +388,15 @@ export function QuickFixModal({
                 type="text"
                 value={textVal}
                 onChange={(e) => setTextVal(e.target.value)}
-                placeholder={fieldKey === "phone" ? "+91 99999 88888" : "https://yourclinic.com"}
+                placeholder={fieldKey === "phone" ? "+91 98765 43210" : "https://yourclinic.com"}
                 className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-hidden"
               />
             </div>
           )}
 
-          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed">
-            Changes update your clinic profile and Local SEO audit. To push these updates live on Google Maps, also verify them in your <a href="/gbp" className="text-indigo-600 underline font-medium hover:text-indigo-700">Google Profile settings</a>.
+          <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-[11px] text-emerald-800 leading-relaxed flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span><strong>Direct Google Maps Sync:</strong> When saved, changes are automatically pushed directly to your live Google Business Profile and reflected on Google Maps.</span>
           </div>
         </div>
 

@@ -226,6 +226,27 @@ export class GBPService {
     );
   }
 
+  async patchLocation(
+    locationName: string,
+    updateMask: string[],
+    data: any
+  ): Promise<any> {
+    const cleanName = locationName.includes("/locations/")
+      ? `locations/${locationName.split("/locations/")[1]}`
+      : locationName;
+
+    const url = `${BUSINESS_INFORMATION_BASE}/${cleanName}?updateMask=${encodeURIComponent(updateMask.join(","))}`;
+    console.log(`[GBP patchLocation] Patching ${cleanName} with mask ${updateMask.join(",")}:`, JSON.stringify(data));
+
+    return this.googleFetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
   async getInsights(locationName: string, startDate: Date, endDate: Date): Promise<GBPInsights> {
     try {
       const performanceLocationName = this.getPerformanceLocationName(locationName);

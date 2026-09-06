@@ -45,8 +45,8 @@ export default async function DashboardLayout({
       <LocationProvider>
         <div className="flex h-screen bg-gray-50 print:h-auto print:block print:bg-white overflow-hidden">
           
-          {/* Desktop Sidebar (hidden on mobile) */}
-          <div className="hidden md:flex h-full shrink-0">
+          {/* Desktop Sidebar (visible on desktop only >= 1024px) */}
+          <div className="hidden lg:flex h-full shrink-0">
             <Sidebar />
           </div>
 
@@ -58,8 +58,8 @@ export default async function DashboardLayout({
             />
             <Header />
             
-            {/* Main content with bottom padding for mobile navigation bar */}
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-6 print:overflow-visible print:p-0">
+            {/* Main content with bottom padding for mobile and tablet navigation */}
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-6 print:overflow-visible print:p-0">
               {children}
             </main>
 

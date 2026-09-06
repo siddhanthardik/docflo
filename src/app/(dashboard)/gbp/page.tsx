@@ -27,13 +27,14 @@ import {
 import { useLocationContext } from "@/contexts/LocationContext";
 import { QuickFixModal } from "@/app/(dashboard)/local-seo/components/QuickFixModal";
 import { useToast } from "@/components/ui/use-toast";
+import { formatOperatingHours } from "@/lib/operating-hours";
 
 // Donut chart component for Search Intent
-function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: number; discovery?: number; maps?: number }) {
+function DonutChart({ direct = 0, discovery = 0, maps = 0 }: { direct?: number; discovery?: number; maps?: number }) {
   const total = (direct || 0) + (discovery || 0) + (maps || 0);
-  const d = total ? Math.round((direct / total) * 100) : 52;
-  const disc = total ? Math.round((discovery / total) * 100) : 31;
-  const m = total ? 100 - d - disc : 17;
+  const d = total > 0 ? Math.round((direct / total) * 100) : 0;
+  const disc = total > 0 ? Math.round((discovery / total) * 100) : 0;
+  const m = total > 0 ? Math.max(0, 100 - d - disc) : 0;
 
   const size = 140;
   const cx = size / 2;
@@ -42,11 +43,11 @@ function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: numbe
   const strokeWidth = 22;
   const circ = 2 * Math.PI * r;
 
-  const segments = [
+  const segments = total > 0 ? [
     { pct: d, color: "#3B82F6" },
     { pct: disc, color: "#22C55E" },
     { pct: m, color: "#F59E0B" },
-  ];
+  ] : [];
 
   let offset = 0;
   const paths = segments.map((seg, i) => {
@@ -75,8 +76,8 @@ function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: numbe
       <svg width={size} height={size} className="flex-shrink-0">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F1F5F9" strokeWidth={strokeWidth} />
         {paths}
-        <text x={cx} y={cy + 2} textAnchor="middle" dominantBaseline="middle" className="text-sm font-bold fill-gray-700">
-          {d}%
+        <text x={cx} y={cy + 2} textAnchor="middle" dominantBaseline="middle" className="text-xs font-bold fill-gray-700">
+          {total > 0 ? `${total}` : "0"}
         </text>
       </svg>
       <div className="space-y-2.5 w-full sm:flex-1">
@@ -85,21 +86,21 @@ function DonutChart({ direct = 52, discovery = 31, maps = 17 }: { direct?: numbe
             <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Direct Searches</span>
           </div>
-          <span className="text-xs font-bold text-blue-600 ml-2">{d}%</span>
+          <span className="text-xs font-bold text-blue-600 ml-2">{total > 0 ? `${d}%` : "—"}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Discovery Searches</span>
           </div>
-          <span className="text-xs font-bold text-emerald-600 ml-2">{disc}%</span>
+          <span className="text-xs font-bold text-emerald-600 ml-2">{total > 0 ? `${disc}%` : "—"}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
             <span className="text-xs text-gray-600 font-medium">Google Maps Routes</span>
           </div>
-          <span className="text-xs font-bold text-amber-600 ml-2">{m}%</span>
+          <span className="text-xs font-bold text-amber-600 ml-2">{total > 0 ? `${m}%` : "—"}</span>
         </div>
       </div>
     </div>
@@ -275,22 +276,22 @@ export default function GBPProfilePage() {
   const insights: any = activeAccount?.insights || {};
   const reviews = activeAccount?.recentReviews || [];
 
-  const totalViews = insights.totalViews || 0;
-  const searchViews = insights.searchViews || 0;
-  const phoneCalls = insights.phoneCalls || 0;
-  const directionRequests = insights.directionRequests || 0;
-  const rating = insights.rating ? Number(insights.rating).toFixed(1) : "4.9";
-  const totalRatings = insights.user_ratings_total || 78;
-  const primaryCategory = insights.categories?.primaryCategory?.displayName || "Pediatrician";
+  const totalViews = Number(insights.totalViews || 0);
+  const searchViews = Number(insights.searchViews || 0);
+  const phoneCalls = Number(insights.phoneCalls || 0);
+  const directionRequests = Number(insights.directionRequests || 0);
+  const rating = insights.rating ? Number(insights.rating).toFixed(1) : null;
+  const totalRatings = Number(insights.user_ratings_total || 0);
+  const primaryCategory = insights.categories?.primaryCategory?.displayName || (Array.isArray(insights.types) ? insights.types[0]?.replace(/_/g, ' ') : "") || "";
   const additionalCats = insights.categories?.additionalCategories || [];
   const description = insights.description || "";
   const appointmentUrl = insights.appointmentUrl || insights.website || "";
   const rawHours = insights.regularHours || insights.hours;
-  const hours = typeof rawHours === "string" && rawHours ? rawHours : "Mon-Sat 5:30 PM - 7:30 PM";
-  const phone = insights.phone || "+91 99711 18381";
-  const website = insights.website || insights.websiteUri || "https://drvinayrai.com";
+  const hours = formatOperatingHours(rawHours);
+  const phone = insights.phone || insights.formatted_phone_number || insights.primaryPhone || "";
+  const website = insights.website || insights.websiteUri || "";
   
-  const rawAttr = insights.attributes || ["Wheelchair Accessible Entrance", "Appointments Recommended"];
+  const rawAttr = insights.attributes || [];
   const attributes: string[] = Array.isArray(rawAttr)
     ? rawAttr.map((a: any) => (typeof a === "string" ? a : a.displayName || String(a)))
     : typeof rawAttr === "object"
@@ -300,32 +301,32 @@ export default function GBPProfilePage() {
   const metricCards = [
     {
       label: "Profile Views",
-      value: formatNum(totalViews || 1500),
-      change: "+18.4%",
+      value: formatNum(totalViews),
+      change: totalViews > 0 ? "Google Verified" : "Awaiting views",
       color: "#3B82F6",
       icon: <Eye className="h-5 w-5" style={{ color: "#3B82F6" }} />,
       bg: "bg-blue-50",
     },
     {
       label: "Search Impressions",
-      value: formatNum(searchViews || 3500),
-      change: "+12.1%",
+      value: formatNum(searchViews),
+      change: searchViews > 0 ? "Search Discovery" : "Awaiting impressions",
       color: "#A855F7",
       icon: <Search className="h-5 w-5" style={{ color: "#A855F7" }} />,
       bg: "bg-purple-50",
     },
     {
       label: "Direction Requests",
-      value: formatNum(directionRequests || 45),
-      change: "+7.3%",
+      value: formatNum(directionRequests),
+      change: directionRequests > 0 ? "Maps Routes" : "Awaiting requests",
       color: "#F59E0B",
       icon: <Navigation className="h-5 w-5" style={{ color: "#F59E0B" }} />,
       bg: "bg-amber-50",
     },
     {
       label: "Phone Calls",
-      value: formatNum(phoneCalls || 20),
-      change: "+23.5%",
+      value: formatNum(phoneCalls),
+      change: phoneCalls > 0 ? "Direct Calls" : "Awaiting calls",
       color: "#EC4899",
       icon: <Phone className="h-5 w-5" style={{ color: "#EC4899" }} />,
       bg: "bg-pink-50",
@@ -342,23 +343,23 @@ export default function GBPProfilePage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
             <p className="text-blue-200 text-sm mb-1">{greeting} 👋</p>
-            <h2 className="text-white text-xl sm:text-2xl font-black mb-1">{insights.name || "Dr Vinay Kumar Rai"}</h2>
+            <h2 className="text-white text-xl sm:text-2xl font-black mb-1">{insights.name || activeAccount?.locationName || "Google Business Profile"}</h2>
             <p className="text-blue-200 text-xs mb-4">
-              {insights.formattedAddress || "B-4/32, Safdarjung Enclave, New Delhi, 110029"}{" "}
-              <span className="font-semibold text-white">· {primaryCategory}</span>
+              {insights.formattedAddress || "Google Maps Profile"}{" "}
+              {primaryCategory ? <span className="font-semibold text-white">· {primaryCategory}</span> : null}
             </p>
             <div className="grid grid-cols-3 sm:flex gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
                 <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Profile Views</p>
-                <p className="text-sm sm:text-base font-extrabold">{formatNum(totalViews || 1500)}</p>
+                <p className="text-sm sm:text-base font-extrabold">{formatNum(totalViews)}</p>
               </div>
               <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
-                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Calls (30d)</p>
-                <p className="text-sm sm:text-base font-extrabold">{formatNum(phoneCalls || 20)}</p>
+                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Calls</p>
+                <p className="text-sm sm:text-base font-extrabold">{formatNum(phoneCalls)}</p>
               </div>
               <div className="bg-white/15 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-white border border-white/10 text-center sm:text-left">
-                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Response Rate</p>
-                <p className="text-sm sm:text-base font-extrabold">100%</p>
+                <p className="text-[10px] sm:text-[11px] text-blue-200 mb-0.5">Directions</p>
+                <p className="text-sm sm:text-base font-extrabold">{formatNum(directionRequests)}</p>
               </div>
             </div>
           </div>
@@ -389,9 +390,11 @@ export default function GBPProfilePage() {
               <p className="text-blue-200 text-xs mb-1">Average Google Rating</p>
               <div className="flex items-center gap-2 justify-start lg:justify-end">
                 <Star className="h-6 w-6 fill-amber-300 text-amber-300 shrink-0" />
-                <span className="text-white text-3xl sm:text-4xl font-black leading-none">{rating}</span>
+                <span className="text-white text-3xl sm:text-4xl font-black leading-none">{rating || "0.0"}</span>
               </div>
-              <p className="text-blue-200 text-xs mt-1">{totalRatings} total patient reviews</p>
+              <p className="text-blue-200 text-xs mt-1">
+                {totalRatings > 0 ? `${totalRatings} total reviews` : "No reviews on Google yet"}
+              </p>
 
               {insights.newReviewUri && (
                 <button
@@ -444,7 +447,11 @@ export default function GBPProfilePage() {
             </div>
             <Search className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
-          <DonutChart direct={52} discovery={31} maps={17} />
+          <DonutChart
+            direct={Number(insights.directSearches || (searchViews ? Math.round(searchViews * 0.4) : 0))}
+            discovery={Number(insights.discoverySearches || (searchViews ? Math.round(searchViews * 0.6) : 0))}
+            maps={Number(insights.mapsViews || directionRequests || 0)}
+          />
         </div>
       </div>
 
@@ -460,29 +467,29 @@ export default function GBPProfilePage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Primary Business Category */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Primary Category</span>
               </div>
-              <p className="text-sm font-bold text-gray-900">{primaryCategory}</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{primaryCategory || "Not specified"}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("primaryCategory", "Primary Category", primaryCategory)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Secondary Categories */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Additional Services</span>
@@ -495,7 +502,7 @@ export default function GBPProfilePage() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-gray-400">Doctor, Consultant, Children&apos;s Clinic</span>
+                  <span className="text-xs text-gray-400 italic">No additional categories set</span>
                 )}
               </div>
             </div>
@@ -503,129 +510,141 @@ export default function GBPProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("categories", "Secondary Categories", additionalCats.map((c: any) => c.displayName || c))}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Business Description */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start justify-between gap-3 col-span-1 md:col-span-2">
-            <div className="space-y-1 max-w-2xl">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-start justify-between gap-3 min-w-0 col-span-1 lg:col-span-2">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-amber-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Business Description</span>
               </div>
               <p className="text-xs text-gray-700 leading-relaxed font-medium">
-                {description || "Leading Pediatrician clinic providing comprehensive child care, vaccinations, and specialized treatment programs."}
+                {description || <span className="text-gray-400 italic">No business description provided on Google. Click Edit to add.</span>}
               </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("description", "Business Description", description)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Appointment Booking URL */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1 min-w-0 w-full sm:w-auto">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <CalendarCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Appointment Booking Link</span>
               </div>
-              <p className="text-xs font-bold text-indigo-900 truncate max-w-xs sm:max-w-md">{appointmentUrl || "https://gyrex.in/book/dr-vinay-rai"}</p>
+              <p className="text-xs font-bold text-indigo-900 truncate">
+                {appointmentUrl || <span className="text-gray-400 font-normal italic">Not set on Google Profile</span>}
+              </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("appointmentUrl", "Appointment Booking URL", appointmentUrl)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Opening Hours */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Operating Hours</span>
               </div>
-              <p className="text-xs font-bold text-gray-900">{hours}</p>
+              <p className="text-xs font-bold text-gray-900">
+                {hours && hours !== "Not specified" ? hours : <span className="text-gray-400 font-normal italic">Not set on Google Profile</span>}
+              </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("hours", "Operating Hours & Schedule", hours)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Direct Phone Number */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-pink-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Direct Phone Number</span>
               </div>
-              <p className="text-xs font-bold text-gray-900">{phone}</p>
+              <p className="text-xs font-bold text-gray-900">
+                {phone || <span className="text-gray-400 font-normal italic">Not set on Google Profile</span>}
+              </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("phone", "Direct Phone Number", phone)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Official Website */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1 min-w-0 w-full sm:w-auto">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-3 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Official Website</span>
               </div>
-              <p className="text-xs font-bold text-gray-900 truncate max-w-xs sm:max-w-md">{website}</p>
+              <p className="text-xs font-bold text-gray-900 truncate">
+                {website || <span className="text-gray-400 font-normal italic">Not set on Google Profile</span>}
+              </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("website", "Official Website Link", website)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>
           </div>
 
           {/* Attributes & Amenities */}
-          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 col-span-1 md:col-span-2">
-            <div className="space-y-1">
+          <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-100 flex items-start justify-between gap-3 min-w-0 col-span-1 lg:col-span-2">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Clinic Amenities & Attributes</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {(Array.isArray(attributes) ? attributes : []).map((attr: string, i: number) => (
-                  <span key={i} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-2.5 py-0.5 rounded-md">
-                    {attr}
-                  </span>
-                ))}
+                {(Array.isArray(attributes) && attributes.length > 0) ? (
+                  attributes.map((attr: string, i: number) => (
+                    <span key={i} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-2.5 py-0.5 rounded-md">
+                      {attr}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-400 italic">No amenities or attributes specified on Google</span>
+                )}
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleOpenEditModal("attributes", "Profile Attributes & Amenities", attributes)}
-              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0 self-end sm:self-auto"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 shrink-0"
             >
               <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
             </Button>

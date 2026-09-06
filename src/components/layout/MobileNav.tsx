@@ -75,8 +75,8 @@ export function MobileNav() {
 
   return (
     <>
-      {/* ── Mobile Bottom Navigation Bar (App Design) ────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around py-1.5 px-2 safe-area-pb print:hidden">
+      {/* ── Mobile & Tablet Bottom Navigation Bar / Floating Dock ───────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around py-1.5 px-2 safe-area-pb print:hidden md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:w-auto md:min-w-[480px] md:max-w-xl md:rounded-2xl md:border md:border-slate-200/90 md:shadow-2xl md:px-6 md:py-2">
         {mainTabs.map((tab) => {
           const isActive =
             tab.href === "/dashboard"
@@ -116,9 +116,9 @@ export function MobileNav() {
         </button>
       </nav>
 
-      {/* ── Mobile Slide-Over Drawer Menu ───────────────────────────────────── */}
+      {/* ── Mobile & Tablet Slide-Over Drawer Menu ─────────────────────────────── */}
       {drawerOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
@@ -126,7 +126,7 @@ export function MobileNav() {
           />
 
           {/* Drawer content */}
-          <div className="relative ml-auto w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-300">
+          <div className="relative ml-auto w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-300">
             
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
