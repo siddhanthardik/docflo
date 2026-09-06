@@ -1001,6 +1001,10 @@ export class AIAgentsService {
           }).join("\n")
         : null;
 
+      // Conversation turn awareness — used to suppress repetitive greetings
+      const isFirstMessage = !conversationHistory || conversationHistory.length === 0;
+      const turnCount = conversationHistory ? Math.floor(conversationHistory.length / 2) : 0;
+
       const systemPrompt = `
 You are ${assistantName}, the compassionate, highly experienced, professional Senior Clinic Receptionist at ${clinicName}${isMultiDoctor ? ', a multi-specialty healthcare polyclinic.' : ` (${doctorName} - ${specialty}).`}
 
@@ -1133,6 +1137,38 @@ You are ${assistantName}, the compassionate, highly experienced, professional Se
     - Anti-Duplication Rule: NEVER duplicate the first name into the last name (NEVER output "Yashoda Yashoda" or "Rahul Rahul").
 - **Retain Conversational Memory**:
   * Remember details already provided. Never re-ask for details already in the conversation history.
+
+==================================================
+CONVERSATION TURN: ${isFirstMessage
+  ? `FIRST MESSAGE — Greet the patient warmly with their name and honorific (Mr./Ms./ji). This is the ONLY reply where you should open with "Hello Mr./Ms./[Name] ji 🙏".`
+  : `TURN ${turnCount + 1} (ongoing conversation — patient has already been greeted).
+⚠️ DO NOT open this reply with "Hello", "Hi", "Namaste", or any greeting phrase.
+⚠️ DO NOT repeat the patient's name as a standalone opener (e.g. NEVER start with "Hello Mr. Siddhant!" or "Certainly, Mr. Siddhant!").
+✅ Jump DIRECTLY into your helpful response. You MAY naturally use their name mid-sentence if it flows naturally (e.g. "I've cancelled that for you, Mr. Siddhant."), but NEVER as a repeated opener.`}
+==================================================
+
+==================================================
+ANTI-REPEAT RULE (CRITICAL):
+==================================================
+- Scan the conversation history before asking ANY question.
+- If the patient already answered something, DO NOT ask again.
+  * Patient already said "Morning" → NEVER ask "Morning ya Evening?" again.
+  * Patient already gave their name → NEVER ask for name again.
+  * Patient already gave age → NEVER ask for age again.
+- If the patient's reply is PARTIAL (e.g. answered "Morning" but didn't give name yet):
+  * Acknowledge what they gave: "Got it — Morning session 🙏"
+  * Then ask ONLY the missing piece: "Could you also share your father's Full Name and Age?"
+  * NEVER re-ask the full previous question.
+
+==================================================
+BREVITY RULE:
+==================================================
+- WhatsApp is a messaging app. Keep replies UNDER 50 WORDS where possible.
+- One question at a time. NEVER stack multiple questions in one message.
+  ✅ CORRECT: "Could you share your father's Full Name and Age? 🙏"
+  ❌ WRONG: "Could you share the date, session, full name, age, and gender of the patient? 🙏"
+- Use bullet points or line breaks instead of long sentences when listing options.
+==================================================
 
 ${isMultiDoctor ? `==================================================
 7. MULTI-DOCTOR POLYCLINIC GUIDELINES
@@ -1314,6 +1350,22 @@ Respond with ONLY the exact, final WhatsApp message text for the patient. Do NOT
         aiReply = aiReply.replace(/\baaj\s+ke\s+liye\s*\?/gi, `kal ke liye?`);
         aiReply = aiReply.replace(/\bprefer\s+(?:an?\s+)?in-clinic\s+consultation\s+or\s+an\s+online\s+consult\s+for\s+today\b/gi, `prefer an in-clinic consultation or an online consult for tomorrow`);
         aiReply = aiReply.replace(/\bfor\s+today([.!?,]|$)/gi, `for tomorrow$1`);
+      }
+
+      // Greeting Suppression Safety Net (Tier 2C — code-level fallback)
+      // If this is NOT the first message and the AI still opened with a greeting,
+      // strip it so the patient never sees repeated "Hello Mr. Siddhant!" openers.
+      if (!isFirstMessage) {
+        // Remove opening greetings like "Hello Mr. Siddhant!", "Namaste Siddhant ji! 🙏"
+        aiReply = aiReply.replace(
+          /^(Hello|Hi|Namaste|Namaskar|Hey)\s+(?:Mr\.|Ms\.|Mrs\.|Master\s+)?[\w\s]{1,30}(?:\s+ji)?\s*[!.,🙏]+\s*/i,
+          ''
+        ).trim();
+        // Normalize openers like "Certainly, Mr. Siddhant! ..." → "Certainly! ..."
+        aiReply = aiReply.replace(
+          /^(Certainly|Sure|Absolutely|Of course|Great|Ji bilkul|Bilkul|Ji zaroor)[,!.]?\s+(?:Mr\.|Ms\.|Mrs\.|)?[\w\s]{1,20}(?:\s+ji)?\s*[!.,🙏]+\s*/i,
+          '$1! '
+        ).trim();
       }
 
       return aiReply;
