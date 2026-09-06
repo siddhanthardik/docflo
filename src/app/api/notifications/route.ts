@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { whatsappManager } from "@/lib/whatsapp-manager";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,6 +16,18 @@ export async function GET(req: NextRequest) {
     });
 
     if (!doctor) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Auto-resolve stale "WhatsApp Disconnected" alerts if WhatsApp is currently connected
+    if (whatsappManager.isConnected(doctor.id)) {
+      await prisma.notification.updateMany({
+        where: {
+          doctorId: doctor.id,
+          title: { contains: "WhatsApp Disconnected" },
+          isRead: false
+        },
+        data: { isRead: true }
+      });
+    }
 
     const notifications = await prisma.notification.findMany({
       where: { doctorId: doctor.id },

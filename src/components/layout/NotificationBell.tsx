@@ -20,9 +20,10 @@ export function NotificationBell() {
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
-            // Check for new critical unread notifications (e.g. WhatsApp Disconnected)
+            // Check for fresh critical unread notifications (e.g. WhatsApp Disconnected in last 5 minutes)
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
             const criticalUnread = data.filter(
-              (n) => !n.isRead && (n.title?.includes("WhatsApp") || n.type === "ERROR")
+              (n) => !n.isRead && new Date(n.createdAt).getTime() > fiveMinutesAgo && (n.title?.includes("WhatsApp") || n.type === "ERROR")
             );
 
             if (

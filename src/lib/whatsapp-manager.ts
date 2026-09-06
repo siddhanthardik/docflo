@@ -464,6 +464,16 @@ class WhatsAppManager {
           this.activeConnections.add(doctorId);
           this.reconnectAttempts.delete(doctorId);
           this.connectionOpenAt.set(doctorId, Date.now()); // Start 10s warm-up timer
+
+          // Auto-resolve any previous WhatsApp Disconnected alerts now that connection is active
+          prisma.notification.updateMany({
+            where: {
+              doctorId,
+              title: { contains: "WhatsApp Disconnected" },
+              isRead: false
+            },
+            data: { isRead: true }
+          }).catch(e => console.error(`[WhatsAppManager] Failed to clear disconnect notifications for ${doctorId}:`, e));
         }
       });
 
