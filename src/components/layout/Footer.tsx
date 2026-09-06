@@ -87,7 +87,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/affiliates/register" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <Link href="/affiliates" className="hover:text-white transition-colors flex items-center gap-1.5">
                   <span>Partner &amp; Affiliate Program</span>
                   <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Earn 20%</span>
                 </Link>
