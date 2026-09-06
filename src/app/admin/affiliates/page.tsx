@@ -152,7 +152,13 @@ export default function AffiliatesPage() {
 
   const openPayoutModal = (affiliate: any) => {
     setSelectedAffiliate(affiliate);
-    setPayoutForm({ amount: affiliate.pendingPayout.toFixed(2), referenceId: "", notes: "" });
+    const pendingRequest = affiliate.affiliatePayouts?.find((p: any) => p.status === "PENDING");
+    const amountToSettle = pendingRequest ? pendingRequest.amount : affiliate.pendingPayout;
+    setPayoutForm({ 
+      amount: amountToSettle.toFixed(2), 
+      referenceId: "", 
+      notes: pendingRequest ? `Settling payout request of ₹${pendingRequest.amount}` : "Paid via Bank Transfer" 
+    });
     setIsPayoutModalOpen(true);
   };
 
@@ -255,7 +261,14 @@ export default function AffiliatesPage() {
                       {formatINR(affiliate.totalEarnings)}
                     </td>
                     <td className="px-6 py-4 font-bold text-indigo-600">
-                      {formatINR(affiliate.pendingPayout)}
+                      <div className="flex items-center gap-2">
+                        <span>{formatINR(affiliate.pendingPayout)}</span>
+                        {affiliate.affiliatePayouts?.some((p: any) => p.status === "PENDING") && (
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] animate-pulse">
+                            Payout Requested
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
@@ -286,8 +299,16 @@ export default function AffiliatesPage() {
                           Settings
                         </Button>
                         {affiliate.pendingPayout > 0 ? (
-                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => openPayoutModal(affiliate)}>
-                            Record Payout
+                          <Button 
+                            size="sm" 
+                            className={
+                              affiliate.affiliatePayouts?.some((p: any) => p.status === "PENDING")
+                                ? "bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            } 
+                            onClick={() => openPayoutModal(affiliate)}
+                          >
+                            {affiliate.affiliatePayouts?.some((p: any) => p.status === "PENDING") ? "Settle Request" : "Record Payout"}
                           </Button>
                         ) : (
                           <Button size="sm" variant="outline" disabled>
@@ -311,6 +332,15 @@ export default function AffiliatesPage() {
           </DialogHeader>
           {selectedAffiliate && (
             <form onSubmit={handleRecordPayout} className="space-y-4 pt-4">
+              {selectedAffiliate.affiliatePayouts?.some((p: any) => p.status === "PENDING") && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Affiliate Withdrawal Requested:</span>
+                    <p className="mt-0.5">This partner submitted a payout request. Transfer the funds using their account details below, then enter the transaction reference.</p>
+                  </div>
+                </div>
+              )}
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Bank Details on File</h4>
                 {selectedAffiliate.bankDetails ? (

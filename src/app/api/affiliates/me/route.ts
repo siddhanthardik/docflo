@@ -27,6 +27,9 @@ export async function GET() {
             name: true,
             clinicName: true,
             createdAt: true,
+            subscriptionStatus: true,
+            subscriptionExpiry: true,
+            billingPeriod: true,
             package: { select: { name: true, priceMonthly: true, priceYearly: true } },
             paymentTransactions: {
               where: { status: "SUCCESS" },
@@ -55,15 +58,31 @@ export async function GET() {
 
     // Calculate metrics
     let totalRevenueGenerated = 0;
+    const now = new Date();
     const referrals = affiliate.referredDoctors.map(doc => {
       const revenue = doc.paymentTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
       totalRevenueGenerated += revenue;
+
+      let subscriptionStatusLabel = "Active";
+      if (doc.paymentTransactions.length === 0) {
+        const daysSinceJoined = Math.floor((now.getTime() - new Date(doc.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        subscriptionStatusLabel = daysSinceJoined <= 14 ? "14-Day Free Trial" : "Trial Expired";
+      } else if (doc.subscriptionStatus === "CANCELED") {
+        subscriptionStatusLabel = "Canceled";
+      } else if (doc.subscriptionStatus === "PAST_DUE" || (doc.subscriptionExpiry && new Date(doc.subscriptionExpiry) < now)) {
+        subscriptionStatusLabel = "Past Due";
+      } else {
+        subscriptionStatusLabel = "Active (Paid)";
+      }
+
       return {
         id: doc.id,
         name: doc.name,
         clinicName: doc.clinicName,
         dateJoined: doc.createdAt,
         package: doc.package?.name || "None",
+        billingPeriod: doc.billingPeriod || "monthly",
+        status: subscriptionStatusLabel,
         revenue,
       };
     });
@@ -74,6 +93,7 @@ export async function GET() {
       .reduce((sum, p) => sum + p.amount, 0);
     
     const pendingPayout = totalEarnings - totalPaidOut;
+    const pendingPayoutRecord = affiliate.affiliatePayouts.find(p => p.status === "PENDING");
 
     return NextResponse.json({
       profile: {
@@ -90,6 +110,8 @@ export async function GET() {
         totalEarnings,
         totalPaidOut,
         pendingPayout,
+        hasPendingPayoutRequest: Boolean(pendingPayoutRecord),
+        pendingPayoutRequestAmount: pendingPayoutRecord?.amount || 0,
       },
       referrals,
       payouts: affiliate.affiliatePayouts

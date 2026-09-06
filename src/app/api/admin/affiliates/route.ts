@@ -124,16 +124,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields for payout" }, { status: 400 });
     }
 
-    const payout = await prisma.affiliatePayout.create({
-      data: {
-        affiliateId,
-        amount: parseFloat(amount),
-        status: "PAID",
-        paidAt: new Date(),
-        referenceId,
-        notes,
-      }
+    const existingPending = await prisma.affiliatePayout.findFirst({
+      where: { affiliateId, status: "PENDING" },
+      orderBy: { createdAt: "desc" }
     });
+
+    let payout;
+    if (existingPending) {
+      payout = await prisma.affiliatePayout.update({
+        where: { id: existingPending.id },
+        data: {
+          amount: parseFloat(amount),
+          status: "PAID",
+          paidAt: new Date(),
+          referenceId: referenceId || existingPending.referenceId,
+          notes: notes || existingPending.notes,
+        }
+      });
+    } else {
+      payout = await prisma.affiliatePayout.create({
+        data: {
+          affiliateId,
+          amount: parseFloat(amount),
+          status: "PAID",
+          paidAt: new Date(),
+          referenceId,
+          notes,
+        }
+      });
+    }
 
     return NextResponse.json(payout, { status: 201 });
   } catch (error) {

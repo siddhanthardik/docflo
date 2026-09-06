@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, IndianRupee, Users, TrendingUp, Copy, LogOut, CheckCircle, AlertTriangle, FileText, Building } from "lucide-react";
+import { 
+  Loader2, IndianRupee, Users, TrendingUp, Copy, LogOut, 
+  CheckCircle, AlertTriangle, FileText, Building, MessageSquare, 
+  Mail, Share2, Wallet, Clock, Sparkles, Check, HelpCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +15,14 @@ import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 
 export default function AffiliateDashboard() {
   const { data: session, status } = useSession();
@@ -30,6 +42,10 @@ export default function AffiliateDashboard() {
   const [kycDocUrl, setKycDocUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Payout Request State
+  const [isPayoutRequestModalOpen, setIsPayoutRequestModalOpen] = useState(false);
+  const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+
   const formatINR = (val: number) => 
     `₹${(val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -38,7 +54,7 @@ export default function AffiliateDashboard() {
       redirect("/affiliates/login");
     } else if (status === "authenticated") {
       if (session?.user?.role !== "AFFILIATE" && session?.user?.role !== "SALES") {
-        redirect("/"); // They shouldn't be here!
+        redirect("/"); // Unauthorized
       } else {
         fetchDashboardData();
       }
@@ -103,6 +119,27 @@ export default function AffiliateDashboard() {
     }
   };
 
+  const handleRequestPayout = async () => {
+    setIsRequestingPayout(true);
+    try {
+      const res = await fetch("/api/affiliates/payout-request", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (res.ok) {
+        toast({ title: "Payout Requested! 🎉", description: json.message });
+        setIsPayoutRequestModalOpen(false);
+        fetchDashboardData();
+      } else {
+        throw new Error(json.error || "Failed to submit payout request");
+      }
+    } catch (e: any) {
+      toast({ title: "Request Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsRequestingPayout(false);
+    }
+  };
+
   const copyLink = (type: "register" | "home" = "register") => {
     if (data?.profile?.affiliateCode) {
       const path = type === "register" ? "/register" : "";
@@ -117,6 +154,14 @@ export default function AffiliateDashboard() {
     }
   };
 
+  const copySwipe = (title: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ 
+      title: "Swipe Copy Ready! 📋", 
+      description: `${title} copied to clipboard with your referral link included.` 
+    });
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -126,6 +171,96 @@ export default function AffiliateDashboard() {
   }
 
   if (!data) return null;
+
+  const partnerRefCode = data.profile?.affiliateCode || "PARTNER";
+  const partnerHomeLink = typeof window !== "undefined" 
+    ? `${window.location.origin}/?ref=${partnerRefCode}` 
+    : `https://gyrex.in/?ref=${partnerRefCode}`;
+
+  // Pre-compiled doctor pitch swipe files
+  const swipeFiles = [
+    {
+      id: "whatsapp-receptionist",
+      title: "WhatsApp Pitch: 24/7 Practice Receptionist",
+      icon: MessageSquare,
+      badge: "High Response Rate",
+      description: "Pitch focused on missed patient calls after clinic hours and automated OPD appointment booking.",
+      content: `Namaste Dr. [Doctor Name],
+
+Quick question: How many patient appointment queries does your clinic miss after 8 PM or on Sundays?
+
+Most practices lose 30-40% of potential patients simply because reception is closed. Gyrex provides a 24/7 WhatsApp Practice Receptionist that connects to your existing number via QR code, answers patient queries in 6+ Indian languages, and books appointments directly into your clinic schedule.
+
+Take a quick look at the live simulator:
+${partnerHomeLink}
+
+Can we schedule a quick 5-minute live preview for your clinic?`
+    },
+    {
+      id: "whatsapp-maps",
+      title: "WhatsApp Pitch: 5×5 Google Maps Geo-Rank",
+      icon: TrendingUp,
+      badge: "Local SEO Focus",
+      description: "Pitch for doctors losing patients to competitors outside their immediate neighborhood street.",
+      content: `Hello Dr. [Doctor Name],
+
+When patients in your neighborhood search for a [Specialty, e.g. Dermatologist / Pediatrician / Dental Clinic] on Google Maps, does your clinic show up in the Top 3?
+
+Google data shows 70% of patient calls go exclusively to the top 3 listings. Gyrex gives your practice a 5×5 neighborhood visibility heatmap to identify where competitors are winning, plus an automated WhatsApp review collector that boosts 5-star Google reviews.
+
+You can run a free 60-second clinic audit here:
+${partnerHomeLink}
+
+Happy to share a tailored local visibility audit for your clinic!`
+    },
+    {
+      id: "email-formal",
+      title: "Email Proposal: Practice Growth Platform",
+      icon: Mail,
+      badge: "Formal / Hospital Proposal",
+      description: "Comprehensive introduction email suitable for hospital directors, polyclinics, and senior doctors.",
+      content: `Subject: Modernizing patient acquisition & 24/7 WhatsApp reception for [Clinic Name]
+
+Dear Dr. [Doctor Name],
+
+I hope this email finds you well.
+
+I am writing to introduce Gyrex (gyrex.in), India's dedicated practice growth platform built exclusively for doctors and specialty clinics.
+
+Gyrex helps practices address three primary operational bottlenecks:
+1. 24/7 WhatsApp Practice Receptionist: Answers patient inquiries, explains clinical procedures, and books OPD consultations around the clock via QR connection.
+2. 5×5 Google Maps Geo-Rank Domination: Tracks patient discovery across a 5km radius to maintain #1 neighborhood rankings.
+3. Automated 5-Star Reviews: Sends automated post-consultation WhatsApp feedback requests to build an authoritative Google rating.
+
+Clinics typically see a 30-50% increase in patient appointment confirmations within 30 days.
+
+You can explore a live demonstration and start a 14-day free trial here:
+${partnerHomeLink}
+
+Would you be open to a brief 10-minute online walkthrough this week?
+
+Warm regards,
+${data.profile.name}
+Gyrex Practice Growth Partner`
+    },
+    {
+      id: "social-share",
+      title: "LinkedIn & WhatsApp Status Copy",
+      icon: Share2,
+      badge: "Social Media",
+      description: "Short copy for posting on WhatsApp Status, LinkedIn, or medical practitioner groups.",
+      content: `Doctors spend years building clinical excellence, but still lose patient consultations because their clinic reception doesn't respond after hours or their Google Maps profile isn't ranking in neighboring localities.
+
+Gyrex gives doctors:
+• 24/7 WhatsApp Practice Receptionist (no staff needed)
+• 5×5 Google Maps Local Search Heatmap
+• Custom Specialty Clinic Websites (20 Medical Presets)
+• Automated 5-Star Google Review Growth
+
+Try the interactive practice simulator here:
+${partnerHomeLink}`
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -152,6 +287,7 @@ export default function AffiliateDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-500 mt-1">Welcome back. Here is your latest performance data.</p>
           </div>
+          
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-1.5 flex items-center gap-2">
               <div className="px-3 py-1.5 bg-gray-50 rounded text-xs sm:text-sm font-mono text-gray-600 border border-gray-100 flex-1 min-w-[200px] max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -169,25 +305,87 @@ export default function AffiliateDashboard() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-white border border-gray-200 shadow-sm w-full sm:w-auto h-auto p-1 overflow-x-auto flex-wrap">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4">Overview</TabsTrigger>
-            <TabsTrigger value="referrals" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4">My Referrals</TabsTrigger>
-            <TabsTrigger value="payouts" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4">Payout History</TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4">Bank & KYC Settings</TabsTrigger>
+            <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4 font-medium text-sm">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="referrals" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4 font-medium text-sm">
+              My Referrals
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4 font-medium text-sm flex items-center gap-1.5">
+              <span>Marketing Kit (Swipe Files)</span>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+                NEW
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="payouts" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4 font-medium text-sm">
+              Payout History
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 rounded-md py-2 px-4 font-medium text-sm">
+              Bank &amp; KYC Settings
+            </TabsTrigger>
           </TabsList>
 
+          {/* ── OVERVIEW TAB ── */}
           <TabsContent value="overview" className="space-y-6">
             {data.profile.kycStatus === "PENDING" && (
               <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-md flex items-start">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 mr-3" />
+                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 mr-3 shrink-0" />
                 <div>
                   <h3 className="text-sm font-bold text-amber-800">Action Required: KYC Pending</h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    Your KYC verification is currently pending. You can still refer clients, but payouts will be held until your documents and bank details are approved.
+                    Your KYC verification is currently pending. You can still refer clinics, but payouts will be held until your documents and bank details are approved.
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Payout Status Banner */}
+            {data.metrics.hasPendingPayoutRequest ? (
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-700">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900">Payout Request Under Review</h4>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      Your payout request for <span className="font-bold">{formatINR(data.metrics.pendingPayoutRequestAmount)}</span> is being processed by our accounts team for direct NEFT/UPI transfer.
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-300">Processing</Badge>
+              </div>
+            ) : data.metrics.pendingPayout >= 1000 ? (
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-900">Withdrawal Available</h4>
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      You have <span className="font-bold">{formatINR(data.metrics.pendingPayout)}</span> ready for withdrawal (min ₹1,000 threshold reached).
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => setIsPayoutRequestModalOpen(true)} 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-bold text-xs h-9 px-4 whitespace-nowrap"
+                >
+                  <Wallet className="w-4 h-4 mr-1.5" /> Request Payout
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  <span>Threshold for withdrawal is ₹1,000. Balance: <span className="font-bold text-slate-900">{formatINR(data.metrics.pendingPayout)}</span>.</span>
+                </div>
+                <span className="text-slate-500 font-medium">Auto-settled on the 1st of every month via NEFT/UPI</span>
+              </div>
+            )}
+
+            {/* Metric Cards */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardContent className="p-6">
@@ -247,11 +445,12 @@ export default function AffiliateDashboard() {
             </div>
           </TabsContent>
 
+          {/* ── REFERRALS TAB ── */}
           <TabsContent value="referrals">
             <Card>
               <CardHeader>
                 <CardTitle>My Referrals</CardTitle>
-                <CardDescription>A list of all clinics that registered using your affiliate link.</CardDescription>
+                <CardDescription>A list of all clinics that registered using your affiliate link, with live subscription statuses.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -261,6 +460,7 @@ export default function AffiliateDashboard() {
                         <th className="px-4 py-3 font-medium">Clinic Name</th>
                         <th className="px-4 py-3 font-medium">Contact Person</th>
                         <th className="px-4 py-3 font-medium">Joined Date</th>
+                        <th className="px-4 py-3 font-medium">Subscription Status</th>
                         <th className="px-4 py-3 font-medium">Current Package</th>
                         <th className="px-4 py-3 font-medium text-right">Revenue Generated</th>
                         <th className="px-4 py-3 font-medium text-right">Your Cut ({data.profile.commissionPercentage}%)</th>
@@ -269,7 +469,7 @@ export default function AffiliateDashboard() {
                     <tbody className="divide-y divide-gray-50">
                       {data.referrals.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-8 text-center text-gray-500">No referrals yet. Share your link to get started!</td>
+                          <td colSpan={7} className="py-8 text-center text-gray-500">No referrals yet. Share your link or use the Marketing Kit to get started!</td>
                         </tr>
                       ) : (
                         data.referrals.map((ref: any) => (
@@ -277,7 +477,24 @@ export default function AffiliateDashboard() {
                             <td className="px-4 py-3 font-medium text-gray-900">{ref.clinicName || "Unknown"}</td>
                             <td className="px-4 py-3 text-gray-600">{ref.name}</td>
                             <td className="px-4 py-3 text-gray-600">{new Date(ref.dateJoined).toLocaleDateString()}</td>
-                            <td className="px-4 py-3"><Badge variant="secondary">{ref.package}</Badge></td>
+                            <td className="px-4 py-3">
+                              <Badge className={
+                                ref.status === "Active (Paid)" 
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                  : ref.status === "14-Day Free Trial"
+                                  ? "bg-blue-100 text-blue-800 border-blue-200"
+                                  : ref.status === "Past Due"
+                                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                                  : "bg-gray-100 text-gray-700 border-gray-200"
+                              }>
+                                {ref.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="secondary">
+                                {ref.package} {ref.billingPeriod ? `(${ref.billingPeriod})` : ""}
+                              </Badge>
+                            </td>
                             <td className="px-4 py-3 text-right text-gray-600">{formatINR(ref.revenue)}</td>
                             <td className="px-4 py-3 text-right font-medium text-emerald-600">{formatINR(ref.revenue * (data.profile.commissionPercentage/100))}</td>
                           </tr>
@@ -290,11 +507,116 @@ export default function AffiliateDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payouts">
-            <Card>
+          {/* ── MARKETING KIT (SWIPE FILES) TAB ── */}
+          <TabsContent value="marketing" className="space-y-6">
+            <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-400/30 mb-2">
+                  <Sparkles className="w-3.5 h-3.5" /> High-Converting Pitch Templates
+                </div>
+                <h2 className="text-xl font-bold">Doctor Outreach Swipe Files</h2>
+                <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                  Copy and send these proven messages directly to doctors, hospital managers, and clinic administrators. Your referral link is automatically embedded.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/10 text-xs">
+                <span className="text-slate-400 block font-medium">Your Active Referral Link:</span>
+                <span className="font-mono text-indigo-300 font-bold text-xs truncate max-w-[260px] block mt-0.5">
+                  {partnerHomeLink}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {swipeFiles.map((swipe) => {
+                const IconComponent = swipe.icon;
+                return (
+                  <Card key={swipe.id} className="border-slate-200 shadow-sm flex flex-col justify-between">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <CardTitle className="text-base font-bold text-slate-900">{swipe.title}</CardTitle>
+                        </div>
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 text-[10px] uppercase font-bold shrink-0">
+                          {swipe.badge}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-xs text-slate-500">
+                        {swipe.description}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4 pt-0">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
+                        {swipe.content}
+                      </div>
+
+                      <Button 
+                        onClick={() => copySwipe(swipe.title, swipe.content)}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-9 shadow-sm"
+                      >
+                        <Copy className="w-4 h-4 mr-2" /> Copy Message with My Link
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Doctor Objection Handling Cheat Sheet */}
+            <Card className="border-slate-200 shadow-sm bg-white">
               <CardHeader>
-                <CardTitle>Payout History</CardTitle>
-                <CardDescription>Record of all commission payments sent to your bank account.</CardDescription>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-indigo-600" />
+                  Doctor Objection Handling Cheat Sheet
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Quick answers to common questions doctors ask before onboarding.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 className="font-bold text-slate-900 mb-1">&quot;Do I need to change my clinic WhatsApp number?&quot;</h5>
+                    <p className="text-slate-600">No. Gyrex connects directly to your existing WhatsApp Business number via standard QR code sync. All existing chats remain intact.</p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 className="font-bold text-slate-900 mb-1">&quot;Is any technical or coding skill required?&quot;</h5>
+                    <p className="text-slate-600">Zero coding required. Gyrex provides 20 ready-to-launch medical presets. The clinic can launch their specialty website and rank tracker in 2 minutes.</p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 className="font-bold text-slate-900 mb-1">&quot;Can I connect my own custom domain (e.g. drname.com)?&quot;</h5>
+                    <p className="text-slate-600">Yes. Custom domains connect in 1 click with automated free SSL certificates and high-speed cloud CDN hosting included.</p>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 className="font-bold text-slate-900 mb-1">&quot;Can I test it before committing?&quot;</h5>
+                    <p className="text-slate-600">Yes. Every new doctor receives a 14-day free trial with full feature access and money-back guarantee, allowing them to verify patient results first.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── PAYOUTS TAB ── */}
+          <TabsContent value="payouts" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Payout History</CardTitle>
+                  <CardDescription>Record of all commission payments sent to your bank account or UPI.</CardDescription>
+                </div>
+                {data.metrics.pendingPayout >= 1000 && !data.metrics.hasPendingPayoutRequest && (
+                  <Button 
+                    onClick={() => setIsPayoutRequestModalOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm"
+                  >
+                    <Wallet className="w-4 h-4 mr-1.5" /> Request Payout ({formatINR(data.metrics.pendingPayout)})
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -318,8 +640,12 @@ export default function AffiliateDashboard() {
                             <td className="px-4 py-3 text-gray-600">{new Date(p.createdAt).toLocaleDateString()}</td>
                             <td className="px-4 py-3 font-medium text-gray-900">{formatINR(p.amount)}</td>
                             <td className="px-4 py-3">
-                              <Badge className={p.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
-                                {p.status}
+                              <Badge className={
+                                p.status === "PAID" 
+                                  ? "bg-emerald-100 text-emerald-700" 
+                                  : "bg-blue-100 text-blue-700 border-blue-200"
+                              }>
+                                {p.status === "PAID" ? "Settled" : "Pending Review"}
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-gray-500 font-mono text-xs">{p.referenceId || "-"}</td>
@@ -333,6 +659,7 @@ export default function AffiliateDashboard() {
             </Card>
           </TabsContent>
 
+          {/* ── SETTINGS TAB ── */}
           <TabsContent value="settings">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
@@ -447,6 +774,63 @@ export default function AffiliateDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* ── PAYOUT REQUEST MODAL ── */}
+      <Dialog open={isPayoutRequestModalOpen} onOpenChange={setIsPayoutRequestModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <Wallet className="w-5 h-5 text-emerald-600" />
+              Confirm Payout Request
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Your pending earnings will be queued for manual/direct transfer to your verified account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-sm">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+              <span className="text-xs text-emerald-700 font-medium block">Total Withdrawal Amount</span>
+              <span className="text-3xl font-black text-emerald-900 mt-1 block">
+                {formatINR(data.metrics.pendingPayout)}
+              </span>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+              <p className="font-bold text-slate-800">Settlement Account on File:</p>
+              {bankDetails.accountNumber ? (
+                <div className="space-y-1 text-slate-600">
+                  <p><span className="font-medium text-slate-700">Holder:</span> {bankDetails.accountName || "N/A"}</p>
+                  <p><span className="font-medium text-slate-700">Bank:</span> {bankDetails.bankName || "N/A"}</p>
+                  <p><span className="font-medium text-slate-700">Account:</span> {bankDetails.accountNumber}</p>
+                  <p><span className="font-medium text-slate-700">IFSC:</span> {bankDetails.ifscCode || "N/A"}</p>
+                  {bankDetails.upiId && <p><span className="font-medium text-slate-700">UPI ID:</span> {bankDetails.upiId}</p>}
+                </div>
+              ) : (
+                <p className="text-amber-700">No bank details added yet. Please fill Bank Settings before requesting.</p>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-500">
+              Payouts are verified against doctor subscription invoices and transferred within 24-48 business hours via NEFT or UPI.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsPayoutRequestModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRequestPayout} 
+              disabled={isRequestingPayout || !bankDetails.accountNumber}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            >
+              {isRequestingPayout ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Confirm Withdrawal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
