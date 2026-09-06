@@ -114,14 +114,20 @@ export function MedicalEEATScorecard({
           {/* 3. Patient Reputation */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-start gap-3">
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-              numericRating >= 4.5 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+              numericRating >= 4.5 ? "bg-emerald-100 text-emerald-700" : numericRating > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-200 text-slate-500"
             }`}>
               <Star className="w-4 h-4 fill-current" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-900">Patient Sentiment ({numericRating}★)</h4>
+              <h4 className="text-xs font-bold text-slate-900">
+                Patient Sentiment {numericRating > 0 && reviewsCount > 0 ? `(${numericRating.toFixed(1)}★)` : "(Unrated)"}
+              </h4>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                {numericRating >= 4.5 ? "Meets Google's 4.5★+ patient preference threshold." : "Below local 4.5★ competitor benchmark."}
+                {reviewsCount === 0 
+                  ? "No patient reviews recorded on Google yet." 
+                  : numericRating >= 4.5 
+                  ? "Meets Google's 4.5★+ patient preference threshold." 
+                  : "Below local 4.5★ competitor benchmark."}
               </p>
             </div>
           </div>

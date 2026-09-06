@@ -32,6 +32,9 @@ export function Google3PackPreview({
   // Take top 3 listings from the search results
   const top3 = allCompetitors.slice(0, 3);
   const isInTop3 = userRank <= 3;
+  const cleanDisplayName = businessName
+    ? businessName.replace(/\b(dr\.?|doctor)\s*(dr\.?|doctor)\b/gi, "Dr.").split(/\s*([|•–—]| - | : )\s*/)[0].trim()
+    : "Your Clinic";
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs print-card break-inside-avoid print:break-inside-avoid">
@@ -101,6 +104,11 @@ export function Google3PackPreview({
           <div className="divide-y divide-slate-100">
             {top3.map((clinic, i) => {
               const isDoctor = clinic.isYou;
+              const displayClinicName = isDoctor ? cleanDisplayName : clinic.name;
+              const isUnrated = !clinic.rating || String(clinic.rating).includes("Not Available") || clinic.rating === 0 || clinic.rating === "0";
+              const rawRevCount = String(clinic.reviewCount || "");
+              const displayReviewCount = isUnrated || rawRevCount.includes("Not Available") || rawRevCount === "0" ? "0" : clinic.reviewCount;
+
               return (
                 <div
                   key={i}
@@ -117,7 +125,7 @@ export function Google3PackPreview({
                           {clinic.rank}
                         </span>
                         <h4 className="font-bold text-sm text-slate-900 truncate">
-                          {clinic.name}
+                          {displayClinicName}
                         </h4>
                         {isDoctor && (
                           <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300">
@@ -128,11 +136,17 @@ export function Google3PackPreview({
 
                       {/* Rating & Reviews */}
                       <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <span className="font-bold text-slate-900">{clinic.rating}</span>
-                        <div className="flex items-center text-amber-400 text-[10px]">
-                          {"★★★★★".slice(0, 5)}
-                        </div>
-                        <span className="text-slate-500">({clinic.reviewCount})</span>
+                        {isUnrated ? (
+                          <span className="font-semibold text-slate-500 text-[11px] bg-slate-100 px-1.5 py-0.2 rounded">Unrated</span>
+                        ) : (
+                          <>
+                            <span className="font-bold text-slate-900">{clinic.rating}</span>
+                            <div className="flex items-center text-amber-400 text-[10px]">
+                              {"★★★★★".slice(0, 5)}
+                            </div>
+                          </>
+                        )}
+                        <span className="text-slate-500">({displayReviewCount} reviews)</span>
                         <span className="text-slate-300">•</span>
                         <span className="text-slate-600 font-medium">{specialty}</span>
                       </div>
@@ -164,7 +178,7 @@ export function Google3PackPreview({
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold">
-                  {businessName} is currently outside the Top 3 Google Map Pack (at position #{userRank}).
+                  {cleanDisplayName} is currently outside the Top 3 Google Map Pack (at position #{userRank}).
                 </p>
                 <p className="text-[11px] text-amber-800 mt-0.5">
                   Over 78% of high-intent mobile searchers exclusively click clinics inside the 3-Pack above.

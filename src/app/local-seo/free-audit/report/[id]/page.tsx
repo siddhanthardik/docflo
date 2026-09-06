@@ -7,12 +7,13 @@ import {
   AlertTriangle, Trophy, ChevronDown, ChevronUp, ArrowRight, X,
   Building2, TrendingUp, Search, ShieldAlert, ShieldCheck, Sparkles, Download,
   ExternalLink, Check, Zap, ArrowUpRight, BarChart3, RefreshCw,
-  Map, LayoutGrid, Compass
+  Map, LayoutGrid, Compass, MessageSquare
 } from "lucide-react";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { Google3PackPreview } from "@/components/audit/google-3pack-preview";
 import { MedicalEEATScorecard } from "@/components/audit/medical-eeat-scorecard";
 import { RankTrackerMap } from "@/app/(dashboard)/local-seo/components/RankTrackerMap";
+import { sanitizeDoctorBusinessName } from "@/lib/audit/name-sanitizer";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompetitorRow {
@@ -224,6 +225,25 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
         >
           Learn More &gt;
         </Link>
+        <div className="mt-3 pt-3 border-t border-slate-200/80 flex items-center justify-center gap-3 text-xs">
+          <a
+            href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I need help with my Google Profile Audit for ${businessName}.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-semibold"
+          >
+            <WhatsAppSVG />
+            <span>WhatsApp</span>
+          </a>
+          <span className="text-slate-300">•</span>
+          <a
+            href="tel:+919717228528"
+            className="inline-flex items-center gap-1 text-slate-600 hover:text-indigo-600 font-medium"
+          >
+            <Phone className="w-3.5 h-3.5 text-slate-400" />
+            <span>+91 97172 28528</span>
+          </a>
+        </div>
       </div>
 
       {/* Social Proof & Doctor Trust */}
@@ -430,7 +450,7 @@ function SearchGridVisualization({
 
           {/* Grid with West/East labels */}
           <div className="flex items-center justify-center gap-3 min-w-[320px]">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest writing-mode-vertical rotate-180 flex items-center gap-1">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 select-none">
               <span>◀</span> West
             </div>
 
@@ -570,10 +590,42 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
   const completeness  = (reportData.profileCompleteness    || {}) as any;
   const healthIntel   = (reportData.healthcareIntelligence || {}) as any;
 
-  const businessName    = overview.businessName || reportData.businessName || "Your Clinic";
+  const rawBusinessName = overview.businessName || reportData.businessName || "Your Clinic";
+  const nameInfo        = sanitizeDoctorBusinessName(rawBusinessName);
+  const cleanName       = nameInfo.cleanDisplayName;
+  const fullRawTitle    = nameInfo.fullRawTitle;
+  const isKeywordStuffed = nameInfo.isKeywordStuffed;
+  const businessName    = cleanName;
+
   const address         = overview.address || reportData.address || "";
-  const rating          = overview.rating || reportData.rating || "N/A";
-  const reviewsCount    = overview.reviews || reportData.reviewCount || 0;
+  const addressParts    = address.split(",").map((s: string) => s.trim());
+  const city            = compIntel?.searchContext || (addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "your area");
+  const specialty       = healthIntel?.specialty || reportData.speciality || "Medical Clinic";
+  
+  // Clean rating & reviews fallback
+  const rawRating       = overview.rating || reportData.rating;
+  const isUnrated       = !rawRating || String(rawRating).includes("Not Available") || rawRating === 0 || rawRating === "0" || rawRating === "N/A";
+  const rating          = isUnrated ? "Unrated" : String(rawRating);
+  
+  const rawReviewsCount = overview.reviews ?? reportData.reviewCount;
+  const reviewsCount    = !rawReviewsCount || String(rawReviewsCount).includes("Not Available") ? 0 : Number(rawReviewsCount) || 0;
+
+  const rawCompetitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
+  const youRow          = rawCompetitors.find((c: any) => c.isYou);
+  const rawRank         = youRow?.rank;
+  const userRankNum     = typeof rawRank === "number" ? rawRank : parseInt(String(rawRank).replace(/\D/g, ""), 10) || 21;
+  const isUnranked      = userRankNum > 20 || String(rawRank).includes("+");
+  const clinicsAheadStr = isUnranked ? "20+" : String(Math.max(0, userRankNum - 1));
+
+  // Harmonized competitor review average
+  const competitorRowsOnly = rawCompetitors.filter((c: any) => !c.isYou);
+  const compReviewCounts = competitorRowsOnly
+    .map((c: any) => Number(c.reviewCount) || 0)
+    .filter((cnt: number) => cnt > 0);
+  const compAvgReviews =
+    compReviewCounts.length > 0
+      ? Math.round(compReviewCounts.reduce((a: number, b: number) => a + b, 0) / compReviewCounts.length)
+      : 100;
 
   let rawIssues: Issue[] = visibility?.issues || [];
   const issueTitles = new Set<string>();
@@ -581,7 +633,26 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
   for (const item of rawIssues) {
     if (item && item.issue && !issueTitles.has(item.issue)) {
-      issues.push(item);
+      let cleanIssue = item.issue;
+      let cleanEvidence = item.evidence;
+
+      // Fix awkward "Only 0 reviews found." phrasing
+      if (cleanIssue.toLowerCase().includes("only 0 reviews") || cleanIssue.toLowerCase().includes("0 reviews found")) {
+        cleanIssue = "Review Deficit: No Google reviews found on this listing";
+        cleanEvidence = `Nearby competitors in ${city} average ${compAvgReviews} reviews on Google Maps. Having verified patient reviews is the #1 local ranking factor.`;
+      }
+
+      // Neutralize inaccurate "Hospital" advice if clinic is an outpatient practice
+      if (cleanIssue.toLowerCase().includes('"hospital" not found') && !cleanName.toLowerCase().includes("hospital")) {
+        cleanIssue = `Primary specialty keyword "${specialty}" optimization`;
+        cleanEvidence = `Ensure your primary medical category is accurately set to "${specialty}" to capture local patient searches without competing against tertiary hospitals.`;
+      }
+
+      issues.push({
+        issue: cleanIssue,
+        evidence: cleanEvidence,
+        impact: item.impact || "High"
+      });
       issueTitles.add(item.issue);
     }
   }
@@ -595,16 +666,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     });
   }
 
-  const issueCount      = issues.length;
-  const rawCompetitors: CompetitorRow[] = compIntel?.competitors || reportData.competitors || [];
-  const youRow          = rawCompetitors.find((c: any) => c.isYou);
-  const rawRank         = youRow?.rank;
-  const userRankNum     = typeof rawRank === "number" ? rawRank : parseInt(String(rawRank).replace(/\D/g, ""), 10) || 21;
-  const isUnranked      = userRankNum > 20 || String(rawRank).includes("+");
-  const clinicsAheadStr = isUnranked ? "20+" : String(Math.max(0, userRankNum - 1));
+  const issueCount = issues.length;
 
   // Unify and deduplicate all table rows, sorted strictly by Map Rank
-  const competitorRowsOnly = rawCompetitors.filter((c: any) => !c.isYou);
   const allTableRows = [
     ...competitorRowsOnly.map((c: any, i: number) => {
       let computedRank = c.rank || c.googlePosition;
@@ -622,22 +686,16 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
       };
     }),
     {
-      name: businessName,
+      name: cleanName,
+      rawTitle: fullRawTitle,
+      isKeywordStuffed,
       isYou: true,
-      rating: rating,
+      rating: isUnrated ? "Unrated" : rating,
       reviewCount: reviewsCount,
       rank: userRankNum,
       distanceKm: null,
     },
   ].sort((a, b) => a.rank - b.rank);
-
-  const compReviewCounts = competitorRowsOnly
-    .map((c: any) => Number(c.reviewCount) || 0)
-    .filter((cnt: number) => cnt > 0);
-  const compAvgReviews =
-    compReviewCounts.length > 0
-      ? Math.round(compReviewCounts.reduce((a: number, b: number) => a + b, 0) / compReviewCounts.length)
-      : 100;
 
   const defaultCompletenessItems: CheckItem[] = [
     { name: "Business Name Verified", present: true },
@@ -659,7 +717,6 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     : defaultCompletenessItems;
 
   const profilePct      = completenessPercent(completenessItems);
-  const specialty       = healthIntel?.specialty || reportData.speciality || "Medical Clinic";
   
   // Dynamic Authentic Medical Specialty Keyword Mapping
   const keywords: string[] = (function(s: string, existing: string[] | undefined) {
@@ -691,10 +748,6 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
     return ["General Consultation", "Preventive Health Checkup", "Patient Diagnosis & Follow-up", "Prescription & Care"];
   })(specialty, healthIntel?.expectedServices);
 
-  // City extraction
-  const addressParts = address.split(",").map((s: string) => s.trim());
-  const city = compIntel?.searchContext || (addressParts.length >= 2 ? addressParts[addressParts.length - 2] : addressParts[0] || "your area");
-
   // PDF Download Handler with production-grade naming prefix "gyrex-audit"
   const handleDownloadPDF = () => {
     const originalTitle = document.title;
@@ -723,6 +776,9 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
           body {
             background-color: #ffffff !important;
             color: #0f172a !important;
+          }
+          a[href]:after {
+            content: none !important;
           }
           .print-card {
             break-inside: avoid !important;
@@ -799,14 +855,28 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                     </div>
                   )}
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">{businessName}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 tracking-tight">{cleanName}</h1>
+                    {isKeywordStuffed && (
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-[11px] font-mono text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200/80 max-w-xl truncate" title={fullRawTitle}>
+                          GBP Title: {fullRawTitle}
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          ⚠️ Name Policy Warning
+                        </span>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500 font-normal">
                       {address && (
                         <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 border border-slate-200/60 rounded-lg text-slate-600">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {address}
                         </span>
                       )}
-                      {rating !== "N/A" && (
+                      {isUnrated ? (
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 border border-slate-200/70 rounded-lg text-slate-600 font-medium">
+                          <Star className="w-3.5 h-3.5 text-slate-400" /> Unrated (0 Reviews)
+                        </span>
+                      ) : (
                         <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200/60 rounded-lg text-amber-800 font-medium">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {rating} ({reviewsCount} reviews)
                         </span>
@@ -829,12 +899,12 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                 <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug mb-3 tracking-tight">
                   {userRankNum === 1 ? (
                     <>
-                      <span className="text-indigo-600">{businessName}</span> is currently the{" "}
+                      <span className="text-indigo-600">{cleanName}</span> is currently the{" "}
                       <span className="text-emerald-600 underline decoration-emerald-200 underline-offset-4">#1 ranked clinic</span> on Google Maps!
                     </>
                   ) : (
                     <>
-                      <span className="text-indigo-600">{businessName}</span> is actively losing patients to{" "}
+                      <span className="text-indigo-600">{cleanName}</span> is actively losing patients to{" "}
                       <span className="text-rose-600 underline decoration-rose-200 underline-offset-4">{clinicsAheadStr} competitor{clinicsAheadStr === "1" ? "" : "s"}</span> on Google.
                     </>
                   )}
@@ -966,19 +1036,33 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       if (c.isYou) {
                         return (
                           <tr key={`you-${i}`} className="bg-indigo-50/60 border-t-2 border-b-2 border-indigo-100">
-                            <td className="px-6 py-4 font-bold text-indigo-950 flex items-center gap-2 text-sm">
-                              <div className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                            <td className="px-6 py-4 font-bold text-indigo-950 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                                </div>
+                                <span>{c.name}</span>
+                                <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 border border-indigo-200/60 px-2 py-0.5 rounded-md">(YOU)</span>
                               </div>
-                              {c.name} <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 border border-indigo-200/60 px-2 py-0.5 rounded-md">(YOU)</span>
+                              {c.isKeywordStuffed && (
+                                <p className="text-[10px] text-slate-500 font-normal truncate max-w-sm sm:max-w-md mt-1 pl-4" title={c.rawTitle}>
+                                  GBP Title: {c.rawTitle}
+                                </p>
+                              )}
                             </td>
                             <td className="px-4 py-4">
-                              <span className="inline-flex items-center gap-1 text-amber-800 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
-                              </span>
+                              {c.rating === "Unrated" ? (
+                                <span className="inline-flex items-center gap-1 text-slate-600 font-medium text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                  Unrated
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-800 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
+                                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" /> {c.rating}
+                                </span>
+                              )}
                             </td>
-                            <td className="px-4 py-4 font-bold text-rose-600 text-sm">{c.reviewCount} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
+                            <td className="px-4 py-4 font-bold text-slate-800 text-sm">{c.reviewCount || 0} <span className="font-normal text-slate-500 text-[11px]">reviews</span></td>
                             <td className="px-6 py-4 text-right">
                               <span className={`inline-flex items-center gap-1 font-bold text-sm px-2.5 py-1 rounded-lg border ${
                                 userRankNum === 1 
@@ -1176,6 +1260,101 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
+            {/* ── SECTION 5.5: Executive Doctor Growth Consultation & WhatsApp Action Block ── */}
+            <div className="print-card print:break-inside-avoid rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-indigo-500/30 overflow-hidden relative print:bg-white print:text-slate-900 print:border-slate-300 print:shadow-none">
+              {/* Decorative background glow for web */}
+              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none print:hidden" />
+              
+              <div className="relative z-10 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 print:bg-emerald-50 print:border-emerald-200 print:text-emerald-700 shrink-0">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 print:text-emerald-700 bg-emerald-500/10 print:bg-emerald-50 border border-emerald-500/20 print:border-emerald-200 px-2 py-0.5 rounded-full">
+                          Action Plan & Doctor Support
+                        </span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-1 text-white print:text-slate-900">
+                        Ready to Fix These Ranking Obstacles for {cleanName}?
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm sm:text-[15px] text-slate-300 print:text-slate-600 leading-relaxed max-w-3xl">
+                  Your Google Business Profile has immediate growth opportunities in category accuracy, review generation, and Google compliance. Connect directly with our healthcare growth specialists to implement these recommendations and outrank local competitors.
+                </p>
+
+                {/* Key Solutions Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
+                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
+                      <span>Category Precision</span>
+                    </div>
+                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
+                      Align primary and secondary categories to {specialty} so Google stops ranking tertiary hospitals over your clinic.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
+                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
+                      <span>WhatsApp Review Engine</span>
+                    </div>
+                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
+                      Automate 5-star Google review collection from your consultations to close the {compAvgReviews}+ competitor review deficit.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 print:bg-slate-50 print:border-slate-200">
+                    <div className="flex items-center gap-2 text-indigo-300 print:text-indigo-700 font-semibold text-xs mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 print:text-emerald-600 shrink-0" />
+                      <span>Policy Suspension Shield</span>
+                    </div>
+                    <p className="text-xs text-slate-300 print:text-slate-600 leading-snug">
+                      {isKeywordStuffed ? "Fix title keyword stuffing to protect your listing against Google suspensions." : "Optimize description and services following strict Google Healthcare guidelines."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct Action Buttons: WhatsApp & Call */}
+                <div className="pt-3 border-t border-white/10 print:border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Google Business Profile Audit for ${cleanName} and would like to speak with a healthcare specialist to fix our ranking obstacles.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+                    >
+                      <WhatsAppSVG />
+                      <span>Chat on WhatsApp (+91-9717228528)</span>
+                    </a>
+
+                    <a
+                      href="tel:+919717228528"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm border border-white/20 transition-all active:scale-95 print:bg-slate-100 print:text-slate-800 print:border-slate-300"
+                    >
+                      <Phone className="w-4 h-4 text-indigo-300 print:text-indigo-600" />
+                      <span>Call: +91-9717228528</span>
+                    </a>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs text-slate-300 print:text-slate-600 font-medium">
+                      Direct Healthcare Support: <span className="font-bold text-white print:text-slate-900">+91-9717228528</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 print:text-slate-500 mt-0.5">
+                      Mon – Sat: 9:30 AM – 7:30 PM IST • Instant Response
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* ── SECTION 6: FAQ Accordion (Hidden on Print & Downloaded PDF) ── */}
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm print:hidden">
               <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -1200,10 +1379,43 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
 
         </div>
 
+        {/* ── Report Bottom Footer (Both Web & Print) ── */}
+        <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 print:mt-6 print:pt-4 print:border-slate-200">
+          <div className="flex items-center gap-2">
+            <GyrexLogo size="sm" />
+            <span>Healthcare Practice Growth Platform</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <span>WhatsApp & Call Helpline: <strong className="text-slate-800 font-semibold">+91-9717228528</strong></span>
+            <span>•</span>
+            <a href="mailto:support@gyrex.in" className="hover:text-indigo-600">support@gyrex.in</a>
+            <span>•</span>
+            <span>https://gyrex.in</span>
+          </div>
+        </div>
+
       </div>
 
       {/* ── Native App Mobile Sticky Bottom Bar (App-like UX) ─────────────── */}
       <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://wa.me/919717228528?text=${encodeURIComponent(`Hi Gyrex Team, I reviewed my Audit Report for ${cleanName} and need assistance.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0"
+            title="Chat on WhatsApp (+91-9717228528)"
+          >
+            <WhatsAppSVG />
+          </a>
+          <a
+            href="tel:+919717228528"
+            className="p-2.5 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 flex items-center justify-center shrink-0"
+            title="Call Support (+91-9717228528)"
+          >
+            <Phone className="w-4 h-4 text-slate-600" />
+          </a>
+        </div>
         <div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-base font-bold text-slate-900">₹0</span>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
+import { resolveBulletproofSpecialty } from "@/lib/audit/specialty-resolver";
 import {
   fetchPlaceDetails,
   searchCompetitorsWithRank,
@@ -37,11 +38,11 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
       data: { progress: 60 },
     });
 
-    // 2. Classify Healthcare Speciality
+    // 2. Classify Healthcare Speciality with Bulletproof Intelligence
     const actualName = placeData?.name || data.name || data.searchQuery || "Clinic";
     const actualCategories = placeData?.types || [];
     const locationStr = placeData?.formattedAddress || data.address || "";
-    const specialityData = detectSpeciality(
+    const resolvedResult = resolveBulletproofSpecialty(
       actualName,
       actualCategories,
       locationStr,
@@ -49,9 +50,11 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
       placeData?.primaryTypeDisplayName || null,
       placeData?.reviewsText || []
     );
+    const specialityData = resolvedResult.benchmark;
+    const resolvedPrimaryCategory = resolvedResult.primaryCategory;
 
     console.log(
-      `[AuditScanService] ${actualName} → Detected specialty: "${specialityData.speciality}" | GBP primaryType: "${placeData?.primaryType}" | displayName: "${placeData?.primaryTypeDisplayName}"`
+      `[AuditScanService] ${actualName} → Detected specialty: "${specialityData.speciality}" | Primary Category: "${resolvedPrimaryCategory}" (Overridden: ${resolvedResult.isBroadContainerOverridden})`
     );
 
     await prisma.auditRequest.update({
@@ -182,10 +185,7 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
         address: placeData?.formattedAddress || data.address || "Data unavailable",
         websiteUrl: placeData?.website || null,
 
-        primaryCategory:
-          placeData?.primaryTypeDisplayName ||
-          placeData?.primaryType ||
-          specialityData.speciality,
+        primaryCategory: resolvedPrimaryCategory,
         secondaryCategories: placeData?.types || [],
         businessType: "Local Healthcare",
         rating: placeData?.rating || null,
