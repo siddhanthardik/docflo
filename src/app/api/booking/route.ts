@@ -53,7 +53,6 @@ export async function POST(req: Request) {
         address: true,
         city: true,
         googleMapsUri: true,
-        consultationFee: true,
         enableBookingConfirmation: true
       }
     });
@@ -103,7 +102,7 @@ export async function POST(req: Request) {
           clinicName: doctor?.clinicName,
           startTime,
           clinicTz,
-          consultationFee: service.price || doctor?.consultationFee,
+          consultationFee: service.price,
           address: doctor?.address,
           city: doctor?.city,
           mapsUrl: doctor?.googleMapsUri

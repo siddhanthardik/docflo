@@ -1854,7 +1854,7 @@ class WhatsAppManager {
                         clinicName: doctorInfo?.clinicName,
                         startTime: startTime,
                         clinicTz: clinicTz,
-                        consultationFee: doctorInfo?.consultationFee,
+                        consultationFee: matchedPractitioner?.consultationFee,
                         address: clinicAddress || doctorInfo?.address,
                         city: doctorInfo?.city,
                         mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
@@ -1891,7 +1891,7 @@ class WhatsAppManager {
                             clinicName: doctorInfo?.clinicName,
                             startTime: startTime,
                             clinicTz: clinicTz,
-                            consultationFee: doctorInfo?.consultationFee,
+                            consultationFee: matchedPractitioner?.consultationFee,
                             address: clinicAddress || doctorInfo?.address,
                             city: doctorInfo?.city,
                             mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
@@ -2328,7 +2328,7 @@ class WhatsAppManager {
                             clinicName: doctorInfo?.clinicName,
                             startTime: startTime,
                             clinicTz: clinicTz,
-                            consultationFee: doctorInfo?.consultationFee,
+                            consultationFee: chosenPractitioner?.consultationFee,
                             isTele: isTele,
                             address: clinicAddress || doctorInfo?.address,
                             city: doctorInfo?.city,
