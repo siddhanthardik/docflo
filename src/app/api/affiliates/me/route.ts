@@ -106,7 +106,7 @@ export async function GET() {
 export async function PATCH(req: Request) {
   try {
     const session = await auth();
-    if (!session || !session.user || session.user.role !== "AFFILIATE") {
+    if (!session || !session.user || (session.user.role !== "AFFILIATE" && session.user.role !== "SALES")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

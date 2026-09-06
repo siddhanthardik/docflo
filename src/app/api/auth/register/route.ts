@@ -6,6 +6,8 @@ import { registerSchema } from "@/lib/validators";
 import { logActivity } from "@/lib/audit";
 import { sendVerificationEmail } from "@/lib/email";
 
+import { cookies } from "next/headers";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -44,11 +46,24 @@ export async function POST(req: Request) {
     const hashedPassword = await hash(normalizedPassword, 12);
 
     try {
-      // Find affiliate if ref code provided
+      // Find affiliate if ref code provided (payload or 60-day cookie fallback)
       let salesRepId = null;
-      if (validatedData.affiliateCode) {
-        const affiliate = await prisma.platformUser.findUnique({
-          where: { affiliateCode: validatedData.affiliateCode }
+      let refCode = validatedData.affiliateCode;
+      if (!refCode) {
+        try {
+          const cookieStore = await cookies();
+          refCode = cookieStore.get("gyrex_ref")?.value;
+        } catch (cookieErr) {
+          // ignore if unavailable
+        }
+      }
+
+      if (refCode && refCode.trim()) {
+        const affiliate = await prisma.platformUser.findFirst({
+          where: { 
+            affiliateCode: { equals: refCode.trim(), mode: "insensitive" },
+            isActive: true,
+          }
         });
         if (affiliate) {
           salesRepId = affiliate.id;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, DollarSign, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download, Plus, Settings, Eye } from "lucide-react";
+import { Loader2, IndianRupee, Search, CheckCircle, ExternalLink, AlertTriangle, FileText, Download, Plus, Settings, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,6 +17,9 @@ export default function AffiliatesPage() {
   const [affiliates, setAffiliates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const formatINR = (val: number) => 
+    `₹${(val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [selectedAffiliate, setSelectedAffiliate] = useState<any>(null);
@@ -171,7 +174,7 @@ export default function AffiliatesPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-indigo-600" />
+            <IndianRupee className="w-6 h-6 text-indigo-600" />
             Affiliates
           </h1>
           <p className="text-slate-500 text-sm mt-1">
@@ -249,10 +252,10 @@ export default function AffiliatesPage() {
                       {affiliate.referredDoctors.length}
                     </td>
                     <td className="px-6 py-4 font-medium text-gray-900">
-                      ${affiliate.totalEarnings.toFixed(2)}
+                      {formatINR(affiliate.totalEarnings)}
                     </td>
                     <td className="px-6 py-4 font-bold text-indigo-600">
-                      ${affiliate.pendingPayout.toFixed(2)}
+                      {formatINR(affiliate.pendingPayout)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
@@ -312,10 +315,16 @@ export default function AffiliatesPage() {
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Bank Details on File</h4>
                 {selectedAffiliate.bankDetails ? (
                   <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                    <p><span className="font-medium text-gray-900">Account Name:</span> {selectedAffiliate.bankDetails.accountName}</p>
-                    <p><span className="font-medium text-gray-900">Bank:</span> {selectedAffiliate.bankDetails.bankName}</p>
-                    <p><span className="font-medium text-gray-900">Account #:</span> {selectedAffiliate.bankDetails.accountNumber}</p>
-                    <p><span className="font-medium text-gray-900">Routing/IFSC:</span> {selectedAffiliate.bankDetails.routingNumber}</p>
+                    <p><span className="font-medium text-gray-900">Account Name:</span> {selectedAffiliate.bankDetails.accountName || "N/A"}</p>
+                    <p><span className="font-medium text-gray-900">Bank:</span> {selectedAffiliate.bankDetails.bankName || "N/A"}</p>
+                    <p><span className="font-medium text-gray-900">Account #:</span> {selectedAffiliate.bankDetails.accountNumber || "N/A"}</p>
+                    <p><span className="font-medium text-gray-900">IFSC:</span> {selectedAffiliate.bankDetails.ifscCode || selectedAffiliate.bankDetails.routingNumber || "N/A"}</p>
+                    {selectedAffiliate.bankDetails.upiId && (
+                      <p className="col-span-2"><span className="font-medium text-gray-900">UPI ID:</span> {selectedAffiliate.bankDetails.upiId}</p>
+                    )}
+                    {selectedAffiliate.bankDetails.panNumber && (
+                      <p className="col-span-2"><span className="font-medium text-gray-900">PAN:</span> {selectedAffiliate.bankDetails.panNumber}</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-amber-600 flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> No bank details provided yet.</p>
@@ -323,7 +332,7 @@ export default function AffiliatesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Payout Amount ($)</Label>
+                <Label>Payout Amount (₹)</Label>
                 <Input required type="number" step="0.01" min="0.01" value={payoutForm.amount} onChange={e => setPayoutForm({...payoutForm, amount: e.target.value})} />
               </div>
               <div className="space-y-2">
@@ -434,7 +443,13 @@ export default function AffiliatesPage() {
                     <p><span className="font-medium text-slate-500">Bank Name:</span> {(selectedAffiliate.bankDetails as any).bankName || "N/A"}</p>
                     <p><span className="font-medium text-slate-500">Account Name:</span> {(selectedAffiliate.bankDetails as any).accountName || "N/A"}</p>
                     <p><span className="font-medium text-slate-500">Account Number:</span> {(selectedAffiliate.bankDetails as any).accountNumber || "N/A"}</p>
-                    <p><span className="font-medium text-slate-500">Routing/IFSC:</span> {(selectedAffiliate.bankDetails as any).routingNumber || "N/A"}</p>
+                    <p><span className="font-medium text-slate-500">IFSC Code:</span> {(selectedAffiliate.bankDetails as any).ifscCode || (selectedAffiliate.bankDetails as any).routingNumber || "N/A"}</p>
+                    {(selectedAffiliate.bankDetails as any).upiId && (
+                      <p><span className="font-medium text-slate-500">UPI ID:</span> {(selectedAffiliate.bankDetails as any).upiId}</p>
+                    )}
+                    {(selectedAffiliate.bankDetails as any).panNumber && (
+                      <p><span className="font-medium text-slate-500">PAN:</span> {(selectedAffiliate.bankDetails as any).panNumber}</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500 flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-amber-500" /> No bank details provided yet.</p>
@@ -464,7 +479,7 @@ export default function AffiliatesPage() {
                     {selectedAffiliate.affiliatePayouts.map((payout: any, i: number) => (
                       <div key={i} className="text-sm bg-slate-50 p-3 rounded flex justify-between items-center border border-slate-100">
                         <div>
-                          <p className="font-medium text-slate-900">${payout.amount.toFixed(2)}</p>
+                          <p className="font-medium text-slate-900">{formatINR(payout.amount)}</p>
                           <p className="text-xs text-slate-500">Ref: {payout.referenceId}</p>
                         </div>
                         <div className="text-right">

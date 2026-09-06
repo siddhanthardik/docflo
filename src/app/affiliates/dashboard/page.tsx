@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { Loader2, DollarSign, Users, TrendingUp, Copy, LogOut, CheckCircle, AlertTriangle, FileText, Building } from "lucide-react";
+import { Loader2, IndianRupee, Users, TrendingUp, Copy, LogOut, CheckCircle, AlertTriangle, FileText, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,9 +18,20 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Settings State
-  const [bankDetails, setBankDetails] = useState({ accountName: "", accountNumber: "", bankName: "", routingNumber: "" });
+  const [bankDetails, setBankDetails] = useState({ 
+    accountName: "", 
+    accountNumber: "", 
+    bankName: "", 
+    ifscCode: "",
+    upiId: "",
+    panNumber: "",
+    routingNumber: "" 
+  });
   const [kycDocUrl, setKycDocUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  const formatINR = (val: number) => 
+    `₹${(val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -41,7 +52,15 @@ export default function AffiliateDashboard() {
         const json = await res.json();
         setData(json);
         if (json.profile.bankDetails) {
-          setBankDetails(json.profile.bankDetails);
+          setBankDetails({
+            accountName: json.profile.bankDetails.accountName || "",
+            accountNumber: json.profile.bankDetails.accountNumber || "",
+            bankName: json.profile.bankDetails.bankName || "",
+            ifscCode: json.profile.bankDetails.ifscCode || json.profile.bankDetails.routingNumber || "",
+            upiId: json.profile.bankDetails.upiId || "",
+            panNumber: json.profile.bankDetails.panNumber || "",
+            routingNumber: json.profile.bankDetails.routingNumber || json.profile.bankDetails.ifscCode || "",
+          });
         }
         if (json.profile.kycDocuments && json.profile.kycDocuments.url) {
           setKycDocUrl(json.profile.kycDocuments.url);
@@ -64,12 +83,15 @@ export default function AffiliateDashboard() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bankDetails,
+          bankDetails: {
+            ...bankDetails,
+            routingNumber: bankDetails.ifscCode || bankDetails.routingNumber,
+          },
           kycDocuments: kycDocUrl ? { url: kycDocUrl } : null
         }),
       });
       if (res.ok) {
-        toast({ title: "Saved", description: "Your details have been updated." });
+        toast({ title: "Saved", description: "Your banking & KYC details have been updated." });
         fetchDashboardData();
       } else {
         throw new Error("Failed to save settings");
@@ -81,11 +103,17 @@ export default function AffiliateDashboard() {
     }
   };
 
-  const copyLink = () => {
+  const copyLink = (type: "register" | "home" = "register") => {
     if (data?.profile?.affiliateCode) {
-      const link = `${window.location.origin}/register?ref=${data.profile.affiliateCode}`;
+      const path = type === "register" ? "/register" : "";
+      const link = `${window.location.origin}${path}?ref=${data.profile.affiliateCode}`;
       navigator.clipboard.writeText(link);
-      toast({ title: "Copied!", description: "Affiliate link copied to clipboard." });
+      toast({ 
+        title: "Link Copied!", 
+        description: type === "register" 
+          ? "Direct registration link copied to clipboard." 
+          : "Homepage referral link copied to clipboard." 
+      });
     }
   };
 
@@ -124,12 +152,17 @@ export default function AffiliateDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-500 mt-1">Welcome back. Here is your latest performance data.</p>
           </div>
-          <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-1.5 flex items-center gap-2">
-            <div className="px-3 py-1.5 bg-gray-50 rounded text-sm font-mono text-gray-600 border border-gray-100 flex-1 min-w-[250px] overflow-hidden text-ellipsis">
-              {window.location.origin}/register?ref={data.profile.affiliateCode}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-1.5 flex items-center gap-2">
+              <div className="px-3 py-1.5 bg-gray-50 rounded text-xs sm:text-sm font-mono text-gray-600 border border-gray-100 flex-1 min-w-[200px] max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {typeof window !== "undefined" ? window.location.origin : "https://gyrex.in"}/register?ref={data.profile.affiliateCode}
+              </div>
+              <Button onClick={() => copyLink("register")} className="bg-indigo-600 hover:bg-indigo-700 h-9 px-3 text-xs sm:text-sm whitespace-nowrap">
+                <Copy className="h-4 w-4 mr-1.5" /> Direct Register Link
+              </Button>
             </div>
-            <Button onClick={copyLink} className="bg-indigo-600 hover:bg-indigo-700 h-9 px-3">
-              <Copy className="h-4 w-4 mr-2" /> Copy Link
+            <Button variant="outline" onClick={() => copyLink("home")} className="border-gray-200 hover:bg-gray-50 h-[46px] px-3 text-xs sm:text-sm whitespace-nowrap">
+              <Copy className="h-4 w-4 mr-1.5" /> Homepage Link
             </Button>
           </div>
         </div>
@@ -189,10 +222,10 @@ export default function AffiliateDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Total Earnings</p>
-                      <h3 className="text-3xl font-bold text-gray-900 mt-2">${data.metrics.totalEarnings.toFixed(2)}</h3>
+                      <h3 className="text-3xl font-bold text-gray-900 mt-2">{formatINR(data.metrics.totalEarnings)}</h3>
                     </div>
                     <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
-                      <DollarSign className="w-6 h-6" />
+                      <IndianRupee className="w-6 h-6" />
                     </div>
                   </div>
                 </CardContent>
@@ -203,10 +236,10 @@ export default function AffiliateDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-indigo-600">Pending Payout</p>
-                      <h3 className="text-3xl font-bold text-indigo-900 mt-2">${data.metrics.pendingPayout.toFixed(2)}</h3>
+                      <h3 className="text-3xl font-bold text-indigo-900 mt-2">{formatINR(data.metrics.pendingPayout)}</h3>
                     </div>
                     <div className="p-3 bg-indigo-600 rounded-full text-white">
-                      <DollarSign className="w-6 h-6" />
+                      <IndianRupee className="w-6 h-6" />
                     </div>
                   </div>
                 </CardContent>
@@ -245,8 +278,8 @@ export default function AffiliateDashboard() {
                             <td className="px-4 py-3 text-gray-600">{ref.name}</td>
                             <td className="px-4 py-3 text-gray-600">{new Date(ref.dateJoined).toLocaleDateString()}</td>
                             <td className="px-4 py-3"><Badge variant="secondary">{ref.package}</Badge></td>
-                            <td className="px-4 py-3 text-right text-gray-600">${ref.revenue.toFixed(2)}</td>
-                            <td className="px-4 py-3 text-right font-medium text-emerald-600">${(ref.revenue * (data.profile.commissionPercentage/100)).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right text-gray-600">{formatINR(ref.revenue)}</td>
+                            <td className="px-4 py-3 text-right font-medium text-emerald-600">{formatINR(ref.revenue * (data.profile.commissionPercentage/100))}</td>
                           </tr>
                         ))
                       )}
@@ -283,7 +316,7 @@ export default function AffiliateDashboard() {
                         data.payouts.map((p: any) => (
                           <tr key={p.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-gray-600">{new Date(p.createdAt).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 font-medium text-gray-900">${p.amount.toFixed(2)}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900">{formatINR(p.amount)}</td>
                             <td className="px-4 py-3">
                               <Badge className={p.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
                                 {p.status}
@@ -311,27 +344,70 @@ export default function AffiliateDashboard() {
                   <form onSubmit={saveSettings} className="space-y-4">
                     <div className="space-y-2">
                       <Label>Account Holder Name</Label>
-                      <Input value={bankDetails.accountName} onChange={e => setBankDetails({...bankDetails, accountName: e.target.value})} required />
+                      <Input 
+                        value={bankDetails.accountName} 
+                        onChange={e => setBankDetails({...bankDetails, accountName: e.target.value})} 
+                        placeholder="Dr. / Partner Full Legal Name"
+                        required 
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bank Name</Label>
+                        <Input 
+                          value={bankDetails.bankName} 
+                          onChange={e => setBankDetails({...bankDetails, bankName: e.target.value})} 
+                          placeholder="e.g. HDFC Bank, ICICI Bank, SBI"
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account Number</Label>
+                        <Input 
+                          value={bankDetails.accountNumber} 
+                          onChange={e => setBankDetails({...bankDetails, accountNumber: e.target.value})} 
+                          placeholder="Bank Account Number"
+                          required 
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bank IFSC Code</Label>
+                        <Input 
+                          value={bankDetails.ifscCode} 
+                          onChange={e => setBankDetails({...bankDetails, ifscCode: e.target.value.toUpperCase(), routingNumber: e.target.value.toUpperCase()})} 
+                          placeholder="e.g. HDFC0001234"
+                          required 
+                        />
+                        <p className="text-xs text-gray-500">11-character Indian Financial System Code</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>UPI ID (Optional)</Label>
+                        <Input 
+                          value={bankDetails.upiId} 
+                          onChange={e => setBankDetails({...bankDetails, upiId: e.target.value})} 
+                          placeholder="e.g. partner@okhdfcbank"
+                        />
+                        <p className="text-xs text-gray-500">For fast instant settlement</p>
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Bank Name</Label>
-                      <Input value={bankDetails.bankName} onChange={e => setBankDetails({...bankDetails, bankName: e.target.value})} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Account Number</Label>
-                      <Input value={bankDetails.accountNumber} onChange={e => setBankDetails({...bankDetails, accountNumber: e.target.value})} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Routing / IFSC Code</Label>
-                      <Input value={bankDetails.routingNumber} onChange={e => setBankDetails({...bankDetails, routingNumber: e.target.value})} required />
+                      <Label>PAN / Tax ID (Optional)</Label>
+                      <Input 
+                        value={bankDetails.panNumber} 
+                        onChange={e => setBankDetails({...bankDetails, panNumber: e.target.value.toUpperCase()})} 
+                        placeholder="e.g. ABCDE1234F"
+                      />
+                      <p className="text-xs text-gray-500">For TDS compliance & invoice generation</p>
                     </div>
                     
                     <div className="pt-4 border-t border-gray-100 mt-6">
                       <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /> KYC Document</h4>
                       <div className="space-y-2">
-                        <Label>Link to KYC Document (ID Proof / Tax ID)</Label>
+                        <Label>Link to KYC Document (Aadhaar / PAN / Cancelled Cheque)</Label>
                         <Input placeholder="https://drive.google.com/..." value={kycDocUrl} onChange={e => setKycDocUrl(e.target.value)} />
-                        <p className="text-xs text-gray-500 mt-1">Please provide a secure link to your identification document for compliance.</p>
+                        <p className="text-xs text-gray-500 mt-1">Please provide a Google Drive / cloud link to your ID or cancelled cheque for bank verification.</p>
                       </div>
                     </div>
 

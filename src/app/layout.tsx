@@ -6,6 +6,7 @@ import Providers from "@/components/providers";
 import Script from "next/script";
 
 import { FloatingWhatsAppWidget } from "@/components/floating-whatsapp-widget";
+import { ReferralTracker } from "@/components/analytics/ReferralTracker";
 
 export const metadata: Metadata = {
   title: "Gyrex - Practice Growth Platform",
@@ -75,6 +76,7 @@ export default function RootLayout({
         </noscript>
 
         <Providers>
+          <ReferralTracker />
           {children}
           <FloatingWhatsAppWidget />
           <Toaster />

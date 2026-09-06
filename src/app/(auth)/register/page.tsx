@@ -206,7 +206,29 @@ export function RegisterPage() {
     setLoading(true);
     const targetEmail = formData.email.trim().toLowerCase();
     const targetPassword = formData.password.trim();
+
     try {
+      // Resilient referral retrieval (URL -> 60-day Cookie -> LocalStorage)
+      const getActiveReferralCode = (): string | undefined => {
+        const urlRef = searchParams.get("ref") || searchParams.get("aff") || searchParams.get("referral");
+        if (urlRef && urlRef.trim()) return urlRef.trim().toUpperCase();
+
+        if (typeof document !== "undefined") {
+          const cookieMatch = document.cookie.match(/(?:^|;\s*)gyrex_ref=([^;]+)/);
+          if (cookieMatch && cookieMatch[1]?.trim()) {
+            return decodeURIComponent(cookieMatch[1].trim()).toUpperCase();
+          }
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            const localRef = localStorage.getItem("gyrex_ref");
+            if (localRef && localRef.trim()) return localRef.trim().toUpperCase();
+          } catch (e) {}
+        }
+        return undefined;
+      };
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,7 +237,7 @@ export function RegisterPage() {
           email: targetEmail,
           password: targetPassword,
           confirmPassword: formData.confirmPassword.trim(),
-          affiliateCode: searchParams.get("ref") || undefined,
+          affiliateCode: getActiveReferralCode(),
         }),
       });
       const data = await res.json();
