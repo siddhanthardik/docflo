@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useLocationContext } from "@/contexts/LocationContext";
 import {
   LifeBuoy,
   PlusCircle,
@@ -22,6 +23,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Headphones,
+  User,
+  ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,20 +56,60 @@ interface SupportTicket {
 }
 
 const CATEGORIES = [
-  { id: "WHATSAPP_AI", label: "WhatsApp AI & Receptionist", icon: Smartphone, desc: "QR scan, message delays, prompt customization" },
-  { id: "APPOINTMENTS", label: "Appointments & Calendar", icon: Calendar, desc: "Booking conflicts, doctor schedule, timings" },
-  { id: "GOOGLE_BUSINESS_SEO", label: "Google Business & Local SEO", icon: Star, desc: "Post publishing, Google reviews, keyword rank" },
-  { id: "BILLING", label: "Billing & Subscription", icon: FileText, desc: "Invoices, renewals, plan upgrades, payments" },
-  { id: "WEBSITE", label: "Clinic Website & Domains", icon: Globe, desc: "Custom domain SSL, landing page edits, forms" },
-  { id: "OTHER", label: "General & Technical Support", icon: Settings, desc: "Login, team access, feature requests" },
+  {
+    id: "WHATSAPP_AI",
+    label: "WhatsApp AI & Bot",
+    icon: Smartphone,
+    desc: "QR connection, delays, message prompts",
+    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+  },
+  {
+    id: "APPOINTMENTS",
+    label: "Appointments & OPD",
+    icon: Calendar,
+    desc: "Schedules, slots, booking conflicts",
+    color: "text-blue-600 bg-blue-50 border-blue-100",
+  },
+  {
+    id: "GOOGLE_BUSINESS_SEO",
+    label: "Google Profile & SEO",
+    icon: Star,
+    desc: "Hours sync, rankings, reviews",
+    color: "text-amber-600 bg-amber-50 border-amber-100",
+  },
+  {
+    id: "BILLING",
+    label: "Billing & Plans",
+    icon: FileText,
+    desc: "Subscription, invoices, payment receipts",
+    color: "text-purple-600 bg-purple-50 border-purple-100",
+  },
+  {
+    id: "WEBSITE",
+    label: "Clinic Website",
+    icon: Globe,
+    desc: "Domain SSL, website content, forms",
+    color: "text-indigo-600 bg-indigo-50 border-indigo-100",
+  },
+  {
+    id: "OTHER",
+    label: "Technical Assistance",
+    icon: Settings,
+    desc: "Staff login, account access, general help",
+    color: "text-slate-600 bg-slate-50 border-slate-100",
+  },
 ];
 
 export default function SupportPage() {
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const { activeLocation } = useLocationContext();
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [activeTab, setActiveTab] = useState<"ALL" | "ACTIVE" | "RESOLVED">("ALL");
+  const [supportNumber, setSupportNumber] = useState("919717228528");
 
   // New Ticket Modal State
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
@@ -79,6 +122,22 @@ export default function SupportPage() {
   // Message Reply State
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+
+  // Load configured platform support WhatsApp number
+  useEffect(() => {
+    async function loadSupportNumber() {
+      try {
+        const res = await fetch("/api/platform/whatsapp-number");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.whatsappNumber) setSupportNumber(data.whatsappNumber);
+        }
+      } catch (e) {
+        // Fallback already set
+      }
+    }
+    loadSupportNumber();
+  }, []);
 
   const fetchTickets = async () => {
     try {
@@ -103,6 +162,15 @@ export default function SupportPage() {
     fetchTickets();
   }, []);
 
+  const handleOpenWhatsAppSupport = () => {
+    const cleanNumber = supportNumber.replace(/[^\d]/g, "");
+    const doctorName = session?.user?.name || "Doctor";
+    const clinicName = activeLocation?.locationName || "My Clinic";
+    const prefilledText = `Hi Gyrex Support Team, I am ${doctorName} from ${clinicName}. I need quick assistance with my clinic platform.`;
+    const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(prefilledText)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !description.trim()) {
@@ -126,8 +194,8 @@ export default function SupportPage() {
       if (!res.ok) throw new Error(data.error || "Failed to create ticket.");
 
       toast({
-        title: "🎫 Ticket Raised Successfully!",
-        description: `Ticket #${data.ticket.ticketNumber} logged. Our team has been notified via email.`,
+        title: "🎫 Ticket Raised Successfully",
+        description: `Ticket #${data.ticket.ticketNumber} logged. Our technical team has been notified.`,
       });
 
       setIsNewTicketOpen(false);
@@ -181,187 +249,301 @@ export default function SupportPage() {
   const openCount = tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length;
   const resolvedCount = tickets.filter((t) => t.status === "RESOLVED" || t.status === "CLOSED").length;
 
+  const filteredTickets = tickets.filter((ticket) => {
+    if (activeTab === "ACTIVE") return ticket.status === "OPEN" || ticket.status === "IN_PROGRESS";
+    if (activeTab === "RESOLVED") return ticket.status === "RESOLVED" || ticket.status === "CLOSED";
+    return true;
+  });
+
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      {/* ── Page Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10 max-w-2xl">
-          <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 text-xs px-3 py-1 font-semibold mb-3">
-            <Headphones className="w-3.5 h-3.5 mr-1.5 inline" /> Priority Clinic Support
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Doctor Help & Support Center
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+      {/* ── App Header ────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Gyrex Support Desk Online
+            </span>
+            <span className="text-xs text-slate-400 font-medium">Fast Doctor Assistance</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Help & Clinic Support
           </h1>
-          <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
-            Need assistance with WhatsApp AI Receptionist, Google Business Profile, Appointments, or Billing? Raise a ticket and our technical team will resolve it swiftly.
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Quick assistance for your clinic OPD, WhatsApp AI Receptionist, and listings.
           </p>
         </div>
 
-        <div className="relative z-10 flex items-center gap-3">
-          <Button
-            onClick={() => setIsNewTicketOpen(true)}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" /> Raise Support Ticket
-          </Button>
-        </div>
-
-        {/* Ambient background decoration */}
-        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <Button
+          onClick={() => setIsNewTicketOpen(true)}
+          className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-2 self-start sm:self-auto shrink-0"
+        >
+          <PlusCircle className="w-4 h-4" /> Raise Support Ticket
+        </Button>
       </div>
 
-      {/* ── Summary Stats ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Tickets</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{tickets.length}</p>
+      {/* ── 1-Tap Fast Help Channels (Native App Theme Cards) ────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        {/* WhatsApp Direct Doctor Support Card */}
+        <button
+          type="button"
+          onClick={handleOpenWhatsAppSupport}
+          className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all text-left flex items-start justify-between group cursor-pointer"
+        >
+          <div className="space-y-1.5 min-w-0 pr-2">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white mb-2">
+              <MessageSquare className="w-5 h-5 fill-current" />
+            </div>
+            <h3 className="text-sm sm:text-base font-bold leading-tight">Chat on WhatsApp</h3>
+            <p className="text-xs text-emerald-100 leading-snug">
+              Direct priority chat with technical engineers.
+            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-            <MessageSquare className="w-5 h-5" />
-          </div>
-        </div>
+          <ArrowUpRight className="w-5 h-5 text-white/80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0 mt-1" />
+        </button>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Active / In Progress</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{openCount}</p>
+        {/* Doctor Helpline Card */}
+        <a
+          href={`tel:+${supportNumber.replace(/\D/g, "")}`}
+          className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all text-left flex items-start justify-between group cursor-pointer"
+        >
+          <div className="space-y-1.5 min-w-0 pr-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+              <Headphones className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">Doctor Helpline</h3>
+            <p className="text-xs text-slate-500 leading-snug">
+              Instant voice call for urgent OPD queries.
+            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
+          <ArrowUpRight className="w-5 h-5 text-slate-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0 mt-1" />
+        </a>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Resolved Tickets</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{resolvedCount}</p>
+        {/* Create Tracked Ticket Card */}
+        <button
+          type="button"
+          onClick={() => setIsNewTicketOpen(true)}
+          className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all text-left flex items-start justify-between group cursor-pointer"
+        >
+          <div className="space-y-1.5 min-w-0 pr-2">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">Tracked Ticket</h3>
+            <p className="text-xs text-slate-500 leading-snug">
+              Log technical issue with ticket ID & email trail.
+            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-        </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0 mt-1" />
+        </button>
       </div>
 
-      {/* ── Main Tickets View ──────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Your Support Tickets</h2>
-            <p className="text-xs text-slate-500">Track real-time status and converse with support engineers</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchTickets}
-            disabled={loading}
-            className="text-xs font-semibold"
+      {/* ── Segmented Control Filter Tabs (App Theme) ───────────────── */}
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/60">
+          <button
+            type="button"
+            onClick={() => setActiveTab("ALL")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "ALL"
+                ? "bg-white text-slate-900 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
+            All Tickets <span className="ml-1 text-[11px] font-semibold text-slate-400">({tickets.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("ACTIVE")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "ACTIVE"
+                ? "bg-white text-amber-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Active <span className="ml-1 text-[11px] font-semibold text-amber-600">({openCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("RESOLVED")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "RESOLVED"
+                ? "bg-white text-emerald-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Resolved <span className="ml-1 text-[11px] font-semibold text-emerald-600">({resolvedCount})</span>
+          </button>
         </div>
 
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchTickets}
+          disabled={loading}
+          className="h-8 px-2.5 text-xs text-slate-500 hover:text-slate-900 shrink-0"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </Button>
+      </div>
+
+      {/* ── App-Themed Support Tickets Feed ─────────────────────────── */}
+      <div className="space-y-3">
         {loading ? (
-          <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
             <RefreshCw className="w-6 h-6 animate-spin text-indigo-500" />
-            Loading your support history...
+            Loading your support tickets...
           </div>
-        ) : tickets.length === 0 ? (
-          <div className="py-16 text-center max-w-sm mx-auto px-4">
+        ) : filteredTickets.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 text-center max-w-md mx-auto">
             <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <LifeBuoy className="w-7 h-7" />
             </div>
-            <h3 className="text-sm font-bold text-slate-900">No Support Tickets Yet</h3>
+            <h3 className="text-sm font-bold text-slate-900">
+              {activeTab === "ACTIVE"
+                ? "No Active Tickets"
+                : activeTab === "RESOLVED"
+                ? "No Resolved Tickets"
+                : "No Support Tickets Yet"}
+            </h3>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Everything looks smooth! If you ever face an issue or need assistance with clinic features, click &quot;Raise Support Ticket&quot; above.
+              {activeTab === "ACTIVE"
+                ? "All your support inquiries have been resolved. Need something new?"
+                : "Need help with appointments, billing, or WhatsApp bot? Raise a ticket and we'll resolve it swiftly."}
             </p>
             <Button
               onClick={() => setIsNewTicketOpen(true)}
-              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl h-9 px-4"
             >
-              <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Create First Ticket
+              <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Raise New Ticket
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {tickets.map((ticket) => {
-              const statusBadge =
-                ticket.status === "OPEN"
-                  ? { label: "Open", color: "bg-amber-100 text-amber-800 border-amber-200" }
-                  : ticket.status === "IN_PROGRESS"
-                  ? { label: "In Progress", color: "bg-blue-100 text-blue-800 border-blue-200" }
-                  : { label: "Resolved", color: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+          filteredTickets.map((ticket) => {
+            const cat = CATEGORIES.find((c) => c.id === ticket.category) || CATEGORIES[5];
+            const Icon = cat.icon;
 
-              const priorityBadge =
-                ticket.priority === "URGENT"
-                  ? { label: "Urgent", color: "text-rose-600 bg-rose-50 border-rose-200" }
-                  : ticket.priority === "HIGH"
-                  ? { label: "High", color: "text-amber-600 bg-amber-50 border-amber-200" }
-                  : { label: "Medium", color: "text-slate-600 bg-slate-50 border-slate-200" };
+            const isResolved = ticket.status === "RESOLVED" || ticket.status === "CLOSED";
+            const isInProgress = ticket.status === "IN_PROGRESS";
 
-              return (
-                <div
-                  key={ticket.id}
-                  onClick={() => setSelectedTicket(ticket)}
-                  className="p-5 hover:bg-slate-50/80 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
-                >
-                  <div className="space-y-1.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                        #{ticket.ticketNumber}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge.color}`}>
-                        {statusBadge.label}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${priorityBadge.color}`}>
-                        {priorityBadge.label}
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {new Date(ticket.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </span>
+            return (
+              <div
+                key={ticket.id}
+                onClick={() => setSelectedTicket(ticket)}
+                className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer space-y-3 active:scale-[0.995] group"
+              >
+                {/* Card Top: Category Icon + Ticket Number + Status Badge */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${cat.color}`}>
+                      <Icon className="w-4 h-4" />
                     </div>
-
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                      {ticket.subject}
-                    </h3>
-                    <p className="text-xs text-slate-500 line-clamp-1">
-                      {ticket.description}
-                    </p>
+                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                      #{ticket.ticketNumber}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500 truncate hidden sm:inline">
+                      {cat.label}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0 text-slate-400 group-hover:text-slate-700 text-xs font-semibold">
-                    <span>{ticket.messages.length} message{ticket.messages.length !== 1 ? "s" : ""}</span>
-                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                        isResolved
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : isInProgress
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isResolved ? "bg-emerald-500" : isInProgress ? "bg-blue-500 animate-pulse" : "bg-amber-500"
+                        }`}
+                      />
+                      {isResolved ? "Resolved" : isInProgress ? "In Progress" : "Open"}
+                    </span>
+
+                    {ticket.priority === "URGENT" && (
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                        Urgent
+                      </span>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Card Middle: Subject & Description */}
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                    {ticket.subject}
+                  </h3>
+                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-medium">
+                    {ticket.description}
+                  </p>
+                </div>
+
+                {/* Card Bottom: Messages & Timestamp */}
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs text-slate-400">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                    <span>
+                      {ticket.messages.length} message{ticket.messages.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px]">
+                      {new Date(ticket.createdAt).toLocaleDateString("en-IN", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* ── Modal: Raise New Ticket ────────────────────────────────── */}
+      {/* ── App-Themed Modal: Raise Support Ticket ───────────────────── */}
       {isNewTicketOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-xl max-h-[calc(100dvh-2rem)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
-            <div className="shrink-0 bg-slate-900 p-5 sm:p-6 text-white flex items-center justify-between">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold">Raise Support Ticket</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Dispatches an instant email to the Gyrex engineering team</p>
+          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Pinned Modal Header */}
+            <div className="shrink-0 bg-slate-900 px-5 py-4 sm:px-6 sm:py-5 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center">
+                  <LifeBuoy className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold leading-tight">Raise Support Ticket</h2>
+                  <p className="text-xs text-slate-400">Logged directly to Gyrex Engineering</p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsNewTicketOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form id="new-ticket-form" onSubmit={handleCreateTicket} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
-              {/* Category Selector */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Issue Category
+            {/* Scrollable Form Content */}
+            <form
+              id="new-ticket-form"
+              onSubmit={handleCreateTicket}
+              className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4"
+            >
+              {/* Category Selector Chips */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Select Issue Category
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {CATEGORIES.map((cat) => {
@@ -374,7 +556,7 @@ export default function SupportPage() {
                         onClick={() => setCategory(cat.id)}
                         className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-50/80 border-indigo-500 ring-1 ring-indigo-500 text-indigo-950 shadow-xs"
+                            ? "bg-indigo-50/90 border-indigo-500 ring-1 ring-indigo-500 text-indigo-950 shadow-xs"
                             : "bg-white border-slate-200 hover:border-slate-300 text-slate-700"
                         }`}
                       >
@@ -389,18 +571,18 @@ export default function SupportPage() {
                 </div>
               </div>
 
-              {/* Priority */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Urgency / Priority
+              {/* Priority Selector Pills */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Urgency
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setPriority(p)}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         priority === p
                           ? p === "URGENT"
                             ? "bg-rose-500 text-white border-rose-600"
@@ -417,42 +599,42 @@ export default function SupportPage() {
               </div>
 
               {/* Subject */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Subject / Short Summary
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Subject / Summary
                 </label>
                 <Input
-                  placeholder="e.g. WhatsApp QR not refreshing or Google post not syncing"
+                  placeholder="e.g. WhatsApp QR not refreshing or calendar slots missing"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="text-xs font-medium"
+                  className="h-10 text-xs sm:text-sm font-medium rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-indigo-500"
                   required
                 />
               </div>
 
               {/* Description */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                   Detailed Explanation
                 </label>
                 <Textarea
-                  placeholder="Please describe what happened, any error message you saw, and what steps we can take to assist you..."
+                  placeholder="Please describe what happened, patient or doctor details, and any error message you saw..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  className="text-xs font-medium resize-none"
+                  className="text-xs sm:text-sm font-medium resize-none rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-indigo-500"
                   required
                 />
               </div>
             </form>
 
-            {/* Footer Actions */}
-            <div className="shrink-0 p-4 flex items-center justify-end gap-2.5 sm:gap-3 border-t border-slate-100 bg-slate-50/90">
+            {/* Pinned Footer Actions */}
+            <div className="shrink-0 px-5 py-3.5 sm:px-6 bg-slate-50/95 border-t border-slate-100 flex items-center justify-end gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsNewTicketOpen(false)}
-                className="h-10 px-4 rounded-xl text-xs font-bold"
+                className="h-9 px-4 rounded-xl text-xs font-semibold"
               >
                 Cancel
               </Button>
@@ -460,44 +642,46 @@ export default function SupportPage() {
                 type="submit"
                 form="new-ticket-form"
                 disabled={submitting}
-                className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20"
+                className="h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs"
               >
-                {submitting ? "Dispatching..." : "Submit Support Ticket"}
+                {submitting ? "Dispatching..." : "Submit Ticket"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal: View Ticket & Conversational Thread ─────────────── */}
+      {/* ── App-Themed Modal: View Ticket & Interactive Chat Thread ───── */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[calc(100dvh-2rem)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
-            
+          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="bg-slate-900 p-5 sm:p-6 text-white shrink-0 flex items-start justify-between">
-              <div className="min-w-0 pr-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-mono text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded">
+            <div className="bg-slate-900 px-5 py-4 sm:px-6 sm:py-5 text-white shrink-0 flex items-start justify-between border-b border-slate-800">
+              <div className="min-w-0 pr-4 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded-md">
                     #{selectedTicket.ticketNumber}
                   </span>
                   <Badge className="bg-white/20 text-white border-0 text-[10px] font-bold">
                     {selectedTicket.status}
                   </Badge>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {CATEGORIES.find((c) => c.id === selectedTicket.category)?.label || selectedTicket.category}
+                  </span>
                 </div>
                 <h2 className="text-base font-bold truncate leading-snug">{selectedTicket.subject}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Category: {selectedTicket.category}</p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedTicket(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Conversation Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+            {/* Conversation Messages (Chat Bubble Theme) */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-3.5 bg-slate-50/60">
               {selectedTicket.messages.map((msg) => {
                 const isSupport = msg.senderType === "SUPPORT_ADMIN";
                 return (
@@ -505,45 +689,54 @@ export default function SupportPage() {
                     key={msg.id}
                     className={`flex flex-col ${isSupport ? "items-start" : "items-end"}`}
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 mb-1">
-                      <span>{isSupport ? "🛡️ Gyrex Support Team" : `Dr. ${msg.senderName}`}</span>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 mb-1 px-1">
+                      {isSupport ? (
+                        <span className="flex items-center gap-1 text-indigo-700">
+                          <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Gyrex Support Engineer
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <User className="w-3.5 h-3.5 text-slate-400" /> Dr. {msg.senderName}
+                        </span>
+                      )}
                       <span>&bull;</span>
-                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span>
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                     </div>
                     <div
                       className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-xs ${
                         isSupport
-                          ? "bg-white text-slate-800 rounded-tl-none border border-slate-200"
+                          ? "bg-white text-slate-800 rounded-tl-none border border-slate-200/90"
                           : "bg-indigo-600 text-white rounded-tr-none"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.message}</p>
+                      <p className="whitespace-pre-wrap font-medium">{msg.message}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Reply Input Bar */}
-            <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+            {/* Reply Input Bar (Pinned at Bottom) */}
+            <div className="p-3 sm:p-4 bg-white border-t border-slate-200/90 shrink-0">
               <div className="flex items-end gap-2">
                 <Textarea
-                  placeholder="Type your reply or additional details..."
+                  placeholder="Type your reply to the engineering team..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   rows={2}
-                  className="flex-1 text-xs resize-none font-medium"
+                  className="flex-1 text-xs resize-none font-medium rounded-xl border-slate-200 focus:border-indigo-500"
                 />
                 <Button
                   onClick={handleSendReply}
                   disabled={!replyText.trim() || sendingReply}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-auto py-3 px-4 shrink-0"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-auto py-3 px-4 rounded-xl shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-
           </div>
         </div>
       )}

@@ -53,13 +53,16 @@ export function FloatingWhatsAppWidget() {
     "/affiliates",
     "/login",
     "/signup",
+    "/support",
+    "/help",
+    "/download-app",
     "/ai-receptionist-demo"
   ];
 
-  const isAuthenticated = status === "authenticated" || Boolean(session);
+  const isAuthenticated = status === "authenticated" || Boolean(session?.user);
   const isDashboardRoute = DASHBOARD_ROUTES.some((route) => pathname?.startsWith(route));
 
-  // Exclude SaaS marketing widget when authenticated or on internal dashboard routes or doctor custom domains
+  // Exclude SaaS marketing sales widget when authenticated or on internal dashboard routes or doctor custom domains
   const isInternalApp = isDoctorDomain || isAuthenticated || isDashboardRoute;
 
   useEffect(() => {
