@@ -184,20 +184,12 @@ function MobileTrialSpotlight({ businessName }: { businessName: string }) {
         <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
           Automate Your Clinic Growth with Gyrex
         </h3>
-        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-          Everything included to outrank local competitors and double your Google Maps patient consultations.
-        </p>
       </div>
 
       <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between">
-        <div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-extrabold text-slate-900">₹0</span>
-            <span className="text-xs text-slate-600 font-medium">for 14 days</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            <span className="line-through">₹5,000</span> <span className="text-rose-600 font-bold">₹2,499/mo</span> after trial
-          </p>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-extrabold text-slate-900">₹0</span>
+          <span className="text-xs text-slate-600 font-medium">for 14 days</span>
         </div>
         <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg text-[10px]">
           100% Risk Free
@@ -256,24 +248,19 @@ function GyrexPlatformSidebar({ businessName }: { businessName: string }) {
               14-Day Free Trial
             </span>
           </div>
-          <h3 className="text-xl font-bold leading-tight mb-2">Automate Your Clinic Growth with Gyrex</h3>
-          <p className="text-sm text-indigo-100 leading-relaxed font-normal">
-            Everything included to outrank local competition and double your Google Maps patient consultations.
-          </p>
+          <h3 className="text-xl font-bold leading-tight">Automate Your Clinic Growth with Gyrex</h3>
         </div>
       </div>
 
       {/* Pricing / Trial offer */}
-      <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-        <div className="flex items-baseline gap-2 mb-1">
+      <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <div className="flex items-baseline gap-2">
           <span className="text-3xl font-extrabold text-slate-900 tracking-tight">₹0</span>
           <span className="text-sm font-medium text-slate-600">for 14 days</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="line-through decoration-slate-300 font-normal">Regular ₹5,000/mo</span>
-          <span className="text-rose-600 font-bold text-sm">₹2,499/mo</span>
-          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-md text-[10px] ml-auto">100% Risk Free</span>
-        </div>
+        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 font-semibold rounded-md text-xs">
+          100% Risk Free
+        </span>
       </div>
 
       {/* Comprehensive Features List */}
@@ -1412,11 +1399,6 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
                       <Sparkles className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100/80 border border-indigo-200/60 px-2.5 py-0.5 rounded-full">
-                          Action Plan & Doctor Support
-                        </span>
-                      </div>
                       <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                         Ready to Fix These Ranking Obstacles for {cleanName}?
                       </h2>
@@ -1561,11 +1543,7 @@ export default function AuditReportPage({ params }: { params: Promise<{ id: stri
             <span className="text-base font-bold text-slate-900">₹0</span>
             <span className="text-[11px] text-slate-500 font-normal truncate">for 14 days</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px]">
-            <span className="line-through text-slate-400 font-normal">₹5,000</span>
-            <span className="text-rose-600 font-bold">₹2,499/mo</span>
-            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 font-medium rounded text-[9px]">Risk Free</span>
-          </div>
+          <span className="text-[10px] text-emerald-700 font-semibold">100% Risk Free</span>
         </div>
         <Link
           href="/register"
