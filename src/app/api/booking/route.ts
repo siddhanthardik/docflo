@@ -52,7 +52,6 @@ export async function POST(req: Request) {
         specialty: true,
         address: true,
         city: true,
-        googleMapsUri: true,
         enableBookingConfirmation: true
       }
     });
@@ -90,6 +89,10 @@ export async function POST(req: Request) {
     // Send formatted WhatsApp appointment confirmation if connected
     try {
       if (whatsappManager.isConnected(doctorId) && doctor?.enableBookingConfirmation !== false && patient.phone) {
+        const mapsSearchUrl = doctor?.address
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([doctor.clinicName, doctor.address, doctor.city].filter(Boolean).join(", "))}`
+          : null;
+
         const messageText = formatAppointmentConfirmationCard({
           patient: {
             firstName: patient.firstName,
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
           consultationFee: service.price,
           address: doctor?.address,
           city: doctor?.city,
-          mapsUrl: doctor?.googleMapsUri
+          mapsUrl: mapsSearchUrl
         });
         await whatsappManager.sendMessage(doctorId, patient.phone, messageText, "Clinic");
       }

@@ -314,13 +314,16 @@ export async function POST(req: Request) {
           clinicName: true,
           address: true,
           city: true,
-          googleMapsUri: true,
           enableBookingConfirmation: true,
           specialty: true
         }
       });
 
       if (!isWalkIn && whatsappManager.isConnected(doctorId) && doctorRecord?.enableBookingConfirmation !== false && appointment.patient.phone && status === "CONFIRMED") {
+        const mapsSearchUrl = doctorRecord?.address
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([doctorRecord.clinicName, doctorRecord.address, doctorRecord.city].filter(Boolean).join(", "))}`
+          : null;
+
         const messageText = formatAppointmentConfirmationCard({
           patient: appointment.patient,
           doctorName: appointment.practitioner?.name || doctorRecord?.name,
@@ -332,7 +335,7 @@ export async function POST(req: Request) {
           isTele: type === "TELE_CONSULTATION",
           address: doctorRecord?.address,
           city: doctorRecord?.city,
-          mapsUrl: doctorRecord?.googleMapsUri,
+          mapsUrl: mapsSearchUrl,
         });
 
         const patientPhone = appointment.patient.phone;

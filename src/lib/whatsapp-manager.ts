@@ -1857,7 +1857,7 @@ class WhatsAppManager {
                         consultationFee: matchedPractitioner?.consultationFee,
                         address: clinicAddress || doctorInfo?.address,
                         city: doctorInfo?.city,
-                        mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                        mapsUrl: clinicMapsUri
                       });
                       await this.sendOutboundPatientMessage(sock, doctorId, prefilledPhone, ptMsg, newPatient.id, `${newPatient.firstName} ${newPatient.lastName}`.trim());
                       finalAiReply += `\n\nDone, Doctor! I have created a new patient profile for *${cleanName}* and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation card has been sent to them.`;
@@ -1894,7 +1894,7 @@ class WhatsAppManager {
                             consultationFee: matchedPractitioner?.consultationFee,
                             address: clinicAddress || doctorInfo?.address,
                             city: doctorInfo?.city,
-                            mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                            mapsUrl: clinicMapsUri
                           });
                           await this.sendOutboundPatientMessage(sock, doctorId, pt.phone, ptMsg, pt.id, `${pt.firstName} ${pt.lastName}`.trim());
                           finalAiReply += `\n\nDone, Doctor! I have booked the appointment for ${pt.firstName} ${pt.lastName} on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation card.`;
@@ -2332,7 +2332,7 @@ class WhatsAppManager {
                             isTele: isTele,
                             address: clinicAddress || doctorInfo?.address,
                             city: doctorInfo?.city,
-                            mapsUrl: clinicMapsUri || doctorInfo?.googleMapsUri
+                            mapsUrl: clinicMapsUri
                           });
 
                           // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
