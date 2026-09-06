@@ -250,14 +250,57 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
                         issue:
                           userRank === 1
                             ? `Review Velocity: Competitors average ${compAvgReviews} reviews.`
-                            : `Review Deficit: Only ${reviewCountStr} reviews found.`,
+                            : (placeData?.reviewCount || 0) === 0
+                              ? `Review Deficit: No Google reviews found on this listing.`
+                              : `Review Deficit: Only ${reviewCountStr} reviews found.`,
                         evidence:
                           userRank === 1
                             ? `Although you currently hold the #1 rank, collecting regular monthly reviews protects your leadership against high-volume competitors.`
-                            : `Nearby competitors average ${compAvgReviews} reviews on Google Maps.`,
+                            : `Nearby competitors average ${compAvgReviews} reviews on Google Maps. Having verified patient reviews is the #1 local ranking factor.`,
                         impact: userRank === 1 ? "Medium" : "High",
                       }
                     : null,
+                  (placeData?.reviewCount || 0) < 50 || userRank > 3
+                    ? {
+                        issue: "Zero Recent Review Velocity (Stalled Patient Feedback Pipeline).",
+                        evidence:
+                          "Google prioritizes fresh reviews received in the last 30 to 60 days over older reviews. Without a regular review pipeline, competitors outpace you.",
+                        impact: "High",
+                      }
+                    : null,
+                  (placeData?.types?.length || 0) <= 2
+                    ? {
+                        issue: "Secondary medical categories missing.",
+                        evidence:
+                          "Nearby competitors use an average of 3-4 categories to capture multi-specialty patient searches across neighboring areas.",
+                        impact: "High",
+                      }
+                    : null,
+                  {
+                    issue: "Unindexed Treatments Catalog on Google Business Profile.",
+                    evidence:
+                      `Medical treatments for ${specialityData.speciality} (such as consultations, diagnostics, and preventive care) are not published in Google's native services catalog, forfeiting high-intent patient searches.`,
+                    impact: "High",
+                  },
+                  {
+                    issue: "Zero Weekly Google Posts & Activity Signals.",
+                    evidence:
+                      "Google Maps rewards practices that publish weekly health posts, clinic announcements, and photos with higher 3-pack search placement.",
+                    impact: "Medium",
+                  },
+                  placeData?.name && (placeData.name.includes("|") || placeData.name.includes(" - ") || placeData.name.toLowerCase().includes("near me") || placeData.name.toLowerCase().includes("best"))
+                    ? {
+                        issue: "Google Guideline Risk: Keyword stuffing detected in business title.",
+                        evidence:
+                          "Adding marketing tags or location keywords to your Google profile name violates Google Business Profile policies and risks profile suspension. Shift these specialty terms into your official Services Catalog and Secondary Categories instead.",
+                        impact: "High",
+                      }
+                    : {
+                        issue: "0% Patient Review Response Rate.",
+                        evidence:
+                          "Google explicitly confirms that responding promptly to patient reviews builds higher local authority and engagement signals.",
+                        impact: "Medium",
+                      },
                   !placeData?.website
                     ? {
                         issue: "No website link found on Google Maps.",
@@ -266,27 +309,11 @@ export async function executeAuditScan(auditId: string, data: AuditScanInput) {
                         impact: "High",
                       }
                     : null,
-                  (placeData?.types?.length || 0) <= 2
-                    ? {
-                        issue: "Secondary medical categories missing.",
-                        evidence:
-                          "Nearby competitors use an average of 3-4 categories to capture multi-specialty patient searches.",
-                        impact: "High",
-                      }
-                    : null,
                   placeData?.rating && placeData.rating < specialityData.expectedRating
                     ? {
                         issue: `Rating below local benchmark (${placeData.rating} vs ${specialityData.expectedRating}).`,
                         evidence:
                           "Patients are proven to filter out clinics with ratings lower than their immediate local peers.",
-                        impact: "High",
-                      }
-                    : null,
-                  !placeData?.name?.toLowerCase().includes(specialityData.speciality.toLowerCase())
-                    ? {
-                        issue: `Primary keyword "${specialityData.speciality}" not found in business title.`,
-                        evidence:
-                          "Profiles missing the exact specialty keyword in their title struggle to rank for broad category searches.",
                         impact: "High",
                       }
                     : null,

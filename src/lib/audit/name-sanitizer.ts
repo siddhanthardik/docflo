@@ -27,12 +27,13 @@ export function sanitizeDoctorBusinessName(rawName: string | null | undefined): 
 
   const original = rawName.trim();
 
-  // 1. Deduplicate repeated doctor prefixes (e.g. "Dr. Dr.", "Dr.Dr.", "Dr Dr", "Doctor Dr.")
-  let normalized = original
-    .replace(/\b(dr\.?|doctor)\s*(dr\.?|doctor)\b/gi, "Dr.")
-    .replace(/\b(dr\.?|doctor)\s+(dr\.?|doctor)\b/gi, "Dr.")
-    .replace(/^dr\.\s*dr\.\s*/i, "Dr. ")
-    .replace(/^dr\s*dr\s*/i, "Dr. ");
+  // 1. Deduplicate repeated doctor prefixes and prevent double periods (e.g. "Dr. Dr." -> "Dr.", "Dr.." -> "Dr.")
+  let normalized = original.replace(/\.{2,}/g, ".");
+  normalized = normalized
+    .replace(/^(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\s+/i, "Dr. ")
+    .replace(/\b(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\b/gi, "Dr.")
+    .replace(/^dr\s+/i, "Dr. ")
+    .replace(/\.{2,}/g, ".");
 
   // 2. Identify delimiters commonly used for Google Business Profile keyword stuffing
   // e.g. " | ", " - ", " : ", " • ", " – ", " / "
@@ -44,8 +45,10 @@ export function sanitizeDoctorBusinessName(rawName: string | null | undefined): 
 
   // Cleanup honorific in primary segment if it has "Dr."
   primarySegment = primarySegment
-    .replace(/\b(dr\.?|doctor)\s*(dr\.?|doctor)\b/gi, "Dr.")
+    .replace(/^(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\s+/i, "Dr. ")
+    .replace(/\b(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\b/gi, "Dr.")
     .replace(/^dr\s+/i, "Dr. ")
+    .replace(/\.{2,}/g, ".")
     .trim();
 
   // 3. Detect keyword stuffing and extracted keywords from remaining segments
@@ -96,7 +99,10 @@ export function sanitizeDoctorBusinessName(rawName: string | null | undefined): 
 
   return {
     cleanDisplayName: primarySegment,
-    fullRawTitle: original.replace(/\b(dr\.?|doctor)\s*(dr\.?|doctor)\b/gi, "Dr."),
+    fullRawTitle: original
+      .replace(/\.{2,}/g, ".")
+      .replace(/^(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\s+/i, "Dr. ")
+      .replace(/\b(?:dr\.?|doctor)\s+(?:dr\.?|doctor)\b/gi, "Dr."),
     doctorHonorific: hasDr ? "Dr." : null,
     isKeywordStuffed,
     stuffedKeywords,
