@@ -523,24 +523,26 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Cooldown Override Modal */}
       {showCooldownOverride && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-100">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="bg-amber-100 p-3 rounded-full text-amber-600 flex-shrink-0">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Cooldown Period Active</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  This patient has recently received a review request. Sending another request so soon might be perceived as spam. 
-                  Are you sure you want to override the cooldown?
-                </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-[calc(100vw-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col p-0 overflow-hidden border border-gray-100">
+            <div className="p-5 sm:p-6 flex-1 min-h-0 overflow-y-auto">
+              <div className="flex items-start gap-4">
+                <div className="bg-amber-100 p-3 rounded-2xl text-amber-600 shrink-0">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Cooldown Period Active</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    This patient has recently received a review request. Sending another request so soon might be perceived as spam. 
+                    Are you sure you want to override the cooldown?
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/90 flex justify-end gap-2.5">
               <button
                 onClick={() => setShowCooldownOverride(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                className="h-10 px-4 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
                 disabled={sendingReview}
               >
                 Cancel
@@ -548,7 +550,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={() => handleSendReviewRequest(true)}
                 disabled={sendingReview}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 transition-colors flex items-center gap-2"
+                className="h-10 px-4 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 transition-colors flex items-center gap-2"
               >
                 {sendingReview ? "Sending..." : "Override & Send"}
               </button>

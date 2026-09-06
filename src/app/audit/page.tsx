@@ -953,8 +953,8 @@ export default function AuditLandingPage() {
 
       {/* ── CHECK AUDIT STATUS MODAL ─────────────────────────────────────── */}
       {showStatusModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-5 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 max-w-md w-[calc(100vw-1.5rem)] sm:w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto shadow-2xl relative space-y-5 text-left">
             
             <button
               onClick={() => setShowStatusModal(false)}

@@ -219,11 +219,11 @@ export function PricingClient({ initialPackage }: { initialPackage: any }) {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="shrink-0 p-5 sm:p-6 border-b">
             <DialogTitle>{editingPrice ? "Edit Pricing" : "Add Country Pricing"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={submitPrice} className="space-y-6 mt-4">
+          <form id="pricing-form" onSubmit={submitPrice} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-6">
             
             <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
               <div className="space-y-2">
@@ -316,14 +316,14 @@ export function PricingClient({ initialPackage }: { initialPackage: any }) {
                 </div>
               </div>
             </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
-                {loading ? "Saving..." : "Save Pricing"}
-              </Button>
-            </div>
           </form>
+
+          <div className="shrink-0 p-4 border-t border-slate-200 bg-slate-50/90 flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="submit" form="pricing-form" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
+              {loading ? "Saving..." : "Save Pricing"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -300,9 +300,9 @@ export default function RecommendationsPage() {
 
       {/* --- IN APP EDITING MODALS --- */}
       {editingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 w-[calc(100vw-1.5rem)] sm:w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 bg-white">
               <h3 className="font-bold text-gray-900">
                 {editingModal === "description" ? "Edit Business Description" :
                  editingModal === "category" ? "Update Primary Category" :
@@ -313,7 +313,7 @@ export default function RecommendationsPage() {
               </button>
             </div>
             
-            <div className="p-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
               {editingModal === "description" && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-500">
@@ -400,7 +400,7 @@ export default function RecommendationsPage() {
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2 rounded-b-2xl">
+            <div className="shrink-0 p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2.5">
               <Button variant="ghost" onClick={() => setEditingModal(null)} disabled={saving} className="text-gray-600">Cancel</Button>
               <Button 
                 onClick={() => {

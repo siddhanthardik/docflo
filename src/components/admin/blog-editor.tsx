@@ -1218,12 +1218,14 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
 
       {/* Insert Link Modal */}
       {showLinkModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-indigo-600" /> Insert Hyperlink
-            </h3>
-            <div className="space-y-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-md w-[calc(100vw-1.5rem)] sm:w-full max-h-[calc(100dvh-2rem)] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200">
+            <div className="shrink-0 p-5 border-b border-slate-100 bg-white">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-indigo-600" /> Insert Hyperlink
+              </h3>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-700">Display Text</label>
                 <Input
@@ -1244,7 +1246,7 @@ export function BlogEditor({ initialData, isNew = false }: BlogEditorProps) {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/90 flex items-center justify-end gap-2.5">
               <Button variant="ghost" size="sm" onClick={() => setShowLinkModal(false)} className="text-xs">
                 Cancel
               </Button>

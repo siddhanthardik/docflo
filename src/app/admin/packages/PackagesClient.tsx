@@ -602,7 +602,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
 
       {/* PACKAGE BUILDER MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-3xl md:max-w-4xl h-[90vh] flex flex-col bg-slate-50 p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-3xl md:max-w-4xl max-h-[calc(100dvh-2rem)] flex flex-col bg-slate-50 p-0 overflow-hidden">
           {/* Fixed Top Header */}
           <DialogHeader className="bg-white p-6 pb-4 border-b shrink-0 shadow-2xs">
             <DialogTitle className="text-2xl font-black text-slate-900">
@@ -611,7 +611,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
           </DialogHeader>
 
           {/* Scrollable Middle Form Container */}
-          <div className="overflow-y-auto p-6 flex-1 space-y-6">
+          <div className="overflow-y-auto p-4 sm:p-6 flex-1 min-h-0 space-y-6">
             <form id="package-form" onSubmit={submitPackage} className="space-y-8">
               
               {/* Section 1: Basic Info */}
@@ -777,11 +777,11 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
 
       {/* DOCTOR ASSIGNMENT DIALOG */}
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Assign Package to Doctor</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 mt-4">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-6 mt-4 pr-1">
             {!historyResult ? (
               <form onSubmit={handleAssign} className="space-y-6">
                 

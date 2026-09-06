@@ -645,26 +645,26 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
 
       {/* ─── EMAIL PREVIEW & EDITOR MODAL ────────────────────────────────────── */}
       {previewLead && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white p-6 flex items-center justify-between border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-[calc(100vw-1.5rem)] sm:w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)]">
+            <div className="shrink-0 bg-slate-900 text-white p-5 sm:p-6 flex items-center justify-between border-b border-slate-800">
               <div>
-                <h3 className="text-lg font-bold flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                   <Mail className="w-5 h-5 text-indigo-400" /> Review & Edit Outreach Audit Email
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 mt-0.5">
                   Verify recipient address and customize message before sending via secondary outreach domain.
                 </p>
               </div>
               <button
                 onClick={() => setPreviewLead(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-sm font-bold transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-sm font-bold transition-colors shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-sm">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4 text-sm">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700">Recipient Email Address</label>
                 <Input
@@ -716,7 +716,7 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="shrink-0 p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 sm:gap-3">
               <Button
                 variant="outline"
                 onClick={() => setPreviewLead(null)}
@@ -742,26 +742,26 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
 
       {/* ─── TELEPHONE CALL SCRIPT & TALKING POINTS MODAL ───────────────────── */}
       {callScriptLead && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 flex items-center justify-between border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-[calc(100vw-1.5rem)] sm:w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)]">
+            <div className="shrink-0 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 sm:p-6 flex items-center justify-between border-b border-slate-800">
               <div>
-                <h3 className="text-lg font-bold flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
                   <PhoneCall className="w-5 h-5 text-blue-400" /> Phone Call Script & Talking Points
                 </h3>
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-slate-300 mt-0.5">
                   {callScriptLead.clinicName} ({callScriptLead.phone || "No phone listed"})
                 </p>
               </div>
               <button
                 onClick={() => setCallScriptLead(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-sm font-bold transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center text-sm font-bold transition-colors shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-sm leading-relaxed">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4 text-sm leading-relaxed">
               {/* Step 1 */}
               <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100 space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded-md">
@@ -806,7 +806,7 @@ Would you be open to a quick 5-minute walkthrough this week on how to rank #1 on
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="shrink-0 p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
               <Button
                 variant="outline"
                 size="sm"

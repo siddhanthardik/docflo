@@ -313,11 +313,11 @@ export default function AdminTicketsPage() {
 
       {/* ── Modal: Ticket Details & Admin Reply ─────────────────────── */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-8 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[calc(100dvh-2rem)]">
             
             {/* Header */}
-            <div className="bg-slate-900 p-6 text-white shrink-0 flex items-start justify-between">
+            <div className="bg-slate-900 p-5 sm:p-6 text-white shrink-0 flex items-start justify-between">
               <div className="min-w-0 pr-4">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <span className="font-mono text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded">
@@ -344,7 +344,7 @@ export default function AdminTicketsPage() {
             </div>
 
             {/* Quick Status Bar */}
-            <div className="px-6 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs">
+            <div className="shrink-0 px-6 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Quick Change Status:</span>
               <div className="flex gap-2">
                 <Button
@@ -375,7 +375,7 @@ export default function AdminTicketsPage() {
             </div>
 
             {/* Conversation Thread */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
               {selectedTicket.messages.map((msg) => {
                 const isSupport = msg.senderType === "SUPPORT_ADMIN";
                 return (

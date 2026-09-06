@@ -252,12 +252,12 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
 
       {/* Add Staff Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[92vh] overflow-y-auto p-5 sm:p-7 rounded-3xl bg-white shadow-2xl border border-slate-200/90">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200/90 overflow-hidden">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 bg-white">
             <DialogTitle className="text-lg font-bold text-slate-900">Add New Staff</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">Create a new account for a staff member to access the clinic dashboard.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-4 pt-2">
+            <DialogDescription className="text-xs text-slate-500 mt-1">Create a new account for a staff member to access the clinic dashboard.</DialogDescription>
+          </div>
+          <form id="add-staff-form" onSubmit={handleAdd} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
@@ -286,24 +286,24 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
                 </Select>
               </div>
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="w-full sm:w-auto h-11 rounded-xl font-bold">Cancel</Button>
-              <Button type="submit" className="w-full sm:w-auto h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20" disabled={loading}>
-                {loading ? "Adding..." : "Create Account"}
-              </Button>
-            </DialogFooter>
           </form>
+          <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/90 flex items-center justify-end gap-2.5">
+            <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="h-10 px-4 rounded-xl font-bold text-xs sm:text-sm">Cancel</Button>
+            <Button type="submit" form="add-staff-form" className="h-10 px-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 text-xs sm:text-sm" disabled={loading}>
+              {loading ? "Adding..." : "Create Account"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Staff Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[92vh] overflow-y-auto p-5 sm:p-7 rounded-3xl bg-white shadow-2xl border border-slate-200/90">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200/90 overflow-hidden">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 bg-white">
             <DialogTitle className="text-lg font-bold text-slate-900">Edit Staff Details</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">Update the role or name of {selectedStaff?.name}.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4 pt-2">
+            <DialogDescription className="text-xs text-slate-500 mt-1">Update the role or name of {selectedStaff?.name}.</DialogDescription>
+          </div>
+          <form id="edit-staff-form" onSubmit={handleEdit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
@@ -328,13 +328,13 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
                 <Input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="Leave blank to keep current" className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white" />
               </div>
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="w-full sm:w-auto h-11 rounded-xl font-bold">Cancel</Button>
-              <Button type="submit" className="w-full sm:w-auto h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20" disabled={loading}>
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
           </form>
+          <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/90 flex items-center justify-end gap-2.5">
+            <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="h-10 px-4 rounded-xl font-bold text-xs sm:text-sm">Cancel</Button>
+            <Button type="submit" form="edit-staff-form" className="h-10 px-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 text-xs sm:text-sm" disabled={loading}>
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

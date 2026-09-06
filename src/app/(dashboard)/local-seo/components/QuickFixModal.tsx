@@ -161,10 +161,10 @@ export function QuickFixModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 w-[calc(100vw-1.5rem)] sm:w-full max-w-lg overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)]">
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
               {fieldKey === "appointmentUrl" ? (
@@ -356,7 +356,7 @@ export function QuickFixModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+        <div className="shrink-0 p-3.5 sm:p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2.5 sm:gap-3">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={saving} className="text-xs font-medium text-gray-600">
             Cancel
           </Button>

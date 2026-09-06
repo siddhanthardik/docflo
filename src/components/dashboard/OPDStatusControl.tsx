@@ -173,7 +173,7 @@ export function OPDStatusControl() {
           if (!open) setConfirmingAction(null);
         }}
       >
-        <DialogContent className="sm:max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl p-5 font-sans border-slate-200 bg-white shadow-xl">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-md max-h-[calc(100dvh-2rem)] flex flex-col p-5 font-sans border-slate-200 bg-white shadow-xl overflow-y-auto rounded-2xl sm:rounded-3xl">
           
           {/* ═════════════════════════════════════════════════════════════════ */}
           {/* ── CONFIRMATION MODAL: APPLY DELAY ───────────────────────────── */}

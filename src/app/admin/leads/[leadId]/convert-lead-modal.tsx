@@ -70,8 +70,8 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-[425px] max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Convert to Customer</DialogTitle>
           <DialogDescription>
             Provision a new Gyrex account for {lead.name || lead.clinicName}.
@@ -79,7 +79,7 @@ export function ConvertLeadModal({ isOpen, onClose, lead, packages }: ConvertLea
         </DialogHeader>
 
         {!result ? (
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-2">
               <Label>Lead Email</Label>
               <Input value={lead.email || "No email provided"} disabled className="bg-slate-50" />

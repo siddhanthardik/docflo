@@ -342,11 +342,11 @@ export default function SupportPage() {
 
       {/* ── Modal: Raise New Ticket ────────────────────────────────── */}
       {isNewTicketOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-8">
-            <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-xl max-h-[calc(100dvh-2rem)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+            <div className="shrink-0 bg-slate-900 p-5 sm:p-6 text-white flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold">Raise Support Ticket</h2>
+                <h2 className="text-base sm:text-lg font-bold">Raise Support Ticket</h2>
                 <p className="text-xs text-slate-400 mt-0.5">Dispatches an instant email to the Gyrex engineering team</p>
               </div>
               <button
@@ -357,7 +357,7 @@ export default function SupportPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateTicket} className="p-6 space-y-4">
+            <form id="new-ticket-form" onSubmit={handleCreateTicket} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               {/* Category Selector */}
               <div>
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
@@ -444,37 +444,38 @@ export default function SupportPage() {
                   required
                 />
               </div>
-
-              {/* Footer Actions */}
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsNewTicketOpen(false)}
-                  className="text-xs font-bold"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-                >
-                  {submitting ? "Dispatching..." : "Submit Support Ticket"}
-                </Button>
-              </div>
             </form>
+
+            {/* Footer Actions */}
+            <div className="shrink-0 p-4 flex items-center justify-end gap-2.5 sm:gap-3 border-t border-slate-100 bg-slate-50/90">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNewTicketOpen(false)}
+                className="h-10 px-4 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="new-ticket-form"
+                disabled={submitting}
+                className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20"
+              >
+                {submitting ? "Dispatching..." : "Submit Support Ticket"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── Modal: View Ticket & Conversational Thread ─────────────── */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-8 flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[calc(100dvh-2rem)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col">
             
             {/* Header */}
-            <div className="bg-slate-900 p-6 text-white shrink-0 flex items-start justify-between">
+            <div className="bg-slate-900 p-5 sm:p-6 text-white shrink-0 flex items-start justify-between">
               <div className="min-w-0 pr-4">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="font-mono text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded">

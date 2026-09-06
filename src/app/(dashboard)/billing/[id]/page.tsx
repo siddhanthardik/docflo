@@ -358,74 +358,78 @@ export default function InvoiceDetailsPage() {
 
       {/* Record Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-1">Record Payment</h3>
-              <p className="text-sm text-gray-500 mb-6">Manually record a payment made by the patient.</p>
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-[calc(100vw-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            {/* Pinned Header */}
+            <div className="shrink-0 p-5 sm:p-6 border-b border-gray-100 bg-white">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-0.5">Record Payment</h3>
+              <p className="text-xs text-gray-500">Manually record a payment made by the patient.</p>
+            </div>
+            
+            {/* Scrollable Form Body */}
+            <form id="record-payment-form" onSubmit={handleRecordPayment} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max={balanceDue}
+                  placeholder="0.00"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+                <p className="text-xs text-indigo-600 mt-1 cursor-pointer" onClick={() => setPaymentAmount(balanceDue)}>
+                  Pay full balance: ₹{balanceDue.toFixed(2)}
+                </p>
+              </div>
               
-              <form onSubmit={handleRecordPayment} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max={balanceDue}
-                    placeholder="0.00"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
-                    onFocus={(e) => e.target.select()}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  />
-                  <p className="text-xs text-indigo-600 mt-1 cursor-pointer" onClick={() => setPaymentAmount(balanceDue)}>
-                    Pay full balance: ₹{balanceDue.toFixed(2)}
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Payment Method</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  >
-                    <option value="UPI">UPI / QR Code</option>
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Credit/Debit Card</option>
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                >
+                  <option value="UPI">UPI / QR Code</option>
+                  <option value="CASH">Cash</option>
+                  <option value="CARD">Credit/Debit Card</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Reference / Transaction ID (Optional)</label>
-                  <input
-                    type="text"
-                    value={referenceId}
-                    onChange={(e) => setReferenceId(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Reference / Transaction ID (Optional)</label>
+                <input
+                  type="text"
+                  value={referenceId}
+                  onChange={(e) => setReferenceId(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+            </form>
 
-                <div className="flex gap-3 mt-8">
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(false)}
-                    className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={processingPayment || !paymentAmount}
-                    className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-60 flex justify-center items-center gap-2"
-                  >
-                    {processingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Save Payment
-                  </button>
-                </div>
-              </form>
+            {/* Pinned Action Footer */}
+            <div className="shrink-0 p-4 border-t border-gray-100 bg-slate-50/90 flex gap-2.5 sm:gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="h-10 px-4 rounded-xl text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="record-payment-form"
+                disabled={processingPayment || !paymentAmount}
+                className="h-10 px-5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-60 flex justify-center items-center gap-2 shadow-md shadow-indigo-600/20"
+              >
+                {processingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Save Payment
+              </button>
             </div>
           </div>
         </div>
