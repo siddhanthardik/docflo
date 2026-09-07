@@ -215,20 +215,46 @@ export async function PUT(
       validatedData.primaryPractitionerId.trim() !== ""
     ) ? validatedData.primaryPractitionerId : null;
 
+    // Safely parse dateOfBirth (prevent invalid date crashes)
+    let parsedDob: Date | null = null;
+    if (validatedData.dateOfBirth && validatedData.dateOfBirth.trim() !== "") {
+      const d = new Date(validatedData.dateOfBirth);
+      if (!isNaN(d.getTime())) {
+        parsedDob = d;
+      }
+    }
+
+    // Strip non-schema fields before passing to Prisma
+    const {
+      confirmNameChange: _cnc,
+      nameChangeReason: _ncr,
+      dateOfBirth: _dob,
+      ...cleanData
+    } = validatedData;
+
     const patient = await prisma.patient.update({
       where: { id },
       data: {
-        ...validatedData,
+        ...cleanData,
+        lastName: cleanData.lastName || "",
+        email: cleanData.email || null,
+        gender: cleanData.gender || null,
+        bloodGroup: cleanData.bloodGroup || null,
+        address: cleanData.address || null,
+        city: cleanData.city || null,
+        medicalNotes: cleanData.medicalNotes || null,
         primaryPractitionerId,
-        dateOfBirth: validatedData.dateOfBirth
-          ? new Date(validatedData.dateOfBirth)
-          : null,
+        dateOfBirth: parsedDob,
       },
     });
 
     return NextResponse.json(patient);
   } catch (error: any) {
     console.error("Error updating patient:", error);
+    if (error?.name === "ZodError") {
+      const issues = error.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ') || error.message;
+      return NextResponse.json({ error: `Validation error: ${issues}` }, { status: 400 });
+    }
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }

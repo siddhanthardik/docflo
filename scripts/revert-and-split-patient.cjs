@@ -4,9 +4,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('=== GYREX PATIENT IDENTITY REMEDIATION SCRIPT ===\n');
 
-  // 1. Locate primary patient row
-  let primaryPatient = await prisma.patient.findUnique({
-    where: { id: 'cmru2wt9e0004vh04g275aqhu' },
+  // 1. Locate primary patient row (by production ID or fallback)
+  let primaryPatient = await prisma.patient.findFirst({
+    where: {
+      id: { in: ['cmtkaf6z2002fkkn1y92ztz7g', 'cmru2wt9e0004vh04g275aqhu'] }
+    },
     include: {
       invoices: true,
       appointments: true,

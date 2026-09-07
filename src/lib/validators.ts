@@ -25,20 +25,34 @@ export const loginSchema = z.object({
 });
 
 export const patientSchema = z.object({
-  firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().optional().default(""),
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().optional().nullable().default(""),
   phone: z.string().min(10, "Valid phone number is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  dateOfBirth: z.string().optional(),
-  gender: z.enum(["Male", "Female", "Other"]).optional(),
-  bloodGroup: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  medicalNotes: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  patientType: z.enum(["LEAD", "ACTIVE", "INACTIVE", "LOST"]).optional(),
-  isBlocked: z.boolean().optional(),
-  primaryPractitionerId: z.string().optional(),
+  email: z.string().email("Invalid email").optional().nullable().or(z.literal("")),
+  dateOfBirth: z.string().optional().nullable().or(z.literal("")),
+  gender: z.preprocess(
+    (val) => {
+      if (!val || val === "" || val === null) return undefined;
+      if (typeof val === "string") {
+        const lower = val.trim().toLowerCase();
+        if (lower === "male" || lower === "m") return "Male";
+        if (lower === "female" || lower === "f") return "Female";
+        if (lower === "other" || lower === "o") return "Other";
+      }
+      return val;
+    },
+    z.enum(["Male", "Female", "Other"]).optional().nullable()
+  ),
+  bloodGroup: z.string().optional().nullable().or(z.literal("")),
+  address: z.string().optional().nullable().or(z.literal("")),
+  city: z.string().optional().nullable().or(z.literal("")),
+  medicalNotes: z.string().optional().nullable().or(z.literal("")),
+  tags: z.array(z.string()).optional().default([]),
+  patientType: z.enum(["LEAD", "ACTIVE", "INACTIVE", "LOST"]).optional().default("ACTIVE"),
+  isBlocked: z.boolean().optional().default(false),
+  primaryPractitionerId: z.string().optional().nullable().or(z.literal("")),
+  confirmNameChange: z.boolean().optional(),
+  nameChangeReason: z.string().optional().nullable().or(z.literal("")),
 });
 
 export const appointmentSchema = z.object({
