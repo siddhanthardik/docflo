@@ -204,7 +204,7 @@ function buildDeterministicReceptionistReply(
   const hasHindiMarkers = hasDevanagari || /\b(kya|kab|kahan|kaha|kaise|kitna|kitni|chahiye|milna|aana|hai|hain|bhi|ji|hlo|namaste|pranam|batao|bataiye|bataya|batayein|samay|fees|aaj|aj|kal|parso|late|mushkil|pahuch|pahuchenge|thik|theek|kardo|kar|ho|raha|rahi|gya|gaya|pehle|abhi|hu|hoon|hume|humko|mera|meri|karna|karvana|baje|subah|shaam|dopahar|pakka)\b/i.test(textLower);
 
   // Romanized Transliteration Keywords (Only match if NOT standard Hindi/Hinglish)
-  const isBonglish = hasBengali || (!hasHindiMarkers && /\b(ami|amra|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|kothay|daktar|dekhabo|shomoye|thakben|thakbe|dhonnobad|kalke|aajke|ajke)\b/i.test(textLower));
+  const isBonglish = hasBengali || (!hasHindiMarkers && /\b(ami|amra|apnader|tumi|tomra|aasbo|ashbo|ashchi|aschhi|bolchhen|bolchen|bolte|parbo|parben|pari|songe|shonge|kothay|daktar|dekhabo|shomoye|thakben|thakbe|dhonnobad|kalke|aajke|ajke)\b/i.test(textLower));
   const isTanglish = hasTamil || (!hasHindiMarkers && /\b(vanakkam|naan|nanga|neenga|ungalukku|vara|varren|varen|vandhuten|naalaikku|nalaikku|innikku|iniku|epbo|eppo|evvalo|evvalavu|panam|kaasu|paakanum|paarka|pakanum|irukka|iruku|irukku|kedaikkuma|engae|enge|enga|solla|sollunga|nandri|seri|mudiyuma|mudiyum)\b/i.test(textLower));
   const isTelugish = hasTelugu || (!hasHindiMarkers && /\b(namaskaram|namaskaramu|nenu|memu|meeru|repu|ee\s*roju|eeroju|vastanu|vastam|vasta|eppudu|enta|entha|chupinchali|chudali|unnara|untara|undha|ekkada|ekada|cheppandi|cheppu|dhanyavadalu)\b/i.test(textLower));
   const isMarathish = !hasDevanagari && !hasHindiMarkers && /\b(namaskar|mee|amhi|tumhi|udya|aajch|yenar|yeto|yete|kadhi|kiti|dakhvaycha|bhetaycha|aahet|nahit|kuthe|kothe|sanga|saanga|dhanyawad)\b/i.test(textLower);
@@ -1057,21 +1057,30 @@ You are an expert multilingual Senior Clinic Receptionist who fluently speaks, u
   * Arabic (العربية), Spanish (Español), Russian (Русский), French (Français), German (Deutsch), etc.
 
 STRICT MULTILINGUAL MATCHING RULES:
-1. **Always Mirror Patient's Language and Script**:
-   - You MUST detect the language and script of the patient's LATEST message and reply in that EXACT SAME LANGUAGE and SCRIPT.
-   - **If the patient writes in Bengali / Bangla** (e.g., "Apni ki bangla bolte parbo. ?", "Amar baba to bangla hi jane..", "আমার বাবার জন্য অ্যাপয়েন্টমেন্ট চাই"):
-     * You MUST reply 100% in compassionate, polite Bengali / Bangla!
-     * NEVER say that you only reply in Hindi or English. You fluently understand and speak Bengali!
-     * Example: "হ্যাঁ, নিশ্চয়ই! আমি বাংলায় কথা বলতে পারি। আপনার বাবার জন্য চিন্তার কোনো কারণ নেই, আমি ডক্টরের কাছে অ্যাপয়েন্টমেন্ট বুক করে দিচ্ছি। উনি সকালে নাকি বিকেলে দেখাতে চান? 🙏" (or if the patient wrote in Romanized Bangla, reply in polite Romanized or Bengali script).
-   - **If the patient writes in Punjabi** (e.g., "Bangla ya punjabi me bhi?", "Tussi appointment de sakde ho?"):
-     * You MUST reply 100% in warm, respectful Punjabi!
-     * Example: "ਹਾਂਜੀ, ਮੈਂ ਪੰਜਾਬੀ ਵਿੱਚ ਵੀ ਗੱਲ ਕਰ ਸਕਦੀ ਹਾਂ! 🙏 ਡਾਕਟਰ ਸਾਹਿਬ ਦੇ ਕੋਲ ਸਲਾਟ ਉਪਲਬਧ ਹਨ। ਤੁਸੀਂ ਸਵੇਰੇ ਜਾਂ ਸ਼ਾਮ ਕਿਹੜੇ ਸਮੇਂ ਆਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?"
+1. **Always Mirror Patient's Language AND Script**:
+   - You MUST detect BOTH the language and the script (Romanized/Latin script vs Native script) of the patient's LATEST message and reply in that EXACT SAME LANGUAGE AND SCRIPT.
+   - **CRITICAL SCRIPT MATCHING DIRECTIVE**:
+     * If the patient writes in Roman/Latin script (e.g., Romanized Bengali / Bonglish, Hinglish, Tanglish, Punlish), you MUST reply in ROMAN/LATIN SCRIPT! NEVER reply in native script (like Bengali বাংলা or Devanagari) if the patient typed in English alphabets / Roman script.
+     * If the patient writes in Native script (e.g., বাংলা Bengali script, देवनागरी Hindi script, ਪੰਜਾਬੀ Gurmukhi), you MUST reply in that NATIVE SCRIPT.
+   - **If the patient writes in Bengali / Bangla**:
+     * **Case A: Patient wrote in Romanized Bengali / Bonglish** (e.g., "Apni ki bangla bolte parbo. ?", "Amar baba to bangla hi jane..", "Apni ki amar songe bangla bolte parben?", "Amar babar jonno appointment lagbe"):
+       - You MUST reply in natural, polite **Romanized Bengali (Bonglish)**!
+       - NEVER reply in Bengali script (বাংলা) when the patient writes using English letters.
+       - Example reply: "Hyan, nishchoi! Ami aapnar shonge banglay kotha bolte pari 😊 Aapnar babar jonno chintar kono karon nei. Ami doctor-er kachhe appointment book kore dichhi. Uni ki shokale naki bikel-e dekhte chan? 🙏"
+     * **Case B: Patient wrote in Bengali Script (বাংলা)** (e.g., "আপনি কি আমার সাথে বাংলায় কথা বলতে পারবেন?", "আমার বাবার জন্য অ্যাপয়েন্টমেন্ট চাই"):
+       - You MUST reply in respectful, natural **Bengali Script (বাংলা)**!
+       - Example reply: "হ্যাঁ, নিশ্চয়ই! আমি আপনার সাথে সম্পূর্ণ বাংলায় কথা বলতে পারি। আপনার বাবার জন্য অ্যাপয়েন্টমেন্ট বুকিং বা অন্য কোনো তথ্যের প্রয়োজন হলে দয়া করে জানান। 🙏😊"
+   - **If the patient writes in Punjabi**:
+     * **Case A: Romanized Punjabi** (e.g., "Tussi appointment de sakde ho?", "Doctor saab kado milange?"):
+       - Reply in natural **Romanized Punjabi**: "Hanji, main Punjabi vich vi gal kar sakdi han! 🙏 Doctor saab kol slot available hai. Tussi savere ya shaam kado auna chahunde ho?"
+     * **Case B: Gurmukhi Script (ਪੰਜਾਬੀ)** (e.g., "ਤੁਸੀਂ ਅਪਾਇੰਟਮੈਂਟ ਦੇ ਸਕਦੇ ਹੋ?"):
+       - Reply in **Gurmukhi Script (ਪੰਜਾਬੀ)**: "ਹਾਂਜੀ, ਮੈਂ ਪੰਜਾਬੀ ਵਿੱਚ ਵੀ ਗੱਲ ਕਰ ਸਕਦੀ ਹਾਂ! 🙏 ਡਾਕਟਰ ਸਾਹਿਬ ਦੇ ਕੋਲ ਸਲਾਟ ਉਪਲਬਧ ਹਨ। ਤੁਸੀਂ ਸਵੇਰੇ ਜਾਂ ਸ਼ਾਮ ਕਿਹੜੇ ਸਮੇਂ ਆਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?"
    - **If the patient writes in Marathi, Gujarati, Tamil, Telugu, Kannada, Malayalam, Odia, Assamese, Urdu**:
-     * You MUST reply in that exact language fluently, warmly, and accurately.
+     * Follow the exact same rule: If typed in English letters (Romanized), reply in Romanized dialect. If typed in regional script, reply in that regional script.
    - **If the patient writes in English**:
-     * You MUST reply 100% in polite, professional English. Do not mix Hindi/Hinglish terms.
+     * You MUST reply 100% in polite, professional English. Do not mix Hindi or regional words.
    - **If the patient writes in Hindi or Romanized Hinglish**:
-     * Reply in warm, polite Hinglish ("Ji, main aapki poori madad karti hoon. 🙏").
+     * If Romanized Hinglish, reply in warm, polite Hinglish ("Ji, main aapki poori madad karti hoon. 🙏"). If Devanagari Hindi, reply in Devanagari Hindi.
    - **If the patient writes in an International language (Arabic, Spanish, Russian, French, etc.)**:
      * Reply fluently in that language with senior medical receptionist warmth.
 
@@ -1391,8 +1400,12 @@ ${conversationHistory.join("\n")}
 🚨 PATIENT'S LATEST MESSAGE (PRIMARY CURRENT INTENT): "${incomingMessage}"
 ${mediaAttachment ? `\n📎 ATTACHED PATIENT FILE: ${mediaAttachment.type} (${mediaAttachment.fileName || mediaAttachment.mimeType})\n(Note: Read the attached diagnostic report / scan / image thoroughly using your multimodal OCR capabilities to identify the investigation type, key observations, and route to the best matching doctor).` : ''}
 
-OUTPUT REQUIREMENT:
-Respond with ONLY the exact, final WhatsApp message text for the patient. Do NOT include internal reasoning, headers, labels, or formatting markers. Output only the receptionist's warm, direct reply:
+OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
+- Respond with ONLY the exact, final WhatsApp message text for the patient. Do NOT include internal reasoning, headers, labels, or formatting markers.
+- SCRIPT MATCHING:
+  * If the patient's message above is written in English/Latin letters (e.g., Romanized Bengali "Amar baba to bangla hi jane", "Apni ki amar songe bangla bolte parben", Romanized Hindi/Hinglish, Romanized Punjabi, etc.), your response MUST be in ROMAN/LATIN letters! DO NOT use native Bengali (বাংলা), Devanagari, or Gurmukhi script.
+  * If the patient's message above is written in native script (বাংলা, देवनागरी, etc.), reply in that native script.
+- Output only the receptionist's warm, direct reply:
       `;
 
       let aiReply = await generateWithFallback(prompt, mediaAttachment);
