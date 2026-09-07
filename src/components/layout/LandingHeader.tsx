@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   X,
@@ -27,6 +28,39 @@ const NAV_ITEMS = [
 
 export function LandingHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith("/#")) {
+      const targetId = href.replace("/#", "");
+      if (pathname === "/") {
+        e.preventDefault();
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+          window.history.pushState(null, "", `#${targetId}`);
+        }
+      }
+    }
+  };
+
+  const handleMobileNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    setIsMobileMenuOpen(false);
+    if (href.startsWith("/#")) {
+      const targetId = href.replace("/#", "");
+      if (pathname === "/") {
+        e.preventDefault();
+        setTimeout(() => {
+          const element = document.getElementById(targetId);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+            window.history.pushState(null, "", `#${targetId}`);
+          }
+        }, 150);
+      }
+    }
+  };
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -77,6 +111,7 @@ export function LandingHeader() {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors whitespace-nowrap"
               >
                 {item.label}
@@ -155,7 +190,7 @@ export function LandingHeader() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={(e) => handleMobileNavClick(e, item.href)}
                     className="flex items-center justify-between p-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50/60 font-semibold text-sm transition-colors group"
                   >
                     <div className="flex items-center gap-3">

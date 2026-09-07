@@ -35,10 +35,10 @@ export default function AboutPage() {
         
         {/* ── 1. HERO SECTION: WARM, HUMAN EDITORIAL OPENING ── */}
         <section className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6 shadow-xs">
+          <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-6">
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-            <span>Our Story &amp; Purpose</span>
-          </div>
+            Our Story &amp; Purpose
+          </p>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif tracking-tight text-slate-900 leading-[1.15] mb-6">
             We built Gyrex because <br className="hidden sm:inline" />
@@ -126,10 +126,10 @@ export default function AboutPage() {
                   <p className="font-serif font-bold text-slate-900 text-base">The Gyrex Team</p>
                   <p className="text-xs text-slate-500">Built with respect for the medical profession</p>
                 </div>
-                <div className="inline-flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-blue-50 px-3 py-1.5 rounded-full">
+                <p className="text-xs font-semibold text-blue-600 flex items-center gap-1.5">
                   <Stethoscope className="w-3.5 h-3.5" />
-                  <span>Doctor-First Design</span>
-                </div>
+                  Doctor-First Design
+                </p>
               </div>
 
             </div>
