@@ -216,65 +216,71 @@ export default function AboutPage() {
 
         {/* ── 5. SO WE BUILT GYREX (FULL-WIDTH 4-COLUMN PLATFORM) ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-8 sm:p-12 lg:p-16 shadow-xl space-y-10">
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-3xl p-8 sm:p-12 lg:p-16 shadow-xl space-y-10 relative overflow-hidden">
             
-            <div className="text-center max-w-3xl mx-auto space-y-3">
-              <span className="text-xs font-bold text-cyan-300 uppercase tracking-widest">The Platform</span>
+            {/* Subtle background circular decoration matching affiliates page */}
+            <div className="absolute inset-0 opacity-15 pointer-events-none">
+              <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white" />
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-white" />
+            </div>
+
+            <div className="text-center max-w-3xl mx-auto space-y-3 relative z-10">
+              <span className="text-xs font-bold text-indigo-200 uppercase tracking-widest">The Platform</span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-white tracking-tight">
                 So We Built Gyrex
               </h2>
-              <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
+              <p className="text-base sm:text-lg text-indigo-100 leading-relaxed">
                 Gyrex handles the parts of running a clinic that have nothing to do with medicine, so a doctor doesn&apos;t have to learn them.
               </p>
             </div>
 
             {/* 4 Feature Columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
               
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center border border-blue-400/30">
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/20 transition-all shadow-sm space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center border border-white/30">
                   <MapPin className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-white">Google Maps Discovery</h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-indigo-100 leading-relaxed">
                   It shows your clinic to patients nearby who are searching on Google Maps.
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center border border-purple-400/30">
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/20 transition-all shadow-sm space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center border border-white/30">
                   <Zap className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-white">Fast Booking Website</h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-indigo-100 leading-relaxed">
                   It gives you a website that actually loads fast and lets people book directly.
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center border border-emerald-400/30">
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/20 transition-all shadow-sm space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center border border-white/30">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-white">24/7 WhatsApp AI</h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-indigo-100 leading-relaxed">
                   It answers patients on WhatsApp at 2 AM the same way it would at 2 PM, in whatever language they&apos;re comfortable speaking.
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center border border-amber-400/30">
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/20 transition-all shadow-sm space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center border border-white/30">
                   <Star className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-white">Automated Reviews</h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-indigo-100 leading-relaxed">
                   And after a visit, it asks the happy patients for a review, so that goodwill doesn&apos;t just evaporate on the way home.
                 </p>
               </div>
 
             </div>
 
-            <div className="pt-6 border-t border-white/10 text-center">
-              <p className="text-base sm:text-lg text-cyan-200 font-medium italic max-w-2xl mx-auto">
+            <div className="pt-6 border-t border-white/20 text-center relative z-10">
+              <p className="text-base sm:text-lg text-white font-medium italic max-w-2xl mx-auto">
                 None of it needs training. None of it needs your time. It just runs in the background, the way a good front desk always should have.
               </p>
             </div>
