@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const doctorId = session.user.id;
+    const { doctorId } = await getSessionData();
 
     // Fetch conversations for this doctor
     const conversations = await prisma.conversation.findMany({

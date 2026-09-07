@@ -31,6 +31,32 @@ export default function AIAgentsHubPage() {
   const [customRuleDraft, setCustomRuleDraft] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
+  // 3-Month AI Receptionist Renaming Guard
+  const [isRenameConfirmOpen, setIsRenameConfirmOpen] = useState(false);
+  const [pendingRenameTarget, setPendingRenameTarget] = useState<{ oldName: string; newName: string } | null>(null);
+
+  const getReceptionistCooldownInfo = (agentConfig: any) => {
+    if (!agentConfig?.receptionistRenamedAt) return null;
+    const lastRenamed = new Date(agentConfig.receptionistRenamedAt).getTime();
+    const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+    const elapsed = Date.now() - lastRenamed;
+    if (elapsed < ninetyDaysMs) {
+      const remainingDays = Math.ceil((ninetyDaysMs - elapsed) / (24 * 60 * 60 * 1000));
+      const nextEligibleDate = new Date(lastRenamed + ninetyDaysMs).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      });
+      return {
+        isLocked: true,
+        remainingDays,
+        nextEligibleDate,
+        renamedDate: new Date(lastRenamed).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      };
+    }
+    return null;
+  };
+
   const handleFeedback = async (log: any, status: "APPROVED" | "CORRECTED") => {
     try {
       setSubmittingFeedback(true);
@@ -148,7 +174,35 @@ export default function AIAgentsHubPage() {
     setIsConfigOpen(true);
   };
 
-  const saveConfig = async () => {
+  const handleInitiateSave = () => {
+    if (!activeAgent) return;
+
+    // Check if appointment agent assistantName changed
+    if (activeAgent.type === "APPOINTMENT") {
+      const oldName = String(activeAgent.config?.assistantName || "Riya").trim();
+      const newName = String(configDraft.assistantName || "Riya").trim();
+
+      if (newName && newName.toLowerCase() !== oldName.toLowerCase()) {
+        const cooldown = getReceptionistCooldownInfo(activeAgent.config);
+        if (cooldown?.isLocked) {
+          toast({
+            title: "🔒 Name Locked (3-Month Rule)",
+            description: `The AI Receptionist name can only be changed once every 3 months. Next eligible date: ${cooldown.nextEligibleDate} (in ${cooldown.remainingDays} days).`,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        setPendingRenameTarget({ oldName, newName });
+        setIsRenameConfirmOpen(true);
+        return;
+      }
+    }
+
+    executeSaveConfig();
+  };
+
+  const executeSaveConfig = async () => {
     if (!activeAgent) return;
     setSavingConfig(true);
     try {
@@ -157,15 +211,18 @@ export default function AIAgentsHubPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentType: activeAgent.agentType, config: configDraft }),
       });
-      if (res.ok) {
-        toast({ title: "Agent Training & Config Saved! ✨", description: "Updated prompt instructions deployed to AI engine." });
-        setAgents(agents.map(a => a.agentType === activeAgent.agentType ? { ...a, config: configDraft } : a));
-        setIsConfigOpen(false);
-      } else {
-        throw new Error("Save failed");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Save failed");
       }
-    } catch (error) {
-      toast({ title: "Failed to save configuration", variant: "destructive" });
+      toast({ title: "Agent Training & Config Saved! ✨", description: "Updated prompt instructions deployed to AI engine." });
+      const updatedAgent = data.agent || { ...activeAgent, config: configDraft };
+      setAgents(agents.map(a => a.agentType === activeAgent.agentType ? updatedAgent : a));
+      setIsConfigOpen(false);
+      setIsRenameConfirmOpen(false);
+      setPendingRenameTarget(null);
+    } catch (error: any) {
+      toast({ title: error.message || "Failed to save configuration", variant: "destructive" });
     } finally {
       setSavingConfig(false);
     }
@@ -569,14 +626,34 @@ export default function AIAgentsHubPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-1.5 min-w-0">
-                      <Label className="text-xs font-semibold text-slate-700">Assistant Name</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-slate-700">Assistant Name</Label>
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-indigo-500" /> Once / 3 Months
+                        </span>
+                      </div>
                       <Input 
                         placeholder="e.g., Riya"
                         value={configDraft.assistantName || ""}
                         onChange={(e) => setConfigDraft({...configDraft, assistantName: e.target.value})}
                         className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                       />
-                      <p className="text-[10px] text-slate-400">The friendly name your AI receptionist introduces herself as on WhatsApp.</p>
+                      {(() => {
+                        const cd = getReceptionistCooldownInfo(activeAgent?.config);
+                        if (cd?.isLocked) {
+                          return (
+                            <p className="text-[10px] text-amber-800 font-medium bg-amber-50 p-1.5 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
+                              <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              Name locked until {cd.nextEligibleDate} ({cd.remainingDays} days left).
+                            </p>
+                          );
+                        }
+                        return (
+                          <p className="text-[10px] text-slate-500">
+                            The friendly name your AI receptionist introduces herself as. Can only be modified once every 3 months.
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     <div className="space-y-1.5 min-w-0">
@@ -1329,12 +1406,78 @@ export default function AIAgentsHubPage() {
           
           <DialogFooter className="p-3 sm:px-6 sm:py-4 bg-white border-t border-slate-200/80 sticky bottom-0 z-20 shrink-0 gap-2 sm:gap-3 flex flex-row items-center justify-end">
             <Button variant="outline" onClick={() => setIsConfigOpen(false)} className="h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-medium border-slate-200 text-slate-700 shrink-0">Cancel</Button>
-            <Button onClick={saveConfig} disabled={savingConfig} className="h-9 sm:h-10 px-4 sm:px-6 text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-bold shadow-md shadow-indigo-600/20 truncate">
+            <Button onClick={handleInitiateSave} disabled={savingConfig} className="h-9 sm:h-10 px-4 sm:px-6 text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-bold shadow-md shadow-indigo-600/20 truncate">
               {savingConfig ? (
                 <><Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" /> Deploying...</>
               ) : (
                 <><Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Save & Train Agent</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ⚠️ AI Receptionist Renaming 3-Month Confirmation Dialog */}
+      <Dialog open={isRenameConfirmOpen} onOpenChange={setIsRenameConfirmOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-200 shadow-2xl space-y-4">
+          <DialogHeader className="space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-slate-900">
+              Confirm Receptionist Renaming
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 leading-relaxed">
+              You are modifying the AI Receptionist's identity from{" "}
+              <strong className="text-slate-800">"{pendingRenameTarget?.oldName}"</strong> to{" "}
+              <strong className="text-indigo-600 font-bold">"{pendingRenameTarget?.newName}"</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-950 text-xs space-y-2">
+            <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+              <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+              3-Month Renaming Policy (Locked for 90 Days)
+            </div>
+            <p className="text-[11px] leading-relaxed text-amber-900/90">
+              To preserve clinic reputation and prevent patient confusion on WhatsApp, the AI Receptionist's name can only be changed once every <strong>3 months</strong>.
+            </p>
+            <p className="text-[11px] font-semibold text-amber-950 pt-1.5 border-t border-amber-200/70">
+              ⚠️ Once confirmed, this name will be locked and cannot be changed again until{" "}
+              <strong>
+                {new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric"
+                })}
+              </strong>.
+            </p>
+          </div>
+
+          <DialogFooter className="flex flex-row items-center justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={savingConfig}
+              onClick={() => setIsRenameConfirmOpen(false)}
+              className="text-xs font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={savingConfig}
+              onClick={executeSaveConfig}
+              className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm"
+            >
+              {savingConfig ? (
+                <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+              Authorize & Save Name
             </Button>
           </DialogFooter>
         </DialogContent>
