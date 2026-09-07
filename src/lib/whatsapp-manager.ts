@@ -724,38 +724,12 @@ class WhatsAppManager {
                   }
                 });
                 console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}: ${patient.firstName} ${patient.lastName}`);
-              } else if (patient.firstName === "Patient" && hasValidPushName) {
-                const parts = pushNameRaw.split(" ");
-                patient = await prisma.patient.update({
-                  where: { id: patient.id },
-                  data: {
-                    firstName: parts[0] || "Patient",
-                    lastName: parts.slice(1).join(" ") || ""
-                  }
-                });
               } else if (patient && patient.lastName && patient.lastName.startsWith("+")) {
+                // Clean up legacy artifact if phone number was accidentally placed in lastName
                 patient = await prisma.patient.update({
                   where: { id: patient.id },
                   data: { lastName: "" }
                 });
-              }
-
-              // Also check if text message explicitly starts with name (e.g. "Saroj Kumari.. tumi ki...")
-              if (patient && patient.firstName === "Patient" && textMessage) {
-                const nameIntroMatch = textMessage.match(/^(?:my name is|mera naam|naam|i am|this is)?\s*([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})+)/);
-                if (nameIntroMatch && nameIntroMatch[1]) {
-                  const extractedName = nameIntroMatch[1].trim();
-                  const nameParts = extractedName.split(" ");
-                  if (nameParts[0] && !/^(appointment|doctor|clinic|please|hello|namaste|thanks|good)/i.test(nameParts[0])) {
-                    patient = await prisma.patient.update({
-                      where: { id: patient.id },
-                      data: {
-                        firstName: nameParts[0],
-                        lastName: nameParts.slice(1).join(" ") || ""
-                      }
-                    });
-                  }
-                }
               }
 
               if (patient && patient.isBlocked) {
@@ -1109,7 +1083,8 @@ class WhatsAppManager {
                               { phone: phoneDigits },
                               { phone: `+${phoneDigits}` },
                               { phone: { endsWith: last10 } }
-                            ]
+                            ],
+                            firstName: { equals: nameParts[0], mode: 'insensitive' }
                           }
                         });
                         if (!newPatient) {
@@ -1210,7 +1185,8 @@ class WhatsAppManager {
                               { phone: phoneDigits4 },
                               { phone: `+${phoneDigits4}` },
                               { phone: { endsWith: last10_4 } }
-                            ]
+                            ],
+                            firstName: { equals: nameParts[0], mode: 'insensitive' }
                           }
                         });
                         if (!newPatient) {
@@ -1842,7 +1818,8 @@ class WhatsAppManager {
                             { phone: prefilledPhone },
                             { phone: `+${prefilledPhone}` },
                             { phone: { endsWith: last10_pref } }
-                          ]
+                          ],
+                          firstName: { equals: nameParts[0], mode: 'insensitive' }
                         }
                       });
                       if (!newPatient) {
@@ -2160,9 +2137,28 @@ class WhatsAppManager {
                   }
 
                   try {
-                    const nameParts = (patientFullName || "Patient").trim().split(/\s+/);
-                    const candidateFirstName = nameParts[0] || "Patient";
+                    const cleanPtDigitsBk = patientPhone.replace(/\D/g, '');
+                    const last10Bk = cleanPtDigitsBk.length >= 10 ? cleanPtDigitsBk.slice(-10) : cleanPtDigitsBk;
+
+                    // Bulletproof phone validation
+                    if (cleanPtDigitsBk.length < 10) {
+                      console.log(`[WhatsAppManager] 🛑 Booking halted: Patient phone has invalid length ("${patientPhone}").`);
+                      return;
+                    }
+
+                    const nameParts = (patientFullName || "").trim().split(/\s+/);
+                    const candidateFirstName = nameParts[0] || "";
                     const candidateLastName = nameParts.slice(1).join(" ") || "";
+
+                    // Bulletproof name validation: do not create appointment if candidate name is empty, "Patient", too short, or a relation word
+                    const isRelationWord = /^(papa|father|pitaji|daddy|dad|mummy|mother|mataji|mom|wife|patni|husband|pati|beta|son|beti|daughter|brother|bhai|sister|behan|bhabhi|chachi|chacha|uncle|aunt)$/i.test(candidateFirstName);
+                    if (!candidateFirstName || candidateFirstName.toLowerCase() === "patient" || candidateFirstName.length < 2 || isRelationWord) {
+                      console.log(`[WhatsAppManager] 🛑 Booking halted: Patient name is missing, generic, or relation word ("${candidateFirstName}").`);
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply = `Kripya patient ka Full Name aur Age share kar dijiye taaki main unke naam se appointment register kar sakoon. 🙏`;
+                      await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
+                      return;
+                    }
 
                     // Clean age & calculate approximate DOB
                     let parsedAge: number | null = null;
@@ -2194,44 +2190,32 @@ class WhatsAppManager {
                       approximateDob = new Date(new Date().getFullYear() - parsedAge, 0, 1);
                     }
 
-                    // 1. Resolve Family Member Identity
-                    const cleanPtDigitsBk = patientPhone.replace(/\D/g, '');
-                    const last10Bk = cleanPtDigitsBk.length >= 10 ? cleanPtDigitsBk.slice(-10) : cleanPtDigitsBk;
-                    let targetPatient = null;
-
-                    // If candidate name is a generic dummy "Patient", do NOT create a new "Patient" record if a valid patient already exists on this phone!
-                    if (candidateFirstName.toLowerCase() === "patient") {
-                      targetPatient = await prisma.patient.findFirst({
-                        where: {
-                          doctorId,
-                          OR: [
-                            { phone: patientPhone },
-                            { phone: `+${patientPhone}` },
-                            ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
-                          ],
-                          firstName: { not: "Patient" }
-                        },
-                        orderBy: { updatedAt: "desc" }
-                      });
-                    }
+                    // 1. Resolve Family Member Identity: Match strictly by (phone + firstName)
+                    let targetPatient = await prisma.patient.findFirst({
+                      where: {
+                        doctorId,
+                        OR: [
+                          { phone: patientPhone },
+                          { phone: `+${patientPhone}` },
+                          ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                        ],
+                        firstName: { equals: candidateFirstName, mode: "insensitive" }
+                      }
+                    });
 
                     if (!targetPatient) {
-                      targetPatient = await prisma.patient.findFirst({
-                        where: {
-                          doctorId,
-                          OR: [
-                            { phone: patientPhone },
-                            { phone: `+${patientPhone}` },
-                            ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
-                          ],
-                          firstName: { equals: candidateFirstName, mode: "insensitive" }
+                      // Check if existing patient on this phone is a virgin placeholder with zero history
+                      let isVirginPlaceholder = false;
+                      if (patient && patient.firstName === "Patient") {
+                        const invCount = await prisma.invoice.count({ where: { patientId: patient.id } });
+                        const aptCount = await prisma.appointment.count({ where: { patientId: patient.id } });
+                        if (invCount === 0 && aptCount === 0) {
+                          isVirginPlaceholder = true;
                         }
-                      });
-                    }
+                      }
 
-                    if (!targetPatient) {
-                      // If existing patient on this phone is a temporary placeholder, update it
-                      if (patient && (patient.firstName === "Patient" || patient.lastName.startsWith("+") || !patient.lastName)) {
+                      if (isVirginPlaceholder && patient) {
+                        // Only an untouched blank lead can have its initial name set
                         targetPatient = await prisma.patient.update({
                           where: { id: patient.id },
                           data: {
@@ -2241,8 +2225,29 @@ class WhatsAppManager {
                             ...(approximateDob ? { dateOfBirth: approximateDob } : {})
                           }
                         });
+                        console.log(`[WhatsAppManager] Initialized placeholder lead to "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
                       } else {
-                        // A distinct family member is booking from this shared mobile number! Create a separate profile
+                        // Enforce max 4 family members under the same mobile number
+                        const existingFamilyCount = await prisma.patient.count({
+                          where: {
+                            doctorId,
+                            OR: [
+                              { phone: patientPhone },
+                              { phone: `+${patientPhone}` },
+                              ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                            ]
+                          }
+                        });
+
+                        if (existingFamilyCount >= 4) {
+                          console.log(`[WhatsAppManager] 🛑 Maximum 4 family members reached for phone ${patientPhone}. Halting booking.`);
+                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                          finalAiReply = `Is mobile number par already 4 family members registered hain. Naye patient ke liye kripya alag mobile number share karein ya clinic reception se sampark karein. 🙏`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
+                          return;
+                        }
+
+                        // A distinct family member is booking! Create a separate, dedicated profile
                         const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                         targetPatient = await prisma.patient.create({
                           data: {
@@ -2260,11 +2265,11 @@ class WhatsAppManager {
                         console.log(`[WhatsAppManager] 👨‍👩‍👧 Created separate Family Member profile: "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
                       }
                     } else {
-                      // Update missing demographic fields if provided now
+                      // Target patient already exists: update ONLY missing optional fields — NEVER overwrite firstName or existing non-empty lastName!
                       const updates: any = {};
                       if (!targetPatient.gender && parsedGender) updates.gender = parsedGender;
                       if (!targetPatient.dateOfBirth && approximateDob) updates.dateOfBirth = approximateDob;
-                      if (candidateLastName && (!targetPatient.lastName || targetPatient.lastName.startsWith("+"))) updates.lastName = candidateLastName;
+                      if (candidateLastName && (!targetPatient.lastName || targetPatient.lastName.trim() === "")) updates.lastName = candidateLastName;
                       if (Object.keys(updates).length > 0) {
                         targetPatient = await prisma.patient.update({
                           where: { id: targetPatient.id },

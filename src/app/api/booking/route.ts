@@ -13,7 +13,10 @@ export async function POST(req: Request) {
     const last10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
     const normalizedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : (phone.startsWith("+") ? phone : `+${cleanPhone}`);
 
-    // Find or create patient with resilient 10-digit matching
+    // Find or create patient with resilient 10-digit matching AND firstName matching
+    const reqFirstName = (firstName || "").trim();
+    const reqLastName = (lastName || "").trim();
+
     let patient = await prisma.patient.findFirst({
       where: {
         doctorId,
@@ -22,17 +25,40 @@ export async function POST(req: Request) {
           { phone: cleanPhone },
           { phone: `+${cleanPhone}` },
           ...(last10.length >= 10 ? [{ phone: { endsWith: last10 } }] : [])
-        ]
+        ],
+        firstName: { equals: reqFirstName, mode: "insensitive" }
       },
     });
+
     if (!patient) {
+      // Enforce max 4 family members under the same mobile number
+      const existingCount = await prisma.patient.count({
+        where: {
+          doctorId,
+          OR: [
+            { phone },
+            { phone: cleanPhone },
+            { phone: `+${cleanPhone}` },
+            ...(last10.length >= 10 ? [{ phone: { endsWith: last10 } }] : [])
+          ]
+        }
+      });
+
+      if (existingCount >= 4) {
+        return NextResponse.json(
+          { error: `Maximum of 4 family members can be registered under mobile number (${last10}). Please use an alternate mobile number.` },
+          { status: 409 }
+        );
+      }
+
       patient = await prisma.patient.create({
         data: {
           doctorId,
-          firstName,
-          lastName,
+          firstName: reqFirstName,
+          lastName: reqLastName,
           phone: normalizedPhone,
           email,
+          tags: existingCount > 0 ? ["Web Booking", "Family Member"] : ["Web Booking"]
         },
       });
     }

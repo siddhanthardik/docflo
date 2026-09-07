@@ -171,6 +171,44 @@ export async function PUT(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
+    // 2-Step Confirmation Check: If patient legal name is being modified, require explicit confirmation flag
+    const isNameChanged =
+      validatedData.firstName.trim().toLowerCase() !== existingPatient.firstName.trim().toLowerCase() ||
+      (validatedData.lastName || "").trim().toLowerCase() !== (existingPatient.lastName || "").trim().toLowerCase();
+
+    if (isNameChanged) {
+      if (body.confirmNameChange !== true) {
+        return NextResponse.json(
+          {
+            error: "Modifying a patient's legal name requires explicit confirmation because it impacts medical records and past billing.",
+            requiresConfirmation: true,
+            currentName: `${existingPatient.firstName} ${existingPatient.lastName || ""}`.trim(),
+            requestedName: `${validatedData.firstName} ${validatedData.lastName || ""}`.trim()
+          },
+          { status: 400 }
+        );
+      }
+
+      // Record audit trail of legal name alteration
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: doctorId,
+            userType: "CLINIC",
+            action: "PATIENT_NAME_CHANGED",
+            details: {
+              patientId: id,
+              oldName: `${existingPatient.firstName} ${existingPatient.lastName || ""}`.trim(),
+              newName: `${validatedData.firstName} ${validatedData.lastName || ""}`.trim(),
+              reason: body.nameChangeReason || "Manual profile edit"
+            }
+          }
+        });
+      } catch (auditErr) {
+        console.warn("[PatientsAPI] Could not record auditLog for name change:", auditErr);
+      }
+    }
+
     const primaryPractitionerId = (
       validatedData.primaryPractitionerId &&
       validatedData.primaryPractitionerId !== "none" &&

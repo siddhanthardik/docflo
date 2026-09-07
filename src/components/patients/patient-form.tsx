@@ -31,6 +31,7 @@ import {
   Loader2,
   CheckCircle2,
   Calendar as CalendarIcon,
+  AlertTriangle,
 } from "lucide-react";
 
 interface PatientFormProps {
@@ -79,6 +80,9 @@ export function PatientForm({
   const [countryCode, setCountryCode] = useState("+91");
   const [ageInput, setAgeInput] = useState("");
   const [ageDisplay, setAgeDisplay] = useState("");
+  const [showNameConfirmModal, setShowNameConfirmModal] = useState(false);
+  const [confirmInputText, setConfirmInputText] = useState("");
+  const [nameChangeReason, setNameChangeReason] = useState("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -205,8 +209,7 @@ export function PatientForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeSubmit = async (withNameConfirmation = false) => {
     setLoading(true);
 
     try {
@@ -224,13 +227,35 @@ export function PatientForm({
       await onSubmit({
         ...formData,
         phone: `${countryCode}${sanitizedNumber}`,
+        ...(withNameConfirmation ? { confirmNameChange: true, nameChangeReason } : {}),
       });
+      setShowNameConfirmModal(false);
       onOpenChange(false);
     } catch (error) {
       // Error handled in parent
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 2-Step Confirmation: Intercept legal name change on existing patient
+    const isNameChanged =
+      mode === "edit" &&
+      initialData &&
+      (formData.firstName.trim().toLowerCase() !== (initialData.firstName || "").trim().toLowerCase() ||
+        formData.lastName.trim().toLowerCase() !== (initialData.lastName || "").trim().toLowerCase());
+
+    if (isNameChanged) {
+      setConfirmInputText("");
+      setNameChangeReason("");
+      setShowNameConfirmModal(true);
+      return;
+    }
+
+    await executeSubmit(false);
   };
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -241,7 +266,8 @@ export function PatientForm({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl md:max-w-3xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
@@ -582,5 +608,95 @@ export function PatientForm({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* 2-Step Critical Double-Layer Confirmation Modal for Legal Name Changes */}
+    <Dialog open={showNameConfirmModal} onOpenChange={setShowNameConfirmModal}>
+      <DialogContent className="max-w-md p-6 rounded-2xl bg-white shadow-2xl border border-amber-200">
+        <div className="flex items-center gap-3 text-amber-600 mb-2">
+          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Confirm Legal Name Change
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Critical patient record modification
+            </DialogDescription>
+          </div>
+        </div>
+
+        <div className="mt-3 p-3.5 bg-amber-50 rounded-xl border border-amber-200/60 text-xs text-amber-900 leading-relaxed">
+          <p className="font-semibold mb-1">
+            You are altering the legal patient identity:
+          </p>
+          <div className="flex items-center gap-2 my-2 font-mono text-[13px]">
+            <span className="line-through text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
+              {initialData?.firstName} {initialData?.lastName || ""}
+            </span>
+            <span>➔</span>
+            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              {formData.firstName} {formData.lastName || ""}
+            </span>
+          </div>
+          <p className="text-[11px] text-amber-700">
+            ⚠️ This will update all historical medical records, consultations, and future billing statements for this patient ID.
+          </p>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <Label className="text-xs font-semibold text-slate-700">
+              Reason for Name Change (Audit Trail)
+            </Label>
+            <Input
+              placeholder="e.g. Spelling error correction, legal update"
+              value={nameChangeReason}
+              onChange={(e) => setNameChangeReason(e.target.value)}
+              className="mt-1 h-9 text-xs rounded-lg"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700">
+              Type <span className="font-mono font-bold text-red-600">CONFIRM</span> to authorize:
+            </Label>
+            <Input
+              placeholder="CONFIRM"
+              value={confirmInputText}
+              onChange={(e) => setConfirmInputText(e.target.value.toUpperCase())}
+              className="mt-1 h-9 text-xs font-mono font-bold tracking-wider rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowNameConfirmModal(false)}
+            className="h-9 px-4 rounded-xl text-xs font-semibold"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={confirmInputText !== "CONFIRM" || loading}
+            onClick={() => executeSubmit(true)}
+            className="h-9 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-md disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Authorize Name Change"
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
