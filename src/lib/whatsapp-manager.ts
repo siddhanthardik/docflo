@@ -14,7 +14,8 @@ import {
   resolveClinicTimezone,
   formatInClinicTime,
   formatInClinicDate,
-  getClinicDateOnlyString
+  getClinicDateOnlyString,
+  extractAgreedTimeFromHistory
 } from '@/lib/timezone';
 import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
 import { formatPatientSalutation } from '@/lib/salutation';
@@ -624,6 +625,8 @@ class WhatsAppManager {
                 maxMorningAiBookings: true,
                 maxEveningAiBookings: true,
                 aiSlotPacing: true,
+                workingHoursStart: true,
+                workingHoursEnd: true,
                 package: {
                   include: {
                     packageFeatures: {
@@ -1049,6 +1052,11 @@ class WhatsAppManager {
                 take: 10,
               });
 
+              const conversationHistoryStrings: string[] = recentMessages
+                .slice()
+                .reverse()
+                .map(rm => `${rm.direction === "INCOMING" ? (isStaff ? "Staff" : "Patient") : (isStaff ? "Assistant" : "Clinic")}: ${rm.content}`);
+
               const effectiveConfig = (agentConfig?.config as any) || {
                 mode: "handoff",
                 tone: "warm_receptionist",
@@ -1443,14 +1451,11 @@ class WhatsAppManager {
                   }
                 }
 
-                const history = recentMessages.reverse().map(rm => 
-                  `${rm.direction === "INCOMING" ? "Staff" : "Assistant"}: ${rm.content}`
-                );
+                const history = conversationHistoryStrings;
 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const weekEnd = new Date(today);
-                weekEnd.setDate(weekEnd.getDate() + 7);
+                const staffClinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                const { startOfDay: today } = getClinicDayBounds(new Date(), staffClinicTz);
+                const weekEnd = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
                 
                 const appointmentWhere: any = {
                   doctorId,
@@ -1478,9 +1483,7 @@ class WhatsAppManager {
                   }
                 );
               } else {
-                const history = recentMessages.reverse().map(rm => 
-                  `${rm.direction === "INCOMING" ? "Patient" : "Clinic"}: ${rm.content}`
-                );
+                const history = conversationHistoryStrings;
 
                 const clinicPhone = doctorInfo?.phone || "";
 
@@ -1976,8 +1979,8 @@ class WhatsAppManager {
 
                 if ((isPatientCancelTag || isPatientCancelIntent) && !isStaff) {
                   try {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                    const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
 
                     const activeApt = await prisma.appointment.findFirst({
                       where: {
@@ -2022,7 +2025,8 @@ class WhatsAppManager {
                 const patientRescheduleRegex = /\[RESCHEDULE_APPOINTMENT:\s*([^,]+),\s*([^,]+)(?:,\s*([^\]]+))?\]/i;
                 const resMatch = aiReply.match(patientRescheduleRegex);
                 if (resMatch && !isStaff) {
-                  const [, resDateStr, resSessionStr] = resMatch;
+                  const [, resDateStr, rawResSessionStr] = resMatch;
+                  const resSessionStr = extractAgreedTimeFromHistory(rawResSessionStr, textMessage, conversationHistoryStrings);
                   try {
                     const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                     const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
@@ -2037,6 +2041,7 @@ class WhatsAppManager {
                         date: { gte: todayStart },
                         status: { in: ["SCHEDULED", "CONFIRMED"] }
                       },
+                      include: { patient: true },
                       orderBy: { date: 'asc' }
                     });
 
@@ -2054,7 +2059,11 @@ class WhatsAppManager {
                       }
 
                       const isMorning = resSessionStr.toLowerCase().includes("morning");
-                      const { hour, minute } = parseSessionOrTimeToHourMinute(resSessionStr, isMorning ? 10 : 17);
+                      const { hour, minute } = parseSessionOrTimeToHourMinute(resSessionStr, isMorning ? 10 : 17, {
+                        morningOpd: effectiveConfig?.morningOpd || doctorInfo?.workingHoursStart,
+                        eveningOpd: effectiveConfig?.eveningOpd,
+                        workingHoursStart: doctorInfo?.workingHoursStart
+                      });
                       const { startTime, endTime, dbAppointmentDate } = createClinicAppointmentDateTimes({
                         dateStr: targetDateStr,
                         hour,
@@ -2073,6 +2082,16 @@ class WhatsAppManager {
                         }
                       });
                       console.log(`[WhatsAppManager] Atomically rescheduled appointment ${existingActiveApt.id} for ${patientPhone} to ${targetDateStr} ${hour}:${minute} in ${clinicTz}`);
+
+                      if (doctorInfo?.phone) {
+                        const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
+                        const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
+                        const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' });
+                        const cleanPtName = existingActiveApt.patient ? `${existingActiveApt.patient.firstName} ${existingActiveApt.patient.lastName}`.trim() : (patient ? `${patient.firstName} ${patient.lastName}`.trim() : 'Patient');
+                        
+                        const docAlert = `🔔 *Patient Appointment Rescheduled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 New Slot: *${dateLabel} at ${timeLabel}* (${resSessionStr.trim()})\n\n✨ Updated in your Gyrex calendar.`;
+                        await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
+                      }
                     }
                     finalAiReply = finalAiReply.replace(patientRescheduleRegex, "").trim();
                   } catch (resErr) {
@@ -2096,7 +2115,7 @@ class WhatsAppManager {
                   fullTag = rawTagMatch[0];
                   const parts = rawTagMatch[1].split(',').map(s => s.trim());
                   dateStr = parts[0] || "";
-                  sessionStr = parts[1] || "";
+                  sessionStr = extractAgreedTimeFromHistory(parts[1] || "", textMessage, conversationHistoryStrings);
                   patientFullName = parts[2] || "";
                   rawAgeStr = parts[3] || "";
                   rawGenderStr = parts[4] || "";
@@ -2130,7 +2149,8 @@ class WhatsAppManager {
                       dateStr = getClinicDateOnlyString(da, clinicTzFallback);
                     }
                     const timeM = combined.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
-                    sessionStr = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
+                    const rawFallbackSession = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
+                    sessionStr = extractAgreedTimeFromHistory(rawFallbackSession, textMessage, conversationHistoryStrings);
                     patientFullName = (patient?.firstName && patient.firstName !== "Patient") ? `${patient.firstName} ${patient.lastName || ""}`.trim() : "Patient";
                     fullTag = `[BOOK_APPOINTMENT: ${dateStr}, ${sessionStr}, ${patientFullName}]`;
                   }
@@ -2351,7 +2371,11 @@ class WhatsAppManager {
                           finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in consultations are available at the clinic reception.)*`;
                         } else {
                           const isMorning = sessionStr.toLowerCase().includes("morning");
-                          const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17);
+                          const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17, {
+                            morningOpd: effectiveConfig?.morningOpd || doctorInfo?.workingHoursStart,
+                            eveningOpd: effectiveConfig?.eveningOpd,
+                            workingHoursStart: doctorInfo?.workingHoursStart
+                          });
 
                           // 4. Construct Exact Clinic Timezone Timestamps
                           const { startTime, endTime, dbAppointmentDate, dateOnlyStr } = createClinicAppointmentDateTimes({
@@ -2458,8 +2482,8 @@ class WhatsAppManager {
                             const demoBadge = demoBadgeParts ? ` (${demoBadgeParts})` : "";
 
                             const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
-                            const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' });
-                            const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+                            const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
+                            const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' });
                             const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
                             const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
                             

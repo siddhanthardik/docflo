@@ -128,8 +128,10 @@ function buildDeterministicReceptionistReply(
   practitioners?: ClinicPractitionerInfo[],
   websiteUrl?: string | null,
   allowTeleConsultation: boolean = false,
-  teleConsultationFee?: string
+  teleConsultationFee?: string,
+  clinicTimezone?: string | null
 ): string {
+  const clinicTz = resolveClinicTimezone(clinicTimezone);
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
 
@@ -569,15 +571,15 @@ function buildDeterministicReceptionistReply(
     // 9.6.3 Appointment details provided (Date + Time + Name)
     if (/\b(kal|tomorrow|parso|aaj|today|pm|am|baje|subah|shaam|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)/i.test(textLower)) {
       const now = new Date();
-      let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-      const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit" }), 10);
+      let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: clinicTz });
+      const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: clinicTz, hour: "2-digit" }), 10);
       const isPastOpd = nowClinicH >= 19;
       if (/\b(kal|tomorrow)\b/i.test(textLower) || (!/\b(aaj|today)\b/i.test(textLower) && isPastOpd)) {
         const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+        targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: clinicTz });
       } else if (/\b(parso|day after)\b/i.test(textLower)) {
         const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-        targetDateStr = dayAfter.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+        targetDateStr = dayAfter.toLocaleDateString("en-CA", { timeZone: clinicTz });
       }
       const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
       const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") || textLower.includes("subah") ? "Morning" : "Evening");
@@ -654,12 +656,12 @@ function buildDeterministicReceptionistReply(
   // 10.35 Appointment Details Provided in English (Name, Date, Time)
   if (isOngoingChat && (/\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) || /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower))) {
     const now = new Date();
-    let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit" }), 10);
+    let targetDateStr = now.toLocaleDateString("en-CA", { timeZone: clinicTz });
+    const nowClinicH = parseInt(now.toLocaleTimeString("en-GB", { timeZone: clinicTz, hour: "2-digit" }), 10);
     const isPastOpd = nowClinicH >= 19;
     if (/\b(tomorrow)\b/i.test(textLower) || (!/\b(today)\b/i.test(textLower) && isPastOpd)) {
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: clinicTz });
     }
     const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)/i);
     const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") ? "Morning" : "Evening");
@@ -939,6 +941,7 @@ export class AIAgentsService {
     const customRules = config?.trainingPrompt || config?.customRules || "";
     const emergencyTriggers = config?.emergencyTriggers || "severe pain, bleeding, chest pain, trauma, emergency";
     const targetDemographics = config?.targetDemographics || "all";
+    const clinicTz = resolveClinicTimezone(scheduleContext?.clinicTimezone || config?.timezone);
 
     try {
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
@@ -950,7 +953,6 @@ export class AIAgentsService {
         return `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency medical services.`;
       }
 
-      const clinicTz = resolveClinicTimezone(scheduleContext?.clinicTimezone || config?.timezone);
       const startTime = Date.now();
       const nowClinic = new Date();
       const tomorrowClinic = new Date(nowClinic.getTime() + 24 * 60 * 60 * 1000);
@@ -1218,6 +1220,22 @@ ${languageDirective}
     - Anti-Duplication Rule: NEVER duplicate the first name into the last name (NEVER output "Yashoda Yashoda" or "Rahul Rahul").
 - **Retain Conversational Memory**:
   * Remember details already provided. Never re-ask for details already in the conversation history.
+- **Appointment Time Fidelity & Multi-Turn Exact Time Preservation (CRITICAL TIME ACCURACY DIRECTIVE)**:
+  * When a patient requests an exact time (e.g., "3 pm", "6 clock", "11:30 am", "5:00 PM") in ANY turn of the conversation:
+    - YOU MUST BOOK THE EXACT TIME REQUESTED.
+    - NEVER arbitrarily shift, round, or alter their time! (e.g. NEVER change "3 pm" to "2:00 PM", NEVER change "6 clock" to "5:00 PM").
+    - When the patient sends their Name/Demographics in a follow-up turn (where they may not repeat the time digits), you MUST RECALL the agreed time from the previous turn and put that EXACT numeric time as Parameter 2 in the booking tag!
+    - Example:
+      Turn 1: Patient asks: "Evening 6 clock slot avaible ?"
+      AI replies: "Yes, 6:00 PM is available today! Please share Name, Age, Gender."
+      Turn 2: Patient replies: "Pooja, 25, Female"
+      AI booking tag MUST be: [BOOK_APPOINTMENT: YYYY-MM-DD, 6:00 PM, Pooja, 25, Female, Doctor Name]
+      ⚠️ NEVER emit [BOOK_APPOINTMENT: YYYY-MM-DD, Evening, ...] or [BOOK_APPOINTMENT: YYYY-MM-DD, 5:00 PM, ...]!
+    - Example 2:
+      Turn 1: Patient asks: "3 pm slot"
+      Turn 2: Patient replies: "Anushree Pandey, 21 year old, Female"
+      AI booking tag MUST be: [BOOK_APPOINTMENT: YYYY-MM-DD, 3:00 PM, Anushree Pandey, 21, Female, Doctor Name]
+      ⚠️ NEVER emit [BOOK_APPOINTMENT: YYYY-MM-DD, Afternoon, ...] or [BOOK_APPOINTMENT: YYYY-MM-DD, 2:00 PM, ...]!
 
 ==================================================
 CONVERSATION TURN: ${isFirstMessage
@@ -1272,7 +1290,7 @@ ${isMultiDoctor ? `==================================================
   * When patient describes symptoms (e.g., teeth/dental -> Dental doctor; skin/hair -> Dermatology/Cosmetology doctor), route them to the appropriate doctor.
 - **Booking Tag with Doctor**:
   * When booking for a specific doctor, ALWAYS include the doctor's exact name in the booking tag as the 6th parameter:
-    [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender, Doctor Name]` : ''}
+    [BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender, Doctor Name]` : ''}
 
 ==================================================
 ${isMultiDoctor ? '8' : '7'}. CLINIC DATA, CURRENT TIME & AUTHORITATIVE SPECIFICATIONS
@@ -1379,12 +1397,17 @@ ${isMultiDoctor ? '9' : '8'}. DIAGNOSTIC REPORTS, INVESTIGATION SCANS & MEDICAL 
 ${isMultiDoctor ? '10' : '9'}. BOOKING & RESCHEDULING TAGS
 ==================================================
 - To confirm a booking once details are finalized, append this exact tag at the very end of your confirmation message:
-  ${isMultiDoctor ? `[BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender, Doctor Name]` : `[BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name, Age, Gender]`}
-  *(If Age or Gender are not provided, you may emit: [BOOK_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name${isMultiDoctor ? ', , , Doctor Name' : ''}])*
+  ${isMultiDoctor ? `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender, Doctor Name]` : `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender]`}
+  *(If Age or Gender are not provided, you may emit: [BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name${isMultiDoctor ? ', , , Doctor Name' : ''}])*
+- **MANDATORY EXACT NUMERIC TIME DIRECTIVE (2ND PARAMETER)**:
+  * Parameter 2 MUST be the EXACT NUMERIC TIME agreed upon (e.g. "3:00 PM", "6:00 PM", "11:30 AM", "5:00 PM").
+  * NEVER emit generic words like "Afternoon" or "Evening" if an exact time was discussed in ANY message in the conversation history!
+  * When patient shares name/demographics in a subsequent turn without repeating the time, RECALL the exact time from previous turns and put it in Parameter 2.
+  * Only emit "Morning" or "Evening" if the patient strictly asked for a general session without ever mentioning any specific hour.
 - If patient explicitly asks to cancel:
   [CANCEL_PATIENT_APPOINTMENT]
 - If patient explicitly asks to reschedule an existing booking:
-  [RESCHEDULE_APPOINTMENT: YYYY-MM-DD, Session, Patient Full Name]
+  [RESCHEDULE_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name]
   * When asking for preferred reschedule time:
     - English: "Hello [Name], I would be happy to help you reschedule your appointment. Which date and session (Morning or Evening) works best for you?"
     - Hinglish: "Ji [Name] ji, main aapka appointment reschedule karne mein madad karti hoon. Kripya batayein aap kis date aur session mein shift karna chahte hain?"
@@ -1476,7 +1499,8 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
         practitioners,
         websiteUrl,
         allowTeleConsultation,
-        teleConsultationFee
+        teleConsultationFee,
+        clinicTz
       );
     }
   }

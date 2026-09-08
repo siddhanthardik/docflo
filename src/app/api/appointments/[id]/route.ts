@@ -58,6 +58,9 @@ export async function GET(
         patient: {
           select: { id: true, firstName: true, lastName: true, phone: true, email: true, medicalNotes: true, tags: true },
         },
+        doctor: {
+          select: { timezone: true, clinicName: true, name: true },
+        },
       },
     });
     if (!appointment) {

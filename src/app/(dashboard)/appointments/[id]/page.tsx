@@ -37,11 +37,11 @@ function getAvatarColor(name: string) {
   return colors[code % colors.length];
 }
 
-function formatAppointmentDate(date: string | Date | undefined): string {
+function formatAppointmentDate(date: string | Date | undefined, timeZone: string = "Asia/Kolkata"): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
+    timeZone,
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -49,22 +49,22 @@ function formatAppointmentDate(date: string | Date | undefined): string {
   }).format(d);
 }
 
-function formatAppointmentShortDate(date: string | Date | undefined): string {
+function formatAppointmentShortDate(date: string | Date | undefined, timeZone: string = "Asia/Kolkata"): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
+    timeZone,
     year: "numeric",
     month: "long",
     day: "numeric",
   }).format(d);
 }
 
-function formatAppointmentTime(date: string | Date | undefined): string {
+function formatAppointmentTime(date: string | Date | undefined, timeZone: string = "Asia/Kolkata"): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
+    timeZone,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -133,6 +133,7 @@ export default function AppointmentDetailPage() {
     );
   }
 
+  const clinicTz = appointment.doctor?.timezone || "Asia/Kolkata";
   const patientName = appointment.patient
     ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
     : "Unknown Patient";
@@ -163,7 +164,7 @@ export default function AppointmentDetailPage() {
               Appointment Details
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {formatAppointmentDate(appointment.startTime || appointment.date)}
+              {formatAppointmentDate(appointment.startTime || appointment.date, clinicTz)}
             </p>
           </div>
         </div>
@@ -230,7 +231,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-xs text-gray-500">Date</p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {formatAppointmentShortDate(appointment.startTime || appointment.date)}
+                  {formatAppointmentShortDate(appointment.startTime || appointment.date, clinicTz)}
                 </p>
               </div>
             </div>
@@ -240,7 +241,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-xs text-gray-500">Time</p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {formatAppointmentTime(appointment.startTime)} — {formatAppointmentTime(appointment.endTime)}
+                  {formatAppointmentTime(appointment.startTime, clinicTz)} — {formatAppointmentTime(appointment.endTime, clinicTz)}
                 </p>
               </div>
             </div>

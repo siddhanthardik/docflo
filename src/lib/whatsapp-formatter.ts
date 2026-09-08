@@ -1,5 +1,6 @@
 import { formatPatientSalutation, calculateAgeFromDob } from "./salutation";
 import { formatDoctorDisplayName } from "./utils";
+import { resolveClinicTimezone } from "./timezone";
 
 export interface AppointmentCardParams {
   patient: {
@@ -13,7 +14,7 @@ export interface AppointmentCardParams {
   specialty?: string | null;
   clinicName?: string | null;
   startTime: Date;
-  clinicTz?: string;
+  clinicTz?: string | null;
   consultationFee?: number | string | null;
   isTele?: boolean;
   address?: string | null;
@@ -33,13 +34,13 @@ export function formatAppointmentConfirmationCard(params: AppointmentCardParams)
     specialty = "Medical Specialist",
     clinicName = "Clinic",
     startTime,
-    clinicTz = "Asia/Kolkata",
     consultationFee,
     isTele = false,
     address,
     city,
     mapsUrl,
   } = params;
+  const clinicTz = resolveClinicTimezone(params.clinicTz);
 
   // 1. Resolve Patient Salutation & Age
   const salutationResult = formatPatientSalutation(patient);
@@ -96,11 +97,6 @@ export function formatAppointmentConfirmationCard(params: AppointmentCardParams)
     }
   }
 
-  // 6. Reassurance message with 2-hour reminder notice (Differentiates digital consultation vs clinic visit)
-  const reassurance = isTele
-    ? `Aapka appointment schedule ho gaya hai 🙏 Consultation se 2 ghante pehle aapko WhatsApp reminder mil jayega. Koi query ho toh aap yahan pooch sakte hain!`
-    : `Aapka appointment schedule ho gaya hai 🙏 Visit se 2 ghante pehle aapko WhatsApp reminder mil jayega. Koi query ho toh aap yahan pooch sakte hain!`;
-
   return (
 `✓ *APPOINTMENT CONFIRMED*
 ────────────────────────────
@@ -110,9 +106,6 @@ export function formatAppointmentConfirmationCard(params: AppointmentCardParams)
 *${cleanClinic}*
 
 Patient: ${patientDisplay}
-${paymentLine}${locationBlock}
-
-────────────────────────────
-${reassurance}`
+${paymentLine}${locationBlock}`
   );
 }

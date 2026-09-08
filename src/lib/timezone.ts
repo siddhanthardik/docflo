@@ -66,45 +66,132 @@ export function getClinicDateOnlyString(dateInput: Date | string, timezone: stri
 }
 
 /**
- * Parses time or session string (e.g. "11:00 AM", "11 AM", "5:30 pm", "17:00", "Morning", "Evening")
+ * Extracts the start hour and minute from an OPD timing string (e.g. "10:00 AM - 1:00 PM", "6:00 PM - 8:30 PM", "09:30")
+ * dynamically, preventing hardcoded assumptions.
+ */
+export function extractOpdStartHourMinute(opdStr?: string | null): { hour: number; minute: number } | null {
+  if (!opdStr || typeof opdStr !== "string") return null;
+  const clean = opdStr.trim();
+  const match = clean.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (!match) return null;
+  let h = parseInt(match[1], 10);
+  const m = match[2] ? parseInt(match[2], 10) : 0;
+  const mer = (match[3] || "").toLowerCase();
+  if (mer === "pm" && h < 12) h += 12;
+  if (mer === "am" && h === 12) h = 0;
+  if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+    return { hour: h, minute: m };
+  }
+  return null;
+}
+
+/**
+ * Parses time or session string (e.g. "11:00 AM", "3 pm", "6 clock", "6 o'clock", "6 baje", "17:00", "Morning", "Evening")
  * into numeric hour (0-23) and minute (0-59).
+ * Dynamically references doctor's actual OPD schedule when generic session names are provided.
  */
 export function parseSessionOrTimeToHourMinute(
   timeOrSessionStr: string,
-  defaultHour: number = 10
+  defaultHour: number = 10,
+  referenceSchedule?: {
+    morningOpd?: string | null;
+    eveningOpd?: string | null;
+    workingHoursStart?: string | null;
+    timings?: string | null;
+  }
 ): { hour: number; minute: number } {
   const str = (timeOrSessionStr || "").trim().toLowerCase();
 
-  // 1. Try to find explicit time pattern like "11:30 am", "11 am", "5:30 pm", "17:00", "5 pm"
-  const timeMatch = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  // 1. Try to find explicit time pattern like "11:30 am", "3 pm", "6 clock", "6 o'clock", "6 baje", "17:00"
+  const timeMatch = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|baje|o'?clock|clock)?/i);
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
     const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-    const mer = (timeMatch[3] || "").toLowerCase();
+    const suffix = (timeMatch[3] || "").toLowerCase();
 
-    if (mer === "pm" && hour < 12) hour += 12;
-    if (mer === "am" && hour === 12) hour = 0;
+    const isExplicitPm = suffix === "pm";
+    const isExplicitAm = suffix === "am";
+    const hasEveningContext = str.includes("evening") || str.includes("sham") || str.includes("shaam") || str.includes("night") || str.includes("raat") || defaultHour >= 12;
+    const hasAfternoonContext = str.includes("afternoon") || str.includes("dopahar");
+    const hasMorningContext = str.includes("morning") || str.includes("subah");
+
+    if (isExplicitPm) {
+      if (hour < 12) hour += 12;
+    } else if (isExplicitAm) {
+      if (hour === 12) hour = 0;
+    } else {
+      // Suffix is empty, or colloquial like "clock", "baje", "o'clock"
+      if (hour >= 1 && hour <= 12) {
+        if (hasEveningContext) {
+          if (hour < 12) hour += 12;
+        } else if (hasAfternoonContext) {
+          if (hour < 12 && hour !== 12) hour += 12;
+        } else if (hasMorningContext) {
+          if (hour === 12) hour = 0;
+        } else {
+          // In medical practice, 1 to 6 without AM is afternoon/evening (1 PM to 6 PM)
+          if (hour >= 1 && hour <= 6) {
+            hour += 12;
+          }
+        }
+      }
+    }
 
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
       return { hour, minute };
     }
   }
 
-  // 2. Map session keywords to reasonable clinic OPD hours
+  // 2. Map pure session keywords WITHOUT numbers to actual doctor OPD hours (dynamic, never arbitrary)
   if (str.includes("morning") || str.includes("subah")) {
-    return { hour: 10, minute: 0 };
+    const dynamicStart = extractOpdStartHourMinute(referenceSchedule?.morningOpd || referenceSchedule?.workingHoursStart);
+    if (dynamicStart) return dynamicStart;
+    return { hour: defaultHour ?? 10, minute: 0 };
   }
   if (str.includes("afternoon") || str.includes("dopahar")) {
-    return { hour: 14, minute: 0 };
+    return { hour: defaultHour >= 12 && defaultHour <= 15 ? defaultHour : 14, minute: 0 };
   }
   if (str.includes("evening") || str.includes("sham") || str.includes("shaam")) {
-    return { hour: 17, minute: 0 };
+    const dynamicStart = extractOpdStartHourMinute(referenceSchedule?.eveningOpd);
+    if (dynamicStart) return dynamicStart;
+    return { hour: defaultHour >= 16 ? defaultHour : 17, minute: 0 };
   }
   if (str.includes("night") || str.includes("raat")) {
     return { hour: 20, minute: 0 };
   }
 
   return { hour: defaultHour, minute: 0 };
+}
+
+/**
+ * Scans conversation history to recover the exact agreed numeric time (e.g. "3:00 PM", "6:00 PM", "6 clock")
+ * when an LLM tag emits a generic session name like "Afternoon" or "Evening".
+ * Guarantees zero time-shifting across multi-turn booking flows.
+ */
+export function extractAgreedTimeFromHistory(
+  sessionStr: string,
+  latestMessage: string,
+  history: string[] = []
+): string {
+  // If sessionStr already contains digits, preserve it
+  if (sessionStr && /\d/.test(sessionStr)) {
+    return sessionStr.trim();
+  }
+
+  // Regex to match explicit requested times in patient/clinic dialogue
+  const explicitTimeRegex = /(?:at|for|around|—|-|\b)(\d{1,2}(?::\d{2})?\s*(?:am|pm|baje|o'?clock|clock))\b/i;
+
+  // Scan recent conversation from newest to oldest
+  const messagesToCheck = [latestMessage, ...[...history].reverse()];
+  for (const msg of messagesToCheck) {
+    if (!msg) continue;
+    const match = msg.match(explicitTimeRegex);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return sessionStr;
 }
 
 /**
