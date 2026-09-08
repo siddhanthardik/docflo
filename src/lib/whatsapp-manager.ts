@@ -1972,15 +1972,45 @@ class WhatsAppManager {
                   }
                 }
 
-                // 2. Intercept Patient Cancellation Tag or Intent
-                const patientCancelRegex = /\[(CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT)\]/i;
-                const isPatientCancelTag = patientCancelRegex.test(aiReply);
-                const isPatientCancelIntent = !isStaff && /(?:cancel|cancellation)\s+(?:my\s+)?(?:appointment|booking|slot)|nahi\s+aa\s*(?:paunga|sakta|payenge)|cannot\s+come/i.test(textMessage);
+                // 2. Intercept Patient Cancellation Tag, Intent, or AI Acknowledgment
+                const patientCancelRegex = /\[(?:CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|CANCEL_APPOINTMENT)(?::\s*([^\]]+))?\]/i;
+                const ptCancelMatch = aiReply.match(patientCancelRegex);
+                const isPatientCancelTag = !!ptCancelMatch;
 
-                if ((isPatientCancelTag || isPatientCancelIntent) && !isStaff) {
+                // Match English & Hindi phrases in any word order:
+                // e.g., "Sushmita ka appointment cancel karna hai", "appointment cancel kar do", "cancel my appointment", "slot cancel", "cancel karna hai", "nahi aa paunga"
+                const isCancelWord = /\b(?:cancel|cancellation|radd|hata(?:o|na|de|do)?)\b/i.test(textMessage);
+                const isAppointmentWord = /\b(?:appointment|booking|slot|visit)\b/i.test(textMessage);
+                const isHindiCancelPhrase = /nahi\s+aa\s*(?:paunga|sakta|sakenge|payenge|paenge|payega)|aana\s+nahi\s+hai|cancel\s*(?:karo|karna|kar|kr|do|hoga)/i.test(textMessage);
+                const isPatientCancelIntent = !isStaff && ((isCancelWord && (isAppointmentWord || isHindiCancelPhrase)) || isHindiCancelPhrase);
+
+                // Also detect if the AI text itself acknowledged cancellation even if the tag was omitted
+                const isAiAcknowledgedCancel = !isStaff && /(?:appointment|booking)\s+(?:has\s+been\s+)?(?:cancelled|canceled)|(?:appointment|booking|slot).*(?:cancel|radd)\s+kar\s+diya/i.test(aiReply);
+
+                if ((isPatientCancelTag || isPatientCancelIntent || isAiAcknowledgedCancel) && !isStaff) {
                   try {
                     const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                     const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
+
+                    // Extract target beneficiary if specified in tag or mentioned in message
+                    const rawCancelTarget = ptCancelMatch?.[1]?.trim().toLowerCase();
+                    let targetFirstName: string | null = null;
+                    if (rawCancelTarget && rawCancelTarget !== "patient") {
+                      targetFirstName = rawCancelTarget.split(' ')[0];
+                    } else {
+                      // Check if any patient registered under this phone has their firstName in textMessage or aiReply
+                      const registeredPts = await prisma.patient.findMany({
+                        where: {
+                          phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] },
+                          doctorId
+                        }
+                      });
+                      const combinedTxt = `${textMessage} ${aiReply}`.toLowerCase();
+                      const matchedPt = registeredPts.find(p => p.firstName && p.firstName.length > 2 && combinedTxt.includes(p.firstName.toLowerCase()));
+                      if (matchedPt) {
+                        targetFirstName = matchedPt.firstName.toLowerCase();
+                      }
+                    }
 
                     const activeApt = await prisma.appointment.findFirst({
                       where: {
@@ -1989,6 +2019,7 @@ class WhatsAppManager {
                           ...(patient ? [{ patientId: patient.id }] : []),
                           { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
                         ],
+                        ...(targetFirstName ? { patient: { firstName: { equals: targetFirstName, mode: 'insensitive' } } } : {}),
                         date: { gte: today },
                         status: { in: ["SCHEDULED", "CONFIRMED", "CHECKED_IN"] }
                       },
@@ -2015,7 +2046,7 @@ class WhatsAppManager {
                         await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                       }
                     }
-                    finalAiReply = finalAiReply.replace(/\[(CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT)\]/gi, "").trim();
+                    finalAiReply = finalAiReply.replace(/\[(?:CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|CANCEL_APPOINTMENT)(?::.*?)?\]/gi, "").trim();
                   } catch (cancelErr) {
                     console.error("[WhatsAppManager] Patient Cancellation Error:", cancelErr);
                   }
@@ -2134,6 +2165,15 @@ class WhatsAppManager {
                     const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                     const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
 
+                    // Check if a specific patient is mentioned in textMessage
+                    const registeredPts = await prisma.patient.findMany({
+                      where: {
+                        phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] },
+                        doctorId
+                      }
+                    });
+                    const matchedPt = registeredPts.find(p => p.firstName && p.firstName.length > 2 && textMessage.toLowerCase().includes(p.firstName.toLowerCase()));
+
                     const activeAppointment = await prisma.appointment.findFirst({
                       where: {
                         doctorId,
@@ -2141,11 +2181,12 @@ class WhatsAppManager {
                           ...(patient ? [{ patientId: patient.id }] : []),
                           { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
                         ],
+                        ...(matchedPt ? { patientId: matchedPt.id } : {}),
                         date: { gte: todayStart },
                         status: { in: ["SCHEDULED", "CONFIRMED"] }
                       },
                       include: { patient: true, practitioner: true },
-                      orderBy: { createdAt: 'desc' }
+                      orderBy: [{ updatedAt: 'desc' }, { date: 'asc' }]
                     });
 
                     if (activeAppointment && activeAppointment.startTime) {
@@ -2398,116 +2439,137 @@ class WhatsAppManager {
                       }
                     }
 
-                    // 2. Check if this specific family member already has an upcoming appointment
+                    // 2. Parse Date with intelligent fallback
                     const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                     const { startOfDay: today } = getClinicDayBounds(new Date(), clinicTz);
 
-                    const activeAppointment = await prisma.appointment.findFirst({
-                      where: {
-                        patientId: targetPatient.id,
-                        doctorId: doctorId,
-                        date: { gte: today },
-                        status: "CONFIRMED"
+                    let appointmentDate = new Date(dateStr.trim());
+
+                    if (isNaN(appointmentDate.getTime())) {
+                      const cleanStr = dateStr.trim().toLowerCase();
+                      if (cleanStr.includes("today") || cleanStr.includes("aaj")) {
+                        appointmentDate = new Date(today);
+                      } else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
+                        appointmentDate = new Date(today);
+                        appointmentDate.setDate(appointmentDate.getDate() + 1);
+                      } else if (cleanStr.includes("day after") || cleanStr.includes("parso")) {
+                        appointmentDate = new Date(today);
+                        appointmentDate.setDate(appointmentDate.getDate() + 2);
                       }
-                    });
+                    }
+                    
+                    if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
+                      // Check daily quota for that date in clinic timezone
+                      const { startOfDay: startOfBookingDay, endOfDay: endOfBookingDay } = getClinicDayBounds(appointmentDate, clinicTz);
 
-                    if (activeAppointment) {
-                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
-                      finalAiReply += "\n\n*(Note: You already have an upcoming appointment scheduled. If you need to change it, please contact the clinic directly.)*";
-                    } else {
-                      // 3. Parse Date with intelligent fallback
-                      let appointmentDate = new Date(dateStr.trim());
-
-                      if (isNaN(appointmentDate.getTime())) {
-                        const cleanStr = dateStr.trim().toLowerCase();
-                        if (cleanStr.includes("today") || cleanStr.includes("aaj")) {
-                          appointmentDate = new Date(today);
-                        } else if (cleanStr.includes("tomorrow") || cleanStr.includes("kal")) {
-                          appointmentDate = new Date(today);
-                          appointmentDate.setDate(appointmentDate.getDate() + 1);
-                        } else if (cleanStr.includes("day after") || cleanStr.includes("parso")) {
-                          appointmentDate = new Date(today);
-                          appointmentDate.setDate(appointmentDate.getDate() + 2);
+                      const existingAiBookings = await prisma.appointment.count({
+                        where: {
+                          doctorId,
+                          date: { gte: startOfBookingDay, lte: endOfBookingDay },
+                          notes: { contains: "AI" }
                         }
-                      }
-                      
-                      if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
-                        // Check daily quota for that date in clinic timezone
-                        const { startOfDay: startOfBookingDay, endOfDay: endOfBookingDay } = getClinicDayBounds(appointmentDate, clinicTz);
+                      });
 
-                        const existingAiBookings = await prisma.appointment.count({
-                          where: {
-                            doctorId,
-                            date: { gte: startOfBookingDay, lte: endOfBookingDay },
-                            notes: { contains: "AI" }
-                          }
+                      const maxDaily = doctorInfo?.maxDailyAiBookings ?? 10;
+
+                      if (maxDaily !== null && existingAiBookings >= maxDaily) {
+                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                        finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in consultations are available at the clinic reception.)*`;
+                      } else {
+                        const isMorning = sessionStr.toLowerCase().includes("morning");
+                        const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17, {
+                          morningOpd: effectiveConfig?.morningOpd || doctorInfo?.workingHoursStart,
+                          eveningOpd: effectiveConfig?.eveningOpd,
+                          workingHoursStart: doctorInfo?.workingHoursStart
                         });
 
-                        const maxDaily = doctorInfo?.maxDailyAiBookings ?? 10;
+                        // 3. Construct Exact Clinic Timezone Timestamps
+                        const { startTime, endTime, dbAppointmentDate, dateOnlyStr } = createClinicAppointmentDateTimes({
+                          dateStr: appointmentDate,
+                          hour,
+                          minute,
+                          durationMinutes: 60,
+                          timezone: clinicTz
+                        });
 
-                        if (maxDaily !== null && existingAiBookings >= maxDaily) {
-                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
-                          finalAiReply += `\n\n*(Note: Our online WhatsApp slots for this date are fully reserved. For urgent consultations, direct walk-in consultations are available at the clinic reception.)*`;
+                        // Detect In-Clinic vs Tele-Consultation
+                        const isTele = /tele|video|online|virtual|remote/i.test(`${sessionStr} ${textMessage} ${aiReply}`);
+                        const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
+                        const slotTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                        let chosenPractitioner = null;
+
+                        // 1. Check if doctor name was passed in the booking tag
+                        if (rawDoctorName && rawDoctorName.trim()) {
+                          const cleanDocTarget = rawDoctorName.trim().toLowerCase();
+                          chosenPractitioner = practitioners.find(p => {
+                            const pName = p.name.toLowerCase();
+                            const pBare = pName.replace(/^dr\.?\s*/i, '');
+                            return pName.includes(cleanDocTarget) || cleanDocTarget.includes(pBare);
+                          }) || null;
+                        }
+
+                        // 2. If not specified in tag, check if any doctor is named in conversation or AI reply
+                        if (!chosenPractitioner) {
+                          const combinedText = `${aiReply} ${textMessage}`.toLowerCase();
+                          chosenPractitioner = practitioners.find(p => {
+                            const pName = p.name.toLowerCase();
+                            const pBare = pName.replace(/^dr\.?\s*/i, '');
+                            return combinedText.includes(pName) || (pBare.length > 3 && combinedText.includes(pBare));
+                          }) || null;
+                        }
+
+                        // 3. Match by shift working hours (e.g. 10:00 AM -> Morning doctor; 18:00 -> Evening doctor)
+                        const onDutyDoctor = practitioners.find(p => {
+                          if (!p.workingHoursStart || !p.workingHoursEnd) return false;
+                          return slotTimeStr >= p.workingHoursStart && slotTimeStr <= p.workingHoursEnd;
+                        });
+
+                        // If on-duty doctor is found and (no doctor chosen OR chosen doctor's shift doesn't match the slot time):
+                        if (onDutyDoctor && (!chosenPractitioner || (chosenPractitioner.workingHoursStart && chosenPractitioner.workingHoursEnd && (slotTimeStr < chosenPractitioner.workingHoursStart || slotTimeStr > chosenPractitioner.workingHoursEnd)))) {
+                          console.log(`[WhatsAppManager] 🕒 Slot time ${slotTimeStr} matches on-duty doctor ${onDutyDoctor.name} (replaces ${chosenPractitioner?.name || 'none'})`);
+                          chosenPractitioner = onDutyDoctor;
+                        }
+
+                        if (!chosenPractitioner) {
+                          chosenPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+                        }
+
+                        // Check if this patient already has an active upcoming appointment
+                        const activeAppointment = await prisma.appointment.findFirst({
+                          where: {
+                            patientId: targetPatient.id,
+                            doctorId: doctorId,
+                            date: { gte: today },
+                            status: "CONFIRMED"
+                          },
+                          orderBy: { date: 'asc' }
+                        });
+
+                        if (activeAppointment) {
+                          const isSameDate = getClinicDateOnlyString(activeAppointment.date, clinicTz) === dateOnlyStr;
+                          const isSameTime = activeAppointment.startTime && Math.abs(activeAppointment.startTime.getTime() - startTime.getTime()) < 5 * 60 * 1000;
+
+                          if (isSameDate && isSameTime) {
+                            console.log(`[WhatsAppManager] ℹ️ Duplicate booking request for same slot ${dateOnlyStr} ${slotTimeStr}. Resending existing card.`);
+                          } else {
+                            // Patient is moving / re-booking to a new slot (e.g. after cancellation or slot change)
+                            // Atomically update the existing appointment to the new slot in the database
+                            await prisma.appointment.update({
+                              where: { id: activeAppointment.id },
+                              data: {
+                                practitionerId: chosenPractitioner?.id || activeAppointment.practitionerId,
+                                date: dbAppointmentDate,
+                                startTime: startTime,
+                                endTime: endTime,
+                                status: "CONFIRMED",
+                                notes: `${activeAppointment.notes || ""} [Shifted/Re-booked via WhatsApp to ${dateOnlyStr} ${sessionStr.trim()}]`.trim(),
+                                type: appointmentType
+                              }
+                            });
+                            console.log(`[WhatsAppManager] 🔄 Updated appointment ${activeAppointment.id} to new slot ${dateOnlyStr} ${slotTimeStr} for ${candidateFirstName} ${candidateLastName}`);
+                          }
                         } else {
-                          const isMorning = sessionStr.toLowerCase().includes("morning");
-                          const { hour, minute } = parseSessionOrTimeToHourMinute(sessionStr, isMorning ? 10 : 17, {
-                            morningOpd: effectiveConfig?.morningOpd || doctorInfo?.workingHoursStart,
-                            eveningOpd: effectiveConfig?.eveningOpd,
-                            workingHoursStart: doctorInfo?.workingHoursStart
-                          });
-
-                          // 4. Construct Exact Clinic Timezone Timestamps
-                          const { startTime, endTime, dbAppointmentDate, dateOnlyStr } = createClinicAppointmentDateTimes({
-                            dateStr: appointmentDate,
-                            hour,
-                            minute,
-                            durationMinutes: 60,
-                            timezone: clinicTz
-                          });
-
-                          // Create the Appointment in CRM (detect In-Clinic vs Tele-Consultation)
-                          const isTele = /tele|video|online|virtual|remote/i.test(`${sessionStr} ${textMessage} ${aiReply}`);
-                          const appointmentType = isTele ? "TELE_CONSULTATION" : "IN_CLINIC";
-                          // Resolve Doctor for this Appointment (Strict Shift-Aware & Context-Aware Logic)
-                          const slotTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-                          let chosenPractitioner = null;
-
-                          // 1. Check if doctor name was passed in the booking tag
-                          if (rawDoctorName && rawDoctorName.trim()) {
-                            const cleanDocTarget = rawDoctorName.trim().toLowerCase();
-                            chosenPractitioner = practitioners.find(p => {
-                              const pName = p.name.toLowerCase();
-                              const pBare = pName.replace(/^dr\.?\s*/i, '');
-                              return pName.includes(cleanDocTarget) || cleanDocTarget.includes(pBare);
-                            }) || null;
-                          }
-
-                          // 2. If not specified in tag, check if any doctor is named in conversation or AI reply
-                          if (!chosenPractitioner) {
-                            const combinedText = `${aiReply} ${textMessage}`.toLowerCase();
-                            chosenPractitioner = practitioners.find(p => {
-                              const pName = p.name.toLowerCase();
-                              const pBare = pName.replace(/^dr\.?\s*/i, '');
-                              return combinedText.includes(pName) || (pBare.length > 3 && combinedText.includes(pBare));
-                            }) || null;
-                          }
-
-                          // 3. Match by shift working hours (e.g. 10:00 AM -> Morning doctor; 18:00 -> Evening doctor)
-                          const onDutyDoctor = practitioners.find(p => {
-                            if (!p.workingHoursStart || !p.workingHoursEnd) return false;
-                            return slotTimeStr >= p.workingHoursStart && slotTimeStr <= p.workingHoursEnd;
-                          });
-
-                          // If on-duty doctor is found and (no doctor chosen OR chosen doctor's shift doesn't match the slot time):
-                          if (onDutyDoctor && (!chosenPractitioner || (chosenPractitioner.workingHoursStart && chosenPractitioner.workingHoursEnd && (slotTimeStr < chosenPractitioner.workingHoursStart || slotTimeStr > chosenPractitioner.workingHoursEnd)))) {
-                            console.log(`[WhatsAppManager] 🕒 Slot time ${slotTimeStr} matches on-duty doctor ${onDutyDoctor.name} (replaces ${chosenPractitioner?.name || 'none'})`);
-                            chosenPractitioner = onDutyDoctor;
-                          }
-
-                          if (!chosenPractitioner) {
-                            chosenPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
-                          }
-
+                          // Fresh appointment creation in CRM
                           await prisma.appointment.create({
                             data: {
                               patientId: targetPatient.id,
@@ -2525,56 +2587,57 @@ class WhatsAppManager {
                           });
 
                           console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hour}:${minute} in ${clinicTz}`);
-                          
-                          // Format patient confirmation card matching reference design
-                          finalAiReply = formatAppointmentConfirmationCard({
-                            patient: {
-                              firstName: targetPatient.firstName,
-                              lastName: targetPatient.lastName,
-                              gender: targetPatient.gender,
-                              age: parsedAge,
-                              dateOfBirth: targetPatient.dateOfBirth
-                            },
-                            doctorName: chosenPractitioner?.name || doctorInfo?.name,
-                            specialty: chosenPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
-                            clinicName: doctorInfo?.clinicName,
-                            startTime: startTime,
-                            clinicTz: clinicTz,
-                            consultationFee: chosenPractitioner?.consultationFee,
-                            isTele: isTele,
-                            address: clinicAddress || doctorInfo?.address,
-                            city: doctorInfo?.city,
-                            mapsUrl: clinicMapsUri
-                          });
-
-                          // 5. Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
-                          if (doctorInfo?.phone) {
-                            const aiConfig = await prisma.aIAgentConfig.findUnique({
-                              where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
-                            });
-                            const rawCfg = (aiConfig?.config as any) || {};
-                            const assistantName = rawCfg.assistantName || "Riya";
-
-                            const ageLabel = parsedAge ? `Age: ${parsedAge}` : "";
-                            const genderLabel = parsedGender ? (parsedGender === "MALE" ? "Male" : (parsedGender === "FEMALE" ? "Female" : parsedGender)) : "";
-                            const demoBadgeParts = [ageLabel, genderLabel].filter(Boolean).join(", ");
-                            const demoBadge = demoBadgeParts ? ` (${demoBadgeParts})` : "";
-
-                            const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
-                            const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
-                            const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' });
-                            const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
-                            const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
-                            
-                            const docAlert = `🔔 *New Appointment booked by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been added to your Gyrex calendar.`;
-                            await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
-                          }
                         }
-                      } else {
-                        // Invalid date
-                        finalAiReply = finalAiReply.replace(fullTag, "").trim();
-                        finalAiReply += "\n\n*(Note: There was an issue processing the requested date. Please call the clinic to finalize your slot.)*";
+
+                        // Format patient confirmation card matching reference design
+                        finalAiReply = formatAppointmentConfirmationCard({
+                          patient: {
+                            firstName: targetPatient.firstName,
+                            lastName: targetPatient.lastName,
+                            gender: targetPatient.gender,
+                            age: parsedAge,
+                            dateOfBirth: targetPatient.dateOfBirth
+                          },
+                          doctorName: chosenPractitioner?.name || doctorInfo?.name,
+                          specialty: chosenPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                          clinicName: doctorInfo?.clinicName,
+                          startTime: startTime,
+                          clinicTz: clinicTz,
+                          consultationFee: chosenPractitioner?.consultationFee,
+                          isTele: isTele,
+                          address: clinicAddress || doctorInfo?.address,
+                          city: doctorInfo?.city,
+                          mapsUrl: clinicMapsUri
+                        });
+
+                        // Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
+                        if (doctorInfo?.phone) {
+                          const aiConfig = await prisma.aIAgentConfig.findUnique({
+                            where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
+                          });
+                          const rawCfg = (aiConfig?.config as any) || {};
+                          const assistantName = rawCfg.assistantName || "Riya";
+
+                          const ageLabel = parsedAge ? `Age: ${parsedAge}` : "";
+                          const genderLabel = parsedGender ? (parsedGender === "MALE" ? "Male" : (parsedGender === "FEMALE" ? "Female" : parsedGender)) : "";
+                          const demoBadgeParts = [ageLabel, genderLabel].filter(Boolean).join(", ");
+                          const demoBadge = demoBadgeParts ? ` (${demoBadgeParts})` : "";
+
+                          const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
+                          const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
+                          const timeLabel = startTime.toLocaleTimeString('en-IN', { timeZone: clinicTz, hour: '2-digit', minute: '2-digit' });
+                          const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
+                          const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
+                          
+                          const actionTitle = activeAppointment ? "Patient Appointment Updated / Shifted" : "New Appointment booked";
+                          const docAlert = `🔔 *${actionTitle} by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been ${activeAppointment ? "updated in" : "added to"} your Gyrex calendar.`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
+                        }
                       }
+                    } else {
+                      // Invalid date
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply += "\n\n*(Note: There was an issue processing the requested date. Please call the clinic to finalize your slot.)*";
                     }
                   } catch (e) {
                     console.error("[WhatsAppManager] Agentic Booking Error:", e);
@@ -2584,7 +2647,7 @@ class WhatsAppManager {
 
                 // Send reply via Baileys
                 // Strip any stray internal AI action tags before sending to doctor or patient
-                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT)(?::.*?)?\]/gi, "").trim();
+                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|RESEND_CONFIRMATION)(?::.*?)?\]/gi, "").trim();
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage

@@ -1420,8 +1420,13 @@ ${isMultiDoctor ? '10' : '9'}. BOOKING & RESCHEDULING TAGS
   * ⚠️ NEVER emit [BOOK_APPOINTMENT] if the patient only provided a general word like "Morning" or "Evening" without an agreed time! Ask for their preferred time first.
   * When patient shares name/demographics in a subsequent turn without repeating the time, RECALL the exact time from previous turns and put it in Parameter 2.
   * Only emit a general session name if the patient explicitly confirmed they have no preference (e.g. "any time is fine", "koi bhi chalega").
-- If patient explicitly asks to cancel:
-  [CANCEL_PATIENT_APPOINTMENT]
+- **PATIENT CANCELLATION DIRECTIVE (MANDATORY)**:
+  * If a patient or family member asks to cancel an appointment (e.g., "Sushmita ka appointment cancel karna hai", "Cancel appointment", "Appointment cancel kar do", "nahi aa paunga", "slot cancel", "aana cancel"):
+    1. Acknowledge the cancellation warmly in 1-2 polite sentences.
+    2. ⚠️ MANDATORY: Append this exact tag at the very end of your reply:
+       [CANCEL_PATIENT_APPOINTMENT: Patient Full Name]
+       *(e.g., [CANCEL_PATIENT_APPOINTMENT: Sushmita] or [CANCEL_PATIENT_APPOINTMENT: Patient Full Name])*
+    3. NEVER omit this tag when acknowledging a cancellation! The system requires this tag to update and cancel the booking in the clinic database.
 - If patient explicitly asks to reschedule an existing booking:
   [RESCHEDULE_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name]
 - If patient asks to send/resend confirmation or status (e.g. "Send me confirmation", "Confirmation bhej do", "Is my appointment confirmed"):
