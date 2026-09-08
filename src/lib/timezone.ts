@@ -156,8 +156,10 @@ export function parseSessionOrTimeToHourMinute(
     if (dynamicStart) return dynamicStart;
     return { hour: defaultHour >= 16 ? defaultHour : 17, minute: 0 };
   }
-  if (str.includes("night") || str.includes("raat")) {
-    return { hour: 20, minute: 0 };
+  if (/\b(night|raat)\b/i.test(str)) {
+    const dynamicStart = extractOpdStartHourMinute(referenceSchedule?.eveningOpd);
+    if (dynamicStart) return dynamicStart;
+    return { hour: defaultHour >= 16 ? defaultHour : 20, minute: 0 };
   }
 
   return { hour: defaultHour, minute: 0 };

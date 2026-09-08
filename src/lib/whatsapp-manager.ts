@@ -2025,12 +2025,13 @@ class WhatsAppManager {
                 const patientRescheduleRegex = /\[RESCHEDULE_APPOINTMENT:\s*([^,]+),\s*([^,]+)(?:,\s*([^\]]+))?\]/i;
                 const resMatch = aiReply.match(patientRescheduleRegex);
                 if (resMatch && !isStaff) {
-                  const [, resDateStr, rawResSessionStr] = resMatch;
+                  const [, resDateStr, rawResSessionStr, rawPtName] = resMatch;
                   const resSessionStr = extractAgreedTimeFromHistory(rawResSessionStr, textMessage, conversationHistoryStrings);
                   try {
                     const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                     const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
 
+                    const cleanTargetPtName = rawPtName?.trim().toLowerCase();
                     const existingActiveApt = await prisma.appointment.findFirst({
                       where: {
                         doctorId,
@@ -2038,10 +2039,11 @@ class WhatsAppManager {
                           ...(patient ? [{ patientId: patient.id }] : []),
                           { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
                         ],
+                        ...(cleanTargetPtName ? { patient: { firstName: { equals: cleanTargetPtName.split(' ')[0], mode: 'insensitive' } } } : {}),
                         date: { gte: todayStart },
                         status: { in: ["SCHEDULED", "CONFIRMED"] }
                       },
-                      include: { patient: true },
+                      include: { patient: true, practitioner: true },
                       orderBy: { date: 'asc' }
                     });
 
@@ -2083,6 +2085,27 @@ class WhatsAppManager {
                       });
                       console.log(`[WhatsAppManager] Atomically rescheduled appointment ${existingActiveApt.id} for ${patientPhone} to ${targetDateStr} ${hour}:${minute} in ${clinicTz}`);
 
+                      const resPractitioner = existingActiveApt.practitioner || practitioners.find(p => p.id === existingActiveApt.practitionerId) || practitioners[0];
+                      const updatedCard = formatAppointmentConfirmationCard({
+                        patient: {
+                          firstName: existingActiveApt.patient?.firstName || patient?.firstName,
+                          lastName: existingActiveApt.patient?.lastName || patient?.lastName,
+                          gender: existingActiveApt.patient?.gender || patient?.gender,
+                          dateOfBirth: existingActiveApt.patient?.dateOfBirth
+                        },
+                        doctorName: resPractitioner?.name || doctorInfo?.name,
+                        specialty: resPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                        clinicName: doctorInfo?.clinicName,
+                        startTime: startTime,
+                        clinicTz: clinicTz,
+                        consultationFee: resPractitioner?.consultationFee,
+                        address: clinicAddress || doctorInfo?.address,
+                        city: doctorInfo?.city,
+                        mapsUrl: clinicMapsUri
+                      });
+
+                      finalAiReply = updatedCard;
+
                       if (doctorInfo?.phone) {
                         const docPhoneClean = doctorInfo.phone.replace(/\D/g, '');
                         const dateLabel = dbAppointmentDate.toLocaleDateString('en-IN', { timeZone: clinicTz, weekday: 'short', day: 'numeric', month: 'short' });
@@ -2092,10 +2115,65 @@ class WhatsAppManager {
                         const docAlert = `🔔 *Patient Appointment Rescheduled*\n\n👤 Patient: *${cleanPtName}* (${patientPhone})\n📅 New Slot: *${dateLabel} at ${timeLabel}* (${resSessionStr.trim()})\n\n✨ Updated in your Gyrex calendar.`;
                         await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                       }
+                      
+                      await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, existingActiveApt.patientId, existingActiveApt.patient?.firstName || "Patient");
+                      return;
                     }
                     finalAiReply = finalAiReply.replace(patientRescheduleRegex, "").trim();
                   } catch (resErr) {
                     console.error("[WhatsAppManager] Patient Rescheduling Error:", resErr);
+                  }
+                }
+
+                // 2.6 Intercept Status / Resend Confirmation Card Requests
+                const isResendConfirmationTag = /\[RESEND_CONFIRMATION\]/i.test(aiReply);
+                const isConfirmationRequestText = /(?:send\s*(?:me\s*)?(?:the\s*)?confirmation|confirmation\s*card\s*(?:bhej|send|share)|confirm\s*(?:ho\s*gaya|status)|share\s*confirmation)/i.test(textMessage);
+
+                if ((isResendConfirmationTag || isConfirmationRequestText) && !isStaff) {
+                  try {
+                    const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                    const { startOfDay: todayStart } = getClinicDayBounds(new Date(), clinicTz);
+
+                    const activeAppointment = await prisma.appointment.findFirst({
+                      where: {
+                        doctorId,
+                        OR: [
+                          ...(patient ? [{ patientId: patient.id }] : []),
+                          { patient: { phone: { in: [patientPhone, `+${patientPhone}`, patientPhone.slice(-10)] } } }
+                        ],
+                        date: { gte: todayStart },
+                        status: { in: ["SCHEDULED", "CONFIRMED"] }
+                      },
+                      include: { patient: true, practitioner: true },
+                      orderBy: { createdAt: 'desc' }
+                    });
+
+                    if (activeAppointment && activeAppointment.startTime) {
+                      const pDoc = activeAppointment.practitioner || practitioners.find(p => p.id === activeAppointment.practitionerId) || practitioners[0];
+                      const card = formatAppointmentConfirmationCard({
+                        patient: {
+                          firstName: activeAppointment.patient?.firstName || patient?.firstName,
+                          lastName: activeAppointment.patient?.lastName || patient?.lastName,
+                          gender: activeAppointment.patient?.gender || patient?.gender,
+                          dateOfBirth: activeAppointment.patient?.dateOfBirth
+                        },
+                        doctorName: pDoc?.name || doctorInfo?.name,
+                        specialty: pDoc?.specialty || doctorInfo?.specialty || "General Physician",
+                        clinicName: doctorInfo?.clinicName,
+                        startTime: activeAppointment.startTime,
+                        clinicTz: clinicTz,
+                        consultationFee: pDoc?.consultationFee,
+                        address: clinicAddress || doctorInfo?.address,
+                        city: doctorInfo?.city,
+                        mapsUrl: clinicMapsUri
+                      });
+
+                      finalAiReply = card;
+                      await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, activeAppointment.patientId, activeAppointment.patient?.firstName || "Patient");
+                      return;
+                    }
+                  } catch (cardErr) {
+                    console.error("[WhatsAppManager] Resend Confirmation Card Error:", cardErr);
                   }
                 }
 
@@ -2133,7 +2211,8 @@ class WhatsAppManager {
                   }
                 } else if (!rawTagMatch && !isStaff) {
                   // Safety net: Check if the AI textually confirmed an appointment but the tag was omitted or malformed
-                  const isConfirmationReply = /(?:appointment\s*(?:is\s*)?confirm|slot\s*(?:is\s*)?confirm|request\s*note\s*kar\s*li|booked\s*(?:your\s*)?appointment|appointment\s*request\s*register|aapka\s*appointment\s*confirm|slot\s*reserve|booking\s*confirm)/i.test(aiReply);
+                  const isExistingInquiry = /(?:send\s*(?:me\s*)?confirmation|when\s*is|kab\s*hai|status|already|is\s*(?:it|this)\s*confirm)/i.test(textMessage);
+                  const isConfirmationReply = !isExistingInquiry && /(?:appointment\s*(?:is\s*)?confirm|slot\s*(?:is\s*)?confirm|request\s*note\s*kar\s*li|booked\s*(?:your\s*)?appointment|appointment\s*request\s*register|aapka\s*appointment\s*confirm|slot\s*reserve|booking\s*confirm)/i.test(aiReply);
                   if (isConfirmationReply) {
                     const clinicTzFallback = resolveClinicTimezone(doctorInfo?.timezone);
                     const todayStrFallback = getClinicDateOnlyString(new Date(), clinicTzFallback);

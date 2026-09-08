@@ -582,6 +582,12 @@ function buildDeterministicReceptionistReply(
         targetDateStr = dayAfter.toLocaleDateString("en-CA", { timeZone: clinicTz });
       }
       const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
+      if (!timeMatch && (textLower.includes("morning") || textLower.includes("subah") || textLower.includes("evening") || textLower.includes("shaam"))) {
+        const isMorn = textLower.includes("morning") || textLower.includes("subah");
+        const opdHours = isMorn ? (activeMorningHours || "10:00 AM - 1:00 PM") : (activeEveningHours || "5:00 PM - 8:00 PM");
+        const sessionLabel = isMorn ? "Morning" : "Evening";
+        return `Ji! ${docTitle} (${activeSpecialty}) ki ${sessionLabel} OPD ka samay *${opdHours}* hai. Aap kis time aana pasand karenge? (jaise 5:00 PM, 6:00 PM ya 7:00 PM)${phoneSuffix}`;
+      }
       const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") || textLower.includes("subah") ? "Morning" : "Evening");
       const bookingTag = `\n\n[BOOK_APPOINTMENT: ${targetDateStr}, ${sessionStr}, Patient, , , ${activeDoctorName}]`;
       return `Ji dhanyawad! Maine *${targetDateStr} (${sessionStr})* ke liye ${docTitle} (${activeSpecialty}) ke OPD session me aapki appointment confirm kar di hai. Slot clinic schedule me book ho gaya hai.${bookingTag}${phoneSuffix}`;
@@ -664,14 +670,20 @@ function buildDeterministicReceptionistReply(
       targetDateStr = tomorrow.toLocaleDateString("en-CA", { timeZone: clinicTz });
     }
     const timeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)/i);
+    if (!timeMatch && (textLower.includes("morning") || textLower.includes("evening") || textLower.includes("afternoon"))) {
+      const isMorn = textLower.includes("morning");
+      const opdHours = isMorn ? (activeMorningHours || "10:00 AM - 1:00 PM") : (activeEveningHours || "5:00 PM - 8:00 PM");
+      const sessionLabel = isMorn ? "Morning" : "Evening";
+      return `Certainly! ${docTitle}'s ${sessionLabel} OPD hours are *${opdHours}*. What specific time would work best for you? (e.g., 5:00 PM, 6:00 PM, or 7:00 PM)${phoneSuffix}`;
+    }
     const sessionStr = timeMatch ? timeMatch[1].replace(".", ":").trim() : (textLower.includes("morning") ? "Morning" : "Evening");
     const bookingTag = `\n\n[BOOK_APPOINTMENT: ${targetDateStr}, ${sessionStr}, Patient, , , ${activeDoctorName}]`;
     return `Thank you! I have confirmed your appointment for *${targetDateStr} (${sessionStr})* with ${docTitle} (${activeSpecialty}). Your consultation has been scheduled in our calendar.${bookingTag}${phoneSuffix}`;
   }
 
   // 10.36 Confirmation Query in English
-  if (/is\s*it\s*confirmed|is\s*this\s*confirmed|confirm\s*appointment|booked|status/i.test(textLower)) {
-    return `Yes, certainly! Your appointment request has been received for ${docTitle} (${specialty}). Please arrive a few minutes before your scheduled OPD slot. Thank you! 🙏${phoneSuffix}`;
+  if (/is\s*it\s*confirmed|is\s*this\s*confirmed|confirm\s*appointment|send\s*(?:me\s*)?confirmation|booked|status/i.test(textLower)) {
+    return `Yes, certainly! Your appointment details are confirmed with ${docTitle} (${specialty}).\n\n[RESEND_CONFIRMATION]${phoneSuffix}`;
   }
 
   // 10.4 Appointment Booking / Schedule
@@ -1177,11 +1189,15 @@ ${languageDirective}
 ==================================================
 6. PATIENT DETAILS, AGE, GENDER & MULTI-FAMILY PROFILES
 ==================================================
-- **Progressive Single-Line Details Collection (Match Patient's Language)**:
-  * To confirm a booking, ask for: **Date**, **OPD Session (Morning / Evening)**, and **Patient Details (Full Name, Age & Gender)** in a single natural prompt:
-    - English: "Could you please share the patient's Full Name, Age, and Gender (M/F) so I can confirm the appointment slot for you? 🙏"
-    - Hinglish: "Kripya patient ka Full Name, Age aur Gender (M/F) share kar dijiye taaki main slot confirm kar sakoon. 🙏"
-    - Other Languages: Translate and ask for these same details naturally in the patient's detected language (e.g. Bengali: "দয়া করে রোগীর পুরো নাম, বয়স এবং লিঙ্গ জানিয়ে দিন...").
+- **Progressive Details Collection & Slot Time Intake Protocol (Match Patient's Language)**:
+  * To confirm a booking, you need: **Date**, **Specific Slot Time**, and **Patient Details (Full Name, Age & Gender)**.
+  * ⚠️ **NEVER PREMATURELY BOOK ON GENERIC "EVENING" OR "MORNING"**:
+    - When a patient specifies only a general session (e.g., "Evening", "Shaam", "Morning", "Subah") without picking an exact time:
+      YOU MUST NEVER EMIT [BOOK_APPOINTMENT]!
+      Instead, inform them of the OPD timings for that session and ask which specific slot time they prefer:
+      • English: "Our Evening OPD runs from ${eveningOpd || '5:00 PM to 8:00 PM'}. What time would work best for the patient? (e.g. 5:00 PM, 6:00 PM, or 7:00 PM) 😊"
+      • Hinglish: "Hamari Evening OPD ${eveningOpd || 'shaam 5:00 PM se 8:00 PM'} tak hoti hai. Patient ke liye kaun sa time convenient rahega? (jaise 5:00 PM, 6:00 PM ya 7:00 PM) 😊"
+    - ONLY when the patient specifies an exact time (e.g. "7 pm", "5:00 PM", "6:30") OR explicitly says "any time is fine" / "koi bhi chalega", should you proceed to finalize the booking!
   ${isTodayOpdConcluded ? `* ⚠️ CRITICAL NOTICE: Since today's OPD has ended, NEVER ask if they want an appointment or consult "for today". ALWAYS frame any consultation or booking question for TOMORROW (${tomorrowDateStr}) or upcoming working days.` : ''}
 - **Intelligent Contextual Auto-Inference**:
   * If the patient mentions relationship or pronouns, auto-infer gender naturally:
@@ -1400,17 +1416,16 @@ ${isMultiDoctor ? '10' : '9'}. BOOKING & RESCHEDULING TAGS
   ${isMultiDoctor ? `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender, Doctor Name]` : `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender]`}
   *(If Age or Gender are not provided, you may emit: [BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name${isMultiDoctor ? ', , , Doctor Name' : ''}])*
 - **MANDATORY EXACT NUMERIC TIME DIRECTIVE (2ND PARAMETER)**:
-  * Parameter 2 MUST be the EXACT NUMERIC TIME agreed upon (e.g. "3:00 PM", "6:00 PM", "11:30 AM", "5:00 PM").
-  * NEVER emit generic words like "Afternoon" or "Evening" if an exact time was discussed in ANY message in the conversation history!
+  * Parameter 2 MUST be the EXACT NUMERIC TIME agreed upon (e.g. "3:00 PM", "6:00 PM", "7:00 PM", "11:30 AM", "5:00 PM").
+  * ⚠️ NEVER emit [BOOK_APPOINTMENT] if the patient only provided a general word like "Morning" or "Evening" without an agreed time! Ask for their preferred time first.
   * When patient shares name/demographics in a subsequent turn without repeating the time, RECALL the exact time from previous turns and put it in Parameter 2.
-  * Only emit "Morning" or "Evening" if the patient strictly asked for a general session without ever mentioning any specific hour.
+  * Only emit a general session name if the patient explicitly confirmed they have no preference (e.g. "any time is fine", "koi bhi chalega").
 - If patient explicitly asks to cancel:
   [CANCEL_PATIENT_APPOINTMENT]
 - If patient explicitly asks to reschedule an existing booking:
   [RESCHEDULE_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name]
-  * When asking for preferred reschedule time:
-    - English: "Hello [Name], I would be happy to help you reschedule your appointment. Which date and session (Morning or Evening) works best for you?"
-    - Hinglish: "Ji [Name] ji, main aapka appointment reschedule karne mein madad karti hoon. Kripya batayein aap kis date aur session mein shift karna chahte hain?"
+- If patient asks to send/resend confirmation or status (e.g. "Send me confirmation", "Confirmation bhej do", "Is my appointment confirmed"):
+  [RESEND_CONFIRMATION]
 `;
 
       const prompt = `

@@ -20,15 +20,18 @@ export class ReminderService {
       for (const doctor of doctors) {
         if (!whatsappManager.isConnected(doctor.id)) continue;
 
-        // 1. 24-HOUR PRIOR REMINDERS (If enable24hReminder is not explicitly disabled)
+        // 1. 24-HOUR PRIOR REMINDERS (Strictly for appointments booked in advance, 20-26 hours prior)
         if (doctor.enable24hReminder !== false) {
+          const min24h = new Date(now.getTime() + 20 * 60 * 60 * 1000);
+          const max24h = new Date(now.getTime() + 26 * 60 * 60 * 1000);
+
           const upcoming24hAppointments = await prisma.appointment.findMany({
             where: {
               doctorId: doctor.id,
               status: "CONFIRMED",
               startTime: {
-                gte: now,
-                lte: in24Hours,
+                gte: min24h,
+                lte: max24h,
               },
               followUps: {
                 none: {
@@ -46,8 +49,10 @@ export class ReminderService {
             const appointmentTime = new Date(appointment.startTime);
             const hoursUntilAppointment =
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+            const msSinceCreation = now.getTime() - appointment.createdAt.getTime();
 
-            if (hoursUntilAppointment <= 24 && hoursUntilAppointment > 2) {
+            // Strictly fire between 20 and 26 hours prior, and never if booked within the last 2 hours
+            if (hoursUntilAppointment >= 20 && hoursUntilAppointment <= 26 && msSinceCreation > 2 * 60 * 60 * 1000) {
               const clinicTz = resolveClinicTimezone(doctor.timezone);
               const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
                 timeZone: clinicTz,
@@ -121,8 +126,10 @@ export class ReminderService {
             const appointmentTime = new Date(appointment.startTime);
             const hoursUntilAppointment =
               (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+            const msSinceCreation = now.getTime() - appointment.createdAt.getTime();
 
-            if (hoursUntilAppointment > 0 && hoursUntilAppointment <= 2.2) {
+            // Fire between 15 minutes and 2.2 hours prior, but skip if appointment was created within the last 45 minutes (to avoid redundant alerts immediately after booking card)
+            if (hoursUntilAppointment > 0.25 && hoursUntilAppointment <= 2.2 && msSinceCreation > 45 * 60 * 1000) {
               const clinicTz = resolveClinicTimezone(doctor.timezone);
               const timeStr = appointmentTime.toLocaleTimeString("en-IN", {
                 timeZone: clinicTz,
