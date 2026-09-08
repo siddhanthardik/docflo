@@ -231,7 +231,7 @@ export class PlatformWhatsAppConciergeService {
             `📋 *Your Latest Google Visibility Audit Report*\n\n` +
             `🏥 *Clinic:* ${latestReq.report.businessName}\n` +
             `⭐ *Rating:* ${latestReq.report.rating || "N/A"}★ (${latestReq.report.reviewCount || 0} reviews)\n` +
-            `📅 *Date:* ${latestReq.createdAt.toLocaleDateString("en-IN")}\n\n` +
+            `📅 *Date:* ${latestReq.createdAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}\n\n` +
             `📄 *View Full 10-Section Diagnostic Report:* \n` +
             `👉 https://gyrex.in/local-seo/free-audit/report/${latestReq.id}\n\n` +
             `💡 Reply *1* to run a new audit or *2* to speak with our Growth Specialist.`;

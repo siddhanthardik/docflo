@@ -1539,23 +1539,24 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
     incomingMessage: string,
     conversationHistory: string[],
     appointments: any[],
-    doctorProfile?: { doctorName?: string; clinicName?: string; assistantName?: string }
+    doctorProfile?: { doctorName?: string; clinicName?: string; assistantName?: string; timezone?: string }
   ) {
     try {
       const doctorName = doctorProfile?.doctorName || "Doctor";
       const clinicName = doctorProfile?.clinicName || "our Clinic";
       const assistantName = doctorProfile?.assistantName || "Riya";
+      const docTz = resolveClinicTimezone(doctorProfile?.timezone);
       
       // Format the schedule context for the AI
       const scheduleLines = appointments.map(apt => {
-        const timeStr = new Date(apt.startTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-        const dateStr = new Date(apt.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
+        const timeStr = new Date(apt.startTime).toLocaleTimeString('en-IN', { timeZone: docTz, hour: 'numeric', minute: '2-digit', hour12: true });
+        const dateStr = new Date(apt.date).toLocaleDateString('en-IN', { timeZone: docTz, weekday: 'short', month: 'short', day: 'numeric' });
         const patientName = apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}`.trim() : "Unknown Patient";
         const patientPhone = apt.patient?.phone || "N/A";
         return `- [ID: ${apt.id}] ${dateStr} at ${timeStr} | ${patientName} (Phone: ${patientPhone}) | Status: ${apt.status}`;
       });
 
-      const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const currentDateStr = new Date().toLocaleDateString('en-US', { timeZone: docTz, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
       const scheduleContext = scheduleLines.length > 0 
         ? scheduleLines.join("\n") 

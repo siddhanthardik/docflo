@@ -1252,6 +1252,7 @@ class WhatsAppManager {
                           });
 
                           let count = 0;
+                          const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                           const docName = formatDoctorDisplayName(doctorInfo?.name);
                           for (const apt of apts) {
                             if (apt.startTime) {
@@ -1262,7 +1263,12 @@ class WhatsAppManager {
                                 data: { startTime: newStart, endTime: newEnd }
                               });
                               if (apt.patient?.phone) {
-                                const newTimeStr = newStart.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                                const newTimeStr = newStart.toLocaleTimeString('en-IN', {
+                                  timeZone: clinicTz,
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                });
                                 const msg = `⚠️ *OPD Timing Update*\n\nHi ${apt.patient.firstName}, ${docName} is currently running approx *${delay} minutes late* due to urgent hospital procedures. Your appointment is now scheduled for *${newTimeStr}* today. Thank you for your patience! 😊`;
                                 await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
                                 count++;
@@ -1363,15 +1369,15 @@ class WhatsAppManager {
                 }
 
                 if (delayMatch || isCancelToday || isPauseToday) {
-                  const todayStart = new Date();
-                  todayStart.setHours(0, 0, 0, 0);
-                  const todayEnd = new Date(todayStart);
-                  todayEnd.setHours(23, 59, 59, 999);
+                  const staffClinicTz = resolveClinicTimezone(doctorInfo?.timezone);
+                  const { startOfDay: todayStart, endOfDay: todayEnd } = getClinicDayBounds(new Date(), staffClinicTz);
+                  const cutoffTime = new Date(Date.now() - 15 * 60 * 1000);
 
                   const todayApts = await prisma.appointment.findMany({
                     where: {
                       doctorId,
                       date: { gte: todayStart, lte: todayEnd },
+                      startTime: { gte: cutoffTime },
                       status: "CONFIRMED"
                     },
                     include: { patient: true },
@@ -1383,8 +1389,18 @@ class WhatsAppManager {
                     if (/hr|hour/i.test(delayMatch[0])) mins = mins * 60;
 
                     const summaryLines = todayApts.map((a, i) => {
-                      const orig = a.startTime ? a.startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-                      const newT = a.startTime ? new Date(a.startTime.getTime() + mins * 60000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                      const orig = a.startTime ? a.startTime.toLocaleTimeString('en-IN', {
+                        timeZone: staffClinicTz,
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      }) : 'N/A';
+                      const newT = a.startTime ? new Date(a.startTime.getTime() + mins * 60000).toLocaleTimeString('en-IN', {
+                        timeZone: staffClinicTz,
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      }) : 'N/A';
                       return `  ${i + 1}. *${a.patient.firstName} ${a.patient.lastName}* (${orig} ➔ ${newT})`;
                     });
 
@@ -1469,10 +1485,8 @@ class WhatsAppManager {
                 const clinicPhone = doctorInfo?.phone || "";
 
                 // Calculate Live Schedule Context & Daily Quota
-                const todayStart = new Date();
-                todayStart.setHours(0, 0, 0, 0);
-                const todayEnd = new Date(todayStart);
-                todayEnd.setHours(23, 59, 59, 999);
+                const clinicTzForApts = resolveClinicTimezone(doctorInfo?.timezone);
+                const { startOfDay: todayStart, endOfDay: todayEnd } = getClinicDayBounds(new Date(), clinicTzForApts);
 
                 const todayAppointments = await prisma.appointment.findMany({
                   where: {
@@ -1492,13 +1506,18 @@ class WhatsAppManager {
 
                 const bookedSlotsToday = todayAppointments
                   .filter(a => a.startTime)
-                  .map(a => a.startTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+                  .map(a => a.startTime.toLocaleTimeString("en-IN", {
+                    timeZone: clinicTzForApts,
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  }));
 
                 // ── Auto-Reset Stale OPD Status from Previous Days ──
                 const nowClinic = new Date();
-                const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+                const todayClinicDateStr = nowClinic.toLocaleDateString("en-CA", { timeZone: clinicTzForApts });
                 const statusUpdatedDateStr = doctorInfo?.opdStatusUpdatedAt
-                  ? new Date(doctorInfo.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+                  ? new Date(doctorInfo.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: clinicTzForApts })
                   : null;
 
                 const isStaleOpdStatus = statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr;
@@ -1532,7 +1551,6 @@ class WhatsAppManager {
                   .filter(name => name.toLowerCase() !== 'patient' && !name.startsWith('+'));
 
                 const patientIds = existingFamilyPatients.map(p => p.id);
-                const clinicTzForApts = resolveClinicTimezone(doctorInfo?.timezone);
                 const { startOfDay: clinicTodayStart } = getClinicDayBounds(new Date(), clinicTzForApts);
                 const upcomingApts = await prisma.appointment.findMany({
                   where: {
@@ -1681,9 +1699,12 @@ class WhatsAppManager {
                        
                        // Notify patient via WhatsApp
                        if (apt.patient?.phone) {
+                          const clinicTz = resolveClinicTimezone(doctorInfo?.timezone);
                           const docName = formatDoctorDisplayName(doctorInfo?.name);
                           const salutation = formatPatientSalutation(apt.patient || {});
-                          const msg = `Hi ${salutation.greetingName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${apt.date.toDateString()}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
+                          const dateFormatted = formatInClinicDate(apt.date, clinicTz, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+                          const timeFormatted = apt.startTime ? ` at ${formatInClinicTime(apt.startTime, clinicTz)}` : '';
+                          const msg = `Hi ${salutation.greetingName}, I hope you are having a good day. I'm reaching out because ${docName} had an unexpected change in schedule, and unfortunately, we need to cancel your appointment on ${dateFormatted}${timeFormatted}.\n\nWe sincerely apologize for any inconvenience this may cause you. Please reply to this message if you would like us to help you find a new time that works for you. We are here to help!`;
                           await this.sendOutboundPatientMessage(sock, doctorId, apt.patient.phone, msg, apt.patient.id, `${apt.patient.firstName} ${apt.patient.lastName}`.trim());
                         }
                     } else if (!apt) {
@@ -1893,7 +1914,7 @@ class WhatsAppManager {
                         // SCENARIO 2: Multiple patients with same name - ask doctor to disambiguate
                         const candidateLines = exactMatches.map((pt, i) => {
                           const lastVisitDate = pt.appointments[0]?.date;
-                          const lastVisit = lastVisitDate ? new Date(lastVisitDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No prior visit';
+                          const lastVisit = lastVisitDate ? new Date(lastVisitDate).toLocaleDateString('en-IN', { timeZone: clinicTz, day: 'numeric', month: 'short', year: 'numeric' }) : 'No prior visit';
                           const maskedPhone = pt.phone ? `${pt.phone.slice(0, -4).replace(/./g, 'x')}${pt.phone.slice(-4)}` : 'N/A';
                           return `  ${i + 1}. ${pt.firstName} ${pt.lastName} | Phone: ${maskedPhone} | Last visit: ${lastVisit}`;
                         });

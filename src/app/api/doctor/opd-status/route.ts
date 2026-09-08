@@ -150,11 +150,14 @@ export async function POST(req: Request) {
         },
       });
 
-      // Shift today's upcoming appointments
+      // Shift today's active & upcoming appointments (with 15-minute grace period)
+      // Never shift or notify past appointments that already concluded earlier in the day
+      const cutoffTime = new Date(Date.now() - 15 * 60 * 1000);
       const upcomingApts = await prisma.appointment.findMany({
         where: {
           doctorId,
           date: { gte: todayStart, lte: todayEnd },
+          startTime: { gte: cutoffTime },
           status: "CONFIRMED",
         },
         include: { patient: true },
@@ -179,7 +182,12 @@ export async function POST(req: Request) {
           if (notifyPatients && apt.patient?.phone) {
             try {
               const { whatsappManager } = await import("@/lib/whatsapp-manager");
-              const newTimeStr = newStart.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+              const newTimeStr = newStart.toLocaleTimeString("en-IN", {
+                timeZone: clinicTz,
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              });
               const msg = `⚠️ *OPD Timing Update*\n\nHi ${apt.patient.firstName}, ${docName} is currently running approx *${delay} minutes late* due to hospital emergency procedures. Your appointment is now scheduled for *${newTimeStr}* today. Thank you for your patience! 😊`;
               
               if (whatsappManager) {
@@ -215,10 +223,13 @@ export async function POST(req: Request) {
       });
 
       if (isCancel && notifyPatients) {
+        // Only cancel upcoming appointments; do not cancel sessions already attended earlier today
+        const cutoffTime = new Date(Date.now() - 15 * 60 * 1000);
         const upcomingApts = await prisma.appointment.findMany({
           where: {
             doctorId,
             date: { gte: todayStart, lte: todayEnd },
+            startTime: { gte: cutoffTime },
             status: "CONFIRMED",
           },
           include: { patient: true },

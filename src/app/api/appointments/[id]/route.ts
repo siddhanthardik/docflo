@@ -193,29 +193,38 @@ export async function PUT(
 
         // Check if Cancelled
         if (body.status === "CANCELLED" && existing.status !== "CANCELLED") {
-          const formattedDate = existing.startTime.toLocaleDateString("en-US", {
+          const formattedDate = existing.startTime.toLocaleDateString("en-IN", {
             timeZone: clinicTz,
             weekday: 'long',
+            day: 'numeric',
             month: 'short',
-            day: 'numeric'
+            year: 'numeric'
           });
-          messageText = `Hi ${updated.patient.firstName}, this is ${clinicName}. We are writing to let you know that your appointment on ${formattedDate} has been cancelled.\n\nIf you would like to reschedule for another day, simply reply to this message and we'll be happy to assist you!`;
+          const formattedTime = existing.startTime.toLocaleTimeString("en-IN", {
+            timeZone: clinicTz,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+          messageText = `Hi ${updated.patient.firstName}, this is ${clinicName}. We are writing to let you know that your appointment scheduled for ${formattedDate} at ${formattedTime} has been cancelled.\n\nIf you would like to reschedule for another day or time, simply reply to this message and we'll be happy to assist you!`;
         } 
         // Check if Rescheduled (Date or time changed, and not completed/cancelled/checked in)
         else if (
           updated.status === "CONFIRMED" &&
           (existing.date.getTime() !== updated.date.getTime() || existing.startTime.getTime() !== updated.startTime.getTime())
         ) {
-          const formattedDate = updated.startTime.toLocaleDateString("en-US", {
+          const formattedDate = updated.startTime.toLocaleDateString("en-IN", {
             timeZone: clinicTz,
             weekday: 'long',
+            day: 'numeric',
             month: 'short',
-            day: 'numeric'
+            year: 'numeric'
           });
-          const formattedTime = updated.startTime.toLocaleTimeString("en-US", {
+          const formattedTime = updated.startTime.toLocaleTimeString("en-IN", {
             timeZone: clinicTz,
-            hour: '2-digit',
-            minute: '2-digit'
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
           });
           messageText = `Hi ${updated.patient.firstName}, this is an update regarding your appointment at ${clinicName}. Your visit has been successfully rescheduled to ${formattedDate} at ${formattedTime}.\n\nPlease reply 'CONFIRM' to lock in this new time. Let us know if you have any questions!`;
         }
