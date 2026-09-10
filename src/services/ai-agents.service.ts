@@ -1414,7 +1414,7 @@ ${isMultiDoctor ? '10' : '9'}. BOOKING & RESCHEDULING TAGS
 ==================================================
 - To confirm a booking once details are finalized, append this exact tag at the very end of your confirmation message:
   ${isMultiDoctor ? `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender, Doctor Name]` : `[BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name, Age, Gender]`}
-  *(If Age or Gender are not provided, you may emit: [BOOK_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name${isMultiDoctor ? ', , , Doctor Name' : ''}])*
+  🚨 YOU MUST NEVER EMIT [BOOK_APPOINTMENT] UNTIL YOU HAVE EXPLICITLY ASKED FOR AND RECEIVED THE PATIENT'S FULL NAME AND AGE. If the user provides a time but ignores your request for name/age, DO NOT BOOK. Politely ask for the missing details first.
 - **MANDATORY EXACT NUMERIC TIME DIRECTIVE (2ND PARAMETER)**:
   * Parameter 2 MUST be the EXACT NUMERIC TIME agreed upon (e.g. "3:00 PM", "6:00 PM", "7:00 PM", "11:30 AM", "5:00 PM").
   * ⚠️ NEVER emit [BOOK_APPOINTMENT] if the patient only provided a general word like "Morning" or "Evening" without an agreed time! Ask for their preferred time first.

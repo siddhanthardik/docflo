@@ -2328,6 +2328,14 @@ class WhatsAppManager {
                       if (ageMatch) parsedAge = parseInt(ageMatch[0], 10);
                     }
 
+                    if (!parsedAge) {
+                      console.log(`[WhatsAppManager] 🛑 Booking halted: Patient age is missing or null.`);
+                      finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                      finalAiReply = `Kripya patient ki Age (umar) aur Full Name share karein taaki main appointment booking process complete kar sakoon. 🙏`;
+                      await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
+                      return;
+                    }
+
                     // Clean gender: enforce strict gender tokens and ensure doctor names are never parsed as gender
                     let parsedGender: string | null = null;
                     if (rawGenderStr) {
