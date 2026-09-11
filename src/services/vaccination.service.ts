@@ -14,81 +14,99 @@ export interface IAPMilestone {
 export const IAP_VACCINE_SCHEDULE: IAPMilestone[] = [
   {
     code: "VACC_BIRTH",
-    name: "BCG, OPV-0, Hepatitis B-1",
-    milestone: "Birth Vaccines",
+    name: "BCG, OPV, Hep B-1 (Birth Dose)",
+    milestone: "Birth",
     offsetWeeks: 0
   },
   {
     code: "VACC_6W",
-    name: "DTwP/DTaP-1, IPV-1, HepB-2, Hib-1, Rotavirus-1, PCV-1",
-    milestone: "6 Weeks (1.5 Months)",
+    name: "DTwP/DTaP-1, IPV-1, Hib-1, Hep B-2, Rotavirus-1, PCV-1",
+    milestone: "6 Weeks",
     offsetWeeks: 6
   },
   {
     code: "VACC_10W",
-    name: "DTwP/DTaP-2, IPV-2, Hib-2, Rotavirus-2, PCV-2",
-    milestone: "10 Weeks (2.5 Months)",
+    name: "DTwP/DTaP-2, IPV-2, Hib-2, Hep B-3, Rotavirus-2, PCV-2",
+    milestone: "10 Weeks",
     offsetWeeks: 10
   },
   {
     code: "VACC_14W",
-    name: "DTwP/DTaP-3, IPV-3, Hib-3, Rotavirus-3, PCV-3",
-    milestone: "14 Weeks (3.5 Months)",
+    name: "DTwP/DTaP-3, IPV-3, Hib-3, Hep B-4, Rotavirus-3, PCV-3",
+    milestone: "14 Weeks",
     offsetWeeks: 14
   },
   {
     code: "VACC_6M",
-    name: "Influenza-1, Typhoid Conjugate Vaccine (TCV)",
+    name: "Influenza (IIV)-1",
     milestone: "6 Months",
     offsetWeeks: 26
   },
   {
     code: "VACC_7M",
-    name: "Influenza-2",
+    name: "Influenza (IIV)-2",
     milestone: "7 Months",
     offsetWeeks: 30
   },
   {
+    code: "VACC_6_9M",
+    name: "Typhoid Conjugate Vaccine (TCV)",
+    milestone: "6–9 Months",
+    offsetWeeks: 35
+  },
+  {
     code: "VACC_9M",
-    name: "MMR-1 (Measles, Mumps, Rubella), OPV-1",
+    name: "MMR-1",
     milestone: "9 Months",
     offsetWeeks: 39
   },
   {
     code: "VACC_12M",
-    name: "Hepatitis A-1",
+    name: "Hepatitis A Vaccine (Dose 1)",
     milestone: "12 Months (1 Year)",
     offsetWeeks: 52
   },
   {
     code: "VACC_15M",
-    name: "MMR-2, Varicella-1 (Chickenpox), PCV Booster",
+    name: "MMR-2, Varicella-1, PCV-Booster",
     milestone: "15 Months",
     offsetWeeks: 65
   },
   {
-    code: "VACC_18M",
-    name: "DTwP/DTaP Booster-1, IPV Booster-1, Hib Booster",
-    milestone: "18 Months (1.5 Years)",
-    offsetWeeks: 78
+    code: "VACC_16_18M",
+    name: "DTwP/DTaP-B1, Hib-B1, IPV-B1",
+    milestone: "16–18 Months",
+    offsetWeeks: 74
   },
   {
-    code: "VACC_2Y",
-    name: "Hepatitis A-2, Typhoid Booster",
-    milestone: "2 Years",
-    offsetWeeks: 104
+    code: "VACC_18_19M",
+    name: "Hepatitis A-2 (if inactivated), Varicella-2",
+    milestone: "18–19 Months",
+    offsetWeeks: 80
   },
   {
-    code: "VACC_4_5Y",
-    name: "DTwP/DTaP Booster-2, IPV Booster-2, MMR-3, Varicella-2",
-    milestone: "4 to 5 Years",
+    code: "VACC_4_6Y",
+    name: "DTwP/DTaP-B2, IPV-B2, MMR-3",
+    milestone: "4–6 Years",
     offsetWeeks: 234
   },
   {
-    code: "VACC_10Y",
-    name: "Tdap / Td, HPV Vaccine (Dose 1)",
+    code: "VACC_9_15Y_HPV",
+    name: "HPV Vaccine (Cervavac / Gardasil)",
+    milestone: "9–15 Years",
+    offsetWeeks: 468
+  },
+  {
+    code: "VACC_10Y_TDAP",
+    name: "Tdap",
     milestone: "10 Years",
     offsetWeeks: 520
+  },
+  {
+    code: "VACC_16_18Y",
+    name: "Td/Tdap Booster",
+    milestone: "16–18 Years",
+    offsetWeeks: 832
   }
 ];
 

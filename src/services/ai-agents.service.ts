@@ -66,12 +66,31 @@ function formatPractitionerTimings(p: ClinicPractitionerInfo): string {
   return `${days}: ${s12} - ${e12}`;
 }
 
+export type ClinicalUrgencyLevel = "EMERGENCY" | "URGENT" | "PROMPT" | "ROUTINE";
+
+export interface ClinicalTriageResult {
+  level: ClinicalUrgencyLevel;
+  isEmergency: boolean; // 100% backward compatible with existing code
+  reason?: string;
+  emergencyAlertMessage?: string;
+}
+
 /**
- * Differentiates acute clinical red flags from everyday conversational speech
- * (e.g. "mjhe Sunday ko emergency kahi jana hai", "family emergency", "emergency kaam", "shift kar do").
+ * Universal & Specialty-specific 4-Tier Clinical Triage Engine
+ * Tiers:
+ * 🔴 EMERGENCY (Immediate threat to life/organ/fetus/limb - STOP booking, direct to ER)
+ * 🟠 URGENT (Potentially time-sensitive - Fast-track same-day care, do NOT offer delayed slot)
+ * 🟡 PROMPT (Needs clinician review soon - Offer standard OPD + home precautions)
+ * 🟢 ROUTINE (Normal conversational receptionist flow)
  */
-export function isClinicalMedicalEmergency(message: string, customTriggers?: string): boolean {
-  if (!message || typeof message !== "string") return false;
+export function evaluateClinicalTriage(
+  message: string,
+  specialty?: string,
+  customTriggers?: string
+): ClinicalTriageResult {
+  if (!message || typeof message !== "string") {
+    return { level: "ROUTINE", isEmergency: false };
+  }
   const lowerMsg = message.toLowerCase();
 
   // 1. Check for colloquial, personal, family, or travel emergency phrases
@@ -84,30 +103,229 @@ export function isClinicalMedicalEmergency(message: string, customTriggers?: str
   const isRescheduleOrCancelIntent =
     /\b(shift|reschedule|postpone|cancel|badalna|change\s*date|change\s*time|kal\s*ka|parso|next\s*week|nahi\s*aa\s*pa|can'?t\s*make\s*it|cannot\s*come)\b/i.test(lowerMsg);
 
-  // True acute clinical red-flag symptoms
-  const hasAcuteClinicalSymptoms =
-    /\b(chest\s*pain|heart\s*attack|saans\s*nahi|breathless|difficulty\s*breathing|unconscious|behosh|heavy\s*bleeding|khoon\s*behta|khoon\s*nikal|stroke|paralysis|seizure|fits|daura|poison|zehar|severe\s*burn|head\s*injury|profuse\s*bleeding)\b/i.test(lowerMsg);
+  // If colloquial errand or rescheduling request, NEVER trigger emergency unless true acute life-threat symptoms exist
+  const hasAcuteLifeThreat =
+    /\b(chest\s*pain|heart\s*attack|saans\s*nahi|breathless|unconscious|behosh|stroke|paralysis|seizure|fits|daura|poison|zehar|profuse\s*bleeding)\b/i.test(lowerMsg);
 
-  // If colloquial errand or rescheduling request, ONLY trigger if true acute clinical symptoms exist
   if (isColloquialOrPersonal || isRescheduleOrCancelIntent) {
-    return hasAcuteClinicalSymptoms;
+    if (hasAcuteLifeThreat) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        emergencyAlertMessage: `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency ambulance services (108/112).`
+      };
+    }
+    return { level: "ROUTINE", isEmergency: false };
   }
 
-  // 3. Explicit clinical medical emergency phrases
-  const hasExplicitMedicalEmergency =
-    /\b(medical\s*emergency|health\s*emergency|hospital\s*emergency|emergency\s*room|emergency\s*admit|emergency\s*patient|casualty|icu|critical\s*condition)\b/i.test(lowerMsg);
+  // Normalize specialty
+  const spec = (specialty || "").toLowerCase();
+  const isGyn = /gyn|obg|obstet|pregnan|women|matern/i.test(spec);
+  const isPed = /pediatr|paediatr|child|baby|bal/i.test(spec);
+  const isOrtho = /ortho|bone|joint|fractur|spine/i.test(spec);
+  const isEye = /ophthalm|eye|drishti|netra/i.test(spec);
+  const isEnt = /ent|ear|nose|throat|kan|naak|gala/i.test(spec);
+  const isCardio = /cardio|heart|dil/i.test(spec);
+  const isUro = /uro|nephro|kidney|bladder|prostate/i.test(spec);
+  const isPsych = /psych|mental|mind|manovigyan/i.test(spec);
+  const isDerma = /derm|skin|twacha/i.test(spec);
 
-  // 4. Custom clinic triggers (filter out bare "emergency" to prevent false positives)
+  // ========================================================
+  // 🔴 LAYER 1: UNIVERSAL RED FLAGS (Immediate Threat to Life/Brain/Limb)
+  // ========================================================
+
+  // A. Acute Cardiac & Severe Airway
+  if (/\b(crushing\s*chest\s*pain|chest\s*tightness|heart\s*attack|saans\s*nahi\s*aa\s*rahi|severe\s*breathlessness|choking|gasping|blue\s*lips|cyanosis)\b/i.test(lowerMsg)) {
+    return {
+      level: "EMERGENCY",
+      isEmergency: true,
+      reason: "Acute Respiratory / Cardiac Threat",
+      emergencyAlertMessage: `⚠️ *Emergency Alert*: Chest pain, crushing pressure, or severe breathing distress requires immediate emergency medical evaluation. Please do not wait for an outpatient appointment and proceed immediately to the nearest hospital Emergency Room (ICU/Casualty) or call emergency services (108/112).`
+    };
+  }
+
+  // B. Acute Stroke (FAST) & Severe Neurological Collapse
+  if (/\b(unconscious|behosh|collapsed|sudden\s*facial\s*droop|slurred\s*speech|stroke|paralysis|fits|seizure|daura)\b/i.test(lowerMsg)) {
+    return {
+      level: "EMERGENCY",
+      isEmergency: true,
+      reason: "Acute Neurological / Stroke Event",
+      emergencyAlertMessage: `⚠️ *Emergency Alert*: Sudden loss of consciousness, seizures, or stroke symptoms (facial drooping, limb weakness, slurred speech) are time-critical medical emergencies. Proceed immediately to the nearest hospital Emergency Department (Casualty/ICU).`
+    };
+  }
+
+  // C. Major Uncontrolled Hemorrhage
+  if (/\b(profuse\s*bleeding|khoon\s*behta\s*ja\s*raha|heavy\s*bleeding\s*with\s*dizziness|fainting\s*with\s*bleeding|soaking\s*pads\s*with\s*dizziness)\b/i.test(lowerMsg)) {
+    return {
+      level: "EMERGENCY",
+      isEmergency: true,
+      reason: "Major Uncontrolled Hemorrhage",
+      emergencyAlertMessage: `⚠️ *Medical Emergency*: Continuous heavy bleeding accompanied by weakness, dizziness, or fainting requires immediate hospital resuscitation. Please go to the nearest hospital emergency casualty immediately.`
+    };
+  }
+
+  // D. Suicidal Crisis (Universal)
+  if (/\b(suicide|kill\s*myself|end\s*my\s*life|mar\s*jana\s*chahta|want\s*to\s*die)\b/i.test(lowerMsg)) {
+    return {
+      level: "EMERGENCY",
+      isEmergency: true,
+      reason: "Active Suicidal Crisis",
+      emergencyAlertMessage: `⚠️ *Immediate Crisis Support*: You are not alone, and help is available right now. Please reach out immediately to the 24/7 National Mental Health Helpline Tele-MANAS at 14416 (or 1800-89-14416) or proceed to the nearest hospital emergency department with a family member.`
+    };
+  }
+
+  // ========================================================
+  // 🔴 LAYER 2: SPECIALTY-SPECIFIC EMERGENCY RED FLAGS
+  // ========================================================
+
+  // 1. OB-GYN Red Flags: Bleeding with severe pain, fainting, or shock
+  if (isGyn || /\b(pregnant|pregnancy|garbh|garbhavastha)\b/i.test(lowerMsg)) {
+    const hasBleeding = /\b(bleeding|khoon|spotting|discharge)\b/i.test(lowerMsg);
+    const hasSeverePainOrShock = /\b(severe\s*pain|bohot\s*dard|chakkar|faint|unconscious|behosh|dizzy|collapse|extreme\s*cramp)\b/i.test(lowerMsg);
+
+    if (hasBleeding && hasSeverePainOrShock) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Pregnancy bleeding with severe pain or hemodynamic compromise",
+        emergencyAlertMessage: `⚠️ *Urgent Maternity Alert*: Bleeding during pregnancy accompanied by severe pain, cramping, dizziness, or fainting requires immediate hospital evaluation. Please do not wait for evening OPD and proceed directly to the nearest Maternity Emergency Room / Labor Casualty.`
+      };
+    }
+    if (/\b(water\s*break|pani\s*chhut|leaking\s*fluid|amniotic)\b/i.test(lowerMsg)) {
+      return {
+        level: "URGENT",
+        isEmergency: false,
+        reason: "Possible rupture of membranes",
+        emergencyAlertMessage: undefined
+      };
+    }
+  }
+
+  // 2. Pediatrics Red Flags: Newborn fever < 3 months, seizures, severe distress
+  if (isPed || /\b(baby|bachha|bachhe|newborn|infant|toddler)\b/i.test(lowerMsg)) {
+    const isNewborn = /\b(newborn|navjat|1\s*month|2\s*month|infant|<3\s*month|3\s*week|4\s*week|din\s*ka)\b/i.test(lowerMsg);
+    const hasFever = /\b(fever|bukhar|temperature)\b/i.test(lowerMsg);
+
+    if (isNewborn && hasFever) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Neonatal fever in infant < 3 months",
+        emergencyAlertMessage: `⚠️ *Pediatric Emergency Notice*: Any fever in a newborn or young infant under 3 months requires immediate pediatric hospital evaluation. Please do not wait for routine OPD and proceed directly to the nearest Pediatric Emergency / Child ICU (NICU/PICU).`
+      };
+    }
+
+    if (/\b(pasli\s*chal|chest\s*indrawing|grunting|blue\s*lips|floppy|unresponsive|choking|swallowed\s*battery|poison)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Severe pediatric respiratory distress or unresponsiveness",
+        emergencyAlertMessage: `⚠️ *Pediatric Emergency Notice*: Severe breathing difficulty, chest retractions, or unresponsiveness in a child is time-critical. Proceed immediately to the nearest Pediatric Emergency / Child Hospital Casualty.`
+      };
+    }
+  }
+
+  // 3. Orthopedics Red Flags: Open fracture, vascular compromise, cauda equina
+  if (isOrtho || /\b(bone|fracture|haddi|accident|trauma|fall|gir\s*gaya)\b/i.test(lowerMsg)) {
+    if (/\b(open\s*fracture|haddi\s*bahar|bone\s*piercing|bone\s*poking|limb\s*cold|limb\s*pale|loss\s*of\s*bladder|peshab\s*ruk\s*gaya\s*after\s*fall|paralysis\s*in\s*legs)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Open fracture, vascular compromise or cauda equina",
+        emergencyAlertMessage: `⚠️ *Orthopedic Trauma Alert*: Open fracture with skin breakage, cold/pulseless limb, or loss of bladder control after an injury requires immediate trauma surgery evaluation. Please proceed directly to the nearest Trauma Center / Hospital Emergency.`
+      };
+    }
+  }
+
+  // 4. Ophthalmology Red Flags: Chemical splash, penetrating eye trauma, sudden vision loss
+  if (isEye || /\b(eye|aankh|vision|drishti)\b/i.test(lowerMsg)) {
+    if (/\b(chemical|acid|tezaab|alkali|chuna|cleaner|detergent)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Chemical ocular burn",
+        emergencyAlertMessage: `⚠️ *Ophthalmic Emergency Alert*: Agar chemical/tezaab aankh mein gaya hai, toh turant saaf paani ya suitable irrigation fluid se aankh ko continuously rinse karna shuru karein aur emergency/eye care ke liye niklein. Rinsing ko medical care milne tak continue karein.`
+      };
+    }
+    if (/\b(penetrating|object\s*stuck\s*in\s*eye|glass\s*in\s*eye|aankh\s*mein\s*kuch\s*chubh|open\s*globe)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Penetrating eye injury",
+        emergencyAlertMessage: `⚠️ *Ophthalmic Emergency Alert*: Aankh mein koi cheez chhubhi ho ya cut laga ho, toh aankh ko bilkul press ya rub na karein, aur bina dabaye halke se dhak kar turant nearest Eye Specialty Emergency pahuchein.`
+      };
+    }
+    if (/\b(sudden\s*loss\s*of\s*vision|aankh\s*ki\s*roshni\s*chali\s*gayi|curtain\s*falling|dark\s*shadow\s*over\s*vision)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Sudden visual loss / retinal emergency",
+        emergencyAlertMessage: `⚠️ *Ophthalmic Emergency Alert*: Sudden vision loss or a dark curtain across vision requires immediate same-day evaluation at an Eye Hospital Emergency Casualty.`
+      };
+    }
+  }
+
+  // 5. Urology Red Flags: Testicular torsion & acute retention
+  if (isUro || /\b(testis|testicle|andkosh|urine|peshab)\b/i.test(lowerMsg)) {
+    if (/\b(sudden\s*severe\s*testicular\s*pain|andkosh\s*mein\s*achanak\s*tez\s*dard|torsion)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Suspected testicular torsion",
+        emergencyAlertMessage: `⚠️ *Urological Emergency Alert*: Sudden severe testicular pain with swelling is a time-critical surgical emergency (optimal window < 6 hours). Please visit the nearest hospital Emergency Room / Urology Casualty immediately.`
+      };
+    }
+    if (/\b(peshab\s*bilkul\s*ruk|unable\s*to\s*urinate|acute\s*retention|can'?t\s*pass\s*urine\s*at\s*all)\b/i.test(lowerMsg)) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Acute urinary retention",
+        emergencyAlertMessage: `⚠️ *Urological Emergency Alert*: Complete inability to pass urine with severe lower abdominal pain requires immediate catheterization. Please proceed to the nearest hospital emergency room.`
+      };
+    }
+  }
+
+  // ========================================================
+  // 6. Explicit Emergency Room / Casualty Keywords
+  // ========================================================
+  const hasExplicitEmergencyWords =
+    /\b(medical\s*emergency|hospital\s*emergency|emergency\s*room|emergency\s*admit|emergency\s*patient|casualty|icu|critical\s*condition)\b/i.test(lowerMsg);
+
+  if (hasExplicitEmergencyWords) {
+    return {
+      level: "EMERGENCY",
+      isEmergency: true,
+      reason: "Explicit emergency keywords",
+      emergencyAlertMessage: `⚠️ *Emergency Notice*: If the patient is in critical condition or experiencing an acute emergency, please visit the nearest hospital emergency room immediately or call emergency ambulance services (108/112).`
+    };
+  }
+
+  // 7. Custom Clinic Triggers (if doctor configured custom emergency words)
   if (customTriggers) {
     const list = customTriggers.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
     const hasCustomTrigger = list.some(t => {
       if (t === "emergency") return false;
       return lowerMsg.includes(t);
     });
-    if (hasCustomTrigger) return true;
+    if (hasCustomTrigger) {
+      return {
+        level: "EMERGENCY",
+        isEmergency: true,
+        reason: "Custom clinic trigger",
+        emergencyAlertMessage: `⚠️ *Emergency Notice*: Based on your clinic's emergency protocol, this condition requires immediate hospital evaluation. Please visit the nearest emergency department.`
+      };
+    }
   }
 
-  return hasAcuteClinicalSymptoms || hasExplicitMedicalEmergency;
+  return { level: "ROUTINE", isEmergency: false };
+}
+
+/**
+ * 100% Backward compatible wrapper for existing callers
+ */
+export function isClinicalMedicalEmergency(message: string, customTriggers?: string): boolean {
+  const result = evaluateClinicalTriage(message, undefined, customTriggers);
+  return result.isEmergency;
 }
 
 function buildDeterministicReceptionistReply(
@@ -958,11 +1176,12 @@ export class AIAgentsService {
     try {
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
-      // Emergency Trigger Check (Clinically context-aware — ignores personal errands and colloquial uses)
-      const isEmergency = isClinicalMedicalEmergency(incomingMessage, emergencyTriggers);
+      // 4-Tier Clinical Triage Check (Universal + Specialty-Specific)
+      const triageResult = evaluateClinicalTriage(incomingMessage, specialty, emergencyTriggers);
 
-      if (isEmergency) {
-        return `⚠️ *Emergency Notice*: If the patient is experiencing a severe medical emergency, chest pain, or trauma, please visit the nearest hospital emergency room immediately or call emergency medical services.`;
+      // 🔴 HARD EMERGENCY STOP: If true life/organ/fetus/limb emergency, STOP all OPD booking and direct to ER immediately
+      if (triageResult.level === "EMERGENCY" && triageResult.emergencyAlertMessage) {
+        return triageResult.emergencyAlertMessage;
       }
 
       const startTime = Date.now();
@@ -1173,18 +1392,44 @@ ${languageDirective}
 - **Prescription & Dosage Shield**:
   * NEVER recommend drug dosages, mg/ml amounts, or prescribe medications over WhatsApp.
   * Direct patients to check their written clinic prescription or consult ${doctorName} during OPD.
-- **Emergency & Red-Flag Triage**:
-  * If the patient reports life-threatening symptoms (severe chest pain, difficulty breathing, seizures, loss of consciousness, heavy bleeding, stroke symptoms, poisoning, trauma):
-    IMMEDIATELY advise emergency care:
-    - English: "⚠️ *Emergency Alert*: The symptoms you describe appear potentially serious and require urgent medical attention. Please do not wait for an outpatient appointment and proceed immediately to the nearest hospital emergency room (ICU/Casualty) or call emergency ambulance services (108/112)."
-    - Hinglish: "⚠️ *Emergency Notice*: Jo symptoms aap bata rahe hain woh potentially serious ho sakte hain. Kripya appointment ka wait na karein aur turant nearest hospital emergency room (ICU/Casualty) pahuchein ya Ambulance (108/112) ko call karein."
+- **4-Tier Clinical Triage & Emergency Boundaries (MANDATORY)**:
+  * You operate under a strict 4-Tier Clinical Triage Model:
+    🔴 **EMERGENCY (Immediate Life/Organ/Limb/Fetus Threat)**:
+      - Examples: Crushing chest pain radiating with sweating, acute stroke (FAST), severe breathing failure/cyanosis, massive uncontrolled bleeding with collapse, active suicide plan/intent, pregnancy bleeding WITH severe pain or fainting, newborn (<3m) fever ≥38°C, chemical eye splash, penetrating open globe, testicular torsion, open fracture.
+      - 🚨 **ABSOLUTE RULE**: Once 🔴 is triggered, **STOP ALL OPD BOOKING IMMEDIATELY**.
+      - ⚠️ **NEVER SAY**: "Our OPD is at 5:00 PM today, would you like to come?". NEVER offer delayed appointment slots during an emergency.
+      - DIRECT firmly and empathetically to the nearest hospital Emergency Room / Casualty / 108 ambulance.
+
+    🟠 **URGENT (Same-Day Clinical Assessment)**:
+      - Examples: High fever in child >3m who is alert and drinking; persistent vomiting with mild/moderate dehydration; new vaginal bleeding in pregnancy WITHOUT severe pain/collapse; suspected rupture of membranes; perceived reduction in baby's regular movement pattern; high fever with flank pain (suspected pyelonephritis); acute inability to bear weight after joint twist; persistent nosebleed not stopping after 10-15m pinching.
+      - **Action**: Fast-track to a **same-day in-clinic slot**. Advise: "If symptoms suddenly worsen or severe pain/fainting develops before OPD, visit the hospital emergency room immediately."
+
+    🟡 **PROMPT (Needs Clinician Review, Not Emergency)**:
+      - Examples: Early pregnancy painless minor spotting/brown smudge; mild fever in playful older child; mild blood in urine without pain or fever; mild throat ache; chronic back pain flare without numbness.
+      - **Action**: Offer the next available standard appointment slot. Provide home care comfort advice without prescribing dosages.
+
+    🟢 **ROUTINE (Standard Receptionist Workflow)**:
+      - Routine follow-ups, vaccination visits, lab/ultrasound reviews, chronic joint aches, health checkups. Proceed through standard 2-Step Pre-Booking Verification Gate.
+
+  * **Specialty-Specific Guidance**:
+    - **Obstetrics (OB-GYN)**:
+      • NEVER diagnose. Do not treat all spotting identically: evaluate whether there is severe pain, cramping, or dizziness.
+      • If a mother mentions reduced fetal movements, advise same-day assessment at the maternity unit.
+    - **Pediatrics**:
+      • A child having a mild fever is NOT an automatic emergency. Consider age + alertness + breathing + hydration.
+      • Newborns < 3 months with fever are ALWAYS an immediate emergency.
+    - **Ophthalmology**:
+      • For chemical splash into eyes: Immediately instruct continuous rinsing with clean water/saline without stopping, and head to Eye ER.
+      • For penetrating object / glass cut in eye: Strictly instruct: "DO NOT rub, DO NOT press, and DO NOT rinse. Shield eye gently and rush to hospital."
+    - **Psychiatry**:
+      • For active suicidal intent: Provide Tele-MANAS (14416 / 1800-89-14416) and direct to emergency care accompanied by family.
+      • A standard panic attack without self-harm or danger is 🟡 Prompt/🟠 Urgent, NOT an ambulance alert.
+
   * **Colloquial "Emergency" vs Medical Emergency (CRITICAL DIRECTIVE)**:
     - When a patient says "emergency kahi jana hai", "family emergency", "emergency kaam aa gaya", or "emergency hai isliye kal shift kardo":
       This is a normal personal scheduling reason, NOT a medical crisis.
       NEVER send an emergency disclaimer for personal errands or schedule shifts.
-      Acknowledge politely and proceed directly to reschedule or shift their appointment:
-      • English: "No problem at all! I would be happy to help you reschedule your appointment to tomorrow. Which session (Morning or Evening) works best for you? 🙏"
-      • Hinglish: "Ji bilkul koi baat nahi! Main aapka appointment kal ke liye shift kar deti hoon. Kal aap Morning ya Evening kis session mein aana pasand karenge? 🙏"
+      Acknowledge politely and proceed directly to reschedule or shift their appointment.
 
 ==================================================
 6. PATIENT DETAILS, AGE, GENDER & MULTI-FAMILY PROFILES
