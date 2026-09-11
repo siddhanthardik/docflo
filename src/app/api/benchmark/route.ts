@@ -10,13 +10,18 @@ import { JSONReporter } from "@/benchmark/air-bench/reporters/json-reporter";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSessionData();
-    if (!session || !session.doctorId) {
+    const session = await getSessionData().catch(() => null);
+    const isAllowed = session && (session.doctorId || session.isSuperAdmin || ["SUPERADMIN", "ADMIN"].includes(session.role));
+    if (!isAllowed) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const requestedFile = searchParams.get("reportFile");
+
     const reportsDir = path.resolve(process.cwd(), "src/benchmark/air-bench/reports");
     let reports: Array<{ fileName: string; size: number; createdAt: string }> = [];
+    let latestReport = null;
 
     if (fs.existsSync(reportsDir)) {
       const files = fs.readdirSync(reportsDir).filter(f => f.endsWith(".json"));
@@ -29,6 +34,19 @@ export async function GET(req: NextRequest) {
           createdAt: stat.birthtime.toISOString()
         };
       }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const targetFileName = requestedFile && reports.some(r => r.fileName === requestedFile)
+        ? requestedFile
+        : reports[0]?.fileName;
+
+      if (targetFileName) {
+        try {
+          const content = fs.readFileSync(path.join(reportsDir, targetFileName), "utf8");
+          latestReport = JSON.parse(content);
+        } catch (e) {
+          console.warn("[Benchmark API] Failed to parse report file:", e);
+        }
+      }
     }
 
     return NextResponse.json({
@@ -36,7 +54,8 @@ export async function GET(req: NextRequest) {
       dimensions: CATEGORY_METADATA,
       seedScenarioCount: SEED_SCENARIOS.length,
       availableCategories: Object.keys(CATEGORY_METADATA),
-      recentReports: reports.slice(0, 10)
+      recentReports: reports.slice(0, 15),
+      latestReport
     });
   } catch (err: any) {
     console.error("[Benchmark API GET Error]:", err);
@@ -46,8 +65,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionData();
-    if (!session || !session.doctorId) {
+    const session = await getSessionData().catch(() => null);
+    const isAllowed = session && (session.doctorId || session.isSuperAdmin || ["SUPERADMIN", "ADMIN"].includes(session.role));
+    if (!isAllowed) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
