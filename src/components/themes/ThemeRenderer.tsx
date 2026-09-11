@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { getThemePreset } from "@/components/themes/theme-presets";
-import { ClinicWebsiteData, PageSection } from "./theme-types";
+import { ClinicWebsiteData, PageSection, SectionType } from "./theme-types";
 import { motion } from "framer-motion";
 import {
   Phone,
@@ -27,6 +27,8 @@ import {
   ArrowUp,
   ArrowDown,
   Plus,
+  GripVertical,
+  Copy,
   ChevronLeft,
   ChevronRight,
   HeartPulse,
@@ -105,6 +107,10 @@ export function ThemeRenderer({
   onSelectSection,
   onMoveSection,
   onDeleteSection,
+  onDuplicateSection,
+  onDropNewSection,
+  onReorderSection,
+  onOpenInsertModal,
 }: {
   data: ClinicWebsiteData;
   previewMode?: boolean;
@@ -113,6 +119,10 @@ export function ThemeRenderer({
   onSelectSection?: (sectionId: string) => void;
   onMoveSection?: (sectionId: string, direction: "up" | "down") => void;
   onDeleteSection?: (sectionId: string) => void;
+  onDuplicateSection?: (sectionId: string) => void;
+  onDropNewSection?: (type: SectionType, targetIndex: number) => void;
+  onReorderSection?: (sourceIndex: number, destinationIndex: number) => void;
+  onOpenInsertModal?: (targetIndex: number) => void;
 }) {
   const [openBookingModal, setOpenBookingModal] = useState(false);
   const [patientName, setPatientName] = useState("");
@@ -221,6 +231,51 @@ export function ThemeRenderer({
     }
   };
 
+  // Visual Drop Target / In-Between Section Inserter
+  const renderDropZone = (targetIndex: number) => {
+    if (!composerMode) return null;
+
+    return (
+      <div
+        key={`dropzone_${targetIndex}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.setAttribute("data-drag-over", "true");
+        }}
+        onDragLeave={(e) => {
+          e.currentTarget.removeAttribute("data-drag-over");
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.removeAttribute("data-drag-over");
+
+          const newWidgetType = e.dataTransfer.getData("application/x-gyrex-widget") as SectionType;
+          const reorderSourceIndex = e.dataTransfer.getData("application/x-gyrex-reorder");
+
+          if (newWidgetType) {
+            onDropNewSection?.(newWidgetType, targetIndex);
+          } else if (reorderSourceIndex) {
+            const srcIdx = parseInt(reorderSourceIndex, 10);
+            if (!isNaN(srcIdx)) {
+              onReorderSection?.(srcIdx, targetIndex);
+            }
+          }
+        }}
+        className="relative group/drop py-1.5 transition-all flex items-center justify-center cursor-pointer data-[drag-over=true]:bg-blue-100/90 data-[drag-over=true]:py-5 rounded-xl mx-4"
+        onClick={() => onOpenInsertModal?.(targetIndex)}
+      >
+        <div className="w-full h-0.5 border-t-2 border-dashed border-transparent group-hover/drop:border-blue-400 group-data-[drag-over=true]/drop:border-blue-600 flex items-center justify-center transition-all">
+          <div className="opacity-0 group-hover/drop:opacity-100 group-data-[drag-over=true]/drop:opacity-100 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold py-1 px-3 rounded-full shadow-lg flex items-center gap-1.5 transition-all transform group-hover/drop:scale-100 scale-90 z-30">
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Add Section Here</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Section Container Wrapper with Elementor Non-Continuous (Dashed) Border & Floating Handle
   const renderSectionContainer = (section: PageSection, children: React.ReactNode, index: number) => {
     if (!composerMode) return <React.Fragment key={section.id}>{children}</React.Fragment>;
@@ -228,84 +283,112 @@ export function ThemeRenderer({
     const isSelected = selectedSectionId === section.id;
 
     return (
-      <div
-        id={section.id}
-        key={section.id}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectSection?.(section.id);
-        }}
-        className={`relative group transition-all duration-200 ${
-          isSelected
-            ? "border-2 border-dashed border-blue-600 bg-blue-50/5 ring-4 ring-blue-500/10 z-20"
-            : "hover:border-2 hover:border-dashed hover:border-blue-400"
-        }`}
-      >
-        {/* Elementor Floating Control Handle */}
-        <div className={`absolute top-2 right-4 z-30 flex items-center gap-1.5 bg-blue-600 text-white px-2.5 py-1 rounded-t-lg shadow-xl text-xs transition-opacity ${
-          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        }`}>
-          <span className="text-[10px] font-black uppercase tracking-wider px-1 text-white">
-            {section.type.replace("_", " ")}
-          </span>
+      <React.Fragment key={section.id}>
+        {index === 0 && renderDropZone(0)}
+        <div
+          id={section.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectSection?.(section.id);
+          }}
+          className={`relative group transition-all duration-200 ${
+            isSelected
+              ? "border-2 border-dashed border-blue-600 bg-blue-50/5 ring-4 ring-blue-500/10 z-20"
+              : "hover:border-2 hover:border-dashed hover:border-blue-400"
+          }`}
+        >
+          {/* Elementor Floating Control Handle */}
+          <div className={`absolute top-2 right-4 z-30 flex items-center gap-1.5 bg-blue-600 text-white px-2.5 py-1 rounded-t-lg shadow-xl text-xs transition-opacity ${
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}>
+            {/* 6-dot Drag Grip Handle */}
+            <div
+              draggable={true}
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData("application/x-gyrex-reorder", index.toString());
+              }}
+              className="p-1 hover:bg-blue-700 rounded cursor-grab active:cursor-grabbing text-white"
+              title="Drag to Reorder Section"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectSection?.(section.id);
-            }}
-            className="p-1 hover:bg-blue-700 rounded text-white"
-            title="Edit in Elementor Panel"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+            <span className="text-[10px] font-black uppercase tracking-wider px-1 text-white">
+              {section.type.replace("_", " ")}
+            </span>
 
-          {index > 0 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onMoveSection?.(section.id, "up");
+                onSelectSection?.(section.id);
               }}
               className="p-1 hover:bg-blue-700 rounded text-white"
-              title="Move Up"
+              title="Edit in Elementor Panel"
             >
-              <ArrowUp className="w-3.5 h-3.5" />
+              <Edit2 className="w-3.5 h-3.5" />
             </button>
-          )}
 
-          {index < activeSections.length - 1 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onMoveSection?.(section.id, "down");
+                onDuplicateSection?.(section.id);
               }}
               className="p-1 hover:bg-blue-700 rounded text-white"
-              title="Move Down"
+              title="Duplicate Section"
             >
-              <ArrowDown className="w-3.5 h-3.5" />
+              <Copy className="w-3.5 h-3.5" />
             </button>
-          )}
 
-          {activeSections.length > 1 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteSection?.(section.id);
-              }}
-              className="p-1 hover:bg-rose-600 rounded text-white"
-              title="Delete Section"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveSection?.(section.id, "up");
+                }}
+                className="p-1 hover:bg-blue-700 rounded text-white"
+                title="Move Up"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {index < activeSections.length - 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveSection?.(section.id, "down");
+                }}
+                className="p-1 hover:bg-blue-700 rounded text-white"
+                title="Move Down"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {activeSections.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteSection?.(section.id);
+                }}
+                className="p-1 hover:bg-rose-600 rounded text-white"
+                title="Delete Section"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {children}
         </div>
-
-        {children}
-      </div>
+        {renderDropZone(index + 1)}
+      </React.Fragment>
     );
   };
 
@@ -424,6 +507,7 @@ export function ThemeRenderer({
       </header>
 
       {/* ── DYNAMIC SECTIONS RENDERER ── */}
+      {composerMode && activeSections.length === 0 && renderDropZone(0)}
       {activeSections.map((section, index) => {
         const d = section.design || {};
         const customBg = section.bgColor || d.bgColor;

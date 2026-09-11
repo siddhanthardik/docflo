@@ -69,12 +69,16 @@ import {
   Undo2,
   Redo2,
   RotateCcw,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SPECIALTIES } from "@/lib/specialties";
 import { useToast } from "@/components/ui/use-toast";
+import { InsertSectionModal } from "@/components/composer/InsertSectionModal";
+import { QuickStartWizardModal } from "@/components/composer/QuickStartWizardModal";
+import { MedicalStockModal } from "@/components/composer/MedicalStockModal";
 
 const THEME_OPTIONS = [
   { id: "apex-clinical", name: "Apex Clinical Pro", category: "Hospital & Polyclinic", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
@@ -168,6 +172,11 @@ export default function ElementorComposerPage() {
   const [inspectorSubTab, setInspectorSubTab] = useState<"content" | "style">("content");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [insertModalOpen, setInsertModalOpen] = useState(false);
+  const [insertTargetIndex, setInsertTargetIndex] = useState<number | null>(null);
+  const [quickStartModalOpen, setQuickStartModalOpen] = useState(false);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockTargetField, setStockTargetField] = useState<string | null>(null);
 
   // Undo History Stack
   const [historyStack, setHistoryStack] = useState<ClinicWebsiteData[]>([]);
@@ -440,6 +449,62 @@ export default function ElementorComposerPage() {
     pushHistory(nextState);
     if (selectedSectionId === sectionId) setSelectedSectionId(null);
     toast({ title: "Section Removed" });
+  };
+
+  const handleDuplicateSection = (sectionId: string) => {
+    const list = [...(siteData.sections || [])];
+    const index = list.findIndex((s) => s.id === sectionId);
+    if (index === -1) return;
+
+    const source = list[index];
+    const clone: PageSection = JSON.parse(JSON.stringify(source));
+    clone.id = `sec_${source.type.toLowerCase()}_${Date.now()}`;
+    if (clone.title) clone.title = `${clone.title} (Copy)`;
+
+    list.splice(index + 1, 0, clone);
+    const nextState = { ...siteData, sections: list };
+    setSiteData(nextState);
+    pushHistory(nextState);
+    handleSelectSection(clone.id);
+    toast({ title: `Duplicated ${source.type.replace("_", " ")} Block ⧉` });
+  };
+
+  const handleDropNewSection = (type: SectionType, targetIndex: number) => {
+    const newId = `sec_${type.toLowerCase()}_${Date.now()}`;
+    const newSection: PageSection = {
+      id: newId,
+      type,
+      title: type === "CUSTOM_TEXT" ? "Custom Clinic Notice" : type === "GALLERY" ? "Our Modern Clinical Facilities" : undefined,
+      subtitle: type === "CUSTOM_TEXT" ? "Write announcements or patient guidance here." : undefined,
+      content: type === "CUSTOM_TEXT" ? "Add detailed patient notices, clinic policies, or special guidance here." : undefined,
+      badgeText: "",
+      isVisible: true,
+    };
+
+    const list = [...(siteData.sections || [])];
+    const safeIndex = Math.max(0, Math.min(list.length, targetIndex));
+    list.splice(safeIndex, 0, newSection);
+
+    const nextState = { ...siteData, sections: list };
+    setSiteData(nextState);
+    pushHistory(nextState);
+    handleSelectSection(newId);
+    toast({ title: `Dropped ${type.replace("_", " ")} onto Canvas! 🎯`, description: `Inserted at position #${safeIndex + 1}.` });
+  };
+
+  const handleReorderSection = (sourceIndex: number, targetIndex: number) => {
+    const list = [...(siteData.sections || [])];
+    if (sourceIndex < 0 || sourceIndex >= list.length) return;
+    if (targetIndex < 0 || targetIndex > list.length) return;
+
+    const [removed] = list.splice(sourceIndex, 1);
+    const destination = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+    list.splice(destination, 0, removed);
+
+    const nextState = { ...siteData, sections: list };
+    setSiteData(nextState);
+    pushHistory(nextState);
+    toast({ title: `Reordered ${removed.type.replace("_", " ")} Block 🔄` });
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -806,6 +871,16 @@ export default function ElementorComposerPage() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2.5">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setQuickStartModalOpen(true)}
+            className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer"
+            title="Auto-generate complete clinic website in 45 seconds"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+            <span className="hidden sm:inline">5-Min QuickStart</span>
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -2356,12 +2431,31 @@ export default function ElementorComposerPage() {
               {/* TAB 1: ADD & EDIT WIDGETS TRAY */}
               {sidebarTab === "elements" && (
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  <div className="space-y-1">
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Website Elements</h3>
-                    <p className="text-[11px] text-slate-500">Click to edit existing sections or insert new widgets.</p>
+                  {/* 5-Minute Magic QuickStart Callout */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white shadow-md flex items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 font-black text-xs">
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+                        <span>5-Min Magic QuickStart</span>
+                      </div>
+                      <p className="text-[10px] text-blue-100">Auto-build complete site in 45s</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setQuickStartModalOpen(true)}
+                      className="h-7 px-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-black text-[10px] shadow-xs cursor-pointer shrink-0"
+                    >
+                      Start
+                    </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5 pt-2">
+                  <div className="space-y-1 pt-1">
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Drag &amp; Drop Blocks</h3>
+                    <p className="text-[11px] text-slate-500">Drag any block onto the canvas or click to add / edit.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5 pt-1">
                     {AVAILABLE_WIDGETS.map((widget) => {
                       const Icon = widget.icon;
                       const isPresentOnPage = (siteData.sections || []).some((s) => s.type === widget.type);
@@ -2369,16 +2463,23 @@ export default function ElementorComposerPage() {
                       return (
                         <div
                           key={widget.type}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("application/x-gyrex-widget", widget.type);
+                          }}
                           onClick={() => handleElementCardClick(widget.type)}
-                          className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3 bg-white group"
+                          className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 hover:shadow-md transition-all cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 bg-white group select-none"
+                          title="Drag onto Canvas or Click to Add / Edit"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors relative">
                               <Icon className="w-4 h-4" />
                             </div>
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600">{widget.label}</h4>
+                                <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 flex items-center gap-1.5">
+                                  <span>{widget.label}</span>
+                                </h4>
                                 {isPresentOnPage && (
                                   <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                                     Active
@@ -2389,17 +2490,22 @@ export default function ElementorComposerPage() {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddNewSection(widget.type);
-                            }}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-500 hover:text-white transition-colors shrink-0"
-                            title="Add as New Section"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <div className="p-1 text-slate-300 group-hover:text-blue-500 transition-colors" title="Drag onto canvas">
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddNewSection(widget.type);
+                              }}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-500 hover:text-white transition-colors"
+                              title="Add as New Section"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -2885,6 +2991,13 @@ export default function ElementorComposerPage() {
               onSelectSection={handleSelectSection}
               onMoveSection={handleMoveSection}
               onDeleteSection={handleDeleteSection}
+              onDuplicateSection={handleDuplicateSection}
+              onDropNewSection={handleDropNewSection}
+              onReorderSection={handleReorderSection}
+              onOpenInsertModal={(idx) => {
+                setInsertTargetIndex(idx);
+                setInsertModalOpen(true);
+              }}
             />
           </div>
         </main>
@@ -2929,6 +3042,72 @@ export default function ElementorComposerPage() {
           </div>
         </div>
       )}
+
+      {/* ── INSERT SECTION MODAL ── */}
+      <InsertSectionModal
+        isOpen={insertModalOpen}
+        targetIndex={insertTargetIndex}
+        onClose={() => {
+          setInsertModalOpen(false);
+          setInsertTargetIndex(null);
+        }}
+        onSelectWidget={(type, targetIndex) => handleDropNewSection(type, targetIndex)}
+      />
+
+      {/* ── 5-MINUTE MAGIC QUICKSTART WIZARD MODAL ── */}
+      <QuickStartWizardModal
+        isOpen={quickStartModalOpen}
+        onClose={() => setQuickStartModalOpen(false)}
+        currentData={siteData}
+        onApplySynthesizedSite={(synthesized) => {
+          setSiteData(synthesized);
+          pushHistory(synthesized);
+          setSelectedSectionId("sec_hero");
+          toast({
+            title: "🎉 5-Minute Clinic Site Generated!",
+            description: "Tailored treatments, FAQs, trust stats, and theme applied. Customize or publish live!",
+          });
+        }}
+      />
+
+      {/* ── MEDICAL STOCK PHOTOS MODAL ── */}
+      <MedicalStockModal
+        isOpen={stockModalOpen}
+        onClose={() => {
+          setStockModalOpen(false);
+          setStockTargetField(null);
+        }}
+        onSelectPhoto={(url) => {
+          if (stockTargetField === "hero") {
+            const nextState = { ...siteData, heroImage: url };
+            setSiteData(nextState);
+            pushHistory(nextState);
+            toast({ title: "Hero Banner Photo Updated 📸" });
+          } else if (stockTargetField === "doctor") {
+            const nextState = { ...siteData, doctor: { ...(siteData.doctor || { name: "Doctor" }), image: url } };
+            setSiteData(nextState);
+            pushHistory(nextState);
+            toast({ title: "Doctor Portrait Photo Updated 🩺" });
+          } else if (stockTargetField === "gallery") {
+            const currentGallery = siteData.galleryImages || [];
+            const nextState = { ...siteData, galleryImages: [...currentGallery, { url, caption: "Modern Clinic Facilities" }] };
+            setSiteData(nextState);
+            pushHistory(nextState);
+            toast({ title: "Photo Added to Clinic Gallery 📸" });
+          } else if (stockTargetField && stockTargetField.startsWith("service_")) {
+            const sIdx = parseInt(stockTargetField.split("_")[1], 10);
+            if (!isNaN(sIdx) && siteData.customServices && siteData.customServices[sIdx]) {
+              const updated = [...siteData.customServices];
+              updated[sIdx].image = url;
+              const nextState = { ...siteData, customServices: updated };
+              setSiteData(nextState);
+              pushHistory(nextState);
+              toast({ title: "Treatment Photo Updated 🩺" });
+            }
+          }
+        }}
+        title="Choose from Verified Medical Stock Photography"
+      />
     </div>
   );
 }
