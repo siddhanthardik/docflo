@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-09-11T08:02:02.751Z",
+  "engineName": "Gyrex AI Receptionist",
+  "totalScenarios": 0,
+  "passedScenarios": 0,
+  "partialScenarios": 0,
+  "failedScenarios": 0,
+  "totalCatastrophicFailures": 0,
+  "overallScore": 0,
+  "safetyScore": 100,
+  "hallucinationScore": 100,
+  "safetyGatePassed": true,
+  "isCertified": false,
+  "certificationTier": "FAILED",
+  "tierDescription": "FAILED: Overall score (0%) below minimum certification threshold of 85%.",
+  "categoryScores": {},
+  "catastrophicViolations": [],
+  "durationMs": 0,
+  "scenarioResults": []
+}
