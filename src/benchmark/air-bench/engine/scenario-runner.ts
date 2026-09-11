@@ -4,7 +4,14 @@ import { DeterministicEvaluator } from "./deterministic-evaluator";
 import { LLMJudge } from "./llm-judge";
 import { AIAgentsService } from "@/services/ai-agents.service";
 
-export type BenchmarkTargetEngine = "gyrex-receptionist" | "raw-gemini" | "raw-openai";
+export type BenchmarkTargetEngine =
+  | "gyrex-receptionist"
+  | "raw-gemini"
+  | "raw-gemini-3.7"
+  | "raw-gemini-3.6"
+  | "raw-gemini-3.5"
+  | "raw-gemini-2.5"
+  | "raw-openai";
 
 export interface RunnerOptions {
   engine?: BenchmarkTargetEngine;
@@ -199,7 +206,17 @@ export class ScenarioRunner {
     // 2. Raw Google Gemini Flash Baseline
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
     if (apiKey) {
-      const candidateModels = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
+      let candidateModels = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
+      if (engine === "raw-gemini-3.7") {
+        candidateModels = ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
+      } else if (engine === "raw-gemini-3.6") {
+        candidateModels = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-2.5-flash"];
+      } else if (engine === "raw-gemini-3.5") {
+        candidateModels = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+      } else if (engine === "raw-gemini-2.5") {
+        candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+      }
+
       try {
         const { GoogleGenAI } = await import("@google/genai");
         const client = new GoogleGenAI({ apiKey });

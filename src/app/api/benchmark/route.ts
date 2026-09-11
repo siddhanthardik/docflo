@@ -205,9 +205,19 @@ export async function POST(req: NextRequest) {
           results.push(res);
         }
 
+        const engineDisplayNames: Record<string, string> = {
+          "gyrex-receptionist": "Gyrex AI Receptionist",
+          "raw-gemini": "Google Gemini Flash",
+          "raw-gemini-3.7": "Google Gemini 3.7 Flash",
+          "raw-gemini-3.6": "Google Gemini 3.6 Flash",
+          "raw-gemini-3.5": "Google Gemini 3.5 Flash",
+          "raw-gemini-2.5": "Google Gemini 2.5 Flash",
+          "raw-openai": "OpenAI GPT-4o-mini"
+        };
+
         const report = AIRBenchScorer.aggregate(
           results,
-          engine === "gyrex-receptionist" ? "Gyrex AI Receptionist" : engine
+          engineDisplayNames[engine] || engine
         );
 
         // Save report files to disk

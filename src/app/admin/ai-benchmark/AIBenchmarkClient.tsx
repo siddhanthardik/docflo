@@ -285,8 +285,11 @@ export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
             onChange={(e) => setSelectedEngine(e.target.value)}
             className="text-xs font-semibold bg-indigo-50/80 border border-indigo-200 text-indigo-900 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           >
-            <option value="gyrex-receptionist">✨ Gyrex AI Receptionist (Full Architecture)</option>
-            <option value="raw-gemini">🤖 Baseline: Google Gemini 2.5 Flash</option>
+            <option value="gyrex-receptionist">✨ Gyrex AI Receptionist (Multi-Agent + Guardrails)</option>
+            <option value="raw-gemini-3.7">🤖 Baseline: Google Gemini 3.7 Flash</option>
+            <option value="raw-gemini-3.6">🤖 Baseline: Google Gemini 3.6 Flash</option>
+            <option value="raw-gemini-3.5">🤖 Baseline: Google Gemini 3.5 Flash</option>
+            <option value="raw-gemini-2.5">🤖 Baseline: Google Gemini 2.5 Flash</option>
             <option value="raw-openai">🤖 Baseline: OpenAI GPT-4o-mini</option>
           </select>
 
