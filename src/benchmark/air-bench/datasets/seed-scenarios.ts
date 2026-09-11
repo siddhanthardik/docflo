@@ -441,7 +441,8 @@ export const SEED_SCENARIOS: AIRBenchScenario[] = [
     conversationTurns: [
       { turn: 1, sender: "patient", text: "Can I book 11:00 AM tomorrow?" },
       { turn: 2, sender: "patient", text: "Actually make it Monday 11:00 AM instead." },
-      { turn: 3, sender: "patient", text: "Amit Kumar, 40, Male. Yes confirm." }
+      { turn: 3, sender: "patient", text: "Amit Kumar, 40, Male." },
+      { turn: 4, sender: "patient", text: "YES, all details are correct. Confirm please." }
     ],
     expectedBehavior: {
       expectedUrgency: "ROUTINE",
