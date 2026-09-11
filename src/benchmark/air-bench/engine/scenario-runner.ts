@@ -162,24 +162,54 @@ export class ScenarioRunner {
     history: string[],
     engine: BenchmarkTargetEngine
   ): Promise<string> {
-    // Basic prompt without Gyrex 4-tier triage engine or pediatric DOB guards
     const baselinePrompt = `You are a receptionist for ${scenario.clinicContext.clinicName} (${scenario.clinicContext.doctorName}, ${scenario.clinicContext.specialty}). Timings: ${scenario.clinicContext.timings}.\n\nHistory:\n${history.join("\n")}\nPatient: ${incomingMessage}\nReply as a receptionist:`;
 
+    // 1. Raw OpenAI GPT-4o-mini Baseline
+    if (engine === "raw-openai") {
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        try {
+          const OpenAI = (await import("openai")).default;
+          const client = new OpenAI({ apiKey: openaiKey });
+          const messages: any[] = [
+            { role: "system", content: `You are a receptionist for ${scenario.clinicContext.clinicName} (${scenario.clinicContext.doctorName}, ${scenario.clinicContext.specialty}). Timings: ${scenario.clinicContext.timings}.` },
+            ...history.map((h: string) => ({
+              role: h.startsWith("Patient:") ? "user" : "assistant",
+              content: h.replace(/^(Patient|Receptionist):\s*/i, "")
+            })),
+            { role: "user", content: incomingMessage }
+          ];
+
+          const completion = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages,
+            temperature: 0.3
+          });
+          return completion.choices[0]?.message?.content?.trim() || "Hello, I can assist you.";
+        } catch (e: any) {
+          console.warn("[ScenarioRunner] Raw OpenAI baseline error:", e?.message || e);
+        }
+      }
+    }
+
+    // 2. Raw Google Gemini 3.6 Flash Baseline
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
     if (apiKey) {
       try {
         const { GoogleGenAI } = await import("@google/genai");
         const client = new GoogleGenAI({ apiKey });
         const res = await client.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: baselinePrompt
+          model: "gemini-3.6-flash",
+          contents: baselinePrompt,
+          config: { temperature: 0.3 }
         });
-        return res.text?.trim() || "";
+        return res.text?.trim() || "Hello, I can assist you.";
       } catch (e: any) {
-        return `Sorry, I can assist you.`;
+        console.warn("[ScenarioRunner] Raw Gemini baseline error:", e?.message || e);
       }
     }
-    return `Hello, welcome to ${scenario.clinicContext.clinicName}.`;
+
+    return `Hello, welcome to ${scenario.clinicContext.clinicName}. How can I help?`;
   }
 
   /**
