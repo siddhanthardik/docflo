@@ -180,11 +180,15 @@ export class ScenarioRunner {
             { role: "user", content: incomingMessage }
           ];
 
-          const completion = await client.chat.completions.create({
+          const completionPromise = client.chat.completions.create({
             model: "gpt-4o-mini",
             messages,
             temperature: 0.3
           });
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("OpenAI API call timed out after 8s")), 8000)
+          );
+          const completion: any = await Promise.race([completionPromise, timeoutPromise]);
           return completion.choices[0]?.message?.content?.trim() || "Hello, I can assist you.";
         } catch (e: any) {
           console.warn("[ScenarioRunner] Raw OpenAI baseline error:", e?.message || e);
@@ -192,18 +196,30 @@ export class ScenarioRunner {
       }
     }
 
-    // 2. Raw Google Gemini 3.6 Flash Baseline
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+    // 2. Raw Google Gemini Flash Baseline
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
     if (apiKey) {
+      const candidateModels = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
       try {
         const { GoogleGenAI } = await import("@google/genai");
         const client = new GoogleGenAI({ apiKey });
-        const res = await client.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: baselinePrompt,
-          config: { temperature: 0.3 }
-        });
-        return res.text?.trim() || "Hello, I can assist you.";
+        for (const modelName of candidateModels) {
+          try {
+            const generatePromise = client.models.generateContent({
+              model: modelName,
+              contents: baselinePrompt,
+              config: { temperature: 0.3 }
+            });
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout for ${modelName} after 8s`)), 8000)
+            );
+            const res: any = await Promise.race([generatePromise, timeoutPromise]);
+            const text = res?.text?.trim();
+            if (text) return text;
+          } catch (modelErr: any) {
+            console.warn(`[ScenarioRunner] Raw Gemini baseline attempt with ${modelName} failed:`, modelErr?.message || modelErr);
+          }
+        }
       } catch (e: any) {
         console.warn("[ScenarioRunner] Raw Gemini baseline error:", e?.message || e);
       }

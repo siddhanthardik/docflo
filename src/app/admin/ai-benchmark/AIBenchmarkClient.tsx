@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ShieldCheck,
   Award,
@@ -89,21 +89,106 @@ interface AIBenchmarkClientProps {
     availableCategories: string[];
     recentReports: Array<{ fileName: string; size: number; createdAt: string }>;
     latestReport: BenchmarkReport | null;
+    activeJob?: {
+      id: string;
+      engine: string;
+      category?: string;
+      status: string;
+      progress: {
+        current: number;
+        total: number;
+        currentScenarioId?: string;
+        currentCategory?: string;
+      };
+    } | null;
   };
 }
 
 export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
   const [report, setReport] = useState<BenchmarkReport | null>(initialData.latestReport);
-  const [recentReports] = useState(initialData.recentReports);
+  const [reportsList, setReportsList] = useState(initialData.recentReports);
   const [isRunning, setIsRunning] = useState(false);
+  const [jobProgress, setJobProgress] = useState<{
+    current: number;
+    total: number;
+    currentScenarioId?: string;
+    currentCategory?: string;
+  } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedEngine, setSelectedEngine] = useState<string>("gyrex-receptionist");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const pollJob = async (jobId: string) => {
+    try {
+      const res = await fetch(`/api/benchmark?jobId=${encodeURIComponent(jobId)}`);
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // Retry polling on temporary network hiccup
+        pollTimerRef.current = setTimeout(() => pollJob(jobId), 2000);
+        return;
+      }
+
+      if (!data.success || !data.job) {
+        pollTimerRef.current = setTimeout(() => pollJob(jobId), 2000);
+        return;
+      }
+
+      const job = data.job;
+      if (job.progress) {
+        setJobProgress(job.progress);
+      }
+
+      if (job.status === "COMPLETED") {
+        if (job.report) {
+          setReport(job.report);
+        }
+        setIsRunning(false);
+        setJobProgress(null);
+        // Refresh past reports list
+        fetch("/api/benchmark")
+          .then(r => r.json())
+          .then(d => {
+            if (d.recentReports) setReportsList(d.recentReports);
+          })
+          .catch(() => {});
+      } else if (job.status === "FAILED") {
+        alert("Benchmark execution failed: " + (job.error || "Unknown error"));
+        setIsRunning(false);
+        setJobProgress(null);
+      } else {
+        // Continue polling every 1.5 seconds
+        pollTimerRef.current = setTimeout(() => pollJob(jobId), 1500);
+      }
+    } catch (err: any) {
+      console.warn("[Benchmark Poll Error]:", err);
+      pollTimerRef.current = setTimeout(() => pollJob(jobId), 2500);
+    }
+  };
+
+  // Re-attach to active background job if page is refreshed while running
+  useEffect(() => {
+    if (initialData.activeJob?.id && initialData.activeJob?.status === "RUNNING") {
+      setIsRunning(true);
+      setJobProgress(initialData.activeJob.progress);
+      pollJob(initialData.activeJob.id);
+    }
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleRunBenchmark = async () => {
     setIsRunning(true);
+    setJobProgress(null);
     try {
       const res = await fetch("/api/benchmark", {
         method: "POST",
@@ -113,16 +198,39 @@ export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
           engine: selectedEngine
         })
       });
-      const data = await res.json();
-      if (data.success && data.report) {
+
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 150)}`);
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Benchmark trigger failed.");
+      }
+
+      // Synchronous fallback
+      if (data.report) {
         setReport(data.report);
+        setIsRunning(false);
+        return;
+      }
+
+      // Asynchronous background job
+      if (data.jobId) {
+        if (data.progress) {
+          setJobProgress(data.progress);
+        }
+        pollJob(data.jobId);
       } else {
-        alert(data.error || "Benchmark run failed.");
+        setIsRunning(false);
       }
     } catch (e: any) {
       alert("Execution error: " + (e?.message || e));
-    } finally {
       setIsRunning(false);
+      setJobProgress(null);
     }
   };
 
@@ -178,7 +286,7 @@ export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
             className="text-xs font-semibold bg-indigo-50/80 border border-indigo-200 text-indigo-900 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           >
             <option value="gyrex-receptionist">✨ Gyrex AI Receptionist (Full Architecture)</option>
-            <option value="raw-gemini">🤖 Baseline: Google Gemini 3.6 Flash</option>
+            <option value="raw-gemini">🤖 Baseline: Google Gemini 2.5 Flash</option>
             <option value="raw-openai">🤖 Baseline: OpenAI GPT-4o-mini</option>
           </select>
 
@@ -215,6 +323,41 @@ export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
           </button>
         </div>
       </div>
+
+      {/* Live Benchmark Progress Bar Banner */}
+      {isRunning && (
+        <div className="bg-gradient-to-r from-indigo-500/10 via-blue-500/5 to-white border border-indigo-200/80 rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2.5 text-xs font-bold text-indigo-950">
+              <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+              <span>
+                Evaluating Scenario {jobProgress ? `${Math.min(jobProgress.total, jobProgress.current + 1)} of ${jobProgress.total}` : "..."}
+                {jobProgress?.currentScenarioId ? ` (${jobProgress.currentScenarioId})` : ""}
+              </span>
+              {jobProgress?.currentCategory && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100/80 text-indigo-800 font-semibold uppercase">
+                  {jobProgress.currentCategory}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-mono font-bold text-indigo-700">
+              {jobProgress ? `${Math.round(((jobProgress.current) / Math.max(1, jobProgress.total)) * 100)}% Completed` : "Starting Sandbox..."}
+            </span>
+          </div>
+          <div className="w-full bg-indigo-100 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${jobProgress ? Math.min(100, Math.round(((jobProgress.current + 0.5) / Math.max(1, jobProgress.total)) * 100)) : 10}%`
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-gray-500 mt-2">
+            <span>Clinical sandbox isolated test environment</span>
+            <span>Zero-wait background worker active</span>
+          </div>
+        </div>
+      )}
 
       {report ? (
         <>
@@ -256,14 +399,14 @@ export function AIBenchmarkClient({ initialData }: AIBenchmarkClientProps) {
               </div>
 
               {/* Past Reports Selector */}
-              {recentReports.length > 1 && (
+              {reportsList.length > 1 && (
                 <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-xl border border-gray-200 text-xs text-gray-600">
                   <span>History:</span>
                   <select
                     onChange={(e) => handleSelectReport(e.target.value)}
                     className="bg-transparent font-medium text-gray-800 focus:outline-none"
                   >
-                    {recentReports.map(r => (
+                    {reportsList.map(r => (
                       <option key={r.fileName} value={r.fileName}>
                         {new Date(r.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
                       </option>
