@@ -325,7 +325,7 @@ export function AIRepceptionistSimulator() {
       const data = await res.json();
       const rawText = data.reply || `Namaste! Thank you for contacting ${clinicName}. ${doctorName} is available for appointments. What time suits you best?`;
       const aiReplyText = rawText
-        .replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|DELEGATE_PATIENT_TASK|CLARIFY_TASK)(?::.*?)?\]/gi, "")
+        .replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|DELEGATE_PATIENT_TASK|CLARIFY_TASK|RECORD_CHILD_DOB_AND_VACCINES|OPT_IN_VACCINATION_REMINDERS)(?::.*?)?\]/gi, "")
         .trim();
 
       setTimeout(() => {

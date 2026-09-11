@@ -1554,13 +1554,44 @@ class WhatsAppManager {
                       ...(last10ForApts.length >= 10 ? [{ phone: { endsWith: last10ForApts } }] : [])
                     ]
                   },
-                  select: { id: true, firstName: true, lastName: true }
+                  select: { id: true, firstName: true, lastName: true, dateOfBirth: true, gender: true, vaccinationOptOut: true }
                 });
                 const existingFamilyNames = existingFamilyPatients
                   .map(p => `${p.firstName} ${p.lastName || ''}`.trim())
                   .filter(name => name.toLowerCase() !== 'patient' && !name.startsWith('+'));
 
                 const patientIds = existingFamilyPatients.map(p => p.id);
+
+                // Fetch existing vaccine records for matched family members
+                let existingVaccineRecords: any[] = [];
+                try {
+                  existingVaccineRecords = await (prisma as any).patientVaccineRecord.findMany({
+                    where: { patientId: { in: patientIds } },
+                    orderBy: { dueDate: "asc" }
+                  });
+                } catch (vErr) {
+                  console.warn("[WhatsAppManager] Could not load vaccine records:", vErr);
+                }
+
+                const familyProfiles = existingFamilyPatients.map(p => {
+                  const pVaccines = existingVaccineRecords.filter(v => v.patientId === p.id);
+                  const dobStr = p.dateOfBirth ? p.dateOfBirth.toISOString().split('T')[0] : null;
+                  return {
+                    id: p.id,
+                    fullName: `${p.firstName} ${p.lastName || ''}`.trim(),
+                    firstName: p.firstName,
+                    dateOfBirth: dobStr,
+                    gender: p.gender,
+                    vaccinationOptOut: p.vaccinationOptOut,
+                    totalVaccinesScheduled: pVaccines.length,
+                    pendingVaccines: pVaccines.filter(v => v.status === 'PENDING').slice(0, 5).map(v => ({
+                      milestone: v.milestone,
+                      vaccineName: v.vaccineName,
+                      dueDate: v.dueDate.toISOString().split('T')[0]
+                    }))
+                  };
+                });
+
                 const { startOfDay: clinicTodayStart } = getClinicDayBounds(new Date(), clinicTzForApts);
                 const upcomingApts = await prisma.appointment.findMany({
                   where: {
@@ -1594,6 +1625,7 @@ class WhatsAppManager {
                   pacingStrategy: doctorInfo?.aiSlotPacing || "STAGGERED",
                   activeAppointments,
                   existingFamilyNames,
+                  familyProfiles,
                   clinicTimezone: clinicTzForApts
                 };
 
@@ -2730,9 +2762,84 @@ class WhatsAppManager {
                   }
                 }
 
+                // Process [RECORD_CHILD_DOB_AND_VACCINES: ChildName, YYYY-MM-DD]
+                const recordDobMatch = finalAiReply.match(/\[RECORD_CHILD_DOB_AND_VACCINES:\s*([^,\]]+),\s*([^\]]+)\]/i);
+                if (recordDobMatch) {
+                  const rawChildName = recordDobMatch[1].trim();
+                  const rawDobStr = recordDobMatch[2].trim();
+                  finalAiReply = finalAiReply.replace(recordDobMatch[0], "").trim();
+
+                  try {
+                    const parsedDob = new Date(rawDobStr);
+                    if (!isNaN(parsedDob.getTime())) {
+                      const familyPts = await prisma.patient.findMany({
+                        where: {
+                          doctorId,
+                          phone: { contains: patientPhone.slice(-10) }
+                        }
+                      });
+
+                      let targetPt = familyPts.find(p => {
+                        const fullName = `${p.firstName || ""} ${p.lastName || ""}`.toLowerCase();
+                        return rawChildName.toLowerCase().split(/\s+/).some(part => part.length > 2 && fullName.includes(part));
+                      });
+
+                      if (!targetPt && familyPts.length === 1) {
+                        targetPt = familyPts[0];
+                      }
+
+                      if (targetPt) {
+                        await prisma.patient.update({
+                          where: { id: targetPt.id },
+                          data: { dateOfBirth: parsedDob }
+                        });
+                        await VaccinationService.initializeScheduleForPatient(targetPt.id, doctorId, parsedDob);
+                        console.log(`[WhatsAppManager] 💉 Recorded DOB ${rawDobStr} and initialized vaccine schedule for ${targetPt.firstName} ${targetPt.lastName} (${targetPt.id})`);
+                      }
+                    }
+                  } catch (vErr) {
+                    console.error("[WhatsAppManager] Error processing RECORD_CHILD_DOB_AND_VACCINES:", vErr);
+                  }
+                }
+
+                // Process [OPT_IN_VACCINATION_REMINDERS: ChildName]
+                const optInMatch = finalAiReply.match(/\[OPT_IN_VACCINATION_REMINDERS:\s*([^\]]+)\]/i);
+                if (optInMatch) {
+                  const rawChildName = optInMatch[1].trim();
+                  finalAiReply = finalAiReply.replace(optInMatch[0], "").trim();
+
+                  try {
+                    const familyPts = await prisma.patient.findMany({
+                      where: {
+                        doctorId,
+                        phone: { contains: patientPhone.slice(-10) }
+                      }
+                    });
+
+                    let targetPt = familyPts.find(p => {
+                      const fullName = `${p.firstName || ""} ${p.lastName || ""}`.toLowerCase();
+                      return rawChildName.toLowerCase().split(/\s+/).some(part => part.length > 2 && fullName.includes(part));
+                    });
+
+                    if (!targetPt && familyPts.length === 1) {
+                      targetPt = familyPts[0];
+                    }
+
+                    if (targetPt) {
+                      await prisma.patient.update({
+                        where: { id: targetPt.id },
+                        data: { vaccinationOptOut: false }
+                      });
+                      console.log(`[WhatsAppManager] 🔔 Opted in vaccination reminders for ${targetPt.firstName} ${targetPt.lastName} (${targetPt.id})`);
+                    }
+                  } catch (optErr) {
+                    console.error("[WhatsAppManager] Error processing OPT_IN_VACCINATION_REMINDERS:", optErr);
+                  }
+                }
+
                 // Send reply via Baileys
                 // Strip any stray internal AI action tags before sending to doctor or patient
-                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|RESEND_CONFIRMATION)(?::.*?)?\]/gi, "").trim();
+                finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|RESEND_CONFIRMATION|RECORD_CHILD_DOB_AND_VACCINES|OPT_IN_VACCINATION_REMINDERS)(?::.*?)?\]/gi, "").trim();
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage
