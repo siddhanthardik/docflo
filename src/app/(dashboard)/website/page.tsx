@@ -70,7 +70,10 @@ import {
   Redo2,
   RotateCcw,
   GripVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
+import { BlockTemplateModal } from "@/components/composer/BlockTemplateModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,6 +180,8 @@ export default function ElementorComposerPage() {
   const [quickStartModalOpen, setQuickStartModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockTargetField, setStockTargetField] = useState<string | null>(null);
+  const [blockTemplateModalOpen, setBlockTemplateModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Undo History Stack
   const [historyStack, setHistoryStack] = useState<ClinicWebsiteData[]>([]);
@@ -393,6 +398,15 @@ export default function ElementorComposerPage() {
   };
 
   const handleElementCardClick = (type: SectionType) => {
+    if (type === "HERO") {
+      const existing = (siteData.sections || []).find((s) => s.type === "HERO");
+      if (existing) {
+        handleSelectSection(existing.id);
+      }
+      setBlockTemplateModalOpen(true);
+      return;
+    }
+
     const existing = (siteData.sections || []).find((s) => s.type === type);
     if (existing) {
       handleSelectSection(existing.id);
@@ -712,6 +726,14 @@ export default function ElementorComposerPage() {
           >
             <ChevronLeft className="w-4 h-4" />
           </Link>
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
+            title={isSidebarCollapsed ? "Expand Tools Panel" : "Collapse Tools Panel (Maximize Canvas)"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
           <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5 shrink-0">
             <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
               <Globe className="w-4 h-4" />
@@ -918,18 +940,88 @@ export default function ElementorComposerPage() {
       {/* ── MAIN STUDIO BODY: LEFT PALETTE (390px) + CENTER LIVE VISUAL CANVAS ── */}
       <div className="flex-1 flex overflow-hidden">
         {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
-        <aside className="w-[390px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs">
-          {selectedSection ? (
-            <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
-              <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelectedSectionId(null)}
-                    className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center shadow-2xs"
-                    title="Back to Element Tray"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
+        {isSidebarCollapsed ? (
+          /* Slim 56px Icon Strip when collapsed */
+          <aside className="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-2 shrink-0 z-20 shadow-xs transition-all duration-200">
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center justify-center transition-colors cursor-pointer"
+              title="Expand Tools Panel"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-px bg-slate-200 my-1" />
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarCollapsed(false);
+                setSelectedSectionId(null);
+                setSidebarTab("elements");
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                !selectedSection && sidebarTab === "elements" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Elements Tray"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarCollapsed(false);
+                setSelectedSectionId(null);
+                setSidebarTab("structure");
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                !selectedSection && sidebarTab === "structure" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Page Structure"
+            >
+              <Layers className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarCollapsed(false);
+                setSelectedSectionId(null);
+                setSidebarTab("style");
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                !selectedSection && sidebarTab === "style" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Styling & Typography"
+            >
+              <Palette className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarCollapsed(false);
+                setSelectedSectionId(null);
+                setSidebarTab("domain");
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                !selectedSection && sidebarTab === "domain" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Domain Settings"
+            >
+              <Globe className="w-4 h-4" />
+            </button>
+          </aside>
+        ) : (
+          <aside className="w-[320px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs transition-all duration-200">
+            {selectedSection ? (
+              <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
+                <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedSectionId(null)}
+                      className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center shadow-2xs"
+                      title="Back to Element Tray"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
                       {selectedSection.type.replace("_", " ")}
@@ -1125,7 +1217,55 @@ export default function ElementorComposerPage() {
                   {/* 1. HERO SECTION INSPECTOR */}
                   {selectedSection.type === "HERO" && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                      {/* READYMADE HERO DESIGN SWITCHER */}
+                      <div className="p-3 bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-white rounded-2xl border border-indigo-200/80 shadow-2xs space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                            <Layout className="w-3.5 h-3.5 text-indigo-600" /> Hero Layout Design
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setBlockTemplateModalOpen(true)}
+                            className="text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <Sparkles className="w-3 h-3 text-indigo-500" />
+                            <span>Browse Templates</span>
+                          </button>
+                        </div>
+
+                        {/* 5-Button Visual Switcher */}
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] font-bold">
+                          {[
+                            { id: "SPLIT", label: "Half Right", desc: "Most Popular" },
+                            { id: "FULL_WIDTH", label: "Full Screen", desc: "Ambient Slider" },
+                            { id: "BENTO", label: "Bento Hub", desc: "OPD Slot Card" },
+                            { id: "MINIMAL", label: "Minimalist", desc: "Clean Center" },
+                            { id: "REVERSED_SPLIT", label: "Half Left", desc: "Editorial" },
+                          ].map((v) => {
+                            const isCur = (selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT")) === v.id;
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSection({ heroStyle: v.id as any });
+                                  pushHistory(siteData);
+                                }}
+                                className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                  isCur
+                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+                                }`}
+                              >
+                                <span className="font-bold leading-tight truncate">{v.label}</span>
+                                <span className={`text-[9px] font-normal truncate mt-0.5 ${isCur ? "text-indigo-100" : "text-slate-400"}`}>{v.desc}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
                         <span className="font-bold text-slate-800">Hero Section Content</span>
                         <Button
                           type="button"
@@ -2971,6 +3111,7 @@ export default function ElementorComposerPage() {
             </div>
           )}
         </aside>
+      )}
 
         {/* ── CENTER LIVE VISUAL CANVAS (WYSIWYG) ── */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 flex items-start justify-center bg-slate-100/80">
@@ -3107,6 +3248,54 @@ export default function ElementorComposerPage() {
           }
         }}
         title="Choose from Verified Medical Stock Photography"
+      />
+
+      {/* ── READYMADE HERO TEMPLATES MODAL ── */}
+      <BlockTemplateModal
+        isOpen={blockTemplateModalOpen}
+        onClose={() => setBlockTemplateModalOpen(false)}
+        activeHeroStyle={
+          (selectedSection?.heroStyle ||
+            (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision"
+              ? "FULL_WIDTH"
+              : "SPLIT")) as any
+        }
+        onSelectHeroTemplate={(tmplId) => {
+          // If hero is selected, update it directly
+          const currentSections = siteData.sections || [];
+          const heroSec = currentSections.find((s) => s.type === "HERO");
+          if (heroSec) {
+            const nextSections = currentSections.map((s) =>
+              s.id === heroSec.id ? { ...s, heroStyle: tmplId as any } : s
+            );
+            const nextState = { ...siteData, sections: nextSections };
+            setSiteData(nextState);
+            pushHistory(nextState);
+            setSelectedSectionId(heroSec.id);
+            setInspectorSubTab("content");
+          } else {
+            // Otherwise create new hero with this template
+            const newHeroId = `sec_hero_${Date.now()}`;
+            const newSections: PageSection[] = [
+              {
+                id: newHeroId,
+                type: "HERO",
+                heroStyle: tmplId as any,
+                badgeText: "Clinical Excellence",
+                subtitle: siteData.heroSubheading || "Comprehensive, compassionate healthcare tailored to you.",
+              },
+              ...currentSections,
+            ];
+            const nextState = { ...siteData, sections: newSections };
+            setSiteData(nextState);
+            pushHistory(nextState);
+            setSelectedSectionId(newHeroId);
+          }
+          toast({
+            title: "Hero Design Applied! 🎨",
+            description: `Switched hero layout to ${tmplId.replace("_", " ")}.`,
+          });
+        }}
       />
     </div>
   );

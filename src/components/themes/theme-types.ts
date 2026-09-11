@@ -54,7 +54,7 @@ export interface PageSection {
   content?: string;
   image?: string | null;
   sliderImages?: string[];
-  heroStyle?: "SPLIT" | "FULL_WIDTH" | "BENTO" | "EDITORIAL";
+  heroStyle?: "SPLIT" | "FULL_WIDTH" | "BENTO" | "EDITORIAL" | "MINIMAL" | "REVERSED_SPLIT";
   badgeText?: string;
   ctaText?: string;
   ctaAction?: string;

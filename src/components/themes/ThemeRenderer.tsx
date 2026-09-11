@@ -518,9 +518,11 @@ export function ThemeRenderer({
           const heroHeadline = section.title !== undefined ? section.title : data.heroHeading;
           const heroSub = section.subtitle !== undefined ? section.subtitle : data.heroSubheading;
           const isFullWidthTheme = themeId === "apex-clinical" || themeId === "executive-private" || themeId === "ophthalmology-vision";
+          // Allow explicit heroStyle to override theme defaults: SPLIT, FULL_WIDTH, BENTO, MINIMAL, REVERSED_SPLIT
+          const heroVariant = section.heroStyle || (isFullWidthTheme ? "FULL_WIDTH" : "SPLIT");
 
-          // HERO VARIANT 1: FULL-WIDTH LUXURY AMBIENT SLIDER
-          if (isFullWidthTheme) {
+          // HERO VARIANT: FULL_WIDTH (Luxury Ambient Slider / Background Photo)
+          if (heroVariant === "FULL_WIDTH") {
             const rawOpacity = d.imageOpacity !== undefined ? d.imageOpacity : 85;
             const heroOpacity = Math.max(0.1, Math.min(1, rawOpacity / 100));
             const heroPos = d.imagePosition || "center";
@@ -608,7 +610,180 @@ export function ThemeRenderer({
             );
           }
 
-          // HERO VARIANT 2: ASYMMETRIC / SPLIT
+          // HERO VARIANT: MINIMAL (Centered Clean Typography & Badges)
+          if (heroVariant === "MINIMAL") {
+            const minHeightClass = d.heroHeight === "compact" ? "py-16" : d.heroHeight === "tall" ? "py-32" : d.heroHeight === "fullscreen" ? "min-h-[calc(100vh-70px)] flex flex-col justify-center py-20" : "py-24";
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`relative overflow-hidden ${minHeightClass} border-b border-slate-100 ${
+                  !customBg ? "bg-white" : ""
+                } text-center`}
+              >
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                  {section.badgeText && section.badgeText.trim().length > 0 && (
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs">
+                      <span>{section.badgeText}</span>
+                    </div>
+                  )}
+
+                  <h1 className={`text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
+                    {heroHeadline}
+                  </h1>
+
+                  {heroSub && heroSub.trim().length > 0 && (
+                    <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                      {heroSub}
+                    </p>
+                  )}
+
+                  {/* Doctor credential quick strip if available */}
+                  {data.doctor?.name && (
+                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700">
+                      <span className="font-bold text-slate-900">{data.doctor.name}</span>
+                      {data.doctor.degrees && <span className="text-slate-400">•</span>}
+                      {data.doctor.degrees && <span className="font-medium text-slate-600">{data.doctor.degrees}</span>}
+                      {data.doctor.specialty && <span className="text-slate-400">•</span>}
+                      {data.doctor.specialty && <span className="font-semibold text-blue-700">{data.doctor.specialty}</span>}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+                    <button
+                      onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
+                      className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-8 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                      className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                    </button>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // HERO VARIANT: BENTO (Headline + Direct Booking Hub + Stats)
+          if (heroVariant === "BENTO") {
+            const bentoHeightClass = d.heroHeight === "compact" ? "py-12" : d.heroHeight === "tall" ? "py-24" : "py-16";
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`relative overflow-hidden ${bentoHeightClass} border-b border-slate-100 ${
+                  !customBg ? "bg-slate-50/80" : ""
+                }`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                    {/* Left Bento Cell: Branding & Headlines */}
+                    <div className={`lg:col-span-7 bg-white ${cardRadiusClass} p-8 sm:p-10 border border-slate-200/80 shadow-md flex flex-col justify-between space-y-6`}>
+                      <div className="space-y-4">
+                        {section.badgeText && section.badgeText.trim().length > 0 && (
+                          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                            <span>{section.badgeText}</span>
+                          </div>
+                        )}
+                        <h1 className={`text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
+                          {heroHeadline}
+                        </h1>
+                        {heroSub && (
+                          <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
+                            {heroSub}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Doctor quick badge or stats pill */}
+                      <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
+                            🩺
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-900">{data.doctor?.name || "Senior Consultant"}</p>
+                            <p className="text-[11px] text-slate-500">{data.doctor?.specialty || data.tagline || "Clinical Excellence"}</p>
+                          </div>
+                        </div>
+
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                            className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Bento Cell: Instant Booking Slot Card */}
+                    <div className={`lg:col-span-5 bg-white ${cardRadiusClass} p-6 sm:p-8 border border-slate-200 shadow-xl flex flex-col justify-center space-y-4`}>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                          Direct OPD Booking
+                        </span>
+                        <h3 className="text-xl font-bold text-slate-900">Schedule Consultation</h3>
+                        <p className="text-xs text-slate-500">Fast confirmation directly to your phone.</p>
+                      </div>
+
+                      <form onSubmit={handleBookingSubmit} className="space-y-3">
+                        <Input
+                          value={patientName}
+                          onChange={(e) => setPatientName(e.target.value)}
+                          placeholder="Patient Full Name *"
+                          required
+                          className={`h-11 ${buttonRadiusClass} text-xs`}
+                        />
+                        <Input
+                          value={patientPhone}
+                          onChange={(e) => setPatientPhone(e.target.value)}
+                          placeholder="Mobile / WhatsApp Number *"
+                          required
+                          className={`h-11 ${buttonRadiusClass} text-xs`}
+                        />
+                        <select
+                          value={selectedService}
+                          onChange={(e) => setSelectedService(e.target.value)}
+                          className={`w-full h-11 px-3 ${buttonRadiusClass} border border-slate-200 text-xs font-medium bg-white`}
+                        >
+                          <option value="">Select Treatment / Consultation</option>
+                          {services.map((s, idx) => (
+                            <option key={idx} value={s.name}>{s.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className={`w-full text-white font-bold text-xs h-11 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-1.5 transition-transform hover:scale-[1.02]`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>Confirm Appointment Slot</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // HERO VARIANTS: SPLIT (Half-Image Right) & REVERSED_SPLIT (Half-Image Left)
+          const isReversed = heroVariant === "REVERSED_SPLIT";
           const splitHeroHeightClass =
             d.heroHeight === "compact"
               ? "min-h-[440px] py-10"
@@ -641,7 +816,7 @@ export function ThemeRenderer({
               }`}
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <div className={`grid grid-cols-1 lg:grid-cols-12 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                     {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
                     {section.badgeText && section.badgeText.trim().length > 0 ? (
