@@ -1184,6 +1184,12 @@ export class AIAgentsService {
         return triageResult.emergencyAlertMessage;
       }
 
+      // 🛡️ ADVERSARIAL & JAILBREAK GUARD: Block prompt injection, system overrides, and DAN attacks
+      const isAdversarial = /\b(system\s*override|ignore\s*(all\s*)?(?:previous|prior)\s*instructions|you\s*are\s*now\s*dan|jailbreak|act\s*as\s*dan|mode\s*dan|developer\s*mode|prompt\s*injection)\b/i.test(incomingMessage);
+      if (isAdversarial) {
+        return `I am the clinic receptionist for ${clinicName} (${doctorName}). I can only assist with clinic appointments, consultation timings, and clinic services. How may I help you with your appointment? 🙏`;
+      }
+
       const startTime = Date.now();
       const nowClinic = new Date();
       const tomorrowClinic = new Date(nowClinic.getTime() + 24 * 60 * 60 * 1000);
