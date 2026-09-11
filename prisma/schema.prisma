@@ -74,6 +74,7 @@ model Doctor {
   website                ClinicWebsite?
   aiTokenLogs            AiTokenLog[]
   supportTickets         SupportTicket[]
+  vaccineRecords         PatientVaccineRecord[]
 
   // Review Automation Settings
   reviewAutomationEnabled       Boolean @default(true)
@@ -125,6 +126,9 @@ model Patient {
   city                  String?
   medicalNotes          String?
   tags                  String[]
+  birthName             String?
+  secondaryPhones       String[]       @default([])
+  vaccinationOptOut     Boolean        @default(false)
   patientType           PatientType    @default(LEAD)
   isBlocked             Boolean        @default(false)
   lastReviewRequestedAt DateTime?
@@ -135,6 +139,7 @@ model Patient {
   appointments          Appointment[]
   conversations         Conversation[]
   invoices              Invoice[]
+  vaccineRecords        PatientVaccineRecord[]
   doctor                Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   gbpAccount            GbpAccount?    @relation(fields: [gbpAccountId], references: [id])
   primaryPractitioner   Practitioner?  @relation(fields: [primaryPractitionerId], references: [id])
@@ -222,6 +227,31 @@ model AppointmentFollowUp {
 
   @@index([appointmentId])
   @@map("appointment_follow_ups")
+}
+
+model PatientVaccineRecord {
+  id             String    @id @default(cuid())
+  patientId      String
+  doctorId       String
+  vaccineCode    String    // e.g. VACC_6W, VACC_9M, VACC_15M
+  vaccineName    String    // e.g. DTwP/DTaP-1, IPV-1, HepB-2, Hib-1, Rotavirus-1, PCV-1
+  milestone      String    // "6 Weeks", "9 Months", etc.
+  dueDate        DateTime
+  status         String    @default("PENDING") // PENDING, COMPLETED, SKIPPED
+  administeredAt DateTime?
+  notes          String?
+  reminder1mSent Boolean   @default(false)
+  reminder1wSent Boolean   @default(false)
+  reminder1dSent Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor         Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, vaccineCode])
+  @@index([doctorId, dueDate, status])
+  @@map("patient_vaccine_records")
 }
 
 model GbpAccount {

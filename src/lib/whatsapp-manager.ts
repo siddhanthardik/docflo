@@ -19,6 +19,7 @@ import {
 } from '@/lib/timezone';
 import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
 import { formatPatientSalutation } from '@/lib/salutation';
+import { VaccinationService } from '@/services/vaccination.service';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -1122,8 +1123,11 @@ class WhatsAppManager {
                         });
 
                         const docName = formatDoctorDisplayName(doctorInfo?.name);
-                        const ptMsg = `Hi ${newPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
-                        await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits, ptMsg, newPatient.id, patientName);
+                        const ptSal = formatPatientSalutation(newPatient);
+                        const ptMsg = ptSal.isMinor
+                          ? `Dear Parent, an appointment for *${ptSal.fullNameWithSalutation}* with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                          : `Hi ${ptSal.greetingName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                        await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits, ptMsg, newPatient.id, ptSal.fullNameWithSalutation);
 
                         const confirmMsg = `Done, Doctor! I have created a new patient profile for *${patientName}* and booked their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
@@ -1167,8 +1171,11 @@ class WhatsAppManager {
 
                          const docName = formatDoctorDisplayName(doctorInfo?.name);
                          if (selectedPatient.phone) {
-                            const ptMsg = `Hi ${selectedPatient.firstName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
-                            await this.sendOutboundPatientMessage(sock, doctorId, selectedPatient.phone, ptMsg, selectedPatient.id, `${selectedPatient.firstName} ${selectedPatient.lastName}`.trim());
+                            const ptSal = formatPatientSalutation(selectedPatient);
+                            const ptMsg = ptSal.isMinor
+                              ? `Dear Parent, an appointment for *${ptSal.fullNameWithSalutation}* with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`
+                              : `Hi ${ptSal.greetingName}, your appointment with ${docName} has been confirmed for *${dateLabel} at ${timeLabel}*. Please arrive a few minutes early. Looking forward to seeing you! 😊`;
+                            await this.sendOutboundPatientMessage(sock, doctorId, selectedPatient.phone, ptMsg, selectedPatient.id, ptSal.fullNameWithSalutation);
                           }
                          const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
                          await sock.sendMessage(remoteJid, { text: confirmMsg });
@@ -2321,17 +2328,75 @@ class WhatsAppManager {
                       return;
                     }
 
-                    // Clean age & calculate approximate DOB
+                    // Clean age & calculate exact/approximate DOB
+                    let exactDob: Date | null = null;
                     let parsedAge: number | null = null;
+
                     if (rawAgeStr) {
-                      const ageMatch = rawAgeStr.match(/\d+/);
-                      if (ageMatch) parsedAge = parseInt(ageMatch[0], 10);
+                      const cleanStr = rawAgeStr.trim();
+
+                      // 1. Check for standard date formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or DD Mon YYYY)
+                      const dmyMatch = cleanStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                      const ymdMatch = cleanStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                      const textParsed = Date.parse(cleanStr);
+
+                      if (dmyMatch) {
+                        const day = parseInt(dmyMatch[1], 10);
+                        const month = parseInt(dmyMatch[2], 10) - 1;
+                        const year = parseInt(dmyMatch[3], 10);
+                        const d = new Date(year, month, day);
+                        if (!isNaN(d.getTime()) && d <= new Date()) {
+                          exactDob = d;
+                        }
+                      } else if (ymdMatch) {
+                        const year = parseInt(ymdMatch[1], 10);
+                        const month = parseInt(ymdMatch[2], 10) - 1;
+                        const day = parseInt(ymdMatch[3], 10);
+                        const d = new Date(year, month, day);
+                        if (!isNaN(d.getTime()) && d <= new Date()) {
+                          exactDob = d;
+                        }
+                      } else if (!isNaN(textParsed) && !/^\d+$/.test(cleanStr)) {
+                        const d = new Date(textParsed);
+                        if (d <= new Date()) {
+                          exactDob = d;
+                        }
+                      }
+
+                      // 2. Check for age with units (e.g. "32 months", "18 days", "2 weeks", "4 yrs"):
+                      if (!exactDob) {
+                        const unitMatch = cleanStr.match(/(\d+)\s*(days?|d|weeks?|w|months?|m|years?|yrs?|y)?/i);
+                        if (unitMatch) {
+                          const val = parseInt(unitMatch[1], 10);
+                          const unit = (unitMatch[2] || "").toLowerCase();
+                          const now = new Date();
+
+                          if (unit.startsWith("d")) {
+                            exactDob = new Date(now.getTime() - val * 24 * 60 * 60 * 1000);
+                          } else if (unit.startsWith("w")) {
+                            exactDob = new Date(now.getTime() - val * 7 * 24 * 60 * 60 * 1000);
+                          } else if (unit.startsWith("m")) {
+                            const d = new Date();
+                            d.setMonth(d.getMonth() - val);
+                            exactDob = d;
+                          } else {
+                            parsedAge = val;
+                            if (val > 0 && val < 125) {
+                              exactDob = new Date(now.getFullYear() - val, now.getMonth(), now.getDate());
+                            }
+                          }
+                        }
+                      }
                     }
 
-                    if (!parsedAge) {
-                      console.log(`[WhatsAppManager] 🛑 Booking halted: Patient age is missing or null.`);
+                    if (exactDob) {
+                      parsedAge = Math.max(0, new Date().getFullYear() - exactDob.getFullYear());
+                    }
+
+                    if (!exactDob && !parsedAge) {
+                      console.log(`[WhatsAppManager] 🛑 Booking halted: Patient DOB/Age is missing or null.`);
                       finalAiReply = finalAiReply.replace(fullTag, "").trim();
-                      finalAiReply = `Kripya patient ki Age (umar) aur Full Name share karein taaki main appointment booking process complete kar sakoon. 🙏`;
+                      finalAiReply = `Kripya patient ki Date of Birth (DOB) ya Age share karein taaki main appointment booking process complete kar sakoon. 🙏`;
                       await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
                       return;
                     }
@@ -2354,19 +2419,18 @@ class WhatsAppManager {
                       }
                     }
 
-                    let approximateDob: Date | null = null;
-                    if (parsedAge && parsedAge > 0 && parsedAge < 125) {
-                      approximateDob = new Date(new Date().getFullYear() - parsedAge, 0, 1);
-                    }
+                    const approximateDob = exactDob;
 
-                    // 1. Resolve Family Member Identity: Match strictly by (phone + firstName)
+                    // 1. Resolve Family Member Identity: Match strictly by (phone + firstName) or secondary guardian phones
                     let targetPatient = await prisma.patient.findFirst({
                       where: {
                         doctorId,
                         OR: [
                           { phone: patientPhone },
                           { phone: `+${patientPhone}` },
-                          ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : [])
+                          ...(last10Bk.length >= 10 ? [{ phone: { endsWith: last10Bk } }] : []),
+                          { secondaryPhones: { has: patientPhone } },
+                          { secondaryPhones: { has: `+${patientPhone}` } }
                         ],
                         firstName: { equals: candidateFirstName, mode: "insensitive" }
                       }
@@ -2595,6 +2659,19 @@ class WhatsAppManager {
                           });
 
                           console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hour}:${minute} in ${clinicTz}`);
+                        }
+
+                        // If pediatric clinic, auto-initialize IAP vaccination schedule based on patient's DOB
+                        if (targetPatient.dateOfBirth) {
+                          const isPediatricDoctor = Boolean(
+                            (doctorInfo?.specialty && /pediatric|child|infant|neonato|neonat/i.test(doctorInfo.specialty)) ||
+                            (chosenPractitioner?.specialty && /pediatric|child|infant|neonato|neonat/i.test(chosenPractitioner.specialty))
+                          );
+                          if (isPediatricDoctor) {
+                            VaccinationService.initializeScheduleForPatient(targetPatient.id, doctorId, targetPatient.dateOfBirth).catch(err => {
+                              console.error("[WhatsAppManager] Failed to initialize IAP vaccine schedule:", err);
+                            });
+                          }
                         }
 
                         // Format patient confirmation card matching reference design

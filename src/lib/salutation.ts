@@ -2,10 +2,13 @@
  * Patient Salutation and Cultural Gender Resolution Helper
  * 
  * Rules:
- * - Infants (< 1 year or months): "Baby [Name]"
- * - Children (1 to 12 years): Boys -> "Master [Name]", Girls -> "Baby [Name]" (or "Miss [Name]")
- * - Adults (>= 12 years): Males -> "Mr. [Name]", Females -> "Ms. [Name]"
- * - Unconfirmed Gender:
+ * - Infants (< 1 year or newborn): "Baby [Name]"
+ * - Children (1 to 18 years): Boys -> "Master [Name]", Girls -> "Miss [Name]"
+ * - Adults (>= 18 years): Males -> "Mr. [Name]", Females -> "Ms. [Name]"
+ * - Minors (< 18 years) & Baby profiles:
+ *   - NEVER append "ji" (e.g. No "Baby ji", No "Samarth ji")
+ *   - Conversational greeting addresses the parent ("Hi Parent of Master Samarth") or uses clean direct name
+ * - Unconfirmed Gender for Adults:
  *   - In Hindi / Hinglish: Respectful "Ji" honorific (e.g. "Namaste Siddhant ji 🙏")
  *   - In English: Respectful direct name (e.g. "Hi Siddhant") without misgendering
  */
@@ -18,23 +21,59 @@ export interface SalutationOptions {
 }
 
 export interface FormattedSalutationResult {
-  salutation: string; // "Mr.", "Ms.", "Baby", "Master", or ""
-  fullNameWithSalutation: string; // e.g. "Mr. Rahul Verma", "Baby Aarav"
-  greetingName: string; // e.g. "Mr. Siddhant", "Baby Aarav", "Siddhant"
-  conversationalGreeting: string; // e.g. "Hi Mr. Siddhant", "Namaste Siddhant ji 🙏"
+  salutation: string; // "Mr.", "Ms.", "Baby", "Master", "Miss", or ""
+  fullNameWithSalutation: string; // e.g. "Mr. Rahul Verma", "Master Samarth", "Baby Vivaan"
+  greetingName: string; // e.g. "Mr. Siddhant", "Master Samarth", "Baby Vivaan"
+  conversationalGreeting: string; // e.g. "Dear Parent of Master Samarth", "Namaste Siddhant ji 🙏"
+  isMinor: boolean;
+  dynamicAgeString: string; // e.g. " (32 Months)", " (18 Days)", " (Age 28)"
 }
 
-export function calculateAgeFromDob(dob?: Date | string | null): number | null {
+export function calculateAgeDetailsFromDob(dob?: Date | string | null): {
+  years: number;
+  months: number;
+  days: number;
+  totalDays: number;
+  totalMonths: number;
+} | null {
   if (!dob) return null;
   const birthDate = new Date(dob);
   if (isNaN(birthDate.getTime())) return null;
+
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
+  if (birthDate > today) return null;
+
+  const diffMs = today.getTime() - birthDate.getTime();
+  const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let m = today.getMonth() - birthDate.getMonth();
+  let d = today.getDate() - birthDate.getDate();
+
+  if (d < 0) {
+    m--;
+    const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    d += prevMonth.getDate();
   }
-  return Math.max(0, age);
+  if (m < 0) {
+    years--;
+    m += 12;
+  }
+
+  const totalMonths = Math.max(0, years * 12 + m);
+
+  return {
+    years: Math.max(0, years),
+    months: Math.max(0, m),
+    days: Math.max(0, d),
+    totalDays,
+    totalMonths
+  };
+}
+
+export function calculateAgeFromDob(dob?: Date | string | null): number | null {
+  const details = calculateAgeDetailsFromDob(dob);
+  return details ? details.years : null;
 }
 
 export function formatPatientSalutation(
@@ -57,76 +96,123 @@ export function formatPatientSalutation(
     pFirst = parts[0] || "";
     pLast = parts.slice(1).join(" ");
   }
-  
+
   // Clean first and last name
   const cleanFirst = (pFirst && pFirst.toLowerCase() !== "patient") ? pFirst : "";
   const cleanLast = (pLast && !pLast.startsWith("+") && pLast.toLowerCase() !== "patient" && pLast.toLowerCase() !== cleanFirst.toLowerCase()) ? pLast : "";
-  
+
   const baseName = cleanLast ? `${cleanFirst} ${cleanLast}`.trim() : cleanFirst;
   const firstNameOnly = cleanFirst || "Patient";
 
-  // Determine age
-  let effectiveAge = patient.age ?? calculateAgeFromDob(patient.dateOfBirth);
+  // Check if name already has a baby or B/O label
+  const isBabyNamed = /^(baby\b|b\/o\b)/i.test(baseName);
+
+  // Age calculations
+  const ageDetails = calculateAgeDetailsFromDob(patient.dateOfBirth);
+  let effectiveAgeYears = patient.age ?? (ageDetails ? ageDetails.years : null);
+
+  // Dynamic Age String formatting
+  let dynamicAgeString = "";
+  if (ageDetails) {
+    if (ageDetails.totalDays < 30) {
+      dynamicAgeString = ` (${ageDetails.totalDays} Days)`;
+    } else if (ageDetails.totalMonths < 24) {
+      dynamicAgeString = ` (${ageDetails.totalMonths} Months)`;
+    } else if (ageDetails.years < 5) {
+      dynamicAgeString = ` (${ageDetails.totalMonths} Months)`;
+    } else {
+      dynamicAgeString = ` (Age ${ageDetails.years})`;
+    }
+  } else if (effectiveAgeYears !== null && effectiveAgeYears !== undefined) {
+    dynamicAgeString = effectiveAgeYears < 1 ? " (Infant)" : ` (Age ${effectiveAgeYears})`;
+  }
 
   // Normalize Gender
   const rawG = (patient.gender || "").trim().toUpperCase();
   const isMale = rawG === "MALE" || rawG === "M";
   const isFemale = rawG === "FEMALE" || rawG === "F";
 
+  const isMinor = (effectiveAgeYears !== null && effectiveAgeYears < 18) || isBabyNamed;
+
   let salutation = "";
 
-  if (effectiveAge !== null && effectiveAge !== undefined) {
-    if (effectiveAge < 1) {
-      // Infant / Neonate
+  if (isBabyNamed) {
+    // If the name is already "Baby Vivaan" or "B/O Priyanka", do not prepend another salutation
+    salutation = "";
+  } else if (effectiveAgeYears !== null && effectiveAgeYears !== undefined) {
+    if (effectiveAgeYears < 1 || (ageDetails && ageDetails.totalMonths < 12)) {
       salutation = "Baby";
-    } else if (effectiveAge < 12) {
-      // Pediatric child
+    } else if (effectiveAgeYears < 18) {
+      // Minor pediatric child
       if (isMale) {
         salutation = "Master";
       } else if (isFemale) {
-        salutation = "Baby";
+        salutation = "Miss";
       } else {
-        salutation = "Baby";
+        salutation = "Master/Miss";
       }
     } else {
-      // Adult (>= 12 yrs)
+      // Adult (>= 18 yrs)
       if (isMale) salutation = "Mr.";
       else if (isFemale) salutation = "Ms.";
     }
   } else {
-    // Age unknown: treat adult rules if gender is confirmed
+    // Age unknown: fallback safely
     if (isMale) salutation = "Mr.";
     else if (isFemale) salutation = "Ms.";
   }
 
-  // Full name with salutation (or respectful "ji" if unconfirmed in Indian context)
-  const fullNameWithSalutation = salutation 
-    ? (baseName ? `${salutation} ${baseName}` : salutation)
-    : (baseName ? `${baseName} ji` : "Patient");
+  // Full name with salutation
+  let fullNameWithSalutation = "";
+  if (isBabyNamed) {
+    fullNameWithSalutation = baseName || "Baby";
+  } else if (salutation) {
+    fullNameWithSalutation = baseName ? `${salutation} ${baseName}` : salutation;
+  } else {
+    fullNameWithSalutation = baseName ? (isMinor ? baseName : `${baseName} ji`) : "Patient";
+  }
 
-  // Greeting short name: e.g. "Mr. Siddhant" or "Siddhant ji"
-  const greetingName = salutation 
-    ? `${salutation} ${firstNameOnly}`
-    : `${firstNameOnly} ji`;
+  // Greeting short name
+  let greetingName = "";
+  if (isBabyNamed) {
+    greetingName = baseName;
+  } else if (salutation) {
+    greetingName = `${salutation} ${firstNameOnly}`;
+  } else {
+    greetingName = isMinor ? firstNameOnly : `${firstNameOnly} ji`;
+  }
 
-  // Conversational greetings
+  // Conversational greetings (Strictly suppressing "ji" for minors and babies)
   let conversationalGreeting = "";
-  if (language === "hi") {
-    // In Hindi / Hinglish:
-    if (salutation === "Baby" || salutation === "Master") {
-      conversationalGreeting = `Namaste ${salutation} ${firstNameOnly} ji 🙏`;
-    } else if (salutation) {
-      conversationalGreeting = `Namaste ${salutation} ${firstNameOnly} 🙏`;
+  if (isMinor) {
+    // Minors & Infants: Address the parent or use clean friendly greeting WITHOUT "ji"
+    if (language === "hi") {
+      if (salutation === "Baby" || isBabyNamed) {
+        conversationalGreeting = `Namaste ${fullNameWithSalutation} ke parent 🙏`;
+      } else {
+        conversationalGreeting = `Namaste ${greetingName} 🙏`;
+      }
     } else {
-      // Unconfirmed gender in Hindi: The gold-standard respectful "Ji"
-      conversationalGreeting = `Namaste ${firstNameOnly} ji 🙏`;
+      if (salutation === "Baby" || isBabyNamed) {
+        conversationalGreeting = `Dear Parent of ${fullNameWithSalutation} 👋`;
+      } else {
+        conversationalGreeting = `Dear Parent of ${greetingName} 👋`;
+      }
     }
   } else {
-    // In English / Default:
-    if (salutation) {
-      conversationalGreeting = `Hi ${salutation} ${firstNameOnly}`;
+    // Adults: Respectful standard greetings
+    if (language === "hi") {
+      if (salutation) {
+        conversationalGreeting = `Namaste ${salutation} ${firstNameOnly} 🙏`;
+      } else {
+        conversationalGreeting = `Namaste ${firstNameOnly} ji 🙏`;
+      }
     } else {
-      conversationalGreeting = `Hi ${firstNameOnly} ji 🙏`;
+      if (salutation) {
+        conversationalGreeting = `Hi ${salutation} ${firstNameOnly} 👋`;
+      } else {
+        conversationalGreeting = `Hi ${firstNameOnly} ji 👋`;
+      }
     }
   }
 
@@ -134,7 +220,9 @@ export function formatPatientSalutation(
     salutation,
     fullNameWithSalutation,
     greetingName,
-    conversationalGreeting
+    conversationalGreeting,
+    isMinor,
+    dynamicAgeString
   };
 }
 
@@ -149,9 +237,5 @@ export function formatPatientDisplayNameWithAge(
   }
 ): string {
   const sal = formatPatientSalutation(patient);
-  const calculatedAge = patient.age ?? calculateAgeFromDob(patient.dateOfBirth);
-  const ageString = calculatedAge !== null && calculatedAge !== undefined 
-    ? (calculatedAge < 1 ? " (Infant)" : ` (Age ${calculatedAge})`) 
-    : "";
-  return `${sal.fullNameWithSalutation}${ageString}`;
+  return `${sal.fullNameWithSalutation}${sal.dynamicAgeString}`;
 }

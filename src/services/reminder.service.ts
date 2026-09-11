@@ -3,13 +3,22 @@ import { whatsappManager } from "@/lib/whatsapp-manager";
 import { formatDoctorDisplayName } from "@/services/ai-agents.service";
 import { resolveClinicTimezone } from "@/lib/timezone";
 import { formatPatientSalutation } from "@/lib/salutation";
+import { VaccinationService } from "@/services/vaccination.service";
 
 export class ReminderService {
   /**
-   * Evaluates upcoming confirmed appointments and dispatches 24-hour and 2-hour WhatsApp reminders.
+   * Evaluates upcoming confirmed appointments and dispatches 24-hour and 2-hour WhatsApp reminders,
+   * as well as automated IAP guideline vaccination reminders for pediatric patients.
    */
   async sendAppointmentReminders() {
     try {
+      // Trigger periodic IAP pediatric vaccination reminders
+      try {
+        await VaccinationService.sendVaccinationReminders();
+      } catch (vaccErr) {
+        console.error("[ReminderService] Vaccination reminder check error:", vaccErr);
+      }
+
       const now = new Date();
       const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
