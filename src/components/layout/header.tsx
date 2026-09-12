@@ -38,11 +38,12 @@ function WhatsAppStatusBadge() {
   return (
     <Link
       href="/settings/whatsapp"
-      className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors animate-pulse"
+      className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 rounded-lg bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors animate-pulse shrink-0"
       title="Your WhatsApp Business is disconnected. Click to reconnect."
     >
       <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-      <span>WA Offline</span>
+      <span className="hidden xs:inline sm:inline">WA Offline</span>
+      <span className="xs:hidden sm:hidden">Offline</span>
     </Link>
   );
 }

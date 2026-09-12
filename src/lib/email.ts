@@ -527,3 +527,110 @@ export async function sendSupportTicketReplyToDoctor({
     html,
   });
 }
+
+/**
+ * Send WhatsApp Disconnection Alert Email to Clinic Owner
+ */
+export async function sendWhatsAppDisconnectedEmail({
+  doctorEmail,
+  doctorName,
+  clinicName,
+  reason,
+  reconnectUrl,
+}: {
+  doctorEmail: string;
+  doctorName?: string | null;
+  clinicName?: string | null;
+  reason?: string;
+  reconnectUrl?: string;
+}) {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+  const finalReconnectUrl = reconnectUrl || `${baseUrl}/settings/whatsapp`;
+
+  const firstName = doctorName ? doctorName.trim().replace(/^(dr\.?|doctor)\s+/i, '').split(" ")[0] : "Doctor";
+  const clinicTitle = clinicName || (doctorName ? `${doctorName}'s Clinic` : "your Clinic");
+  const disconnectReason = reason || "Phone internet offline or WhatsApp companion device unlinked";
+  const currentTime = new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+  const currentDate = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", month: "short", day: "numeric", year: "numeric" });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>WhatsApp Business Disconnected</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 0; }
+        .container { max-width: 580px; margin: 30px auto; background: #ffffff; border-radius: 16px; border: 1px solid #fecdd3; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.1); }
+        .header { padding: 32px 32px 24px; text-align: center; background: #fff1f2; border-bottom: 1px solid #fecdd3; }
+        .badge { display: inline-block; background-color: #e11d48; color: #ffffff; font-weight: 800; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 14px; border-radius: 9999px; margin-bottom: 12px; }
+        .title { font-size: 22px; font-weight: 800; color: #9f1239; margin: 0 0 6px 0; }
+        .subtitle { font-size: 14px; color: #be123c; margin: 0; }
+        .content { padding: 32px; }
+        .content p { font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 20px; }
+        .impact-box { background: #fff5f5; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 12px; padding: 20px; margin: 24px 0; }
+        .impact-title { font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .impact-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #431407; }
+        .impact-list li { margin-bottom: 10px; display: flex; align-items: flex-start; }
+        .impact-list li strong { color: #7c2d12; margin-right: 6px; }
+        .btn-container { text-align: center; margin: 32px 0 24px; }
+        .btn { display: inline-block; background-color: #25D366; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff !important; font-weight: 800; font-size: 16px; text-decoration: none; padding: 16px 36px; border-radius: 12px; box-shadow: 0 4px 14px rgba(18, 140, 126, 0.35); }
+        .steps-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; }
+        .steps-box h4 { margin: 0 0 10px 0; font-size: 14px; color: #0f172a; }
+        .steps-box ol { margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.6; }
+        .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="badge">⚠️ Action Required</div>
+          <h1 class="title">WhatsApp Business Disconnected</h1>
+          <p class="subtitle">${clinicTitle} &bull; ${currentDate} at ${currentTime}</p>
+        </div>
+        <div class="content">
+          <p>Dear <strong>Dr. ${firstName}</strong>,</p>
+          <p>Your clinic's WhatsApp Business connection went offline on <strong>${currentDate} at ${currentTime}</strong> (Status: <em>${disconnectReason}</em>).</p>
+
+          <div class="impact-box">
+            <div class="impact-title">⚠️ While WhatsApp is offline, the following automations are paused:</div>
+            <ul class="impact-list">
+              <li>❌ <strong>24/7 AI Receptionist:</strong> Incoming patient inquiries will not receive instant replies.</li>
+              <li>❌ <strong>Appointment Reminders:</strong> 24-hour and 2-hour pre-visit reminders are paused.</li>
+              <li>❌ <strong>Booking Confirmations:</strong> New online bookings will not receive WhatsApp confirmation cards.</li>
+              <li>❌ <strong>Invoices & Receipts:</strong> Automated bill delivery via WhatsApp is temporarily halted.</li>
+            </ul>
+          </div>
+
+          <div class="btn-container">
+            <a href="${finalReconnectUrl}" target="_blank" class="btn">📱 Reconnect WhatsApp Now (Scan QR)</a>
+          </div>
+
+          <div class="steps-box">
+            <h4>Quick 15-Second Reconnect Steps:</h4>
+            <ol>
+              <li>Open <strong>WhatsApp</strong> on your clinic smartphone.</li>
+              <li>Tap <strong>Settings / Menu (⋮) &gt; Linked Devices &gt; Link a Device</strong>.</li>
+              <li>Scan the QR code displayed on Gyrex at <a href="${finalReconnectUrl}" style="color: #0066FF; font-weight: 600;">${finalReconnectUrl}</a>.</li>
+            </ol>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; margin-top: 24px;">
+            <em>Tip: If your clinic front-desk staff holds the phone, you can forward this email to them to scan the QR code immediately.</em>
+          </p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Gyrex Healthcare Platform &bull; Practice Growth & Automation
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: doctorEmail,
+    subject: `🚨 Urgent: WhatsApp Disconnected for ${clinicTitle} – Automations Paused`,
+    html,
+  });
+}

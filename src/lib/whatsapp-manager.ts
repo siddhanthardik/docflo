@@ -42,6 +42,7 @@ class WhatsAppManager {
   private connectionOpenAt: Map<string, number> = new Map(); // doctorId -> timestamp when connection opened (for warm-up)
   private lastMessageSentAt: Map<string, number> = new Map(); // doctorId -> timestamp of last outbound message (for pacing)
   private lastDisconnectNotificationAt: Map<string, number> = new Map(); // doctorId -> timestamp when disconnect notification was dispatched
+  private lastDisconnectEmailAt: Map<string, number> = new Map(); // doctorId -> timestamp when disconnect email was dispatched (2h rate limit)
   private watchdogTimer: NodeJS.Timeout | null = null;
   // Holds doctor-delegated tasks (patientPhone -> task)
   private delegatedDoctorTasks: Map<string, {
@@ -264,6 +265,7 @@ class WhatsAppManager {
     console.warn(`[WhatsAppManager] Dispatching disconnect alert for doctor ${doctorId}: ${reason}`);
 
     try {
+      // 1. Create In-App Notification
       await prisma.notification.create({
         data: {
           doctorId,
@@ -273,8 +275,42 @@ class WhatsAppManager {
           actionUrl: "/settings/whatsapp",
         }
       });
+
+      // 2. Fetch Doctor Profile to send Urgent Email Alert
+      const doctor = await prisma.doctor.findUnique({
+        where: { id: doctorId },
+        select: { name: true, clinicName: true, email: true, phone: true }
+      });
+
+      // 3. Dispatch Email Alert (throttled to max 1 email per 2 hours to avoid inbox flood)
+      if (doctor?.email) {
+        const lastEmail = this.lastDisconnectEmailAt.get(doctorId) || 0;
+        const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+        if (Date.now() - lastEmail >= TWO_HOURS_MS) {
+          this.lastDisconnectEmailAt.set(doctorId, Date.now());
+          const { sendWhatsAppDisconnectedEmail } = await import('@/lib/email');
+          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://gyrex.in";
+          sendWhatsAppDisconnectedEmail({
+            doctorEmail: doctor.email,
+            doctorName: doctor.name,
+            clinicName: doctor.clinicName,
+            reason,
+            reconnectUrl: `${baseUrl}/settings/whatsapp`
+          }).then(res => {
+            if (res.success) {
+              console.log(`[WhatsAppManager] 📧 Dispatched WhatsApp disconnect alert email to ${doctor.email} for ${doctor.clinicName || doctor.name}`);
+            } else {
+              console.warn(`[WhatsAppManager] ⚠️ Disconnect email failed for ${doctor.email}:`, res.error);
+            }
+          }).catch(emailErr => {
+            console.error(`[WhatsAppManager] Error sending disconnect email to ${doctor.email}:`, emailErr);
+          });
+        } else {
+          console.log(`[WhatsAppManager] Disconnect email for ${doctor.email} throttled (already sent within 2h).`);
+        }
+      }
     } catch (e) {
-      console.error(`[WhatsAppManager] Failed to create disconnect notification for ${doctorId}:`, e);
+      console.error(`[WhatsAppManager] Failed to dispatch disconnect notification for ${doctorId}:`, e);
     }
   }
 

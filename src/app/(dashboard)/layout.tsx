@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import { TrialBanner } from "@/components/layout/TrialBanner";
+import { WhatsAppOfflineBanner } from "@/components/layout/WhatsAppOfflineBanner";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({
@@ -56,6 +57,7 @@ export default async function DashboardLayout({
               subscriptionExpiry={doctor?.subscriptionExpiry || null} 
               hasPaymentMethod={hasPaymentMethod} 
             />
+            <WhatsAppOfflineBanner />
             <Header />
             
             {/* Main content with bottom padding for mobile and tablet navigation */}
