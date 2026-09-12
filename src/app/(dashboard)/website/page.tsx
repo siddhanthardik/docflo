@@ -82,6 +82,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { InsertSectionModal } from "@/components/composer/InsertSectionModal";
 import { QuickStartWizardModal } from "@/components/composer/QuickStartWizardModal";
 import { MedicalStockModal } from "@/components/composer/MedicalStockModal";
+import { HeroImageAdjustModal } from "@/components/composer/HeroImageAdjustModal";
 
 const THEME_OPTIONS = [
   { id: "apex-clinical", name: "Apex Clinical Pro", category: "Hospital & Polyclinic", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
@@ -181,6 +182,7 @@ export default function ElementorComposerPage() {
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockTargetField, setStockTargetField] = useState<string | null>(null);
   const [blockTemplateModalOpen, setBlockTemplateModalOpen] = useState(false);
+  const [heroAdjustModalOpen, setHeroAdjustModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Undo History Stack
@@ -1217,52 +1219,52 @@ export default function ElementorComposerPage() {
                   {/* 1. HERO SECTION INSPECTOR */}
                   {selectedSection.type === "HERO" && (
                     <div className="space-y-4">
-                      {/* READYMADE HERO DESIGN SWITCHER */}
-                      <div className="p-3 bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-white rounded-2xl border border-indigo-200/80 shadow-2xs space-y-2.5">
+                      {/* READYMADE HERO DESIGN DISPLAY & MODAL TRIGGER */}
+                      <div className="p-3.5 bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white rounded-2xl border border-indigo-200/80 shadow-2xs space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-                            <Layout className="w-3.5 h-3.5 text-indigo-600" /> Hero Layout Design
+                            <Layout className="w-3.5 h-3.5 text-indigo-600" /> Hero Layout Template
                           </label>
-                          <button
-                            type="button"
-                            onClick={() => setBlockTemplateModalOpen(true)}
-                            className="text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
-                          >
-                            <Sparkles className="w-3 h-3 text-indigo-500" />
-                            <span>Browse Templates</span>
-                          </button>
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                            Active
+                          </span>
                         </div>
 
-                        {/* 5-Button Visual Switcher */}
-                        <div className="grid grid-cols-3 gap-1.5 text-[10px] font-bold">
-                          {[
-                            { id: "SPLIT", label: "Half Right", desc: "Most Popular" },
-                            { id: "FULL_WIDTH", label: "Full Screen", desc: "Ambient Slider" },
-                            { id: "BENTO", label: "Bento Hub", desc: "OPD Slot Card" },
-                            { id: "MINIMAL", label: "Minimalist", desc: "Clean Center" },
-                            { id: "REVERSED_SPLIT", label: "Half Left", desc: "Editorial" },
-                          ].map((v) => {
-                            const isCur = (selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT")) === v.id;
-                            return (
-                              <button
-                                key={v.id}
-                                type="button"
-                                onClick={() => {
-                                  updateSelectedSection({ heroStyle: v.id as any });
-                                  pushHistory(siteData);
-                                }}
-                                className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                                  isCur
-                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
-                                }`}
-                              >
-                                <span className="font-bold leading-tight truncate">{v.label}</span>
-                                <span className={`text-[9px] font-normal truncate mt-0.5 ${isCur ? "text-indigo-100" : "text-slate-400"}`}>{v.desc}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {/* Current Template Preview Card */}
+                        {(() => {
+                          const currentStyle = selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT");
+                          const templateInfoMap: Record<string, { label: string; desc: string; badge: string }> = {
+                            SPLIT: { label: "Split Half-Image Right", desc: "Headline on left (60%), doctor photo or clinic visual on right (40%)", badge: "Most Popular" },
+                            FULL_WIDTH: { label: "Full Screen Ambient Slider", desc: "100% full background photo slider with centered copy", badge: "Hospital Grade" },
+                            BENTO: { label: "Bento Medical Hub", desc: "Modern bento cards with instant OPD slot booking card", badge: "High Conversion" },
+                            MINIMAL: { label: "Minimalist Authority", desc: "Clean centered doctor headline & credentials bar", badge: "Clean Consultant" },
+                            REVERSED_SPLIT: { label: "Split Half-Image Left", desc: "Visual on left (40%) with clinic notice on right (60%)", badge: "Editorial" },
+                          };
+                          const info = templateInfoMap[currentStyle] || templateInfoMap["SPLIT"];
+
+                          return (
+                            <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-2xs flex items-center justify-between gap-3">
+                              <div className="min-w-0 space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900 text-xs truncate">{info.label}</span>
+                                  <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md border border-indigo-100 shrink-0">
+                                    {info.badge}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 truncate">{info.desc}</p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        <Button
+                          type="button"
+                          onClick={() => setBlockTemplateModalOpen(true)}
+                          className="w-full h-8 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+                          <span>Browse All 5 Hero Templates</span>
+                        </Button>
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
@@ -1335,32 +1337,16 @@ export default function ElementorComposerPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Hero Floating Badge Text (Leave blank to remove)</label>
-                        <Input
-                          value={selectedSection.badgeText || ""}
-                          onChange={(e) => updateSelectedSection({ badgeText: e.target.value })}
-                          placeholder="e.g. Precision Vision & Retina Care (Leave blank to hide)"
-                          className="h-9 text-xs rounded-xl"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Specialty Tagline</label>
-                        <Input
-                          value={siteData.tagline || ""}
-                          onChange={(e) => setSiteData({ ...siteData, tagline: e.target.value })}
-                          placeholder="e.g. Leading Pediatrics in New Delhi"
-                          className="h-10 text-xs rounded-xl"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
                         <label className="font-bold text-slate-700">Hero Main Headline</label>
                         <Input
                           value={selectedSection.title !== undefined ? selectedSection.title : siteData.heroHeading}
                           onChange={(e) => {
-                            updateSelectedSection({ title: e.target.value });
-                            setSiteData({ ...siteData, heroHeading: e.target.value });
+                            const val = e.target.value;
+                            setSiteData((prev) => ({
+                              ...prev,
+                              heroHeading: val,
+                              sections: (prev.sections || []).map((s) => (s.id === selectedSectionId ? { ...s, title: val } : s)),
+                            }));
                           }}
                           className="h-10 text-xs rounded-xl font-bold"
                         />
@@ -1371,8 +1357,12 @@ export default function ElementorComposerPage() {
                         <Textarea
                           value={selectedSection.subtitle !== undefined ? selectedSection.subtitle : (siteData.heroSubheading || "")}
                           onChange={(e) => {
-                            updateSelectedSection({ subtitle: e.target.value });
-                            setSiteData({ ...siteData, heroSubheading: e.target.value });
+                            const val = e.target.value;
+                            setSiteData((prev) => ({
+                              ...prev,
+                              heroSubheading: val,
+                              sections: (prev.sections || []).map((s) => (s.id === selectedSectionId ? { ...s, subtitle: val } : s)),
+                            }));
                           }}
                           placeholder="Leave blank to completely hide description..."
                           rows={3}
@@ -1381,70 +1371,99 @@ export default function ElementorComposerPage() {
                       </div>
 
                       {/* Hero Buttons & Links Customizer */}
-                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                        <p className="font-bold text-slate-900">Hero Action Buttons</p>
-
-                        {/* Primary Button */}
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-slate-600">Primary Button</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              value={siteData.ctaButtonText}
-                              onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
-                              placeholder="Button Text"
-                              className="h-8 text-xs bg-white rounded-lg"
-                            />
-                            <select
-                              value={siteData.ctaButtonAction}
-                              onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
-                              className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
-                            >
-                              <option value="BOOKING_MODAL">Instant Booking Modal</option>
-                              <option value="WHATSAPP">WhatsApp Direct</option>
-                              <option value="PHONE">Phone Call</option>
-                              <option value="CUSTOM_URL">Custom URL Link</option>
-                            </select>
+                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-slate-900 text-xs">Hero Action Buttons</p>
+                            <p className="text-[10px] text-slate-500">Enable or disable booking & chat CTA buttons</p>
                           </div>
-                          {siteData.ctaButtonAction === "CUSTOM_URL" && (
-                            <Input
-                              value={siteData.primaryCtaLink || ""}
-                              onChange={(e) => setSiteData({ ...siteData, primaryCtaLink: e.target.value })}
-                              placeholder="https://..."
-                              className="h-8 text-xs bg-white rounded-lg mt-1"
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <span className="text-[10px] font-bold text-slate-600">
+                              {(selectedSection.showHeroActions !== false && siteData.showHeroActions !== false) ? "Visible" : "Hidden"}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={selectedSection.showHeroActions !== false && siteData.showHeroActions !== false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setSiteData((prev) => ({
+                                  ...prev,
+                                  showHeroActions: checked,
+                                  sections: (prev.sections || []).map((s) =>
+                                    s.id === selectedSectionId ? { ...s, showHeroActions: checked } : s
+                                  ),
+                                }));
+                              }}
+                              className="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600"
                             />
-                          )}
+                          </label>
                         </div>
 
-                        {/* Secondary Button */}
-                        <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                          <label className="text-[11px] font-bold text-slate-600">Secondary Button</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              value={siteData.secondaryCtaText || "WhatsApp Chat"}
-                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaText: e.target.value })}
-                              placeholder="Button Text"
-                              className="h-8 text-xs bg-white rounded-lg"
-                            />
-                            <select
-                              value={siteData.secondaryCtaAction || "WHATSAPP"}
-                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaAction: e.target.value })}
-                              className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
-                            >
-                              <option value="WHATSAPP">WhatsApp Direct</option>
-                              <option value="BOOKING_MODAL">Instant Booking Modal</option>
-                              <option value="PHONE">Phone Call</option>
-                              <option value="CUSTOM_URL">Custom URL Link</option>
-                            </select>
+                        {(selectedSection.showHeroActions !== false && siteData.showHeroActions !== false) && (
+                          <div className="space-y-3 pt-2 border-t border-slate-200/80">
+                            {/* Primary Button */}
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold text-slate-600">Primary Button</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={siteData.ctaButtonText}
+                                  onChange={(e) => setSiteData({ ...siteData, ctaButtonText: e.target.value })}
+                                  placeholder="Button Text"
+                                  className="h-8 text-xs bg-white rounded-lg"
+                                />
+                                <select
+                                  value={siteData.ctaButtonAction}
+                                  onChange={(e) => setSiteData({ ...siteData, ctaButtonAction: e.target.value })}
+                                  className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                >
+                                  <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                                  <option value="WHATSAPP">WhatsApp Direct</option>
+                                  <option value="PHONE">Phone Call</option>
+                                  <option value="CUSTOM_URL">Custom URL Link</option>
+                                </select>
+                              </div>
+                              {siteData.ctaButtonAction === "CUSTOM_URL" && (
+                                <Input
+                                  value={siteData.primaryCtaLink || ""}
+                                  onChange={(e) => setSiteData({ ...siteData, primaryCtaLink: e.target.value })}
+                                  placeholder="https://..."
+                                  className="h-8 text-xs bg-white rounded-lg mt-1"
+                                />
+                              )}
+                            </div>
+
+                            {/* Secondary Button */}
+                            <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                              <label className="text-[11px] font-bold text-slate-600">Secondary Button</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={siteData.secondaryCtaText || "WhatsApp Chat"}
+                                  onChange={(e) => setSiteData({ ...siteData, secondaryCtaText: e.target.value })}
+                                  placeholder="Button Text"
+                                  className="h-8 text-xs bg-white rounded-lg"
+                                />
+                                <select
+                                  value={siteData.secondaryCtaAction || "WHATSAPP"}
+                                  onChange={(e) => setSiteData({ ...siteData, secondaryCtaAction: e.target.value })}
+                                  className="h-8 px-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                >
+                                  <option value="WHATSAPP">WhatsApp Direct</option>
+                                  <option value="BOOKING_MODAL">Instant Booking Modal</option>
+                                  <option value="PHONE">Phone Call</option>
+                                  <option value="CUSTOM_URL">Custom URL Link</option>
+                                </select>
+                              </div>
+                              {siteData.secondaryCtaAction === "CUSTOM_URL" && (
+                                <Input
+                                  value={siteData.secondaryCtaLink || ""}
+                                  onChange={(e) => setSiteData({ ...siteData, secondaryCtaLink: e.target.value })}
+                                  placeholder="https://..."
+                                  className="h-8 text-xs bg-white rounded-lg mt-1"
+                                />
+                              )}
+                            </div>
                           </div>
-                          {siteData.secondaryCtaAction === "CUSTOM_URL" && (
-                            <Input
-                              value={siteData.secondaryCtaLink || ""}
-                              onChange={(e) => setSiteData({ ...siteData, secondaryCtaLink: e.target.value })}
-                              placeholder="https://..."
-                              className="h-8 text-xs bg-white rounded-lg mt-1"
-                            />
-                          )}
-                        </div>
+                        )}
                       </div>
 
                       {/* Announcement Bar Toggle & Text */}
@@ -1468,158 +1487,29 @@ export default function ElementorComposerPage() {
                         )}
                       </div>
 
-                      {/* Hero Slider Image Adjustments & Opacity Controls */}
-                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3.5">
+                      {/* Hero Image & Layout Adjustments Trigger Card */}
+                      <div className="p-3.5 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border border-slate-200 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
                             <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" /> Hero Image Adjustments
                           </label>
                           <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                            Opacity: {selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}%
+                            {selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}% Opacity
                           </span>
                         </div>
-
-                        {/* Opacity Range Slider */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                            <span>Image Opacity / Brightness</span>
-                            <span className="text-blue-600">{selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={20}
-                            max={100}
-                            step={5}
-                            value={selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}
-                            onChange={(e) => {
-                              updateSelectedSectionDesign({ imageOpacity: Number(e.target.value) });
-                            }}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                          />
-                          <div className="flex justify-between text-[9px] text-slate-400 font-bold px-1">
-                            <span>20% (Dark)</span>
-                            <span>50%</span>
-                            <span>85% (Optimal)</span>
-                            <span>100% (Full Bright)</span>
-                          </div>
-                        </div>
-
-                        {/* Image Alignment / Focal Point */}
-                        <div className="space-y-1.5 pt-1">
-                          <label className="text-[11px] font-bold text-slate-700">Image Alignment / Focal Point</label>
-                          <div className="grid grid-cols-5 gap-1 text-[10px] font-bold">
-                            {[
-                              { id: "top", label: "Top" },
-                              { id: "center", label: "Center" },
-                              { id: "bottom", label: "Bottom" },
-                              { id: "left", label: "Left" },
-                              { id: "right", label: "Right" },
-                            ].map((pos) => (
-                              <button
-                                key={pos.id}
-                                type="button"
-                                onClick={() => {
-                                  updateSelectedSectionDesign({ imagePosition: pos.id as any });
-                                }}
-                                className={`py-1.5 rounded-lg border transition-all ${
-                                  (selectedSection.design?.imagePosition || "center") === pos.id
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                                }`}
-                              >
-                                {pos.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Overlay Darkness */}
-                        <div className="space-y-1.5 pt-1">
-                          <label className="text-[11px] font-bold text-slate-700">Dark Gradient Overlay</label>
-                          <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
-                            {[
-                              { id: "none", label: "None" },
-                              { id: "subtle", label: "Subtle" },
-                              { id: "medium", label: "Balanced" },
-                              { id: "dark", label: "Deep" },
-                            ].map((ov) => (
-                              <button
-                                key={ov.id}
-                                type="button"
-                                onClick={() => {
-                                  updateSelectedSectionDesign({ overlayDarkness: ov.id as any });
-                                }}
-                                className={`py-1.5 rounded-lg border transition-all ${
-                                  (selectedSection.design?.overlayDarkness || "medium") === ov.id
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                                }`}
-                              >
-                                {ov.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Hero Height */}
-                        <div className="space-y-1.5 pt-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-bold text-slate-700">Hero Section Height</label>
-                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                              {(selectedSection.design?.heroHeight || "normal") === "fullscreen" ? "Full Screen (100vh)" : (selectedSection.design?.heroHeight || "normal").toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
-                            {[
-                              { id: "compact", label: "440px" },
-                              { id: "normal", label: "580px" },
-                              { id: "tall", label: "700px" },
-                              { id: "fullscreen", label: "Full Screen" },
-                            ].map((ht) => (
-                              <button
-                                key={ht.id}
-                                type="button"
-                                onClick={() => {
-                                  updateSelectedSectionDesign({ heroHeight: ht.id as any });
-                                }}
-                                className={`py-2 rounded-xl border transition-all cursor-pointer font-bold ${
-                                  (selectedSection.design?.heroHeight || "normal") === ht.id
-                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                                }`}
-                              >
-                                {ht.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Slider Style & Transition */}
-                        <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                          <label className="text-[11px] font-bold text-slate-700">Slider Style &amp; Transition</label>
-                          <div className="grid grid-cols-3 gap-1 text-[10px] font-bold">
-                            {[
-                              { id: "fade", label: "Smooth Fade" },
-                              { id: "slide", label: "Slide & Dots" },
-                              { id: "ambient", label: "Ambient Zoom" },
-                            ].map((st) => (
-                              <button
-                                key={st.id}
-                                type="button"
-                                onClick={() => {
-                                  updateSelectedSectionDesign({ sliderType: st.id as any });
-                                }}
-                                className={`py-1.5 rounded-lg border transition-all cursor-pointer ${
-                                  (selectedSection.design?.sliderType || "fade") === st.id
-                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                                }`}
-                              >
-                                {st.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Fine-tune image brightness, focal point alignment, dark overlay gradient, and section height with real-time visual preview.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setHeroAdjustModalOpen(true)}
+                          className="w-full h-8 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 border-blue-200 rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Open Image Adjustments & Preview</span>
+                        </Button>
                       </div>
 
                       {/* Multi-Photo Carousel Slider Manager */}
@@ -3294,6 +3184,27 @@ export default function ElementorComposerPage() {
           toast({
             title: "Hero Design Applied! 🎨",
             description: `Switched hero layout to ${tmplId.replace("_", " ")}.`,
+          });
+        }}
+      />
+
+      {/* ── HERO IMAGE & DISPLAY ADJUSTMENT POPUP MODAL ── */}
+      <HeroImageAdjustModal
+        isOpen={heroAdjustModalOpen}
+        onClose={() => setHeroAdjustModalOpen(false)}
+        design={selectedSection?.design || {}}
+        heroHeadline={selectedSection?.title || siteData.heroHeading || "Clinical Excellence"}
+        sampleImageUrl={
+          siteData.heroSliderImages && siteData.heroSliderImages.length > 0
+            ? siteData.heroSliderImages[0]
+            : siteData.heroImage || siteData.doctor?.image || null
+        }
+        onSaveDesign={(patch) => {
+          updateSelectedSectionDesign(patch);
+          pushHistory(siteData);
+          toast({
+            title: "Hero Adjustments Saved ✨",
+            description: "Updated image opacity, alignment, and display settings.",
           });
         }}
       />

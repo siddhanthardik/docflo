@@ -60,6 +60,7 @@ export interface PageSection {
   ctaAction?: string;
   secondaryCtaText?: string;
   secondaryCtaAction?: string;
+  showHeroActions?: boolean;
   bgColor?: string;
   showPrices?: boolean;
   isVisible?: boolean;
@@ -95,6 +96,7 @@ export interface ClinicWebsiteData {
   secondaryCtaText?: string | null;
   secondaryCtaAction?: string | null;
   secondaryCtaLink?: string | null;
+  showHeroActions?: boolean;
   whatsappNumber?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;

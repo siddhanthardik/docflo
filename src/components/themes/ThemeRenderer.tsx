@@ -568,24 +568,27 @@ export function ThemeRenderer({
                     </p>
                   )}
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                    <button
-                      onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
-                      className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-8 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
-                    </button>
+                  {/* ZERO HARDCODING: Render CTA buttons only if showHeroActions is not explicitly false */}
+                  {data.showHeroActions !== false && section.showHeroActions !== false && (
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                      <button
+                        onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
+                        className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-8 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
-                      className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                        className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                      </button>
+                    </div>
+                  )}
 
                   {sliderImages.length > 1 && (
                     <div className="flex items-center justify-center gap-2 pt-4">
@@ -650,24 +653,26 @@ export function ThemeRenderer({
                     </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-                    <button
-                      onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
-                      className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-8 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
-                    </button>
+                  {data.showHeroActions !== false && section.showHeroActions !== false && (
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+                      <button
+                        onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
+                        className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-8 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
-                      className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                        className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>,
               index
@@ -718,15 +723,17 @@ export function ThemeRenderer({
                           </div>
                         </div>
 
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
-                            className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
-                          </button>
-                        </div>
+                        {data.showHeroActions !== false && section.showHeroActions !== false && (
+                          <div className="ml-auto flex items-center gap-2">
+                            <button
+                              onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                              className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -857,24 +864,26 @@ export function ThemeRenderer({
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
-                      <button
-                        onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
-                        className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        <Calendar className="w-4 h-4" />
-                        <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
-                      </button>
+                    {data.showHeroActions !== false && section.showHeroActions !== false && (
+                      <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
+                        <button
+                          onClick={() => handleCtaClick(section.ctaAction || data.ctaButtonAction, data.primaryCtaLink)}
+                          className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Calendar className="w-4 h-4" />
+                          <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                        </button>
 
-                      <button
-                        onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
-                        className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                          className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="lg:col-span-5">
