@@ -63,6 +63,14 @@ export function ClinicDetailsClient({
   packages.forEach(p => packageMap.set(p.id, p.name));
   allPackages.forEach(p => packageMap.set(p.id, p.name));
 
+  // Determine currency symbol: platform packages are priced in INR (₹) by default.
+  // Only display USD ($) if the clinic has an explicit non-Indian country code.
+  const isInternational = Boolean(
+    clinic.country && 
+    !["IN", "IND", "INDIA"].includes(String(clinic.country).trim().toUpperCase())
+  );
+  const currencySymbol = isInternational ? "$" : "₹";
+
   const handleToggleSuspend = async () => {
     if (!confirm(`Are you sure you want to ${clinic.isSuspended ? 'unsuspend' : 'suspend'} this clinic?`)) return;
     setLoading(true);
@@ -318,7 +326,7 @@ export function ClinicDetailsClient({
                   {clinic.package?.name || "No Plan"}
                 </p>
                 <span className="text-[10px] text-indigo-600 font-medium uppercase mt-0.5 inline-block">
-                  {clinic.package ? `${clinic.country !== "IN" ? "$" : "₹"}${clinic.package.priceMonthly}/mo` : "Free Tier"}
+                  {clinic.package ? `${currencySymbol}${clinic.package.priceMonthly}/mo` : "Free Tier"}
                 </span>
               </div>
 
@@ -384,7 +392,7 @@ export function ClinicDetailsClient({
                     <option value="">No Package (Free / Default)</option>
                     {packages.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({clinic.country !== "IN" ? "$" : "₹"}{p.priceMonthly}/mo)
+                        {p.name} ({currencySymbol}{p.priceMonthly}/mo)
                       </option>
                     ))}
                   </select>

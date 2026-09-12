@@ -420,7 +420,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                 return (
                   <div className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm flex items-center justify-between">
                     <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">BASE</span>
-                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">Always Free ($0)</span>
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">Always Free (₹0)</span>
                   </div>
                 );
               }
@@ -429,21 +429,21 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                 <div className="bg-white rounded-lg border border-gray-200 p-2.5 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">BASE</span>
-                    <span className="text-xs font-bold text-gray-900">${monthly} <span className="text-[10px] text-gray-500 font-normal">/mo base</span></span>
+                    <span className="text-xs font-bold text-gray-900">₹{monthly} <span className="text-[10px] text-gray-500 font-normal">/mo base</span></span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-gray-100">
                     <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
                       <div className="text-[9px] font-bold text-indigo-700 uppercase">Qt (10% OFF)</div>
                       <div className="font-bold text-gray-900 mt-0.5">
-                        <span className="line-through text-gray-400 text-[10px] mr-1">${realQt}</span>
-                        <span>${offeredQt}</span>
+                        <span className="line-through text-gray-400 text-[10px] mr-1">₹{realQt}</span>
+                        <span>₹{offeredQt}</span>
                       </div>
                     </div>
                     <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
                       <div className="text-[9px] font-bold text-emerald-700 uppercase">Yr (20% OFF)</div>
                       <div className="font-bold text-gray-900 mt-0.5">
-                        <span className="line-through text-gray-400 text-[10px] mr-1">${realYr}</span>
-                        <span>${offeredYr}</span>
+                        <span className="line-through text-gray-400 text-[10px] mr-1">₹{realYr}</span>
+                        <span>₹{offeredYr}</span>
                       </div>
                     </div>
                   </div>
