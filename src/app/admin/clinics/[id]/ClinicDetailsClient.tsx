@@ -62,6 +62,7 @@ export function ClinicDetailsClient({
   const packageMap = new Map<string, string>();
   packages.forEach(p => packageMap.set(p.id, p.name));
   allPackages.forEach(p => packageMap.set(p.id, p.name));
+  if (clinic.package) packageMap.set(clinic.package.id, clinic.package.name);
 
   // Determine currency symbol: platform packages are priced in INR (₹) by default.
   // Only display USD ($) if the clinic has an explicit non-Indian country code.
@@ -560,15 +561,21 @@ export function ClinicDetailsClient({
                             {format(new Date(hist.createdAt), "MMM d, yyyy h:mm a")}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
-                                {prevName}
+                            {prevName === newName ? (
+                              <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {newName} (Plan Maintained)
                               </span>
-                              <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                {newName}
-                              </span>
-                            </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
+                                  {prevName}
+                                </span>
+                                <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {newName}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-xs">
                             <span className="font-semibold text-slate-800">{hist.changedByRole || "ADMIN"}</span>

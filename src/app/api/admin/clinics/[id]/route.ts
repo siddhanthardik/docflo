@@ -55,8 +55,53 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       updateData.subscriptionExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     }
 
-    // Execute in transaction: update doctor + record history if package changed
+    // Check if any subscription attribute changed or if an audit note was entered
+    const isPackageChanging = packageId !== undefined && packageId !== existingDoctor.packageId;
+    const isStatusChanging = subscriptionStatus !== undefined && subscriptionStatus !== existingDoctor.subscriptionStatus;
+    const isBillingPeriodChanging = billingPeriod !== undefined && billingPeriod !== existingDoctor.billingPeriod;
+    const isExpiryChanging = updateData.subscriptionExpiry !== undefined && (
+      (updateData.subscriptionExpiry === null && existingDoctor.subscriptionExpiry !== null) ||
+      (updateData.subscriptionExpiry !== null && existingDoctor.subscriptionExpiry === null) ||
+      (updateData.subscriptionExpiry && existingDoctor.subscriptionExpiry && 
+       new Date(updateData.subscriptionExpiry).getTime() !== new Date(existingDoctor.subscriptionExpiry).getTime())
+    );
+    const hasAuditNote = Boolean(reason && reason.trim());
+
+    const shouldRecordAudit = isPackageChanging || isStatusChanging || isBillingPeriodChanging || isExpiryChanging || hasAuditNote;
+
+    let auditReason = reason?.trim();
+    if (!auditReason) {
+      const parts: string[] = [];
+      if (isPackageChanging) parts.push("Package modified");
+      if (isStatusChanging) parts.push(`Status set to ${subscriptionStatus}`);
+      if (isBillingPeriodChanging) parts.push(`Billing period set to ${billingPeriod}`);
+      if (isExpiryChanging) {
+        parts.push(updateData.subscriptionExpiry ? `Expiry set to ${new Date(updateData.subscriptionExpiry).toLocaleDateString("en-IN")}` : "Expiry removed");
+      }
+      auditReason = parts.join(", ") || "Manual admin subscription update";
+    }
+
+    const changedByRole = session.user?.name 
+      ? `${session.user.name} (${session.user.role || "ADMIN"})` 
+      : (session.user?.role || "SUPERADMIN");
+
+    const effectivePackageId = (packageId !== undefined ? packageId : existingDoctor.packageId) || "";
+
+    // Execute in transaction: record audit history FIRST, then update doctor so included relation contains the new log
     const updatedClinic = await prisma.$transaction(async (tx) => {
+      if (shouldRecordAudit) {
+        await tx.subscriptionHistory.create({
+          data: {
+            doctorId: id,
+            previousPackageId: existingDoctor.packageId ?? null,
+            newPackageId: effectivePackageId,
+            changedById: session.user?.id || "admin",
+            changedByRole,
+            reason: auditReason,
+          },
+        });
+      }
+
       const updated = await tx.doctor.update({
         where: { id },
         data: updateData,
@@ -67,20 +112,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           },
         },
       });
-
-      // If package changed, write immutable audit log
-      if (packageId !== undefined && packageId !== existingDoctor.packageId) {
-        await tx.subscriptionHistory.create({
-          data: {
-            doctorId: id,
-            previousPackageId: existingDoctor.packageId ?? null,
-            newPackageId: packageId || "",
-            changedById: session.user?.id || "admin",
-            changedByRole: session.user?.role || "SUPERADMIN",
-            reason: reason || "Manual admin package update",
-          },
-        });
-      }
 
       return updated;
     });
