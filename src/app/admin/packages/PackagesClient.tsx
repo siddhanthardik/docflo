@@ -86,6 +86,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
     modules: [] as string[],
     limits: {} as Record<string, number | null>, // null means unlimited
     aiFeatures: [] as string[],
+    customInclusions: "",
   });
 
   const generateSlug = (name: string) => {
@@ -116,6 +117,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       modules: ["CLINIC_CORE", "AI_ASSISTANT"],
       limits: initialLimits,
       aiFeatures: ["AI_RECEPTIONIST", "AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"],
+      customInclusions: "",
     });
     setShowAdvanced(false);
     setIsModalOpen(true);
@@ -133,6 +135,10 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       ? pkg.packageFeatures.filter((pf: any) => pf.isEnabled !== false && pf.feature?.key).map((pf: any) => pf.feature.key)
       : ["AI_RECEPTIONIST", "AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"];
 
+    const existingInclusions = Array.isArray(pkg.features?.inclusions)
+      ? pkg.features.inclusions.join("\n")
+      : "";
+
     setFormData({
       slug: pkg.slug || "",
       name: pkg.name,
@@ -143,6 +149,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       modules: pkg.modules?.map((m: any) => m.moduleName) || [],
       limits: initialLimits,
       aiFeatures: enabledFeatures,
+      customInclusions: existingInclusions,
     });
     setShowAdvanced(false);
     setIsModalOpen(true);
@@ -180,10 +187,16 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
       limitValue: formData.limits[limitName]
     }));
 
+    const inclusionsList = formData.customInclusions
+      .split("\n")
+      .map(s => s.trim())
+      .filter(Boolean);
+
     const payload = {
       ...formData,
       limits: limitsArray,
-      features: formData.aiFeatures
+      features: formData.aiFeatures,
+      inclusions: inclusionsList
     };
 
     try {
@@ -474,6 +487,19 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
           <h4 className="text-xs font-bold uppercase text-gray-500 mb-3 tracking-wider">Key Offerings</h4>
           <ul className="space-y-1.5 text-xs text-slate-700">
             {(() => {
+              const customList = Array.isArray(pkg.features?.inclusions) && pkg.features.inclusions.length > 0 
+                ? pkg.features.inclusions 
+                : null;
+
+              if (customList) {
+                return customList.map((feat: string, idx: number) => (
+                  <li key={idx} className="flex items-start gap-1.5">
+                    <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${feat.startsWith("Everything") ? "text-indigo-600 font-bold" : "text-emerald-600"}`} />
+                    <span className={feat.startsWith("Everything") ? "font-bold text-slate-900" : ""}>{feat}</span>
+                  </li>
+                ));
+              }
+
               const nameUpper = (pkg.name || "").toUpperCase();
               const slugUpper = (pkg.slug || "").toUpperCase();
               let features: string[] = [];
@@ -502,7 +528,7 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                   "AI Google Business Post Generator (150 Credits)",
                   "Digital Invoicing & WhatsApp Sharing",
                   "Medical SEO Schema & Meta Tags",
-                  "WhatsApp Unified Inbox & Broadcasts"
+                  "WhatsApp Unified Patient Inbox & Chat"
                 ];
               } else if (nameUpper.includes("PREMIUM") || slugUpper.includes("PREMIUM") || nameUpper.includes("AUTOPILOT")) {
                 features = [
@@ -515,8 +541,13 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                   "Tele-Consultation & Online Video Care",
                   "Unlimited AI Patient Conversations"
                 ];
+              } else {
+                features = [
+                  ...(pkg.modules?.map((m: any) => m.moduleName.replace(/_/g, ' ')) || []),
+                  ...(pkg.packageFeatures?.filter((f: any) => f.isEnabled).map((f: any) => f.feature?.name) || [])
+                ];
               }
-              return features.map((feat, idx) => (
+              return features.map((feat: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-1.5">
                   <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${feat.startsWith("Everything") ? "text-indigo-600 font-bold" : "text-emerald-600"}`} />
                   <span className={feat.startsWith("Everything") ? "font-bold text-slate-900" : ""}>{feat}</span>
@@ -760,6 +791,26 @@ export function PackagesClient({ initialPackages, doctors }: { initialPackages: 
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Section 5: Custom Package Inclusions */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-lg font-bold text-slate-900">5. Custom Package Inclusions</h3>
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-xs">
+                    Manual Control
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Enter custom offerings / inclusions displayed to doctors on package cards (one bullet per line). If left blank, standard inclusions will be derived automatically from selected modules and AI agents.
+                </p>
+                <Textarea
+                  placeholder={"24/7 Multilingual WhatsApp AI Receptionist\nDoctor WhatsApp Delegation Assistant\nAutomated 5-Star WhatsApp Reviews"}
+                  rows={5}
+                  value={formData.customInclusions}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customInclusions: e.target.value }))}
+                  className="font-mono text-xs bg-slate-50/50"
+                />
               </div>
 
             </form>

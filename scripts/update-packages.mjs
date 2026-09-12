@@ -150,30 +150,133 @@ async function main() {
         { packageId: premium.id, limitName: "AI_CREDITS_PER_MONTH", limitValue: null },
       ]
     });
-    console.log("✅ PREMIUM locked at ₹3,999/mo (without AUTOPILOT)");
+    console.log("✅ PREMIUM locked at ₹3,999/mo");
   }
 
-  // 4. Archive AI Receptionist & all other packages except FREE, STARTER, GROWTH, PREMIUM
-  const validIds = [starter?.id, growth?.id, premium?.id].filter(Boolean);
-  const freePkg = await prisma.package.findFirst({ where: { name: "FREE" } });
-  if (freePkg) validIds.push(freePkg.id);
+  // 4. FREE Tier (₹0)
+  const freePkg = await prisma.package.findFirst({
+    where: { slug: "free" }
+  }) || await prisma.package.findFirst({
+    where: { name: "FREE" }
+  });
+
+  if (freePkg) {
+    await prisma.package.update({
+      where: { id: freePkg.id },
+      data: {
+        slug: "free",
+        name: "FREE",
+        description: "Essential clinical EMR & OPD patient management",
+        priceMonthly: 0,
+        priceQuarterly: 0,
+        priceYearly: 0,
+        isActive: true,
+        isArchived: false,
+      }
+    });
+
+    await prisma.packageModule.deleteMany({ where: { packageId: freePkg.id } });
+    await prisma.packageModule.createMany({
+      data: [
+        { packageId: freePkg.id, moduleName: "CLINIC_CORE" }
+      ]
+    });
+
+    await prisma.packageLimit.deleteMany({ where: { packageId: freePkg.id } });
+    await prisma.packageLimit.createMany({
+      data: [
+        { packageId: freePkg.id, limitName: "MAX_STAFF_SEATS", limitValue: 1 },
+        { packageId: freePkg.id, limitName: "MAX_PATIENTS", limitValue: 50 },
+        { packageId: freePkg.id, limitName: "MAX_GBP_LOCATIONS", limitValue: 0 },
+        { packageId: freePkg.id, limitName: "MAX_TRACKED_KEYWORDS", limitValue: 0 },
+        { packageId: freePkg.id, limitName: "MAX_SCHEDULED_POSTS", limitValue: 0 },
+        { packageId: freePkg.id, limitName: "AI_CREDITS_PER_MONTH", limitValue: 0 },
+      ]
+    });
+    console.log("✅ FREE locked at ₹0/mo");
+  }
+
+  // 5. Populate Feature Flags and PackageFeatures for all tiers
+  const aiFeatureFlags = [
+    { key: "AI_RECEPTIONIST", name: "WhatsApp Clinic Receptionist" },
+    { key: "AI_REVIEW_REPLY", name: "Review Manager Assistant" },
+    { key: "AI_POST_CREATOR", name: "Google Updates Assistant" },
+    { key: "AI_SEO_COPILOT", name: "Google Maps Rank Assistant" },
+  ];
+
+  const flagMap = {};
+  for (const flag of aiFeatureFlags) {
+    const ff = await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      update: { name: flag.name },
+      create: { key: flag.key, name: flag.name, type: "BOOLEAN", defaultValue: "true" }
+    });
+    flagMap[flag.key] = ff.id;
+  }
+
+  // Attach features to tiers
+  const tierFeatures = [
+    { pkg: starter, features: ["AI_REVIEW_REPLY", "AI_SEO_COPILOT"] },
+    { pkg: growth, features: ["AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"] },
+    { pkg: premium, features: ["AI_RECEPTIONIST", "AI_REVIEW_REPLY", "AI_POST_CREATOR", "AI_SEO_COPILOT"] },
+  ];
+
+  for (const tf of tierFeatures) {
+    if (!tf.pkg) continue;
+    await prisma.packageFeature.deleteMany({ where: { packageId: tf.pkg.id } });
+    for (const fKey of tf.features) {
+      await prisma.packageFeature.create({
+        data: {
+          packageId: tf.pkg.id,
+          featureId: flagMap[fKey],
+          isEnabled: true,
+        }
+      });
+    }
+    console.log(`✅ Attached AI features to ${tf.pkg.name}`);
+  }
+
+  // 6. Archive all 11 legacy/test packages except the 4 official ones
+  const validIds = [starter?.id, growth?.id, premium?.id, freePkg?.id].filter(Boolean);
 
   const extraPkgs = await prisma.package.findMany({
     where: {
       id: { notIn: validIds },
-      isArchived: false,
     }
   });
 
   for (const extra of extraPkgs) {
     await prisma.package.update({
       where: { id: extra.id },
-      data: { isArchived: true }
+      data: { isArchived: true, isActive: false }
     });
-    console.log(`📦 Archived extra package: ${extra.name} (ID: ${extra.id})`);
+    console.log(`📦 Archived & deactivated extra package: "${extra.name}" (ID: ${extra.id})`);
   }
 
-  console.log("🎉 Database package update successfully executed!");
+  // 7. Migrate any doctors currently assigned to archived packages (e.g. legacy ENTERPRISE) to PREMIUM
+  if (premium) {
+    const doctorsOnArchived = await prisma.doctor.findMany({
+      where: {
+        OR: [
+          { packageId: { in: extraPkgs.map(p => p.id) } },
+          { package: { name: { contains: "ENTERPRISE", mode: "insensitive" } } }
+        ]
+      }
+    });
+
+    for (const doc of doctorsOnArchived) {
+      await prisma.doctor.update({
+        where: { id: doc.id },
+        data: {
+          packageId: premium.id,
+          subscriptionStatus: "ACTIVE",
+        }
+      });
+      console.log(`🔄 Reassigned doctor "${doc.name}" (${doc.email}) from legacy package to PREMIUM`);
+    }
+  }
+
+  console.log("🎉 Database package update and migration successfully executed!");
 }
 
 main()

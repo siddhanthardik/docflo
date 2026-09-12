@@ -37,11 +37,12 @@ export default async function ClinicDetailsPage({ params }: { params: Promise<{ 
   }
 
   const packages = await prisma.package.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isArchived: false },
     orderBy: { priceMonthly: "asc" }
   });
 
   const allPackages = await prisma.package.findMany({
+    where: { isArchived: false },
     select: { id: true, name: true }
   });
 

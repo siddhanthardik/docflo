@@ -40,11 +40,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const updateData: any = {};
     if (isSuspended !== undefined) updateData.isSuspended = isSuspended;
-    if (packageId !== undefined) updateData.packageId = packageId || null;
+    if (packageId !== undefined) {
+      updateData.packageId = packageId || null;
+      if (packageId && subscriptionStatus === undefined && existingDoctor.subscriptionStatus !== "ACTIVE") {
+        updateData.subscriptionStatus = "ACTIVE";
+      }
+    }
     if (billingPeriod !== undefined) updateData.billingPeriod = billingPeriod;
     if (subscriptionStatus !== undefined) updateData.subscriptionStatus = subscriptionStatus;
     if (subscriptionExpiry !== undefined) {
       updateData.subscriptionExpiry = subscriptionExpiry ? new Date(subscriptionExpiry) : null;
+    } else if (packageId && existingDoctor.subscriptionExpiry && new Date(existingDoctor.subscriptionExpiry) <= new Date()) {
+      // If assigning a package and previous trial expiry was in the past, refresh by 1 year
+      updateData.subscriptionExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     }
 
     // Execute in transaction: update doctor + record history if package changed

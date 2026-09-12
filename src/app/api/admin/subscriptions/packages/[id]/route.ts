@@ -57,7 +57,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features } = body;
+  const { name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features, inclusions } = body;
 
   // Validate module names if provided
   if (modules) {
@@ -129,6 +129,7 @@ export async function PUT(
         ...(priceMonthly !== undefined && { priceMonthly }),
         ...(priceQuarterly !== undefined && { priceQuarterly }),
         ...(priceYearly !== undefined && { priceYearly }),
+        ...(inclusions !== undefined && { features: { inclusions } }),
       },
       include: INCLUDE_FULL,
     });

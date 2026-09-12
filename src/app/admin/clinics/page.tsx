@@ -25,7 +25,7 @@ export default async function ClinicsPage() {
   });
 
   const packages = await prisma.package.findMany({
-    where: { isActive: true }
+    where: { isActive: true, isArchived: false }
   });
 
   return (

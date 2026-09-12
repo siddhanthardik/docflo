@@ -327,6 +327,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                session.user.role = target.role;
                session.user.name = target.name;
                session.user.email = target.email;
+               session.user.doctorId = target.id;
+               (session.user as any).clinicName = target.clinicName;
+               (session.user as any).packageId = target.packageId;
+               (session.user as any).impersonate = true;
              }
            }
          } catch(e) {}

@@ -14,8 +14,11 @@ export async function getSessionData() {
   const isSuperAdmin = user.originalRole === "SUPERADMIN" || user.role === "SUPERADMIN"
   const isImpersonating = !!user.originalAdminId || !!user.impersonate
 
-  // If the logged-in user is a staff member or has a linked clinic, use the linked doctorId
-  if (user.doctorId) {
+  // If impersonating, doctorId is always the impersonated target doctor ID
+  if (isImpersonating) {
+    doctorId = user.id
+  } else if (user.doctorId) {
+    // If the logged-in user is a staff member or has a linked clinic, use the linked doctorId
     doctorId = user.doctorId
   } else if (["RECEPTIONIST", "STAFF", "NURSE", "MANAGER", "ADMIN"].includes(role)) {
     const staffDoctorId = user.doctorId

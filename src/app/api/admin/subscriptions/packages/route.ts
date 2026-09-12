@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { slug, name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features } = body;
+  const { slug, name, description, priceMonthly, priceQuarterly, priceYearly, modules, limits, features, inclusions } = body;
 
   if (!slug || !name || typeof priceMonthly !== 'number') {
     return NextResponse.json(
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         priceMonthly,
         priceQuarterly: priceQuarterly ?? 0,
         priceYearly: priceYearly ?? 0,
+        ...(inclusions ? { features: { inclusions } } : {}),
         modules: {
           create: (modules || []).map((m: string) => ({ moduleName: m as ModuleName })),
         },

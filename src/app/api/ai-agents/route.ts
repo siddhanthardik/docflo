@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { logActivity } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 const ALLOWED_ROLES = ["DOCTOR", "ADMIN", "MANAGER", "RECEPTIONIST"];
 
 export async function GET() {
@@ -16,12 +18,13 @@ export async function GET() {
       );
     }
 
-    // Fetch the doctor with package and packageFeatures
+    // Fetch the doctor with package, modules, and packageFeatures
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       include: { 
         package: {
           include: {
+            modules: true,
             packageFeatures: {
               include: { feature: true }
             }
@@ -35,36 +38,69 @@ export async function GET() {
     }
 
     const pkgName = (doctor.package?.name || "").toUpperCase();
-    const isTrialActive = doctor.subscriptionExpiry 
-      ? new Date(doctor.subscriptionExpiry) > new Date() 
-      : (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000);
+    const pkgSlug = (doctor.package?.slug || "").toLowerCase();
+    const hasExplicitExpiry = Boolean(doctor.subscriptionExpiry);
+    const isExpiryInFuture = hasExplicitExpiry ? new Date(doctor.subscriptionExpiry!) > new Date() : false;
+    const isWithin14Days = doctor.createdAt 
+      ? (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000) 
+      : false;
+    const isTrialActive = isExpiryInFuture || (!hasExplicitExpiry && isWithin14Days);
 
-    // Helper to check feature flag or default package rank
+    const hasPaidPackage = Boolean(
+      doctor.package && 
+      !pkgName.includes("FREE") && 
+      pkgSlug !== "free" && 
+      doctor.subscriptionStatus !== "CANCELED" &&
+      (!hasExplicitExpiry || isExpiryInFuture)
+    );
+
+    const hasModule = (modName: string) => {
+      return doctor.package?.modules?.some((m: any) => m.moduleName === modName) ?? false;
+    };
+
     const isFeatureEnabled = (key: string) => {
       const feat = doctor.package?.packageFeatures?.find(pf => pf.feature?.key === key);
       return feat?.isEnabled ?? false;
     };
 
-    // Agent access logic (Trial active or valid package grants access)
+    const isSuperOrImpersonating = Boolean(isSuperAdmin || isImpersonating);
+
+    // Agent access logic (Trial active or valid package / modules grant access)
+    const hasAppointmentAccess = isSuperOrImpersonating || isTrialActive || (
+      hasPaidPackage && (
+        hasModule("AI_ASSISTANT") ||
+        pkgName.includes("PREMIUM") || 
+        pkgName.includes("ENTERPRISE") || 
+        pkgName.includes("AUTOPILOT") || 
+        pkgSlug.includes("premium") || 
+        pkgSlug.includes("enterprise") || 
+        isFeatureEnabled("AI_RECEPTIONIST")
+      )
+    );
+
+    const hasReviewAccess = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_REVIEW_REPLY") || hasModule("GROWTH_SEO");
+    const hasPostAccess = isSuperOrImpersonating || isTrialActive || (hasPaidPackage && (hasModule("GROWTH_SEO") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || isFeatureEnabled("AI_POST_CREATOR")));
+    const hasSeoAccess = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_SEO_COPILOT") || hasModule("GROWTH_SEO");
+
     const isAllowedMap: Record<string, { isAllowed: boolean; requiredPackage: string }> = {
       APPOINTMENT: {
-        isAllowed: isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST"),
+        isAllowed: hasAppointmentAccess,
         requiredPackage: "PREMIUM"
       },
       REVIEW: {
-        isAllowed: isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_REVIEW_REPLY"),
+        isAllowed: hasReviewAccess,
         requiredPackage: "STARTER"
       },
       POST_CREATION: {
-        isAllowed: isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR"),
+        isAllowed: hasPostAccess,
         requiredPackage: "GROWTH"
       },
       PROFILE: {
-        isAllowed: isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR"),
+        isAllowed: hasPostAccess,
         requiredPackage: "GROWTH"
       },
       LOCAL_SEO_COPILOT: {
-        isAllowed: isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT"),
+        isAllowed: hasSeoAccess,
         requiredPackage: "STARTER"
       }
     };
@@ -120,31 +156,67 @@ export async function PUT(req: Request) {
     // Check doctor's package entitlement before enabling
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
-      include: { package: { include: { packageFeatures: { include: { feature: true } } } } }
+      include: { 
+        package: { 
+          include: { 
+            modules: true,
+            packageFeatures: { include: { feature: true } } 
+          } 
+        } 
+      }
     });
 
     const pkgName = (doctor?.package?.name || "").toUpperCase();
-    const isTrialActive = doctor?.subscriptionExpiry 
-      ? new Date(doctor.subscriptionExpiry) > new Date() 
-      : (doctor?.createdAt ? (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000) : false);
+    const pkgSlug = (doctor?.package?.slug || "").toLowerCase();
+    const hasExplicitExpiry = Boolean(doctor?.subscriptionExpiry);
+    const isExpiryInFuture = hasExplicitExpiry ? new Date(doctor!.subscriptionExpiry!) > new Date() : false;
+    const isWithin14Days = doctor?.createdAt 
+      ? (Date.now() - new Date(doctor.createdAt).getTime() <= 14 * 24 * 60 * 60 * 1000) 
+      : false;
+    const isTrialActive = isExpiryInFuture || (!hasExplicitExpiry && isWithin14Days);
+
+    const hasPaidPackage = Boolean(
+      doctor?.package && 
+      !pkgName.includes("FREE") && 
+      pkgSlug !== "free" && 
+      doctor?.subscriptionStatus !== "CANCELED" &&
+      (!hasExplicitExpiry || isExpiryInFuture)
+    );
+
+    const hasModule = (modName: string) => {
+      return doctor?.package?.modules?.some((m: any) => m.moduleName === modName) ?? false;
+    };
+
     const isFeatureEnabled = (key: string) => {
       const feat = doctor?.package?.packageFeatures?.find(pf => pf.feature?.key === key);
       return feat?.isEnabled ?? false;
     };
 
+    const isSuperOrImpersonating = Boolean(isSuperAdmin || isImpersonating);
+
     let allowed = false;
     let reqPkg = "Premium";
     if (agentType === "APPOINTMENT") {
-      allowed = isTrialActive || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_RECEPTIONIST");
+      allowed = isSuperOrImpersonating || isTrialActive || (
+        hasPaidPackage && (
+          hasModule("AI_ASSISTANT") ||
+          pkgName.includes("PREMIUM") || 
+          pkgName.includes("ENTERPRISE") || 
+          pkgName.includes("AUTOPILOT") || 
+          pkgSlug.includes("premium") || 
+          pkgSlug.includes("enterprise") || 
+          isFeatureEnabled("AI_RECEPTIONIST")
+        )
+      );
       reqPkg = "Premium";
     } else if (agentType === "REVIEW") {
-      allowed = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_REVIEW_REPLY");
+      allowed = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_REVIEW_REPLY") || hasModule("GROWTH_SEO");
       reqPkg = "Starter";
     } else if (agentType === "POST_CREATION" || agentType === "PROFILE") {
-      allowed = isTrialActive || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_POST_CREATOR");
+      allowed = isSuperOrImpersonating || isTrialActive || (hasPaidPackage && (hasModule("GROWTH_SEO") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || isFeatureEnabled("AI_POST_CREATOR")));
       reqPkg = "Growth";
     } else if (agentType === "LOCAL_SEO_COPILOT") {
-      allowed = isTrialActive || pkgName.includes("STARTER") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || pkgName.includes("AUTOPILOT") || pkgName.includes("TRIAL") || isFeatureEnabled("AI_SEO_COPILOT");
+      allowed = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_SEO_COPILOT") || hasModule("GROWTH_SEO");
       reqPkg = "Starter";
     }
 

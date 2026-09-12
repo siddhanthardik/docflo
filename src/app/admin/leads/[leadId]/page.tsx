@@ -26,7 +26,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ lea
   }
 
   const packages = await prisma.package.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isArchived: false },
     orderBy: { priceMonthly: 'asc' }
   });
 

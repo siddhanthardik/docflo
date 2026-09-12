@@ -71,7 +71,7 @@ export async function POST(
   // Verify doctor exists
   const doctor = await prisma.doctor.findUnique({
     where: { id: doctorId },
-    select: { id: true, packageId: true, name: true },
+    select: { id: true, packageId: true, name: true, subscriptionExpiry: true, subscriptionStatus: true },
   });
   if (!doctor) return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
 
@@ -93,16 +93,25 @@ export async function POST(
     return NextResponse.json({ error: 'Doctor is already on this package' }, { status: 409 });
   }
 
+  const isExpiryInPast = doctor.subscriptionExpiry ? new Date(doctor.subscriptionExpiry) <= new Date() : false;
+  const newExpiry = isExpiryInPast ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : undefined;
+
   // Perform assignment + create immutable history record in one transaction
   const [updatedDoctor, historyRecord] = await prisma.$transaction([
     prisma.doctor.update({
       where: { id: doctorId },
-      data: { packageId },
+      data: { 
+        packageId,
+        subscriptionStatus: "ACTIVE",
+        ...(newExpiry && { subscriptionExpiry: newExpiry }),
+      },
       select: {
         id: true,
         name: true,
         email: true,
         packageId: true,
+        subscriptionStatus: true,
+        subscriptionExpiry: true,
         package: {
           select: {
             id: true,
@@ -127,6 +136,12 @@ export async function POST(
   ]);
 
   // Invalidate entitlement cache for the doctor
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/admin/packages");
+    revalidatePath("/admin/clinics");
+    revalidatePath(`/admin/clinics/${doctorId}`);
+  } catch {}
   revalidateTag(`doctor-package-${doctorId}`, "default");
 
   return NextResponse.json({
