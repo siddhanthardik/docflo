@@ -29,8 +29,16 @@ export class AIService {
     prompt: string,
     options?: AIGenerationOptions
   ): Promise<{ content: string; creditsUsed: number; remainingCredits: number }> {
-    // 1. Verify doctor has AI_ASSISTANT module
-    await EntitlementService.requireModule(doctorId, 'AI_ASSISTANT', { route: 'AIService.generate' });
+    // 1. Verify doctor has appropriate module access
+    if (feature === AIFeature.REVIEW_REPLY) {
+      const hasAssistant = await EntitlementService.hasModule(doctorId, 'AI_ASSISTANT');
+      const hasGrowth = await EntitlementService.hasModule(doctorId, 'GROWTH_SEO');
+      if (!hasAssistant && !hasGrowth) {
+        await EntitlementService.requireModule(doctorId, 'GROWTH_SEO', { route: 'AIService.generate.REVIEW_REPLY' });
+      }
+    } else {
+      await EntitlementService.requireModule(doctorId, 'AI_ASSISTANT', { route: 'AIService.generate' });
+    }
 
     // 2. Determine credit cost
     const creditCost = AICreditCosts[feature];

@@ -36,9 +36,9 @@ export class GeminiProvider implements AIProvider {
 
   async generateText(prompt: string, options?: AIGenerationOptions): Promise<string> {
     // Convert options to Gemini specific generation config
-    const generationConfig = {
+    const baseConfig = {
       temperature: options?.temperature ?? 0.7,
-      maxOutputTokens: options?.maxTokens ?? 1024,
+      maxOutputTokens: Math.max(options?.maxTokens ?? 1024, 1024),
     };
 
     let finalPrompt = prompt;
@@ -93,6 +93,20 @@ export class GeminiProvider implements AIProvider {
     let lastError: any = null;
     for (const modelName of CANDIDATE_MODELS) {
       try {
+        const generationConfig: any = {
+          temperature: baseConfig.temperature,
+          maxOutputTokens: baseConfig.maxOutputTokens,
+        };
+
+        // In Gemini 3.7, internal thinking/reasoning tokens are deducted from maxOutputTokens.
+        // For fast direct text generation (reviews, posts, audits), disable thinking budget
+        // so thinking tokens do not deplete the token budget and cause truncated mid-sentence replies.
+        if (modelName.includes('3.7')) {
+          generationConfig.thinkingConfig = {
+            thinkingBudget: 0,
+          };
+        }
+
         const model = this.genAI.getGenerativeModel({ model: modelName });
         const generatePromise = model.generateContent({
           contents: [{ role: 'user', parts }],
@@ -142,9 +156,9 @@ export class GeminiProvider implements AIProvider {
   }
 
   async generateWithUsage(prompt: string, options?: AIGenerationOptions): Promise<import('../types').AIGenerationResult> {
-    const generationConfig = {
+    const baseConfig = {
       temperature: options?.temperature ?? 0.7,
-      maxOutputTokens: options?.maxTokens ?? 1024,
+      maxOutputTokens: Math.max(options?.maxTokens ?? 1024, 1024),
     };
 
     let finalPrompt = prompt;
@@ -196,6 +210,20 @@ export class GeminiProvider implements AIProvider {
     let lastError: any = null;
     for (const modelName of CANDIDATE_MODELS) {
       try {
+        const generationConfig: any = {
+          temperature: baseConfig.temperature,
+          maxOutputTokens: baseConfig.maxOutputTokens,
+        };
+
+        // In Gemini 3.7, internal thinking/reasoning tokens are deducted from maxOutputTokens.
+        // For fast direct text generation (reviews, posts, audits), disable thinking budget
+        // so thinking tokens do not deplete the token budget and cause truncated mid-sentence replies.
+        if (modelName.includes('3.7')) {
+          generationConfig.thinkingConfig = {
+            thinkingBudget: 0,
+          };
+        }
+
         const model = this.genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent({
           contents: [{ role: 'user', parts }],

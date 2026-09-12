@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 import { ReviewReplyService } from "@/services/ai/review-reply.service";
 import { toHumanFriendlyAIError } from "@/services/ai/ai-error-formatter";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { doctorId } = await getSessionData();
+    if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized. Please sign in to draft AI replies." }, { status: 401 });
     }
 
@@ -17,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const result = await ReviewReplyService.generateReply({
-      doctorId: session.user.id,
+      doctorId,
       reviewText,
       rating,
       authorName,

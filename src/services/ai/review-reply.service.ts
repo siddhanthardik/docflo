@@ -202,7 +202,7 @@ ${reviewTypeInstructions}
       doctorId,
       AIFeature.REVIEW_REPLY,
       prompt,
-      { temperature: 0.75, maxTokens: 400 }
+      { temperature: 0.75, maxTokens: 1024 }
     );
 
     // 4. Sanitize and Polish Output
