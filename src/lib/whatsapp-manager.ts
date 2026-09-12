@@ -20,6 +20,7 @@ import {
 import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
 import { formatPatientSalutation } from '@/lib/salutation';
 import { VaccinationService } from '@/services/vaccination.service';
+import { sanitizePersonName } from '@/lib/utils';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -735,17 +736,19 @@ class WhatsAppManager {
               });
 
               // If no patient exists, auto-create as a Patient or with WhatsApp pushName
-              const pushNameRaw = (msg.pushName || "").trim();
+              const pushNameRaw = sanitizePersonName(msg.pushName || "");
               const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
 
               if (!patient) {
                 const parts = hasValidPushName ? pushNameRaw.split(" ") : ["Patient", ""];
                 const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+                const cleanFirst = sanitizePersonName(parts[0]) || "Patient";
+                const cleanLast = sanitizePersonName(parts.slice(1).join(" ")) || "";
                 patient = await prisma.patient.create({
                   data: {
                     doctorId,
-                    firstName: parts[0] || "Patient",
-                    lastName: parts.slice(1).join(" ") || "",
+                    firstName: cleanFirst,
+                    lastName: cleanLast,
                     phone: patientPhone,
                     patientType: "ACTIVE",
                     primaryPractitionerId: defaultPractitioner?.id || null,
@@ -753,12 +756,22 @@ class WhatsAppManager {
                   }
                 });
                 console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}: ${patient.firstName} ${patient.lastName}`);
-              } else if (patient && patient.lastName && patient.lastName.startsWith("+")) {
-                // Clean up legacy artifact if phone number was accidentally placed in lastName
-                patient = await prisma.patient.update({
-                  where: { id: patient.id },
-                  data: { lastName: "" }
-                });
+              } else {
+                // Self-heal: Clean up emojis or legacy artifacts from existing patient records
+                const cleanFirst = sanitizePersonName(patient.firstName || "");
+                let cleanLast = sanitizePersonName(patient.lastName || "");
+                if (cleanLast.startsWith("+")) cleanLast = "";
+
+                if ((cleanFirst && cleanFirst !== patient.firstName) || cleanLast !== (patient.lastName || "")) {
+                  patient = await prisma.patient.update({
+                    where: { id: patient.id },
+                    data: {
+                      firstName: cleanFirst || "Patient",
+                      lastName: cleanLast
+                    }
+                  });
+                  console.log(`[WhatsAppManager] 🧼 Sanitized emojis from existing patient name: ${patient.firstName} ${patient.lastName}`);
+                }
               }
 
               if (patient && patient.isBlocked) {
@@ -767,7 +780,8 @@ class WhatsAppManager {
               }
             }
 
-            const patientName = isStaff ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor") : `${patient!.firstName} ${patient!.lastName}`.trim();
+            const rawPatientName = isStaff ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor") : `${patient!.firstName} ${patient!.lastName}`.trim();
+            const patientName = sanitizePersonName(rawPatientName) || "Patient";
 
             // Find or create Conversation (deduplicate by 10-digit suffix)
             const last10Incoming = patientPhone.slice(-10);
@@ -2299,7 +2313,7 @@ class WhatsAppManager {
                   const parts = rawTagMatch[1].split(',').map(s => s.trim());
                   dateStr = parts[0] || "";
                   sessionStr = extractAgreedTimeFromHistory(parts[1] || "", textMessage, conversationHistoryStrings);
-                  patientFullName = parts[2] || "";
+                  patientFullName = sanitizePersonName(parts[2] || "");
                   rawAgeStr = parts[3] || "";
                   rawGenderStr = parts[4] || "";
                   rawDoctorName = parts[5] || "";
@@ -2335,7 +2349,7 @@ class WhatsAppManager {
                     const timeM = combined.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|baje)?)/i);
                     const rawFallbackSession = timeM ? timeM[1].replace(".", ":").trim() : (combined.includes("morning") ? "Morning" : "Evening");
                     sessionStr = extractAgreedTimeFromHistory(rawFallbackSession, textMessage, conversationHistoryStrings);
-                    patientFullName = (patient?.firstName && patient.firstName !== "Patient") ? `${patient.firstName} ${patient.lastName || ""}`.trim() : "Patient";
+                    patientFullName = (patient?.firstName && patient.firstName !== "Patient") ? sanitizePersonName(`${patient.firstName} ${patient.lastName || ""}`) : "Patient";
                     fullTag = `[BOOK_APPOINTMENT: ${dateStr}, ${sessionStr}, ${patientFullName}]`;
                   }
                 }

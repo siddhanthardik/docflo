@@ -1,5 +1,5 @@
 import { Phone, Mail, Calendar, Tag, User } from "lucide-react"
-import { formatDate } from "@/lib/utils"
+import { formatDate, sanitizePersonName } from "@/lib/utils"
 
 interface Patient {
   firstName: string
@@ -23,10 +23,12 @@ function AppointmentStatusBadge({ status }: { status: string }) {
     CANCELLED: { bg: "bg-red-50", text: "text-red-700" },
     NO_SHOW: { bg: "bg-amber-50", text: "text-amber-700" },
   }
-  const style = map[status] ?? { bg: "bg-gray-100", text: "text-gray-600" }
+
   return (
     <span
-      className={`inline-flex items-center ${style.bg} ${style.text} text-xs font-medium px-2 py-0.5 rounded-full`}
+      className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+        map[status]?.bg || "bg-gray-50"
+      } ${map[status]?.text || "text-gray-600"}`}
     >
       {status.replace("_", " ")}
     </span>
@@ -34,6 +36,9 @@ function AppointmentStatusBadge({ status }: { status: string }) {
 }
 
 export function PatientContext({ patient }: { patient: Patient }) {
+  const cleanFirst = sanitizePersonName(patient.firstName || "") || "Patient"
+  const cleanLast = sanitizePersonName(patient.lastName || "")
+
   return (
     <div className="p-4 space-y-4">
       {/* Patient Card */}
@@ -41,11 +46,11 @@ export function PatientContext({ patient }: { patient: Patient }) {
         {/* Avatar + name */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-base font-bold text-indigo-700 flex-shrink-0">
-            {((patient.firstName?.[0] || "") + (patient.lastName?.[0] || "")).toUpperCase() || patient.firstName?.[0]?.toUpperCase() || "P"}
+            {((cleanFirst[0] || "") + (cleanLast[0] || "")).toUpperCase() || cleanFirst[0]?.toUpperCase() || "P"}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
-              {patient.firstName} {patient.lastName || ""}
+              {cleanFirst} {cleanLast}
             </h3>
             <p className="text-xs text-gray-500">Patient Profile</p>
           </div>

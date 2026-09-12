@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown } from "lucide-react"
 import { format, isToday, isYesterday } from "date-fns"
+import { sanitizePersonName } from "@/lib/utils"
 
 function getChatDateDivider(dateStr: string): string {
   const date = new Date(dateStr)
@@ -107,7 +108,7 @@ export function ChatWindow({
     )
   }
 
-  const name = conversation.patientName || conversation.patientPhone
+  const name = sanitizePersonName(conversation.patientName || "") || conversation.patientPhone
 
   return (
     <div className="h-full flex flex-col relative">

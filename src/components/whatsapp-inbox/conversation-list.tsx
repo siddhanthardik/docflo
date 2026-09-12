@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Search } from "lucide-react"
 import { format, isToday, isYesterday, differenceInCalendarDays } from "date-fns"
+import { sanitizePersonName } from "@/lib/utils"
 
 function formatWhatsAppDate(dateStr?: string | Date | null): string {
   if (!dateStr) return ""
@@ -46,8 +47,8 @@ export function ConversationList({
   const [query, setQuery] = useState("")
 
   const filtered = conversations.filter((c) => {
-    const name = (c.patientName || c.patientPhone).toLowerCase()
-    return name.includes(query.toLowerCase())
+    const cleanName = sanitizePersonName(c.patientName || "") || c.patientPhone
+    return cleanName.toLowerCase().includes(query.toLowerCase())
   })
 
   function getInitials(name: string) {
@@ -120,7 +121,7 @@ export function ConversationList({
             </div>
           )
           : filtered.map((conv) => {
-              const rawName = conv.patientName || conv.patientPhone
+              const rawName = sanitizePersonName(conv.patientName || "") || conv.patientPhone
               const name = (rawName.startsWith("Lead") && conv.patientPhone) ? conv.patientPhone : rawName
               const lastMsg = conv.messages?.[0]?.content || "No messages yet"
               const isSelected = selectedId === conv.id

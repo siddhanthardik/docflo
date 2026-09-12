@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager"; // Initialize WhatsApp Manager
 import { entitlementGuard } from "@/lib/withEntitlements";
+import { sanitizePersonName } from "@/lib/utils";
 
 export async function GET(req: Request) {
   try {
@@ -25,12 +26,46 @@ export async function GET(req: Request) {
       orderBy: { lastMessageAt: "desc" },
     });
 
-    // Ensure conversation.lastMessageAt reflects the actual latest WhatsApp message timestamp
+    // Ensure conversation.lastMessageAt reflects actual latest timestamp & patientName has zero emojis
     const synchronizedConversations = conversations
       .map((c) => {
         const latestMessageDate = c.messages?.[0]?.createdAt;
+        const cleanName = sanitizePersonName(c.patientName || "") || c.patientPhone;
+
+        // Asynchronously self-heal database record if emojis were present
+        if (c.patientName && c.patientName !== cleanName && cleanName) {
+          prisma.conversation.update({
+            where: { id: c.id },
+            data: { patientName: cleanName }
+          }).catch(() => {});
+
+          const last10 = (c.patientPhone || "").slice(-10);
+          prisma.patient.findFirst({
+            where: {
+              doctorId,
+              OR: [
+                { phone: c.patientPhone },
+                { phone: `+${c.patientPhone}` },
+                ...(last10.length >= 10 ? [{ phone: { endsWith: last10 } }] : [])
+              ]
+            }
+          }).then((p) => {
+            if (p) {
+              const cleanFirst = sanitizePersonName(p.firstName || "");
+              const cleanLast = sanitizePersonName(p.lastName || "");
+              if (cleanFirst !== p.firstName || cleanLast !== p.lastName) {
+                prisma.patient.update({
+                  where: { id: p.id },
+                  data: { firstName: cleanFirst || "Patient", lastName: cleanLast }
+                }).catch(() => {});
+              }
+            }
+          }).catch(() => {});
+        }
+
         return {
           ...c,
+          patientName: cleanName,
           lastMessageAt: latestMessageDate ? new Date(latestMessageDate).toISOString() : c.lastMessageAt,
         };
       })
