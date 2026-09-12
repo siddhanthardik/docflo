@@ -32,6 +32,24 @@ class DemoSandboxManager {
   private connectingSessions: Set<string> = new Set();
   private expiryTimers: Map<string, NodeJS.Timeout> = new Map();
   private conversationHistories: Map<string, string[]> = new Map(); // `${sessionId}:${senderJid}` -> messages[]
+  private processedMessageIds: Map<string, number> = new Map(); // msgId -> timestamp for 5m deduplication
+
+  private isDuplicateMessage(msgId?: string | null): boolean {
+    if (!msgId) return false;
+    const now = Date.now();
+    if (this.processedMessageIds.size > 2000) {
+      for (const [id, timestamp] of this.processedMessageIds.entries()) {
+        if (now - timestamp > 5 * 60 * 1000) {
+          this.processedMessageIds.delete(id);
+        }
+      }
+    }
+    if (this.processedMessageIds.has(msgId)) {
+      return true;
+    }
+    this.processedMessageIds.set(msgId, now);
+    return false;
+  }
 
   constructor() {
     const baseDir = getSandboxBaseDir();
@@ -261,6 +279,12 @@ class DemoSandboxManager {
           if (m.type !== 'notify') return;
           for (const msg of m.messages) {
             if (msg.key.fromMe) continue;
+
+            const msgId = msg.key.id;
+            if (this.isDuplicateMessage(msgId)) {
+              console.log(`[DemoSandboxManager] ⚠️ Duplicate inbound message ${msgId} skipped`);
+              continue;
+            }
             
             const senderJid = msg.key.remoteJid;
             if (!senderJid || senderJid.endsWith('@g.us')) continue; // Ignore groups
@@ -293,7 +317,7 @@ class DemoSandboxManager {
               },
               history
             ).catch(() => 
-              `Namaste! 🙏 I am ${assistantName}, 24/7 AI Receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment or visit today?`
+              `Namaste! 🙏 I am ${assistantName}, virtual receptionist for ${doctorName} at ${clinicName}. How may I help you with your appointment or clinic inquiry today?`
             );
 
             const reply = (rawReply || "")

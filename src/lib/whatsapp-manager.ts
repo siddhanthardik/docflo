@@ -80,6 +80,25 @@ class WhatsAppManager {
       }
   > = new Map();
 
+  private processedMessageIds: Map<string, number> = new Map(); // msgId -> timestamp (5m TTL)
+
+  private isDuplicateMessage(msgId?: string | null): boolean {
+    if (!msgId) return false;
+    const now = Date.now();
+    if (this.processedMessageIds.size > 2000) {
+      for (const [id, timestamp] of this.processedMessageIds.entries()) {
+        if (now - timestamp > 5 * 60 * 1000) {
+          this.processedMessageIds.delete(id);
+        }
+      }
+    }
+    if (this.processedMessageIds.has(msgId)) {
+      return true;
+    }
+    this.processedMessageIds.set(msgId, now);
+    return false;
+  }
+
   constructor() {
     // Ensure auth folder exists
     const authDir = getAuthBaseDir();
@@ -487,6 +506,12 @@ class WhatsAppManager {
       
       for (const msg of m.messages) {
         if (!msg.message || msg.key.fromMe) continue;
+
+        const msgId = msg.key.id;
+        if (this.isDuplicateMessage(msgId)) {
+          console.log(`[WhatsAppManager] ⚠️ Duplicate message ${msgId} skipped`);
+          continue;
+        }
 
         const remoteJid = msg.key.remoteJid;
         let textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
