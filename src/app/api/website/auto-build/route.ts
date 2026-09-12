@@ -381,8 +381,14 @@ export async function POST(req: NextRequest) {
       ? `https://maps.google.com/maps?q=${encodeURIComponent(fullPinQuery)}&t=&z=16&ie=UTF8&iwloc=&output=embed`
       : null;
 
-    // Subdomain
-    const subdomain = generateSubdomain(docName || clinicName, city);
+    // Check for existing website to preserve existing subdomain
+    const existingWebsite = await prisma.clinicWebsite.findUnique({
+      where: { doctorId },
+      select: { subdomain: true },
+    });
+
+    // Subdomain: preserve existing subdomain if available, or generate a clean one
+    const subdomain = existingWebsite?.subdomain || generateSubdomain(docName || clinicName, city);
 
     // Standard high-conversion sections sequence
     const sections: PageSection[] = [
@@ -397,9 +403,8 @@ export async function POST(req: NextRequest) {
       { id: "sec_map", type: "MAP_HOURS", title: "Visit Our Clinic" },
     ];
 
-    // 6. Upsert to ClinicWebsite Database
-    const websitePayload: any = {
-      doctorId,
+    // 6. Upsert to ClinicWebsite Database (excluding doctorId from update to prevent Prisma relation error)
+    const websiteData: any = {
       subdomain,
       themeId: themeDef.themeId,
       primaryColor: themeDef.primaryColor,
@@ -451,10 +456,10 @@ export async function POST(req: NextRequest) {
     const savedWebsite = await prisma.clinicWebsite.upsert({
       where: { doctorId },
       create: {
-        ...websitePayload,
-        doctor: { connect: { id: doctorId } },
+        doctorId,
+        ...websiteData,
       },
-      update: websitePayload,
+      update: websiteData,
     });
 
     // Also sync doctor model credentials

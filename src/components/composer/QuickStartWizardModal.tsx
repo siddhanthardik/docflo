@@ -226,9 +226,14 @@ export function QuickStartWizardModal({
     } catch (err: any) {
       clearInterval(stepInterval);
       setIsGenerating(false);
+      const rawMsg = err.message || "";
+      const cleanErrMsg = rawMsg.includes("}") 
+        ? rawMsg.slice(rawMsg.lastIndexOf("}") + 1).trim() || "Failed to synthesize website"
+        : rawMsg || "Failed to synthesize website. You can try manual fast setup.";
+
       toast({
         title: "Auto-Build Error",
-        description: err.message || "Failed to synthesize website. You can try manual fast setup.",
+        description: cleanErrMsg,
         variant: "destructive",
       });
     }
