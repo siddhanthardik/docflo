@@ -1370,6 +1370,201 @@ export default function ElementorComposerPage() {
                         />
                       </div>
 
+                      {/* Hero Feature Highlight Badges (Zero Hardcoding - Fully Editable / Removable) */}
+                      {(() => {
+                        const isBadgesVisible = selectedSection.showHighlights !== false && siteData.showHighlights !== false;
+                        const currentHighlights = (selectedSection.heroHighlights !== undefined
+                          ? selectedSection.heroHighlights
+                          : siteData.heroHighlights !== undefined
+                          ? siteData.heroHighlights
+                          : (siteData.themeId === "warm-pediatrics"
+                            ? [
+                                { icon: "🧸", text: "Stress-Free Play Zone" },
+                                { icon: "💉", text: "Pain-Free Vaccines" },
+                                { icon: "🌡️", text: "24/7 Fever Support" },
+                              ]
+                            : []));
+
+                        const updateHeroBadges = (newBadges: Array<{ icon?: string; text: string }>) => {
+                          const nextState = {
+                            ...siteData,
+                            heroHighlights: newBadges,
+                            sections: (siteData.sections || []).map((s) =>
+                              s.id === selectedSectionId ? { ...s, heroHighlights: newBadges } : s
+                            ),
+                          };
+                          setSiteData(nextState);
+                          pushHistory(nextState);
+                        };
+
+                        const toggleBadgesVisibility = (visible: boolean) => {
+                          const nextState = {
+                            ...siteData,
+                            showHighlights: visible,
+                            sections: (siteData.sections || []).map((s) =>
+                              s.id === selectedSectionId ? { ...s, showHighlights: visible } : s
+                            ),
+                          };
+                          setSiteData(nextState);
+                          pushHistory(nextState);
+                        };
+
+                        return (
+                          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                  <span>Feature Badges / Highlights</span>
+                                </p>
+                                <p className="text-[10px] text-slate-500">
+                                  Highlight key clinic USPs, safety guarantees, or 24/7 care
+                                </p>
+                              </div>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <span className="text-[10px] font-bold text-slate-600">
+                                  {isBadgesVisible ? "Visible" : "Hidden"}
+                                </span>
+                                <input
+                                  type="checkbox"
+                                  checked={isBadgesVisible}
+                                  onChange={(e) => toggleBadgesVisibility(e.target.checked)}
+                                  className="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600"
+                                />
+                              </label>
+                            </div>
+
+                            {isBadgesVisible && (
+                              <div className="space-y-3 pt-2 border-t border-slate-200/80">
+                                {/* Specialty Preset Quick Buttons */}
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quick Presets</span>
+                                    {currentHighlights.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => updateHeroBadges([])}
+                                        className="text-[10px] text-rose-600 hover:underline font-bold"
+                                      >
+                                        Remove All
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateHeroBadges([
+                                        { icon: "🧸", text: "Stress-Free Play Zone" },
+                                        { icon: "💉", text: "Pain-Free Vaccines" },
+                                        { icon: "🌡️", text: "24/7 Fever Support" },
+                                      ])}
+                                      className="px-2 py-1 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
+                                    >
+                                      🧸 Pediatrics
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateHeroBadges([
+                                        { icon: "✨", text: "Pain-Free Dentistry" },
+                                        { icon: "🔬", text: "Digital 3D Scans" },
+                                        { icon: "⚡", text: "Same-Day Relief" },
+                                      ])}
+                                      className="px-2 py-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
+                                    >
+                                      🦷 Dental
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateHeroBadges([
+                                        { icon: "👨‍⚕️", text: "Senior Specialists" },
+                                        { icon: "🧪", text: "NABL Certified Lab" },
+                                        { icon: "🕒", text: "Zero Waiting Time" },
+                                      ])}
+                                      className="px-2 py-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
+                                    >
+                                      🩺 General Clinic
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateHeroBadges([
+                                        { icon: "💎", text: "US FDA Approved" },
+                                        { icon: "🌿", text: "Personalized Care" },
+                                        { icon: "🎯", text: "Advanced Laser Tech" },
+                                      ])}
+                                      className="px-2 py-1 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
+                                    >
+                                      💆 Skin / Derma
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* List of badges */}
+                                <div className="space-y-2">
+                                  {currentHighlights.map((badge, bIdx) => (
+                                    <div key={bIdx} className="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                                      {/* Emoji / Icon Input */}
+                                      <div className="relative shrink-0">
+                                        <Input
+                                          value={badge.icon || ""}
+                                          onChange={(e) => {
+                                            const updated = [...currentHighlights];
+                                            updated[bIdx] = { ...updated[bIdx], icon: e.target.value };
+                                            updateHeroBadges(updated);
+                                          }}
+                                          placeholder="🧸"
+                                          title="Type or paste any icon or emoji"
+                                          className="w-11 h-8 text-center text-sm p-0 rounded-lg bg-slate-50 border-slate-200 font-bold"
+                                        />
+                                      </div>
+
+                                      {/* Text Input */}
+                                      <Input
+                                        value={badge.text}
+                                        onChange={(e) => {
+                                          const updated = [...currentHighlights];
+                                          updated[bIdx] = { ...updated[bIdx], text: e.target.value };
+                                          updateHeroBadges(updated);
+                                        }}
+                                        placeholder="Badge text (e.g. Pain-Free Vaccines)"
+                                        className="h-8 text-xs bg-white rounded-lg flex-1"
+                                      />
+
+                                      {/* Delete Button */}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updated = currentHighlights.filter((_, idx) => idx !== bIdx);
+                                          updateHeroBadges(updated);
+                                        }}
+                                        className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                                        title="Delete Badge"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Add Badge Button */}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const next = [...currentHighlights, { icon: "⭐", text: "New Highlight" }];
+                                    updateHeroBadges(next);
+                                  }}
+                                  className="w-full h-8 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border-dashed border-slate-300 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>Add Highlight Badge</span>
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* Hero Buttons & Links Customizer */}
                       <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                         <div className="flex items-center justify-between">

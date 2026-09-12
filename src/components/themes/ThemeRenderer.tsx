@@ -568,6 +568,30 @@ export function ThemeRenderer({
                     </p>
                   )}
 
+                  {/* ZERO HARDCODING: Dynamic Feature highlight badges */}
+                  {(() => {
+                    const isHighlightsVisible = section.showHighlights !== false && data.showHighlights !== false;
+                    if (!isHighlightsVisible) return null;
+                    const rawHighlights = section.heroHighlights !== undefined ? section.heroHighlights : data.heroHighlights;
+                    if (!rawHighlights || rawHighlights.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1 pb-1">
+                        {rawHighlights.map((item, hIdx) => {
+                          if (!item.text && !item.icon) return null;
+                          return (
+                            <div
+                              key={hIdx}
+                              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white shadow-xs text-xs font-bold"
+                            >
+                              {item.icon && <span className="text-base">{item.icon}</span>}
+                              <span>{item.text}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   {/* ZERO HARDCODING: Render CTA buttons only if showHeroActions is not explicitly false */}
                   {data.showHeroActions !== false && section.showHeroActions !== false && (
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -652,6 +676,30 @@ export function ThemeRenderer({
                       {data.doctor.specialty && <span className="font-semibold text-blue-700">{data.doctor.specialty}</span>}
                     </div>
                   )}
+
+                  {/* ZERO HARDCODING: Dynamic Feature highlight badges */}
+                  {(() => {
+                    const isHighlightsVisible = section.showHighlights !== false && data.showHighlights !== false;
+                    if (!isHighlightsVisible) return null;
+                    const rawHighlights = section.heroHighlights !== undefined ? section.heroHighlights : data.heroHighlights;
+                    if (!rawHighlights || rawHighlights.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1 pb-1">
+                        {rawHighlights.map((item, hIdx) => {
+                          if (!item.text && !item.icon) return null;
+                          return (
+                            <div
+                              key={hIdx}
+                              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-slate-800 shadow-2xs text-xs font-bold"
+                            >
+                              {item.icon && <span className="text-base">{item.icon}</span>}
+                              <span>{item.text}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {data.showHeroActions !== false && section.showHeroActions !== false && (
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
@@ -848,22 +896,52 @@ export function ThemeRenderer({
                       </p>
                     )}
 
-                    {themeId === "warm-pediatrics" && (
-                      <div className="grid grid-cols-3 gap-2 pt-1 pb-1">
-                        <div className="bg-white/90 backdrop-blur-xs border border-amber-200 rounded-2xl p-2.5 text-center shadow-2xs">
-                          <span className="text-base">🧸</span>
-                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">Stress-Free Play Zone</p>
+                    {/* ZERO HARDCODING: Dynamic Feature highlight badges (fully editable, removable, custom icon & text) */}
+                    {(() => {
+                      const isHighlightsVisible = section.showHighlights !== false && data.showHighlights !== false;
+                      if (!isHighlightsVisible) return null;
+
+                      const rawHighlights = section.heroHighlights !== undefined 
+                        ? section.heroHighlights 
+                        : data.heroHighlights !== undefined 
+                        ? data.heroHighlights 
+                        : (themeId === "warm-pediatrics" ? [
+                            { icon: "🧸", text: "Stress-Free Play Zone" },
+                            { icon: "💉", text: "Pain-Free Vaccines" },
+                            { icon: "🌡️", text: "24/7 Fever Support" },
+                          ] : []);
+
+                      if (!rawHighlights || rawHighlights.length === 0) return null;
+
+                      const colClass = rawHighlights.length === 1
+                        ? "grid-cols-1 max-w-xs"
+                        : rawHighlights.length === 2
+                        ? "grid-cols-2 max-w-md"
+                        : rawHighlights.length === 3
+                        ? "grid-cols-3"
+                        : "grid-cols-2 sm:grid-cols-4";
+
+                      return (
+                        <div className={`grid ${colClass} gap-2 pt-1 pb-1`}>
+                          {rawHighlights.map((item, hIdx) => {
+                            if (!item.text && !item.icon) return null;
+                            return (
+                              <div
+                                key={hIdx}
+                                className={`bg-white/90 backdrop-blur-xs border rounded-2xl p-2.5 text-center shadow-2xs transition-all hover:scale-[1.02] ${
+                                  themeId === "warm-pediatrics"
+                                    ? hIdx === 0 ? "border-amber-200" : hIdx === 1 ? "border-emerald-200" : "border-sky-200"
+                                    : "border-slate-200/80"
+                                }`}
+                              >
+                                {item.icon && <span className="text-base">{item.icon}</span>}
+                                <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">{item.text}</p>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div className="bg-white/90 backdrop-blur-xs border border-emerald-200 rounded-2xl p-2.5 text-center shadow-2xs">
-                          <span className="text-base">💉</span>
-                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">Pain-Free Vaccines</p>
-                        </div>
-                        <div className="bg-white/90 backdrop-blur-xs border border-sky-200 rounded-2xl p-2.5 text-center shadow-2xs">
-                          <span className="text-base">🌡️</span>
-                          <p className="text-[11px] font-black text-slate-800 leading-tight mt-0.5">24/7 Fever Support</p>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     {data.showHeroActions !== false && section.showHeroActions !== false && (
                       <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                         <button

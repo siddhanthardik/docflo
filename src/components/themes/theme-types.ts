@@ -61,11 +61,18 @@ export interface PageSection {
   secondaryCtaText?: string;
   secondaryCtaAction?: string;
   showHeroActions?: boolean;
+  showHighlights?: boolean;
+  heroHighlights?: HeroHighlightItem[];
   bgColor?: string;
   showPrices?: boolean;
   isVisible?: boolean;
   design?: SectionDesignConfig;
   data?: any;
+}
+
+export interface HeroHighlightItem {
+  icon?: string;
+  text: string;
 }
 
 export interface ClinicWebsiteData {
@@ -97,6 +104,8 @@ export interface ClinicWebsiteData {
   secondaryCtaAction?: string | null;
   secondaryCtaLink?: string | null;
   showHeroActions?: boolean;
+  showHighlights?: boolean;
+  heroHighlights?: HeroHighlightItem[];
   whatsappNumber?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
