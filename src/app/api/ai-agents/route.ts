@@ -195,7 +195,7 @@ export async function PUT(req: Request) {
     const isSuperOrImpersonating = Boolean(isSuperAdmin || isImpersonating);
 
     let allowed = false;
-    let reqPkg = "Premium";
+    let reqPkg = "PREMIUM";
     if (agentType === "APPOINTMENT") {
       allowed = isSuperOrImpersonating || isTrialActive || (
         hasPaidPackage && (
@@ -208,16 +208,16 @@ export async function PUT(req: Request) {
           isFeatureEnabled("AI_RECEPTIONIST")
         )
       );
-      reqPkg = "Premium";
+      reqPkg = "PREMIUM";
     } else if (agentType === "REVIEW") {
       allowed = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_REVIEW_REPLY") || hasModule("GROWTH_SEO");
-      reqPkg = "Starter";
+      reqPkg = "STARTER";
     } else if (agentType === "POST_CREATION" || agentType === "PROFILE") {
       allowed = isSuperOrImpersonating || isTrialActive || (hasPaidPackage && (hasModule("GROWTH_SEO") || pkgName.includes("GROWTH") || pkgName.includes("PREMIUM") || isFeatureEnabled("AI_POST_CREATOR")));
-      reqPkg = "Growth";
+      reqPkg = "GROWTH";
     } else if (agentType === "LOCAL_SEO_COPILOT") {
       allowed = isSuperOrImpersonating || isTrialActive || hasPaidPackage || isFeatureEnabled("AI_SEO_COPILOT") || hasModule("GROWTH_SEO");
-      reqPkg = "Starter";
+      reqPkg = "STARTER";
     }
 
     if (enabled && !allowed) {
@@ -351,7 +351,13 @@ export async function PUT(req: Request) {
       }).catch(e => console.error("Audit log recording error:", e));
     }
 
-    return NextResponse.json({ agent });
+    return NextResponse.json({
+      agent: {
+        ...agent,
+        isAllowed: allowed,
+        requiredPackage: reqPkg,
+      }
+    });
   } catch (error: any) {
     console.error("PUT /api/ai-agents error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });

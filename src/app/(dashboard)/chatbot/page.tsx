@@ -92,9 +92,9 @@ export default function AIAgentsHubPage() {
     }
   };
 
-  const fetchAgents = async () => {
+  const fetchAgents = async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const res = await fetch("/api/ai-agents");
       if (res.ok) {
         const data = await res.json();
@@ -102,9 +102,9 @@ export default function AIAgentsHubPage() {
       }
     } catch (e) {
       console.error(e);
-      toast({ title: "Failed to load agents", variant: "destructive" });
+      if (!isSilent) toast({ title: "Failed to load agents", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -140,7 +140,7 @@ export default function AIAgentsHubPage() {
     }
 
     const newStatus = !currentStatus;
-    setAgents(agents.map(a => a.agentType === agentType ? { ...a, enabled: newStatus } : a));
+    setAgents(prev => prev.map(a => a.agentType === agentType ? { ...a, enabled: newStatus } : a));
     
     try {
       const res = await fetch("/api/ai-agents", {
@@ -153,8 +153,9 @@ export default function AIAgentsHubPage() {
         throw new Error(errData.error || "Update failed");
       }
       toast({ title: newStatus ? "AI Agent Activated 🚀" : "AI Agent Paused" });
+      fetchAgents(true);
     } catch (error: any) {
-      setAgents(agents.map(a => a.agentType === agentType ? { ...a, enabled: currentStatus } : a));
+      setAgents(prev => prev.map(a => a.agentType === agentType ? { ...a, enabled: currentStatus } : a));
       toast({ title: error.message || "Failed to update agent status", variant: "destructive" });
     }
   };
@@ -206,21 +207,33 @@ export default function AIAgentsHubPage() {
     if (!activeAgent) return;
     setSavingConfig(true);
     try {
+      const targetType = activeAgent.agentType || activeAgent.type;
       const res = await fetch("/api/ai-agents", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentType: activeAgent.agentType, config: configDraft }),
+        body: JSON.stringify({ agentType: targetType, config: configDraft }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Save failed");
       }
       toast({ title: "Agent Training & Config Saved! ✨", description: "Updated prompt instructions deployed to AI engine." });
-      const updatedAgent = data.agent || { ...activeAgent, config: configDraft };
-      setAgents(agents.map(a => a.agentType === activeAgent.agentType ? updatedAgent : a));
+      
+      const updatedAgent = {
+        ...activeAgent,
+        ...(data.agent || {}),
+        config: data.agent?.config ?? configDraft,
+        isAllowed: data.agent?.isAllowed !== undefined ? data.agent.isAllowed : (activeAgent.isAllowed ?? true),
+        requiredPackage: data.agent?.requiredPackage || activeAgent.requiredPackage || "PREMIUM",
+      };
+
+      setAgents(prev => prev.map(a => ((a.agentType === targetType || a.type === targetType) ? updatedAgent : a)));
       setIsConfigOpen(false);
       setIsRenameConfirmOpen(false);
       setPendingRenameTarget(null);
+
+      // Silently refresh agent list from server to ensure state consistency
+      fetchAgents(true);
     } catch (error: any) {
       toast({ title: error.message || "Failed to save configuration", variant: "destructive" });
     } finally {
