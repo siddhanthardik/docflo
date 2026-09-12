@@ -87,8 +87,19 @@ export function formatAppointmentConfirmationCard(params: AppointmentCardParams)
   // 5. Location details (Only for in-clinic visits)
   let locationBlock = "";
   if (!isTele) {
-    const locationParts = [address, city].filter(Boolean).map(s => s?.trim()).filter(Boolean);
-    const fullAddress = locationParts.join(", ");
+    let fullAddress = (address || "").trim();
+    const cleanCity = (city || "").trim();
+
+    if (cleanCity) {
+      const alreadyHasCity = fullAddress.toLowerCase().includes(cleanCity.toLowerCase());
+      const hasPinCode = /\b\d{6}\b/.test(fullAddress);
+      const isMultiSegment = fullAddress.split(",").length >= 3;
+
+      if (!alreadyHasCity && !hasPinCode && !isMultiSegment) {
+        fullAddress = fullAddress ? `${fullAddress}, ${cleanCity}` : cleanCity;
+      }
+    }
+
     if (fullAddress || mapsUrl) {
       locationBlock = `\n\n📍 *Clinic Address:*\n${fullAddress || cleanClinic}`;
       if (mapsUrl && mapsUrl.startsWith("http")) {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { resolveClinicTimezone, createClinicAppointmentDateTimes } from "@/lib/timezone"
 import { whatsappManager } from "@/lib/whatsapp-manager"
 import { formatAppointmentConfirmationCard } from "@/lib/whatsapp-formatter"
+import { resolveExactClinicLocation } from "@/lib/maps-helper"
 
 export async function POST(req: Request) {
   try {
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid service" }, { status: 400 })
     }
 
-    // Fetch doctor's clinic timezone
+    // Fetch doctor's clinic timezone & profile details
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       select: {
@@ -78,7 +79,13 @@ export async function POST(req: Request) {
         specialty: true,
         address: true,
         city: true,
-        enableBookingConfirmation: true
+        googleReviewLink: true,
+        enableBookingConfirmation: true,
+        gbpAccounts: {
+          orderBy: { lastSyncAt: "desc" },
+          take: 1,
+          select: { insightsData: true }
+        }
       }
     });
     const clinicTz = resolveClinicTimezone(doctor?.timezone);
@@ -115,9 +122,7 @@ export async function POST(req: Request) {
     // Send formatted WhatsApp appointment confirmation if connected
     try {
       if (whatsappManager.isConnected(doctorId) && doctor?.enableBookingConfirmation !== false && patient.phone) {
-        const mapsSearchUrl = doctor?.address
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([doctor.clinicName, doctor.address, doctor.city].filter(Boolean).join(", "))}`
-          : null;
+        const resolvedLocation = resolveExactClinicLocation(doctor);
 
         const messageText = formatAppointmentConfirmationCard({
           patient: {
@@ -132,9 +137,9 @@ export async function POST(req: Request) {
           startTime,
           clinicTz,
           consultationFee: service.price,
-          address: doctor?.address,
-          city: doctor?.city,
-          mapsUrl: mapsSearchUrl
+          address: resolvedLocation.address,
+          city: null,
+          mapsUrl: resolvedLocation.mapsUrl
         });
         await whatsappManager.sendMessage(doctorId, patient.phone, messageText, "Clinic");
       }

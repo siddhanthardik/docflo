@@ -120,6 +120,26 @@ export async function POST(req: Request) {
         },
       });
 
+      // Synchronize verified GMB clinic address, city, state, and pincode to Doctor profile
+      if (profileInsights.formattedAddress) {
+        const storefront = discovered.location.storefrontAddress;
+        const gmbCity = storefront?.locality || storefront?.administrativeArea || null;
+        const gmbState = storefront?.administrativeArea || null;
+        const gmbPincode = storefront?.postalCode || null;
+        const gmbReviewLink = profileInsights.newReviewUri || null;
+
+        await prisma.doctor.update({
+          where: { id: doctorId },
+          data: {
+            address: profileInsights.formattedAddress,
+            ...(gmbCity ? { city: gmbCity } : {}),
+            ...(gmbState ? { state: gmbState } : {}),
+            ...(gmbPincode ? { pincode: gmbPincode } : {}),
+            ...(gmbReviewLink ? { googleReviewLink: gmbReviewLink } : {}),
+          }
+        }).catch(err => console.warn("[GBP Save] Failed to sync verified address to doctor:", err));
+      }
+
       const today = new Date();
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

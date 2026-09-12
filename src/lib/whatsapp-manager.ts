@@ -18,6 +18,7 @@ import {
   extractAgreedTimeFromHistory
 } from '@/lib/timezone';
 import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
+import { resolveExactClinicLocation } from '@/lib/maps-helper';
 import { formatPatientSalutation } from '@/lib/salutation';
 import { VaccinationService } from '@/services/vaccination.service';
 import { sanitizePersonName, isBotTemplateEcho } from '@/lib/utils';
@@ -795,6 +796,7 @@ class WhatsAppManager {
                 specialty: true,
                 address: true,
                 city: true,
+                googleReviewLink: true,
                 createdAt: true,
                 subscriptionStatus: true,
                 subscriptionExpiry: true,
@@ -827,8 +829,21 @@ class WhatsAppManager {
             const gbpInsights = (gbpAccount?.insightsData && typeof gbpAccount.insightsData === 'object')
               ? gbpAccount.insightsData as Record<string, any>
               : null;
-            const clinicAddress = gbpInsights?.formattedAddress as string | null ?? null;
-            const clinicMapsUri = gbpInsights?.mapsUri as string | null ?? null;
+
+            const resolvedClinicLocation = resolveExactClinicLocation(doctorInfo, gbpAccount);
+            const clinicAddress = resolvedClinicLocation.address;
+            const clinicMapsUri = resolvedClinicLocation.mapsUrl;
+
+            // Auto-heal doctor record if GMB has verified address and doctor table is contradictory or missing address
+            if (gbpInsights?.formattedAddress && (doctorInfo?.address !== gbpInsights.formattedAddress || (doctorInfo?.city && !gbpInsights.formattedAddress.toLowerCase().includes(doctorInfo.city.toLowerCase())))) {
+              prisma.doctor.update({
+                where: { id: doctorId },
+                data: {
+                  address: gbpInsights.formattedAddress,
+                  city: gbpInsights.formattedAddress.split(",").slice(-3, -2)[0]?.trim() || undefined,
+                }
+              }).catch(() => {});
+            }
 
             const clinicWebsite = await prisma.clinicWebsite.findUnique({
               where: { doctorId },
@@ -2164,7 +2179,7 @@ class WhatsAppManager {
                         clinicTz: clinicTz,
                         consultationFee: matchedPractitioner?.consultationFee,
                         address: clinicAddress || doctorInfo?.address,
-                        city: doctorInfo?.city,
+                        city: clinicAddress ? null : doctorInfo?.city,
                         mapsUrl: clinicMapsUri
                       });
                       await this.sendOutboundPatientMessage(sock, doctorId, prefilledPhone, ptMsg, newPatient.id, `${newPatient.firstName} ${newPatient.lastName}`.trim());
@@ -2201,7 +2216,7 @@ class WhatsAppManager {
                             clinicTz: clinicTz,
                             consultationFee: matchedPractitioner?.consultationFee,
                             address: clinicAddress || doctorInfo?.address,
-                            city: doctorInfo?.city,
+                            city: clinicAddress ? null : doctorInfo?.city,
                             mapsUrl: clinicMapsUri
                           });
                           await this.sendOutboundPatientMessage(sock, doctorId, pt.phone, ptMsg, pt.id, `${pt.firstName} ${pt.lastName}`.trim());
@@ -2426,7 +2441,7 @@ class WhatsAppManager {
                         clinicTz: clinicTz,
                         consultationFee: resPractitioner?.consultationFee,
                         address: clinicAddress || doctorInfo?.address,
-                        city: doctorInfo?.city,
+                        city: clinicAddress ? null : doctorInfo?.city,
                         mapsUrl: clinicMapsUri
                       });
 
@@ -2500,7 +2515,7 @@ class WhatsAppManager {
                         clinicTz: clinicTz,
                         consultationFee: pDoc?.consultationFee,
                         address: clinicAddress || doctorInfo?.address,
-                        city: doctorInfo?.city,
+                        city: clinicAddress ? null : doctorInfo?.city,
                         mapsUrl: clinicMapsUri
                       });
 
@@ -2979,7 +2994,7 @@ class WhatsAppManager {
                           consultationFee: chosenPractitioner?.consultationFee,
                           isTele: isTele,
                           address: clinicAddress || doctorInfo?.address,
-                          city: doctorInfo?.city,
+                          city: clinicAddress ? null : doctorInfo?.city,
                           mapsUrl: clinicMapsUri
                         });
 

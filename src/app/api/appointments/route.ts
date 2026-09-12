@@ -4,6 +4,7 @@ import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { resolveClinicTimezone, getClinicTimezoneOffset, getClinicDateOnlyString, getClinicDayBounds } from "@/lib/timezone";
 import { formatAppointmentConfirmationCard } from "@/lib/whatsapp-formatter";
+import { resolveExactClinicLocation } from "@/lib/maps-helper";
 
 // ---------- Helper functions ----------
 
@@ -314,15 +315,19 @@ export async function POST(req: Request) {
           clinicName: true,
           address: true,
           city: true,
+          googleReviewLink: true,
           enableBookingConfirmation: true,
-          specialty: true
+          specialty: true,
+          gbpAccounts: {
+            orderBy: { lastSyncAt: "desc" },
+            take: 1,
+            select: { insightsData: true }
+          }
         }
       });
 
       if (!isWalkIn && whatsappManager.isConnected(doctorId) && doctorRecord?.enableBookingConfirmation !== false && appointment.patient.phone && status === "CONFIRMED") {
-        const mapsSearchUrl = doctorRecord?.address
-          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([doctorRecord.clinicName, doctorRecord.address, doctorRecord.city].filter(Boolean).join(", "))}`
-          : null;
+        const resolvedLocation = resolveExactClinicLocation(doctorRecord);
 
         const messageText = formatAppointmentConfirmationCard({
           patient: appointment.patient,
@@ -333,9 +338,9 @@ export async function POST(req: Request) {
           clinicTz: doctorTimezone,
           consultationFee: appointment.practitioner?.consultationFee,
           isTele: type === "TELE_CONSULTATION",
-          address: doctorRecord?.address,
-          city: doctorRecord?.city,
-          mapsUrl: mapsSearchUrl,
+          address: resolvedLocation.address,
+          city: null,
+          mapsUrl: resolvedLocation.mapsUrl,
         });
 
         const patientPhone = appointment.patient.phone;
