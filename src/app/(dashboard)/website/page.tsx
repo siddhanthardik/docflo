@@ -2168,15 +2168,29 @@ export default function ElementorComposerPage() {
                       <div className="space-y-2 pt-2 border-t border-slate-100">
                         <div className="flex items-center justify-between">
                           <label className="font-bold text-slate-700">Facility Photos</label>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => galleryUploadRef.current?.click()}
-                            className="h-7 text-[11px] font-bold rounded-lg"
-                          >
-                            <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setStockTargetField("gallery");
+                                setStockModalOpen(true);
+                              }}
+                              className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200 rounded-lg cursor-pointer"
+                            >
+                              <Sparkles className="w-3 h-3 mr-1 text-purple-600" /> Stock Photos
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => galleryUploadRef.current?.click()}
+                              className="h-7 text-[11px] font-bold rounded-lg cursor-pointer"
+                            >
+                              <Upload className="w-3 h-3 mr-1 text-blue-600" /> Add Photo
+                            </Button>
+                          </div>
                           <input
                             ref={galleryUploadRef}
                             type="file"
@@ -3090,13 +3104,23 @@ export default function ElementorComposerPage() {
         isOpen={quickStartModalOpen}
         onClose={() => setQuickStartModalOpen(false)}
         currentData={siteData}
-        onApplySynthesizedSite={(synthesized) => {
-          setSiteData(synthesized);
-          pushHistory(synthesized);
+        onApplySynthesizedSite={(synthesized: any) => {
+          const formatted: ClinicWebsiteData = {
+            ...siteData,
+            ...synthesized,
+            doctor: synthesized.doctor || synthesized.doctorInfo || siteData.doctor,
+            sections: synthesized.sections || siteData.sections,
+            customServices: synthesized.customServices || siteData.customServices,
+            customFaqs: synthesized.customFaqs || siteData.customFaqs,
+            galleryImages: synthesized.galleryImages || siteData.galleryImages,
+          };
+          setSiteData(formatted);
+          pushHistory(formatted);
           setSelectedSectionId("sec_hero");
+          setSidebarTab("elements");
           toast({
-            title: "🎉 5-Minute Clinic Site Generated!",
-            description: "Tailored treatments, FAQs, trust stats, and theme applied. Customize or publish live!",
+            title: "🎉 Clinic Website Auto-Built in 45s!",
+            description: "Imported Google photos, verified reviews, doctor biography, and WhatsApp booking.",
           });
         }}
       />
