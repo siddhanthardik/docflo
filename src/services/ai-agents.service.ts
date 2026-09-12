@@ -93,6 +93,14 @@ export function evaluateClinicalTriage(
   }
   const lowerMsg = message.toLowerCase();
 
+  // 0. Safety Shield: Ignore incoming echoes of the bot's own emergency alerts/notices
+  if (/⚠️\s*\*.*?(?:emergency|surgical|pediatric).*?(?:notice|alert)\*/i.test(message) ||
+      /If the patient is in critical condition or experiencing an acute emergency/i.test(message) ||
+      /please visit the nearest hospital emergency room immediately/i.test(message) ||
+      /proceed immediately to the nearest.*emergency.*department/i.test(message)) {
+    return { level: "ROUTINE", isEmergency: false };
+  }
+
   // 1. Check for colloquial, personal, family, or travel emergency phrases
   const isColloquialOrPersonal =
     /\b(family|personal|office|work|travel|flight|train|home|ghar)\s*emergency\b/i.test(lowerMsg) ||

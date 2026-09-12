@@ -20,7 +20,7 @@ import {
 import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
 import { formatPatientSalutation } from '@/lib/salutation';
 import { VaccinationService } from '@/services/vaccination.service';
-import { sanitizePersonName } from '@/lib/utils';
+import { sanitizePersonName, isBotTemplateEcho } from '@/lib/utils';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -82,6 +82,116 @@ class WhatsAppManager {
   > = new Map();
 
   private processedMessageIds: Map<string, number> = new Map(); // msgId -> timestamp (5m TTL)
+
+  // Platform-wide doctor/clinic numbers cache to prevent cross-clinic bot-to-bot loops
+  private platformDoctorPhonesCache: Set<string> = new Set(); // "doctorId:last10"
+  private lastPlatformPhonesFetch: number = 0;
+
+  // Rate-limiting and debounce per patient phone: `${doctorId}:${patientPhone}`
+  private aiReplyHistory: Map<string, number[]> = new Map(); // key -> timestamps[]
+  private lastAiReplyTime: Map<string, number> = new Map(); // key -> timestamp
+
+  // Checks if a phone number belongs to ANY clinic, doctor, or staff registered on Gyrex
+  async isPlatformClinicPhone(rawPhone: string, currentDoctorId: string): Promise<boolean> {
+    if (!rawPhone) return false;
+    const cleanDigits = rawPhone.replace(/\D/g, '');
+    if (cleanDigits.length < 10) return false;
+    const last10 = cleanDigits.slice(-10);
+
+    const now = Date.now();
+    if (now - this.lastPlatformPhonesFetch > 2 * 60 * 1000 || this.platformDoctorPhonesCache.size === 0) {
+      try {
+        const doctors = await prisma.doctor.findMany({
+          where: { phone: { not: null } },
+          select: { id: true, phone: true }
+        });
+        const practitioners = await prisma.practitioner.findMany({
+          where: { phone: { not: null } },
+          select: { doctorId: true, phone: true }
+        });
+        const staff = await prisma.staffMember.findMany({
+          where: { phone: { not: null } },
+          select: { doctorId: true, phone: true }
+        });
+
+        this.platformDoctorPhonesCache.clear();
+        for (const d of doctors) {
+          if (d.phone) {
+            const digits = d.phone.replace(/\D/g, '');
+            if (digits.length >= 10) {
+              this.platformDoctorPhonesCache.add(`${d.id}:${digits.slice(-10)}`);
+            }
+          }
+        }
+        for (const p of practitioners) {
+          if (p.phone) {
+            const digits = p.phone.replace(/\D/g, '');
+            if (digits.length >= 10) {
+              this.platformDoctorPhonesCache.add(`${p.doctorId}:${digits.slice(-10)}`);
+            }
+          }
+        }
+        for (const s of staff) {
+          if (s.phone) {
+            const digits = s.phone.replace(/\D/g, '');
+            if (digits.length >= 10) {
+              this.platformDoctorPhonesCache.add(`${s.doctorId}:${digits.slice(-10)}`);
+            }
+          }
+        }
+
+        for (const [docId, sock] of this.sockets.entries()) {
+          const userPhone = sock?.user?.id?.split(':')[0]?.replace(/\D/g, '');
+          if (userPhone && userPhone.length >= 10) {
+            this.platformDoctorPhonesCache.add(`${docId}:${userPhone.slice(-10)}`);
+          }
+        }
+
+        this.lastPlatformPhonesFetch = now;
+      } catch (err) {
+        console.warn('[WhatsAppManager] Failed to refresh platform doctor phones cache:', err);
+      }
+    }
+
+    for (const entry of this.platformDoctorPhonesCache) {
+      const [docId, phoneLast10] = entry.split(':');
+      if (phoneLast10 === last10 && docId !== currentDoctorId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Rate limiter & cooldown check: minimum 4s debounce and max 3 replies in 60s per sender
+  private checkAiRateLimit(doctorId: string, patientPhone: string): { allowed: boolean; reason?: string } {
+    const key = `${doctorId}:${patientPhone.slice(-10)}`;
+    const now = Date.now();
+
+    // 1. Debounce: minimum 4 seconds between AI replies to same phone
+    const lastReply = this.lastAiReplyTime.get(key) || 0;
+    if (now - lastReply < 4000) {
+      return { allowed: false, reason: `Cooldown active (${Math.ceil((4000 - (now - lastReply)) / 1000)}s)` };
+    }
+
+    // 2. Velocity limit: max 3 AI replies in 60 seconds
+    const timestamps = (this.aiReplyHistory.get(key) || []).filter(t => now - t < 60000);
+    if (timestamps.length >= 3) {
+      return { allowed: false, reason: `Max 3 AI replies per minute exceeded (${timestamps.length}/3)` };
+    }
+
+    return { allowed: true };
+  }
+
+  // Record an AI reply for rate limiting
+  private recordAiReply(doctorId: string, patientPhone: string) {
+    const key = `${doctorId}:${patientPhone.slice(-10)}`;
+    const now = Date.now();
+    this.lastAiReplyTime.set(key, now);
+    const timestamps = (this.aiReplyHistory.get(key) || []).filter(t => now - t < 60000);
+    timestamps.push(now);
+    this.aiReplyHistory.set(key, timestamps);
+  }
 
   private isDuplicateMessage(msgId?: string | null): boolean {
     if (!msgId) return false;
@@ -292,6 +402,8 @@ class WhatsAppManager {
           createdAt: sentDate,
         }
       });
+
+      this.recordAiReply(doctorId, normalizedPhone);
 
       return true;
     } catch (err) {
@@ -608,6 +720,12 @@ class WhatsAppManager {
           
           if (isSpam) {
             console.log(`[WhatsAppManager] Blocked incoming spam message from ${patientPhone}`);
+            continue; // Skip processing this message entirely
+          }
+
+          // --- Shield 2: Bot Template Echo Filter ---
+          if (isBotTemplateEcho(textMessage)) {
+            console.log(`[WhatsAppManager] 🛡️ Ignored incoming bot template echo from ${patientPhone}: "${textMessage.slice(0, 60)}..."`);
             continue; // Skip processing this message entirely
           }
 
@@ -1084,13 +1202,76 @@ class WhatsAppManager {
             const isAutoResponderEnabled = doctorInfo?.enableAIAutoResponder !== false && (agentConfig ? agentConfig.enabled : true);
 
             if (isAutoResponderEnabled) {
+              // ── Shield 1: Cross-Clinic Bot-to-Bot Loop Prevention ────────────
+              const isOtherPlatformClinic = await this.isPlatformClinicPhone(patientPhone, doctorId);
+              if (isOtherPlatformClinic) {
+                console.log(`[WhatsAppManager] 🛑 Cross-clinic bot loop blocked: ${patientPhone} belongs to another doctor/clinic on Gyrex. Bypassing AI auto-responder.`);
+                return;
+              }
+
+              // ── Shield 5: Self-Message / Note-to-Self Prevention ─────────────
+              const isOwnClinicPhone = isOwnerMatch || (sock.user?.id && this.isPhoneMatch(sock.user.id.split(':')[0], patientPhone));
+              if (isOwnClinicPhone) {
+                const lowerCmd = textMessage.toLowerCase();
+                const isDoctorCommand = /(?:running\s+)?\d+\s*(?:mins?|minutes?|hr|hour)\s+late|cancel\s+(?:all\s+)?(?:today'?s?|evening|morning)?\s*(?:opd|appointments?)|(?:pause|stop|block)\s+(?:new\s+)?(?:booking|patient|opd)|resume\s+(?:normal\s+)?opd/i.test(lowerCmd);
+                if (!isDoctorCommand) {
+                  console.log(`[WhatsAppManager] 👤 Self-message from clinic owner phone (${patientPhone}) without doctor command. Bypassing AI auto-responder.`);
+                  return;
+                }
+              }
+
+              // ── Shield 3: Sliding-Window Rate Limiter & Debounce Cooldown ────
+              const rateCheck = this.checkAiRateLimit(doctorId, patientPhone);
+              if (!rateCheck.allowed) {
+                console.log(`[WhatsAppManager] ⏳ AI Rate limit / cooldown triggered for ${patientPhone}: ${rateCheck.reason}. Skipping AI auto-reply.`);
+                return;
+              }
+
               const { AIAgentsService } = await import('@/services/ai-agents.service');
               
               const recentMessages = await prisma.chatMessage.findMany({
                 where: { conversationId: conversation.id },
                 orderBy: { createdAt: "desc" },
-                take: 10,
+                take: 12,
               });
+
+              // ── Shield 4: Consecutive AI Turn Circuit Breaker ─────────────────
+              if (!isStaff) {
+                const recentOutgoing = recentMessages.filter(m => m.direction === "OUTGOING");
+                let consecutiveAiCount = 0;
+                for (const m of recentOutgoing) {
+                  if (m.senderName === "AI Assistant" || m.senderName === "Clinic") {
+                    consecutiveAiCount++;
+                  } else {
+                    break;
+                  }
+                }
+
+                const isExplicitBookingIntent = /appointment|book|schedule|consult|slot|timing|fee|cancel|reschedule/i.test(textMessage);
+                if (consecutiveAiCount >= 6 && !isExplicitBookingIntent) {
+                  console.log(`[WhatsAppManager] 🛑 Circuit Breaker tripped: ${consecutiveAiCount} consecutive AI messages for ${patientPhone}. Halting automated replies.`);
+                  if (consecutiveAiCount === 6) {
+                    const safetyHandoff = `Thank you! I have shared your inquiry with our clinic front desk team. A staff member will respond to you shortly. 🙏`;
+                    await sock.sendMessage(remoteJid, { text: safetyHandoff });
+                    await prisma.chatMessage.create({
+                      data: {
+                        conversationId: conversation.id,
+                        direction: "OUTGOING",
+                        messageType: "text",
+                        content: safetyHandoff,
+                        senderName: "AI Assistant",
+                        createdAt: messageDate,
+                      }
+                    });
+                    await prisma.conversation.update({
+                      where: { id: conversation.id },
+                      data: { lastMessageAt: messageDate }
+                    });
+                    this.recordAiReply(doctorId, patientPhone);
+                  }
+                  return;
+                }
+              }
 
               const conversationHistoryStrings: string[] = recentMessages
                 .slice()
@@ -2897,6 +3078,8 @@ class WhatsAppManager {
                   where: { id: conversation.id },
                   data: { lastMessageAt: messageDate }
                 });
+
+                this.recordAiReply(doctorId, patientPhone);
               }
             }
           } catch (err: any) {
