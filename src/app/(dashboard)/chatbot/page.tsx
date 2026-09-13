@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck, Compass, Target, Radar, TestTube, FlaskConical } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck, Compass, Target, Radar, TestTube, FlaskConical, FileSpreadsheet, UploadCloud, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -244,6 +245,337 @@ export default function AIAgentsHubPage() {
       toast({ title: error.message || "Failed to save configuration", variant: "destructive" });
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // 📊 Excel / CSV Diagnostic Rate List Handlers
+  // ─────────────────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownloadTemplate = () => {
+    try {
+      const sampleData = [
+        {
+          "Test Name": "CBC (Complete Blood Count)",
+          "Abbreviation": "CBC",
+          "Sample Type": "EDTA Whole Blood",
+          "TAT (Report Time)": "Same Day (4 Hours)",
+          "Normal Price (₹)": 350,
+          "CGHS Rate (₹)": 135,
+          "ECHS Rate (₹)": 135,
+        },
+        {
+          "Test Name": "Fasting Blood Sugar (Glucose Fasting)",
+          "Abbreviation": "FBS",
+          "Sample Type": "Fluoride Plasma",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 100,
+          "CGHS Rate (₹)": 40,
+          "ECHS Rate (₹)": 40,
+        },
+        {
+          "Test Name": "Lipid Profile Comprehensive",
+          "Abbreviation": "LIPID",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 750,
+          "CGHS Rate (₹)": 250,
+          "ECHS Rate (₹)": 240,
+        },
+        {
+          "Test Name": "Thyroid Profile (Total T3, Total T4, TSH)",
+          "Abbreviation": "TFT",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 500,
+          "CGHS Rate (₹)": 200,
+          "ECHS Rate (₹)": 200,
+        },
+        {
+          "Test Name": "Liver Function Test (LFT)",
+          "Abbreviation": "LFT",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 700,
+          "CGHS Rate (₹)": 250,
+          "ECHS Rate (₹)": 250,
+        },
+        {
+          "Test Name": "Kidney Function Test (KFT / RFT)",
+          "Abbreviation": "KFT",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 700,
+          "CGHS Rate (₹)": 250,
+          "ECHS Rate (₹)": 250,
+        },
+        {
+          "Test Name": "17-OH Progesterone",
+          "Abbreviation": "17-OH P",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Next Day",
+          "Normal Price (₹)": 1400,
+          "CGHS Rate (₹)": 600,
+          "ECHS Rate (₹)": 600,
+        },
+        {
+          "Test Name": "Vitamin D (25-Hydroxy)",
+          "Abbreviation": "VIT D",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 1200,
+          "CGHS Rate (₹)": 550,
+          "ECHS Rate (₹)": 550,
+        },
+        {
+          "Test Name": "Vitamin B12 (Cyanocobalamin)",
+          "Abbreviation": "VIT B12",
+          "Sample Type": "Serum",
+          "TAT (Report Time)": "Same Day",
+          "Normal Price (₹)": 900,
+          "CGHS Rate (₹)": 350,
+          "ECHS Rate (₹)": 350,
+        },
+        {
+          "Test Name": "Ultrasound Whole Abdomen",
+          "Abbreviation": "USG ABDOMEN",
+          "Sample Type": "In-Person Scan",
+          "TAT (Report Time)": "Immediate (After Scan)",
+          "Normal Price (₹)": 1200,
+          "CGHS Rate (₹)": 450,
+          "ECHS Rate (₹)": 450,
+        },
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      ws["!cols"] = [
+        { wch: 38 },
+        { wch: 16 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 16 },
+        { wch: 16 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rate List Template");
+      XLSX.writeFile(wb, "Diagnostic_Rate_List_Template.xlsx");
+      toast({
+        title: "Template Downloaded! 📊",
+        description: "Diagnostic_Rate_List_Template.xlsx downloaded. Fill your tests and click Upload Excel.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Failed to generate template", variant: "destructive" });
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        throw new Error("No sheet found in uploaded spreadsheet");
+      }
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+      if (rows.length === 0) {
+        toast({ title: "Empty Spreadsheet", description: "No rows found in the uploaded file.", variant: "destructive" });
+        return;
+      }
+
+      // Column key matching
+      const sampleRow = rows[0] || {};
+      const keys = Object.keys(sampleRow);
+
+      const findKey = (patterns: RegExp[]) => {
+        return keys.find(k => patterns.some(p => p.test(k.trim())));
+      };
+
+      const testNameKey = findKey([/test\s*name/i, /^test$/i, /investigation/i, /parameter/i, /profile/i, /^name$/i]);
+      const abbrKey = findKey([/abbreviation/i, /^abbr$/i, /^code$/i, /short\s*name/i]);
+      const sampleTypeKey = findKey([/sample\s*type/i, /^sample$/i, /specimen/i]);
+      const tatKey = findKey([/tat/i, /turnaround/i, /delivery/i, /report\s*time/i]);
+
+      const normalPriceKey = findKey([/normal\s*(?:price|rate)/i, /^price$/i, /^rate$/i, /^mrp$/i, /charges?/i, /standard\s*(?:price|rate)/i]);
+      const cghsPriceKey = findKey([/cghs/i, /govt/i]);
+      const echsPriceKey = findKey([/echs/i]);
+
+      if (!testNameKey) {
+        toast({
+          title: "Missing 'Test Name' Column",
+          description: "Could not find a column named 'Test Name', 'Test', or 'Investigation' in your sheet.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const formatLine = (testName: string, abbr: string, sample: string, tat: string, price: any) => {
+        const cleanPrice = String(price ?? "").replace(/[^\d.]/g, '').trim();
+        const priceStr = cleanPrice ? `₹${cleanPrice}` : "Rate on request";
+        const parts = [`• ${testName}${abbr ? ` (${abbr})` : ''}: ${priceStr}`];
+        const extras: string[] = [];
+        if (sample) extras.push(`Sample: ${sample}`);
+        if (tat) extras.push(`TAT: ${tat}`);
+        if (extras.length > 0) {
+          parts.push(` [${extras.join(", ")}]`);
+        }
+        return parts.join("");
+      };
+
+      const normalLines: string[] = [];
+      const cghsLines: string[] = [];
+      const echsLines: string[] = [];
+      const genericLines: string[] = [];
+
+      let importedCount = 0;
+
+      for (const row of rows) {
+        const testName = String(row[testNameKey] || "").trim();
+        if (!testName) continue;
+        importedCount++;
+
+        const abbr = abbrKey ? String(row[abbrKey] || "").trim() : "";
+        const sample = sampleTypeKey ? String(row[sampleTypeKey] || "").trim() : "";
+        const tat = tatKey ? String(row[tatKey] || "").trim() : "";
+
+        if (normalPriceKey && row[normalPriceKey] !== undefined && String(row[normalPriceKey]).trim() !== "") {
+          normalLines.push(formatLine(testName, abbr, sample, tat, row[normalPriceKey]));
+        }
+
+        if (cghsPriceKey && row[cghsPriceKey] !== undefined && String(row[cghsPriceKey]).trim() !== "") {
+          cghsLines.push(formatLine(testName, abbr, sample, tat, row[cghsPriceKey]));
+        }
+
+        if (echsPriceKey && row[echsPriceKey] !== undefined && String(row[echsPriceKey]).trim() !== "") {
+          echsLines.push(formatLine(testName, abbr, sample, tat, row[echsPriceKey]));
+        }
+
+        // Generic fallback if spreadsheet has a single rate column
+        const generalPrice = normalPriceKey ? row[normalPriceKey] : (cghsPriceKey ? row[cghsPriceKey] : row[keys.find(k => /price|rate|cost/i.test(k)) || ""]);
+        genericLines.push(formatLine(testName, abbr, sample, tat, generalPrice));
+      }
+
+      const updatedDraft = { ...configDraft };
+
+      if (cghsLines.length > 0 || echsLines.length > 0) {
+        // Multi-column spreadsheet (Normal + CGHS / ECHS)
+        if (normalLines.length > 0) {
+          updatedDraft.rateCardNormal = normalLines.join("\n");
+          updatedDraft.rateCardText = updatedDraft.rateCardNormal;
+        }
+        if (cghsLines.length > 0) {
+          updatedDraft.rateCardCGHS = cghsLines.join("\n");
+          updatedDraft.acceptsGovtPanels = true;
+        }
+        if (echsLines.length > 0) {
+          updatedDraft.rateCardECHS = echsLines.join("\n");
+          updatedDraft.acceptsGovtPanels = true;
+        }
+        setConfigDraft(updatedDraft);
+        toast({
+          title: `✅ Imported ${importedCount} Tests Multi-Tier!`,
+          description: `Extracted Normal (${normalLines.length}), CGHS (${cghsLines.length}), and ECHS (${echsLines.length}) rate lists. Click 'Save Agent Settings' to deploy.`,
+        });
+      } else {
+        // Single tier sheet: populate whichever category is currently selected
+        const content = (normalLines.length > 0 ? normalLines : genericLines).join("\n");
+        if (selectedRateCategory === "NORMAL") {
+          updatedDraft.rateCardNormal = content;
+          updatedDraft.rateCardText = content;
+        } else if (selectedRateCategory === "CGHS") {
+          updatedDraft.rateCardCGHS = content;
+        } else if (selectedRateCategory === "ECHS") {
+          updatedDraft.rateCardECHS = content;
+        } else {
+          updatedDraft.rateCardOther = content;
+        }
+        setConfigDraft(updatedDraft);
+        toast({
+          title: `✅ Imported ${importedCount} Tests!`,
+          description: `Loaded ${importedCount} tests into ${selectedRateCategory} rate list. Click 'Save Agent Settings' to deploy.`,
+        });
+      }
+    } catch (error: any) {
+      console.error("[RateCardUpload] Error:", error);
+      toast({
+        title: "Failed to Import Spreadsheet",
+        description: error?.message || "Please ensure the file is a valid .xlsx or .csv format.",
+        variant: "destructive"
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleExportCurrentRates = () => {
+    try {
+      const activeText = 
+        selectedRateCategory === "NORMAL" ? (configDraft.rateCardNormal || configDraft.rateCardText || "") :
+        selectedRateCategory === "CGHS" ? (configDraft.rateCardCGHS || "") :
+        selectedRateCategory === "ECHS" ? (configDraft.rateCardECHS || "") :
+        (configDraft.rateCardOther || "");
+
+      if (!activeText.trim()) {
+        toast({ title: "Nothing to Export", description: `The ${selectedRateCategory} rate list is currently empty.`, variant: "destructive" });
+        return;
+      }
+
+      const lines = activeText.split("\n").filter((l: string) => l.trim().length > 0);
+      const rows = lines.map((line: string, idx: number) => {
+        const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+        const priceMatch = clean.match(/^(.*?)(?:\s*\((.*?)\))?:\s*(?:₹|Rs\.?)?\s*([\d,]+)(?:\s*\[(.*?)\])?/i);
+        if (priceMatch) {
+          const testName = priceMatch[1]?.trim() || clean;
+          const abbr = priceMatch[2]?.trim() || "";
+          const price = priceMatch[3]?.replace(/,/g, '').trim() || "";
+          const extra = priceMatch[4] || "";
+          const sampleMatch = extra.match(/Sample:\s*([^,\]]+)/i);
+          const tatMatch = extra.match(/TAT:\s*([^,\]]+)/i);
+
+          return {
+            "S. No": idx + 1,
+            "Test Name": testName,
+            "Abbreviation": abbr,
+            "Sample Type": sampleMatch ? sampleMatch[1].trim() : "",
+            "TAT (Report Time)": tatMatch ? tatMatch[1].trim() : "",
+            [`Price (₹) - ${selectedRateCategory}`]: Number(price) || price,
+          };
+        }
+
+        return {
+          "S. No": idx + 1,
+          "Test / Line": clean
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [
+        { wch: 8 },
+        { wch: 38 },
+        { wch: 16 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 18 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `${selectedRateCategory}_Rates`);
+      XLSX.writeFile(wb, `Diagnostic_${selectedRateCategory}_Rates.xlsx`);
+      toast({
+        title: "Export Complete! 📁",
+        description: `Exported ${rows.length} tests to Diagnostic_${selectedRateCategory}_Rates.xlsx.`,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Failed to export rates", variant: "destructive" });
     }
   };
 
@@ -871,7 +1203,65 @@ export default function AIAgentsHubPage() {
 
                   {/* Rate Card Selection (Normal, CGHS, ECHS, Other) */}
                   <div className="space-y-3 min-w-0 p-3 sm:p-4 bg-white rounded-xl border border-indigo-100 shadow-xs">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    {/* Excel/CSV Import & Template Tools */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-gradient-to-r from-indigo-50/90 via-purple-50/50 to-blue-50/60 border border-indigo-200/80 rounded-xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <FileSpreadsheet className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-indigo-950 flex items-center gap-1.5 truncate">
+                            <span>Excel & CSV Rate Card Automation</span>
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">Fast Bulk Setup</span>
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Upload your lab rate card (.xlsx/.csv) or download our standardized template.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept=".xlsx,.xls,.csv"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="h-8 text-xs font-semibold bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 shadow-2xs gap-1.5"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>Upload Excel / CSV</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleDownloadTemplate}
+                          className="h-8 text-xs font-medium text-indigo-900 hover:text-indigo-950 hover:bg-indigo-100/60 gap-1.5"
+                        >
+                          <Download className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Download Template</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleExportCurrentRates}
+                          className="h-8 text-xs font-medium text-slate-600 hover:text-indigo-900 hover:bg-indigo-50/60 gap-1.5"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Export Rates</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                       <div>
                         <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                           <span>Select Rate List to View & Edit</span>
