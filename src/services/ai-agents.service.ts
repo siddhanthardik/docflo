@@ -1373,6 +1373,12 @@ export class AIAgentsService {
         return `I am the clinic receptionist for ${clinicName} (${doctorName}). I can only assist with clinic appointments, consultation timings, and clinic services. How may I help you with your appointment? 🙏`;
       }
 
+      // 🛡️ SPAM & SPORTS BROADCAST GUARD: If message is an obvious sports broadcast or lottery/betting spam, return [NO_REPLY]
+      const isBlatantSpam = /\b(derby score|prediction|win prizes|leaderboard|betting|casino|jackpot|crypto|earn money|telegram channel|fantasy cricket|dream11|mancity\.co|fcbarcelona|barça xi|city\+)\b/i.test(incomingMessage);
+      if (isBlatantSpam) {
+        return "[NO_REPLY]";
+      }
+
       const startTime = Date.now();
       const nowClinic = new Date();
       const tomorrowClinic = new Date(nowClinic.getTime() + 24 * 60 * 60 * 1000);
@@ -2101,6 +2107,7 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
 - SCRIPT MATCHING:
   * If the patient's message above is written in English/Latin letters (e.g., Romanized Bengali "Amar baba to bangla hi jane", "Apni ki amar songe bangla bolte parben", Romanized Hindi/Hinglish, Romanized Punjabi, etc.), your response MUST be in ROMAN/LATIN letters! DO NOT use native Bengali (বাংলা), Devanagari, or Gurmukhi script.
   * If the patient's message above is written in native script (বাংলা, देवनागरी, etc.), reply in that native script.
+- SPAM & BROADCAST SILENCE: If the patient's message is an unrelated promotional advertisement, sports match score/lineup, fantasy sports, lottery, or spam forward with zero medical intent, output ONLY "[NO_REPLY]".
 - Output only the receptionist's warm, direct reply:
       `;
 
@@ -2109,6 +2116,10 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
 
       const latency = Date.now() - startTime;
       console.log(`[AIAgentsService] 💬 Receptionist Response generated in ${latency}ms`);
+
+      if (aiReply.includes("[NO_REPLY]") || aiReply.trim() === "[NO_REPLY]") {
+        return "[NO_REPLY]";
+      }
 
       // Clean up any stray legacy disclaimers or repetitive prefixes
       aiReply = aiReply

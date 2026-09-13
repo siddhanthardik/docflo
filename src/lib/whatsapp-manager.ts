@@ -668,6 +668,23 @@ class WhatsAppManager {
         }
 
         const remoteJid = msg.key.remoteJid;
+        if (!remoteJid) continue;
+
+        // 🛡️ PROTOCOL-LEVEL ZERO-TOKEN GATEKEEPER:
+        // Immediately drop non-patient sources (Channels/Newsletters, Groups, Broadcasts, and 18-digit server JIDs)
+        // BEFORE media downloads, Whisper audio transcriptions, or database queries!
+        const isNewsletter = remoteJid.endsWith('@newsletter') || remoteJid.includes('@newsletter');
+        const isGroup = remoteJid.endsWith('@g.us') || remoteJid.includes('@g.us') || Boolean(msg.key.participant);
+        const isBroadcast = remoteJid.includes('@broadcast');
+        const rawJidDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+        const isServerChannelId = rawJidDigits.startsWith('120363');
+        const isInvalidPhoneLength = rawJidDigits.length > 15 || (rawJidDigits.length < 7 && rawJidDigits !== '0');
+
+        if (isNewsletter || isGroup || isBroadcast || isServerChannelId || isInvalidPhoneLength) {
+          // Silently drop non-patient broadcasts and channels with 0 token spend
+          continue;
+        }
+
         let textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
         // Extract true message delivery timestamp from WhatsApp (never use arbitrary server time)
@@ -761,7 +778,7 @@ class WhatsAppManager {
           }
         }
 
-        if (remoteJid && textMessage && !remoteJid.includes('@g.us') && !remoteJid.includes('status@broadcast')) {
+        if (remoteJid && textMessage) {
           let rawPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@lid', '');
           
           if (remoteJid.includes('@lid')) {
@@ -769,19 +786,54 @@ class WhatsAppManager {
           }
           
           const patientPhone = this.normalizePhone(rawPhone);
+          const cleanPhoneDigits = patientPhone.replace(/\D/g, '');
+
+          // Double check normalized phone against invalid or 18-digit channel IDs
+          if (cleanPhoneDigits.startsWith('120363') || cleanPhoneDigits.length > 15 || cleanPhoneDigits.length < 7) {
+            console.log(`[WhatsAppManager] 🛡️ Ignored message from invalid/channel phone: ${patientPhone}`);
+            continue;
+          }
+
           console.log(`[WhatsAppManager] Message from ${patientPhone} (raw: ${remoteJid}) to doctor ${doctorId}: ${textMessage}`);
 
-          // --- Spam Filter ---
-          const spamKeywords = ["balde vs gavi", "keep playing", "ow.ly", "youtu.be", "bit.ly", "t.me", "earn money", "crypto", "bitcoin", "casino"];
+          // --- Shield 1: Comprehensive Spam, Sports, Betting & Gaming Filter ---
+          const spamKeywords = [
+            "balde vs gavi", "keep playing", "ow.ly", "youtu.be", "bit.ly", "t.me", 
+            "earn money", "crypto", "bitcoin", "casino", "derby score", "leaderboard", 
+            "win prizes", "prediction", "match prediction", "betting", "lottery", 
+            "jackpot", "bonus cash", "click here 🔗", "telegram channel", "fantasy cricket", 
+            "dream11", "rummy", "online earning", "work from home earn", "subscribe to my channel",
+            "mancity.co", "mancity.com", "fcbarcelona", "barça xi", "city+"
+          ];
           const textLowerForSpam = textMessage.toLowerCase();
-          const isSpam = spamKeywords.some(keyword => textLowerForSpam.includes(keyword));
-          
-          if (isSpam) {
-            console.log(`[WhatsAppManager] Blocked incoming spam message from ${patientPhone}`);
+          const isSpamKeyword = spamKeywords.some(keyword => textLowerForSpam.includes(keyword));
+
+          // Shield 2: Bank OTPs, Carrier SMS forwards, Transaction Alerts
+          const isOtpOrBankingSms = /\b(your otp is|one time password|do not share this otp|credited with inr|debited by inr|account balance is inr|recharge successful|pack expired)\b/i.test(textMessage);
+
+          if (isSpamKeyword || isOtpOrBankingSms) {
+            console.log(`[WhatsAppManager] 🛡️ Blocked incoming spam/promotional message from ${patientPhone}: "${textMessage.slice(0, 60)}..."`);
             continue; // Skip processing this message entirely
           }
 
-          // --- Shield 2: Bot Template Echo Filter ---
+          // --- Shield 3: Unsolicited External Promotional Link Drops from Unknown Senders ---
+          const hasUrl = /https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9-]+\.(?:com|co|io|link|app|xyz|me|club|live|tv)\/[^\s]*/i.test(textMessage);
+          if (hasUrl) {
+            const clinicalKeywords = [
+              "doctor", "dr.", "appointment", "clinic", "hospital", "consult", "consultation",
+              "fever", "cough", "cold", "pain", "headache", "vomiting", "diarrhea", "rash",
+              "baby", "child", "infant", "pediatric", "bache", "bimar", "dawai", "medicine",
+              "report", "test", "scan", "ultrasound", "blood", "cbc", "kft", "lft", "timing",
+              "fees", "opd", "morning", "evening", "slot", "schedule", "visit", "vaccine", "vaccination"
+            ];
+            const hasClinicalIntent = clinicalKeywords.some(kw => textLowerForSpam.includes(kw));
+            if (!hasClinicalIntent) {
+              console.log(`[WhatsAppManager] 🛡️ Blocked non-clinical link drop from ${patientPhone}: "${textMessage.slice(0, 60)}..."`);
+              continue;
+            }
+          }
+
+          // --- Shield 4: Bot Template Echo Filter ---
           if (isBotTemplateEcho(textMessage)) {
             console.log(`[WhatsAppManager] 🛡️ Ignored incoming bot template echo from ${patientPhone}: "${textMessage.slice(0, 60)}..."`);
             continue; // Skip processing this message entirely
@@ -1954,6 +2006,11 @@ class WhatsAppManager {
                   scheduleContext,
                   mediaAttachment
                 );
+              }
+
+              if (!aiReply || aiReply.includes("[NO_REPLY]") || aiReply.trim() === "[NO_REPLY]") {
+                console.log(`[WhatsAppManager] 🛡️ AI flagged incoming message from ${patientPhone} as non-patient/spam ([NO_REPLY]). Outbound message suppressed.`);
+                continue;
               }
 
               let finalAiReply = aiReply;
