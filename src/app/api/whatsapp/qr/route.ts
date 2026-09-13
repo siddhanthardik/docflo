@@ -39,6 +39,7 @@ export async function GET(req: Request) {
         status: "CONNECTING", 
         hasSavedSession: state.hasSavedSession, 
         retryCount: state.retryCount,
+        maxRetries: state.maxRetries,
         qr: null 
       }, { status: 200 });
     }
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
       status: "DISCONNECTED", 
       hasSavedSession: state.hasSavedSession, 
       retryCount: state.retryCount,
+      maxRetries: state.maxRetries,
       qr: null 
     }, { status: 200 });
   } catch (error: any) {

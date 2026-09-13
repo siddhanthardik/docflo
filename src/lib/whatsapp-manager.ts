@@ -530,7 +530,7 @@ class WhatsAppManager {
         },
         printQRInTerminal: false,
         generateHighQualityLinkPreview: false,
-        browser: Browsers.appropriate('Chrome'),
+        browser: Browsers.macOS('Desktop'),
         markOnlineOnConnect: false, // Do not instantly broadcast presence on connect (anti-bot safeguard)
         syncFullHistory: false,
         keepAliveIntervalMs: 30000,
@@ -589,29 +589,33 @@ class WhatsAppManager {
           if (shouldReconnect) {
             const currentAttempts = (this.reconnectAttempts.get(doctorId) || 0) + 1;
 
-            // Strict Anti-Ban Guard: After 2 rapid retries, alert doctor and release the connecting lock
-            // so UI can show a fresh QR code instead of hanging indefinitely on "Auto-Connecting"
-            const MAX_RAPID_RETRIES = 2;
+            // Humane Exponential Backoff: 5 progressive attempts across an ~8.7-minute recovery window
+            // Allows mobile devices (especially iPhones on standby / Wi-Fi transitions) to wake up and sync
+            // without hammering WhatsApp servers or triggering premature false disconnect alerts.
+            const MAX_RAPID_RETRIES = 5;
             if (currentAttempts > MAX_RAPID_RETRIES) {
-              console.warn(`[WhatsAppManager] Rapid retry cap reached for ${doctorId}. Marking as disconnected & alerting doctor.`);
+              console.warn(`[WhatsAppManager] Reconnect retry limit (${MAX_RAPID_RETRIES}) reached for ${doctorId}. Marking as disconnected & alerting clinic.`);
               this.reconnectAttempts.delete(doctorId);
               this.connectingDoctors.delete(doctorId);
-              this.notifyDoctorDisconnected(doctorId, `Failed to reconnect after ${MAX_RAPID_RETRIES} attempts`);
+              this.notifyDoctorDisconnected(doctorId, `Failed to reconnect after ${MAX_RAPID_RETRIES} attempts (~9 mins offline)`);
               return;
             }
 
             this.reconnectAttempts.set(doctorId, currentAttempts);
 
-            // Humane Anti-Ban Backoff: Attempt 1: 10s | Attempt 2: 25s
-            const backoffSchedule = [10000, 25000];
-            const delay = backoffSchedule[currentAttempts - 1] || 25000;
+            // Progressive schedule: 10s, 30s, 60s (1m), 120s (2m), 300s (5m)
+            const backoffSchedule = [10000, 30000, 60000, 120000, 300000];
+            const delay = backoffSchedule[currentAttempts - 1] || 300000;
+            const delayStr = delay >= 60000 ? `${Math.round(delay / 60000)}m` : `${Math.round(delay / 1000)}s`;
 
-            console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RAPID_RETRIES}) in ${Math.round(delay / 1000)}s...`);
+            console.log(`[WhatsAppManager] Scheduling humane auto-reconnect for ${doctorId} (attempt #${currentAttempts}/${MAX_RAPID_RETRIES}) in ${delayStr}...`);
             
             setTimeout(() => {
               this.connect(doctorId, { force: true }).catch(e => {
-                console.error(`[WhatsAppManager] Auto-reconnect failed for ${doctorId}:`, e);
-                this.notifyDoctorDisconnected(doctorId, "Auto-reconnect failed");
+                console.error(`[WhatsAppManager] Auto-reconnect attempt #${currentAttempts} failed for ${doctorId}:`, e);
+                if (currentAttempts >= MAX_RAPID_RETRIES) {
+                  this.notifyDoctorDisconnected(doctorId, "Auto-reconnect failed");
+                }
               });
             }, delay);
           } else {
@@ -3211,23 +3215,28 @@ class WhatsAppManager {
     qr: string | null;
     hasSavedSession: boolean;
     retryCount: number;
+    maxRetries: number;
   } {
     const isConn = this.isConnected(doctorId);
     if (isConn) {
-      return { status: 'CONNECTED', qr: null, hasSavedSession: true, retryCount: 0 };
+      return { status: 'CONNECTED', qr: null, hasSavedSession: true, retryCount: 0, maxRetries: 5 };
     }
 
     const qrStr = this.getQR(doctorId);
     if (qrStr) {
-      return { status: 'SCAN_QR', qr: qrStr, hasSavedSession: false, retryCount: this.reconnectAttempts.get(doctorId) || 0 };
+      return { status: 'SCAN_QR', qr: qrStr, hasSavedSession: false, retryCount: this.reconnectAttempts.get(doctorId) || 0, maxRetries: 5 };
     }
 
-    if (this.connectingDoctors.has(doctorId)) {
+    const retryCount = this.reconnectAttempts.get(doctorId) || 0;
+    const isConnecting = this.connectingDoctors.has(doctorId) || retryCount > 0;
+
+    if (isConnecting) {
       return {
         status: 'CONNECTING',
         qr: null,
         hasSavedSession: this.hasSavedSession(doctorId),
-        retryCount: this.reconnectAttempts.get(doctorId) || 0,
+        retryCount,
+        maxRetries: 5,
       };
     }
 
@@ -3235,7 +3244,8 @@ class WhatsAppManager {
       status: 'DISCONNECTED',
       qr: null,
       hasSavedSession: this.hasSavedSession(doctorId),
-      retryCount: this.reconnectAttempts.get(doctorId) || 0,
+      retryCount: 0,
+      maxRetries: 5,
     };
   }
 
