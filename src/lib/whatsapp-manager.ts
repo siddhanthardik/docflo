@@ -977,28 +977,10 @@ class WhatsAppManager {
                 },
               });
 
-              // If no patient exists, auto-create as a Patient or with WhatsApp pushName
-              const pushNameRaw = sanitizePersonName(msg.pushName || "");
-              const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
-
-              if (!patient) {
-                const parts = hasValidPushName ? pushNameRaw.split(" ") : ["Patient", ""];
-                const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
-                const cleanFirst = sanitizePersonName(parts[0]) || "Patient";
-                const cleanLast = sanitizePersonName(parts.slice(1).join(" ")) || "";
-                patient = await prisma.patient.create({
-                  data: {
-                    doctorId,
-                    firstName: cleanFirst,
-                    lastName: cleanLast,
-                    phone: patientPhone,
-                    patientType: "ACTIVE",
-                    primaryPractitionerId: defaultPractitioner?.id || null,
-                    tags: ["WhatsApp"]
-                  }
-                });
-                console.log(`[WhatsAppManager] Auto-created new CRM patient for ${patientPhone}: ${patient.firstName} ${patient.lastName}`);
-              } else {
+              // If no patient exists, do NOT auto-create an ACTIVE patient in CRM!
+              // The incoming message creates or updates a Conversation only.
+              // A Patient record is only created upon confirmed booking ([BOOK_APPOINTMENT]) or explicit CRM registration.
+              if (patient) {
                 // Self-heal: Clean up emojis or legacy artifacts from existing patient records
                 const cleanFirst = sanitizePersonName(patient.firstName || "");
                 let cleanLast = sanitizePersonName(patient.lastName || "");
@@ -1022,7 +1004,14 @@ class WhatsAppManager {
               }
             }
 
-            const rawPatientName = isStaff ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor") : `${patient!.firstName} ${patient!.lastName}`.trim();
+            const pushNameRaw = sanitizePersonName(msg.pushName || "");
+            const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
+
+            const rawPatientName = isStaff
+              ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor")
+              : (patient
+                  ? `${patient.firstName} ${patient.lastName}`.trim()
+                  : (hasValidPushName ? pushNameRaw : (patientPhone.startsWith("+") ? patientPhone : `+${patientPhone}`)));
             const patientName = sanitizePersonName(rawPatientName) || "Patient";
 
             // Find or create Conversation (deduplicate by 10-digit suffix)
@@ -1044,7 +1033,7 @@ class WhatsAppManager {
                   doctorId,
                   patientPhone,
                   patientName,
-                  patientId: isStaff ? null : patient!.id,
+                  patientId: isStaff ? null : (patient ? patient.id : null),
                   status: "OPEN",
                   lastMessageAt: messageDate,
                   createdAt: messageDate,
@@ -1056,6 +1045,10 @@ class WhatsAppManager {
                 unreadCount: { increment: 1 }, 
                 status: "OPEN",
               };
+              // Link patientId if an existing patient was found and conversation didn't have one
+              if (!conversation.patientId && patient) {
+                updatedData.patientId = patient.id;
+              }
               if (patient && patient.firstName !== "Patient" && (!conversation.patientName || conversation.patientName === "Patient" || conversation.patientName.includes("+"))) {
                 updatedData.patientName = `${patient.firstName} ${patient.lastName}`.trim();
               }
@@ -2833,9 +2826,9 @@ class WhatsAppManager {
                     });
 
                     if (!targetPatient) {
-                      // Check if existing patient on this phone is a virgin placeholder with zero history
+                      // Check if existing patient on this phone is an unvisited virgin lead with zero medical history
                       let isVirginPlaceholder = false;
-                      if (patient && patient.firstName === "Patient") {
+                      if (patient && (patient.firstName === "Patient" || patient.firstName === "Lead" || patient.tags.includes("WhatsApp Lead") || patient.tags.includes("WhatsApp"))) {
                         const invCount = await prisma.invoice.count({ where: { patientId: patient.id } });
                         const aptCount = await prisma.appointment.count({ where: { patientId: patient.id } });
                         if (invCount === 0 && aptCount === 0) {
@@ -2854,7 +2847,7 @@ class WhatsAppManager {
                             ...(approximateDob ? { dateOfBirth: approximateDob } : {})
                           }
                         });
-                        console.log(`[WhatsAppManager] Initialized placeholder lead to "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
+                        console.log(`[WhatsAppManager] 🧼 Initialized unvisited lead to confirmed patient "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
                       } else {
                         // Enforce max 4 family members under the same mobile number
                         const existingFamilyCount = await prisma.patient.count({
@@ -2876,7 +2869,7 @@ class WhatsAppManager {
                           return;
                         }
 
-                        // A distinct family member is booking! Create a separate, dedicated profile
+                        // Create dedicated patient profile for this booking
                         const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                         targetPatient = await prisma.patient.create({
                           data: {
@@ -2888,10 +2881,10 @@ class WhatsAppManager {
                             dateOfBirth: approximateDob,
                             patientType: "ACTIVE",
                             primaryPractitionerId: defaultPractitioner?.id || null,
-                            tags: ["WhatsApp", "Family Member"]
+                            tags: existingFamilyCount > 0 ? ["WhatsApp", "Family Member"] : ["WhatsApp"]
                           }
                         });
-                        console.log(`[WhatsAppManager] 👨‍👩‍👧 Created separate Family Member profile: "${candidateFirstName} ${candidateLastName}" (${patientPhone})`);
+                        console.log(`[WhatsAppManager] 👨‍👩‍👧 Created patient profile: "${candidateFirstName} ${candidateLastName}" (${patientPhone}, familyCount: ${existingFamilyCount})`);
                       }
                     } else {
                       // Target patient already exists: update ONLY missing optional fields — NEVER overwrite firstName or existing non-empty lastName!
@@ -2905,6 +2898,17 @@ class WhatsAppManager {
                           data: updates
                         });
                       }
+                    }
+
+                    // Ensure conversation is linked to the booked patient
+                    if (conversation && targetPatient) {
+                      await prisma.conversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                          patientId: targetPatient.id,
+                          patientName: `${targetPatient.firstName} ${targetPatient.lastName}`.trim()
+                        }
+                      }).catch(() => {});
                     }
 
                     // 2. Parse Date with intelligent fallback
