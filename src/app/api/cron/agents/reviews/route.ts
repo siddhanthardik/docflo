@@ -4,11 +4,11 @@ import { AIAgentsService } from "@/services/ai-agents.service";
 import { GBPService } from "@/services/gbp.service";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { ReviewDispatcherService } from "@/services/review-dispatcher.service";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
 export async function GET(req: Request) {
-  if (process.env.CRON_SECRET && req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const unauth = verifyCronRequest(req);
+  if (unauth) return unauth;
   try {
     console.log("[CRON] Starting Review Manager Agent...");
     

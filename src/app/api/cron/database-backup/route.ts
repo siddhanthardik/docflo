@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { BackupService } from "@/services/backup.service";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    // Basic CRON secret check
-    if (process.env.CRON_SECRET && req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const unauth = verifyCronRequest(req);
+    if (unauth) return unauth;
 
     console.log("[CRON] Executing Automated Daily Database Backup...");
 

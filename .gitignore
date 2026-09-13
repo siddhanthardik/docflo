@@ -41,10 +41,25 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# WhatsApp session data
+# WhatsApp session data & secrets
 /auth_info
+/auth_info/
+auth_info/
+auth_info_sandbox/
+*.pem
+*.key
+*.cert
+*.crt
 
-# Temporary scratch & test artifacts
+# Temporary scratch, test artifacts & debug dumps
 *.txt
 *.pdf
- scratch/
+*.log
+*.bak
+*.dump
+*.sql
+*.py
+scratch/
+src/benchmark/air-bench/reports/
+npm_audit_report.json
+matrix.json

@@ -49,7 +49,8 @@ async function main() {
   });
 
   if (!existingSuperadmin) {
-    const hashedPassword = await bcrypt.hash("SuperAdmin123!", 10);
+    const adminPass = process.env.INITIAL_ADMIN_PASSWORD || "Admin@" + Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(adminPass, 10);
     await prisma.doctor.create({
       data: {
         email: "superadmin@gyrex.in",
@@ -59,7 +60,7 @@ async function main() {
         packageId: enterprise.id,
       }
     });
-    console.log("Superadmin created: superadmin@gyrex.in / SuperAdmin123!");
+    console.log(`Superadmin created: superadmin@gyrex.in (Password configured via INITIAL_ADMIN_PASSWORD)`);
   } else {
     console.log("Superadmin already exists.");
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
 /**
  * Nightly Cron Job: 30-Day Rolling Storage Auto-Purge
@@ -10,10 +11,8 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get("authorization");
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      // Allow local development executions
-    }
+    const unauth = verifyCronRequest(req);
+    if (unauth) return unauth;
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { ReminderService } from "@/services/reminder.service";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
 export async function GET(req: Request) {
-  if (process.env.CRON_SECRET && req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const unauth = verifyCronRequest(req);
+  if (unauth) return unauth;
   try {
     console.log("[CRON] Starting Reminder Service CRON...");
     const reminderService = new ReminderService();
