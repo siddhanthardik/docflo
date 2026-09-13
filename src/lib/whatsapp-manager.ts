@@ -1287,21 +1287,36 @@ class WhatsAppManager {
               });
 
               // ── Shield 4: Consecutive AI Turn Circuit Breaker ─────────────────
+              // Protects against infinite bot loops if the bot talks to an automated machine without patient replying.
+              // A patient's incoming reply or a new session (e.g. gap > 2 hours) MUST reset this count so returning patients are never blocked.
               if (!isStaff) {
-                const recentOutgoing = recentMessages.filter(m => m.direction === "OUTGOING");
-                let consecutiveAiCount = 0;
-                for (const m of recentOutgoing) {
-                  if (m.senderName === "AI Assistant" || m.senderName === "Clinic") {
-                    consecutiveAiCount++;
-                  } else {
-                    break;
+                let consecutiveUnansweredAiCount = 0;
+                // Exclude the current incoming message itself (recentMessages[0]) when evaluating prior history
+                const priorHistory = recentMessages.slice(1);
+                
+                // If the current message arrived after a conversation pause (> 2 hours since last message),
+                // it is a brand new user visit/session — reset consecutive unreplied count immediately.
+                const lastPriorMsgTime = priorHistory[0]?.createdAt ? new Date(priorHistory[0].createdAt).getTime() : 0;
+                const isNewSessionAfterBreak = (messageDate.getTime() - lastPriorMsgTime) > (2 * 60 * 60 * 1000);
+
+                if (!isNewSessionAfterBreak) {
+                  for (const m of priorHistory) {
+                    if (m.direction === "INCOMING") {
+                      // Patient sent a message previously in this session — unbroken chain of AI messages ends here
+                      break;
+                    }
+                    if (m.direction === "OUTGOING" && (m.senderName === "AI Assistant" || m.senderName === "Clinic")) {
+                      consecutiveUnansweredAiCount++;
+                    } else {
+                      break;
+                    }
                   }
                 }
 
                 const isExplicitBookingIntent = /appointment|book|schedule|consult|slot|timing|fee|cancel|reschedule/i.test(textMessage);
-                if (consecutiveAiCount >= 6 && !isExplicitBookingIntent) {
-                  console.log(`[WhatsAppManager] 🛑 Circuit Breaker tripped: ${consecutiveAiCount} consecutive AI messages for ${patientPhone}. Halting automated replies.`);
-                  if (consecutiveAiCount === 6) {
+                if (consecutiveUnansweredAiCount >= 6 && !isExplicitBookingIntent) {
+                  console.log(`[WhatsAppManager] 🛑 Circuit Breaker tripped: ${consecutiveUnansweredAiCount} consecutive unreplied AI messages in active session for ${patientPhone}. Halting automated replies.`);
+                  if (consecutiveUnansweredAiCount === 6) {
                     const safetyHandoff = `Thank you! I have shared your inquiry with our clinic front desk team. A staff member will respond to you shortly. 🙏`;
                     await sock.sendMessage(remoteJid, { text: safetyHandoff });
                     await prisma.chatMessage.create({

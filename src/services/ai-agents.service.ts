@@ -687,8 +687,14 @@ function buildDeterministicReceptionistReply(
       return `Understood. If you would like to cancel your appointment, please share your Full Name or booking details, and I will assist you immediately.${phoneSuffix}`;
     }
 
-    // 8.5.4 Fees & charges inquiry
-    if (/fee|fees|charge|charges|cost|price|rate|payment/i.test(textLower)) {
+    // 8.5.35 Diagnostic / Pathology / Lab Test Price & Inquiry
+    const isLabOrDiagnosticQuery = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
+    if (isLabOrDiagnosticQuery && /price|cost|rate|charge|charges|fee|fees|how\s*much/i.test(textLower)) {
+      return `Our diagnostic lab offers comprehensive pathology and imaging tests (including Blood tests, CBC, Sugar, Thyroid, LFT, KFT, Ultrasound, and X-ray). Test prices vary depending on the specific investigation requested. Phlebotomists are also available for home sample collection.\n\nPlease share the exact name of the test you require, and I will share the details and timings with you right away.${phoneSuffix}`;
+    }
+
+    // 8.5.4 Fees & charges inquiry (Doctor Consultation Fee)
+    if (!isLabOrDiagnosticQuery && /fee|fees|charge|charges|cost|price|rate|payment/i.test(textLower)) {
       return `The consultation fee for ${docTitle} (${activeSpecialty}) is ₹${cleanFee || consultationFee || "500"}. Clinic OPD hours are *${activeTimings}*. How may I assist you with an appointment?${phoneSuffix}`;
     }
 
@@ -785,8 +791,14 @@ function buildDeterministicReceptionistReply(
       return `Hamara clinic *${clinicName}* par sthit hai. Exact address ke liye aap clinic reception par direct call bhi kar sakte hain.${phoneSuffix}`;
     }
 
-    // 9.4 Fee / Pricing Inquiry
-    if (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower) || text.includes("फीस") || text.includes("शुल्क")) {
+    // 9.35 Diagnostic / Pathology / Lab Test Price & Inquiry in Hindi
+    const isLabOrDiagHi = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab|pathology|जाँच|खून|टेस्ट/i.test(textLower);
+    if (isLabOrDiagHi && /fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower)) {
+      return `Hamare diagnostic lab me routine aur specialized tests (Blood test, CBC, Sugar, Thyroid, LFT, KFT, Ultrasound, X-ray) uplabdh hain. Test ka kharch/charges specific test par nirbhar karta hai. Certified phlebotomists dwara home blood sample collection ki suvidha bhi uplabdh hai.\n\nKripya specific test ka naam batayein taaki main exact price aur preparation guide kar sakoon.${phoneSuffix}`;
+    }
+
+    // 9.4 Fee / Pricing Inquiry (Doctor Consultation Fee)
+    if (!isLabOrDiagHi && (/fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower) || text.includes("फीस") || text.includes("शुल्क"))) {
       const feeText = cleanFee ? `Consultation fees *₹${cleanFee}* hai` : "Consultation fees ki details clinic par consultation ke samay di jaati hain";
       return `${docTitle} (${specialty}) ki ${feeText}.\n\nKya aap aaj ya kal ke liye slot book karna chahenge?${phoneSuffix}`;
     }
@@ -934,8 +946,14 @@ function buildDeterministicReceptionistReply(
     return `${docTitle} is available during OPD hours:\n🕒 *${clinicTimings}*\n\nTo reserve your slot, please reply with the **Patient Full Name** and your ${slotPromptEn}. I will be happy to confirm it for you!${phoneSuffix}`;
   }
 
-  // 10.5 Fees & Pricing
-  if (/fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
+  // 10.45 Diagnostic / Pathology / Lab Test Price & Inquiry
+  const isDiagnosticTestQuery = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
+  if (isDiagnosticTestQuery && /fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
+    return `Our diagnostic center provides comprehensive laboratory pathology and imaging services (Blood panels, CBC, Blood Sugar, Thyroid Profile, LFT, KFT, Ultrasound, X-ray). Test prices vary according to the specific investigation requested. Certified phlebotomists are also available for home blood sample collection.\n\nPlease share the specific test name so I can provide the exact price, fasting instructions, and turnaround time.${phoneSuffix}`;
+  }
+
+  // 10.5 Fees & Pricing (Doctor Consultation Fee)
+  if (!isDiagnosticTestQuery && /fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
     const feeText = cleanFee ? `Consultation fee is *₹${cleanFee}*` : "Consultation fee details are shared directly at the clinic during your visit";
     return `${feeText} for ${docTitle} (${specialty}).\n\nWould you like to reserve a consultation slot for today or tomorrow?${phoneSuffix}`;
   }
@@ -1809,7 +1827,8 @@ ${isPediatrician ? `
 `}
 
 FEES & POLICIES:
-- Consultation Fee: ${consultationFee || "Shared at clinic"}
+- Consultation Fee: ${consultationFee || "Shared at clinic"} (Note: This is strictly for the DOCTOR'S in-person OPD consultation).
+- Diagnostic & Lab Test Pricing: Laboratory tests (Blood tests, CBC, Sugar, Thyroid, LFT, KFT, Urine, Ultrasound, X-ray) have separate test-specific pathology pricing. DO NOT quote the doctor's consultation fee as the price of a lab test. If a patient asks for lab/blood test prices, explain that test prices vary depending on the specific investigation, mention home sample collection availability, and ask for the specific test name.
 - Follow-up Policy: ${followUpFee ? `₹${followUpFee}` : "₹0 / Free"} for returning patients within ${followUpDays} of initial visit for report review.
 - Tele-Consultation: ${allowTeleConsultation ? `ENABLED (${teleConsultationFee || 'Standard Fee'})` : "IN-CLINIC ONLY (Online consultation / WhatsApp prescription not provided)"}
 - Pediatric Vaccines: ${isPediatrician ? vaccinationsList : "N/A (Pediatric clinics only)"}
