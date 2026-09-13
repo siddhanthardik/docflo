@@ -1094,7 +1094,12 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
-export async function generateWithFallback(prompt: string, attachment?: MediaAttachment): Promise<string> {
+export async function generateWithFallback(
+  prompt: string,
+  attachment?: MediaAttachment,
+  doctorId?: string,
+  feature: string = "WHATSAPP_REPLY"
+): Promise<string> {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   let lastError: any = null;
@@ -1147,7 +1152,33 @@ export async function generateWithFallback(prompt: string, attachment?: MediaAtt
 
           const response = await withTimeout(generatePromise, timeoutMs, modelName);
           if (response.text?.trim()) {
-            return response.text.trim();
+            const replyText = response.text.trim();
+
+            // Record Telemetry Asynchronously (Non-blocking)
+            if (doctorId && !doctorId.startsWith("mock-")) {
+              const usage = response.usageMetadata;
+              const promptTokens = usage?.promptTokenCount ?? Math.ceil(prompt.length / 4);
+              const completionTokens = usage?.candidatesTokenCount ?? Math.ceil(replyText.length / 4);
+              const totalTokens = usage?.totalTokenCount ?? (promptTokens + completionTokens);
+
+              // Gemini Flash pricing: ~$0.10/1M prompt, $0.40/1M output * 85 INR/USD
+              const costInr = ((promptTokens * 0.10 + completionTokens * 0.40) / 1000000) * 85;
+
+              prisma.aiTokenLog.create({
+                data: {
+                  doctorId,
+                  feature,
+                  provider: "GEMINI",
+                  model: modelName,
+                  promptTokens,
+                  completionTokens,
+                  totalTokens,
+                  estimatedCostInr: Number(costInr.toFixed(6)),
+                }
+              }).catch((err) => console.warn("[Telemetry] Failed to log Gemini token usage:", err?.message || err));
+            }
+
+            return replyText;
           }
         } catch (err: any) {
           lastError = err;
@@ -1199,7 +1230,33 @@ export async function generateWithFallback(prompt: string, attachment?: MediaAtt
       });
       const completion = await withTimeout(openaiPromise, timeoutMs, "OpenAI gpt-4o-mini");
       const text = completion.choices[0]?.message?.content?.trim();
-      if (text) return text;
+      if (text) {
+        // Record Telemetry Asynchronously (Non-blocking)
+        if (doctorId && !doctorId.startsWith("mock-")) {
+          const usage = completion.usage;
+          const promptTokens = usage?.prompt_tokens ?? Math.ceil(prompt.length / 4);
+          const completionTokens = usage?.completion_tokens ?? Math.ceil(text.length / 4);
+          const totalTokens = usage?.total_tokens ?? (promptTokens + completionTokens);
+
+          // OpenAI gpt-4o-mini pricing: ~$0.15/1M prompt, $0.60/1M output * 85 INR/USD
+          const costInr = ((promptTokens * 0.15 + completionTokens * 0.60) / 1000000) * 85;
+
+          prisma.aiTokenLog.create({
+            data: {
+              doctorId,
+              feature,
+              provider: "OPENAI",
+              model: "gpt-4o-mini",
+              promptTokens,
+              completionTokens,
+              totalTokens,
+              estimatedCostInr: Number(costInr.toFixed(6)),
+            }
+          }).catch((err) => console.warn("[Telemetry] Failed to log OpenAI token usage:", err?.message || err));
+        }
+
+        return text;
+      }
     } catch (oErr: any) {
       lastError = oErr;
       console.warn(`[AIAgentsService] OpenAI fallback failed/timed out:`, oErr?.message || oErr);
@@ -2025,12 +2082,16 @@ ${isMultiDoctor ? '10' : '9'}. PRE-BOOKING VERIFICATION GATE & BOOKING TAGS
   [RESEND_CONFIRMATION]
 `;
 
+      const recentHistory = conversationHistory && conversationHistory.length > 10
+        ? conversationHistory.slice(-10)
+        : (conversationHistory || []);
+
       const prompt = `
 System Instructions:
 ${systemPrompt}
 
 Conversation History:
-${conversationHistory.join("\n")}
+${recentHistory.join("\n")}
 
 🚨 PATIENT'S LATEST MESSAGE (PRIMARY CURRENT INTENT): "${incomingMessage}"
 ${mediaAttachment ? `\n📎 ATTACHED PATIENT FILE: ${mediaAttachment.type} (${mediaAttachment.fileName || mediaAttachment.mimeType})\n(Note: Read the attached diagnostic report / scan / image thoroughly using your multimodal OCR capabilities to identify the investigation type, key observations, and route to the best matching doctor).` : ''}
@@ -2043,7 +2104,8 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
 - Output only the receptionist's warm, direct reply:
       `;
 
-      let aiReply = await generateWithFallback(prompt, mediaAttachment);
+      const feature = (mediaAttachment && mediaAttachment.base64Data) ? "PRESCRIPTION_OCR" : "WHATSAPP_REPLY";
+      let aiReply = await generateWithFallback(prompt, mediaAttachment, doctorId, feature);
 
       const latency = Date.now() - startTime;
       console.log(`[AIAgentsService] 💬 Receptionist Response generated in ${latency}ms`);
@@ -2283,7 +2345,7 @@ Doctor's Message: "${incomingMessage}"
 Write your professional, direct, concise administrative response directly to Doctor ${doctorName}:
       `;
 
-      const aiReply = await generateWithFallback(prompt);
+      const aiReply = await generateWithFallback(prompt, undefined, doctorId, "WHATSAPP_STAFF_ASSISTANT");
       return aiReply.trim();
     } catch (error: any) {
       console.error("Error in Staff Assistant Agent:", error?.message || error);
@@ -2341,7 +2403,7 @@ Write your professional, direct, concise administrative response directly to Doc
         6. Respond ONLY with the exact text of the reply. Plain text only. No quotes or markdown.
       `;
 
-      return await generateWithFallback(prompt);
+      return await generateWithFallback(prompt, undefined, doctorId, "REVIEW_REPLY");
     } catch (error) {
       console.error("Error in Review Agent:", error);
       return "Thank you for sharing your feedback with our clinic team. Wishing you the best of health.";
@@ -2416,7 +2478,7 @@ Write your professional, direct, concise administrative response directly to Doc
         }
       `;
 
-      const text = await generateWithFallback(prompt);
+      const text = await generateWithFallback(prompt, undefined, doctorId, "GBP_POST");
       let parsedResult: any = null;
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -2458,6 +2520,7 @@ Write your professional, direct, concise administrative response directly to Doc
    */
   static async runLocalSeoCopilot(doctorIdOrOptions: any, config?: any) {
     try {
+      const docId = typeof doctorIdOrOptions === "string" ? doctorIdOrOptions : doctorIdOrOptions?.doctorId;
       const keywords = config?.keywords || "Best Clinic, Doctor Near Me";
       const focus = config?.focus || "all";
 
@@ -2468,7 +2531,7 @@ Write your professional, direct, concise administrative response directly to Doc
         Return JSON array format: [{"title": "Action Title", "impact": "HIGH", "description": "Action details"}]
       `;
 
-      const text = await generateWithFallback(prompt);
+      const text = await generateWithFallback(prompt, undefined, docId, "CLINIC_AUDIT");
       try {
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) return JSON.parse(jsonMatch[0]);

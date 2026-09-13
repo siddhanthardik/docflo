@@ -13,7 +13,8 @@ import {
   BarChart3,
   CheckCircle2,
   Clock,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -67,12 +68,16 @@ interface AIAnalyticsClientProps {
 }
 
 const FEATURE_LABELS: Record<string, { label: string; icon: any; color: string; bg: string }> = {
-  WHATSAPP_REPLY: { label: "WhatsApp AI Assistant", icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50" },
+  WHATSAPP_REPLY: { label: "WhatsApp AI Receptionist", icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50" },
+  WHATSAPP_STAFF_ASSISTANT: { label: "WhatsApp Staff Assistant", icon: Bot, color: "text-teal-600", bg: "bg-teal-50" },
+  PRESCRIPTION_OCR: { label: "Prescription OCR", icon: FileText, color: "text-amber-600", bg: "bg-amber-50" },
+  WHATSAPP_VOICE_NOTE: { label: "Voice Note Transcription", icon: Sparkles, color: "text-sky-600", bg: "bg-sky-50" },
   GBP_POST: { label: "Google Updates Assistant", icon: Sparkles, color: "text-blue-600", bg: "bg-blue-50" },
   REVIEW_REPLY: { label: "AI Review Responder", icon: Bot, color: "text-violet-600", bg: "bg-violet-50" },
   CLINIC_AUDIT: { label: "Clinical Audit & SEO", icon: Layers, color: "text-amber-600", bg: "bg-amber-50" },
   SEO_OPTIMIZATION: { label: "SEO Optimization", icon: BarChart3, color: "text-indigo-600", bg: "bg-indigo-50" },
   BLOG_GENERATION: { label: "Blog Publishing", icon: Cpu, color: "text-rose-600", bg: "bg-rose-50" },
+  AI_BENCHMARK: { label: "AIR-Bench Evaluation", icon: BarChart3, color: "text-purple-600", bg: "bg-purple-50" },
 };
 
 export function AIAnalyticsClient({ initialData }: AIAnalyticsClientProps) {

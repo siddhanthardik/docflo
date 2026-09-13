@@ -733,6 +733,23 @@ class WhatsAppManager {
               if (transcription.text) {
                 textMessage = transcription.text.trim();
                 console.log(`[WhatsAppManager] 🎙️ Transcribed incoming voice note from ${remoteJid}: "${textMessage}"`);
+
+                // Telemetry for Voice Transcription
+                if (doctorId && !doctorId.startsWith("mock-")) {
+                  const estTokens = Math.ceil(textMessage.length / 4) + 100;
+                  prisma.aiTokenLog.create({
+                    data: {
+                      doctorId,
+                      feature: "WHATSAPP_VOICE_NOTE",
+                      provider: "OPENAI",
+                      model: "whisper-1",
+                      promptTokens: 100,
+                      completionTokens: Math.ceil(textMessage.length / 4),
+                      totalTokens: estTokens,
+                      estimatedCostInr: 0.25,
+                    }
+                  }).catch(e => console.warn("[Telemetry] Voice note logging error:", e?.message || e));
+                }
               }
             }
           } catch (audioErr) {
