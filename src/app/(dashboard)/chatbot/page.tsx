@@ -22,6 +22,7 @@ export default function AIAgentsHubPage() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [configDraft, setConfigDraft] = useState<any>({});
   const [savingConfig, setSavingConfig] = useState(false);
+  const [selectedRateCategory, setSelectedRateCategory] = useState<"NORMAL" | "CGHS" | "ECHS" | "OTHER">("NORMAL");
   const [reviewPreviewTab, setReviewPreviewTab] = useState<"star_only" | "positive" | "critical">("positive");
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -171,7 +172,12 @@ export default function AIAgentsHubPage() {
       return;
     }
     setActiveAgent(agent);
-    setConfigDraft(agent.config || {});
+    const initialConfig = { ...(agent.config || {}) };
+    if (!initialConfig.rateCardNormal && initialConfig.rateCardText) {
+      initialConfig.rateCardNormal = initialConfig.rateCardText;
+    }
+    setConfigDraft(initialConfig);
+    setSelectedRateCategory("NORMAL");
     setIsConfigOpen(true);
   };
 
@@ -863,24 +869,135 @@ export default function AIAgentsHubPage() {
                     </div>
                   )}
 
-                  {/* Rate Card Text / Test Menu */}
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-slate-700">Test Menu & Rate List (Normal & Panel Rates)</Label>
-                      <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                        Supports Test Name & Rates
-                      </span>
+                  {/* Rate Card Selection (Normal, CGHS, ECHS, Other) */}
+                  <div className="space-y-3 min-w-0 p-3 sm:p-4 bg-white rounded-xl border border-indigo-100 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div>
+                        <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                          <span>Select Rate List to View & Edit</span>
+                        </Label>
+                        <p className="text-[11px] text-slate-500">
+                          Choose whether to manage Normal private charges or government panel rates.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-64">
+                        <Select
+                          value={selectedRateCategory}
+                          onValueChange={(val: "NORMAL" | "CGHS" | "ECHS" | "OTHER") => setSelectedRateCategory(val)}
+                        >
+                          <SelectTrigger className="h-9 text-xs bg-indigo-50/60 border-indigo-200 font-semibold text-indigo-950">
+                            <SelectValue placeholder="Select Rate List" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NORMAL" className="text-xs font-medium">
+                              🏷️ Normal / Standard Private Rates
+                            </SelectItem>
+                            <SelectItem value="CGHS" className="text-xs font-medium">
+                              🏛️ CGHS Panel Rate List
+                            </SelectItem>
+                            <SelectItem value="ECHS" className="text-xs font-medium">
+                              🎖️ ECHS Panel Rate List
+                            </SelectItem>
+                            <SelectItem value="OTHER" className="text-xs font-medium">
+                              🏢 Other / Corporate Panel Rates
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <Textarea
-                      placeholder={"Enter or paste your test rates, for example:\n• CBC (Complete Blood Count): ₹350 (CGHS: ₹135)\n• Fasting Blood Sugar: ₹100 (CGHS: ₹40)\n• Lipid Profile: ₹750 (CGHS: ₹250)\n• Thyroid Profile (T3 T4 TSH): ₹500 (CGHS: ₹200)\n• Liver Function Test (LFT): ₹700 (CGHS: ₹250)\n• Kidney Function Test (KFT): ₹700 (CGHS: ₹250)\n• Ultrasound Whole Abdomen: ₹1200 (CGHS: ₹450)\n• Digital X-Ray Chest: ₹400 (CGHS: ₹150)"}
-                      value={configDraft.rateCardText || ""}
-                      onChange={(e) => setConfigDraft({ ...configDraft, rateCardText: e.target.value })}
-                      className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
-                      rows={6}
-                    />
-                    <p className="text-[10px] text-slate-400">
-                      AI matches tests from doctor prescriptions and patient queries against this list to quote accurate Normal vs. CGHS prices.
-                    </p>
+
+                    {/* Category Quick Badges / Pill Switcher */}
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
+                      {[
+                        { id: "NORMAL", label: "Normal (Standard)", hasData: !!(configDraft.rateCardNormal || configDraft.rateCardText) },
+                        { id: "CGHS", label: "CGHS Panel", hasData: !!configDraft.rateCardCGHS },
+                        { id: "ECHS", label: "ECHS Panel", hasData: !!configDraft.rateCardECHS },
+                        { id: "OTHER", label: "Corporate / Other", hasData: !!configDraft.rateCardOther },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedRateCategory(item.id as any)}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                            selectedRateCategory === item.id
+                              ? "bg-indigo-600 text-white shadow-xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          <span>{item.label}</span>
+                          {item.hasData ? (
+                            <span className={`w-1.5 h-1.5 rounded-full ${selectedRateCategory === item.id ? "bg-emerald-300" : "bg-emerald-500"}`} />
+                          ) : (
+                            <span className="text-[9px] opacity-60">empty</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Active Category Textarea */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-slate-700">
+                          {selectedRateCategory === "NORMAL" && "🏷️ Normal / Standard Private Test Rates"}
+                          {selectedRateCategory === "CGHS" && "🏛️ CGHS Approved Panel Rates List"}
+                          {selectedRateCategory === "ECHS" && "🎖️ ECHS Approved Panel Rates List"}
+                          {selectedRateCategory === "OTHER" && "🏢 Corporate / Ayushman / Other Panel Rates"}
+                        </Label>
+                        <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                          {selectedRateCategory === "NORMAL" && "Standard Private Patients"}
+                          {selectedRateCategory === "CGHS" && "CGHS Cardholders"}
+                          {selectedRateCategory === "ECHS" && "ECHS Beneficiaries"}
+                          {selectedRateCategory === "OTHER" && "Empaneled Schemes"}
+                        </span>
+                      </div>
+
+                      {selectedRateCategory === "NORMAL" && (
+                        <Textarea
+                          placeholder={"Enter or paste your standard private test rates, for example:\n• CBC (Complete Blood Count): ₹350\n• Fasting Blood Sugar: ₹100\n• Lipid Profile: ₹750\n• Thyroid Profile (T3 T4 TSH): ₹500\n• Liver Function Test (LFT): ₹700\n• Kidney Function Test (KFT): ₹700\n• Ultrasound Whole Abdomen: ₹1200\n• Digital X-Ray Chest: ₹400"}
+                          value={configDraft.rateCardNormal ?? configDraft.rateCardText ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setConfigDraft({ ...configDraft, rateCardNormal: val, rateCardText: val });
+                          }}
+                          className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
+                          rows={6}
+                        />
+                      )}
+
+                      {selectedRateCategory === "CGHS" && (
+                        <Textarea
+                          placeholder={"Enter or paste your CGHS approved panel rates, for example:\n• CBC (Complete Blood Count): ₹135\n• Fasting Blood Sugar: ₹40\n• Lipid Profile: ₹250\n• Thyroid Profile (T3 T4 TSH): ₹200\n• Liver Function Test (LFT): ₹250\n• Kidney Function Test (KFT): ₹250\n• Ultrasound Whole Abdomen: ₹450\n• Digital X-Ray Chest: ₹150"}
+                          value={configDraft.rateCardCGHS || ""}
+                          onChange={(e) => setConfigDraft({ ...configDraft, rateCardCGHS: e.target.value })}
+                          className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
+                          rows={6}
+                        />
+                      )}
+
+                      {selectedRateCategory === "ECHS" && (
+                        <Textarea
+                          placeholder={"Enter or paste your ECHS approved panel rates, for example:\n• CBC (Complete Blood Count): ₹135\n• Fasting Blood Sugar: ₹40\n• Lipid Profile: ₹240\n• Thyroid Profile (T3 T4 TSH): ₹200\n• Liver Function Test (LFT): ₹250\n• Kidney Function Test (KFT): ₹250\n• Ultrasound Whole Abdomen: ₹450\n• Digital X-Ray Chest: ₹150"}
+                          value={configDraft.rateCardECHS || ""}
+                          onChange={(e) => setConfigDraft({ ...configDraft, rateCardECHS: e.target.value })}
+                          className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
+                          rows={6}
+                        />
+                      )}
+
+                      {selectedRateCategory === "OTHER" && (
+                        <Textarea
+                          placeholder={"Enter or paste other panel rates (e.g. Ayushman Bharat, Railway, Corporate Health Insurance):\n• Ayushman CBC: ₹120\n• Railway Lipid Profile: ₹220\n• Corporate Executive Health Package: ₹1499"}
+                          value={configDraft.rateCardOther || ""}
+                          onChange={(e) => setConfigDraft({ ...configDraft, rateCardOther: e.target.value })}
+                          className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
+                          rows={6}
+                        />
+                      )}
+
+                      <p className="text-[10px] text-slate-400">
+                        The AI automatically quotes from the corresponding rate list based on whether the patient inquires about Normal private rates or approved CGHS / ECHS / Panel schemes.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Home Sample Collection & Out-of-scope Scans */}

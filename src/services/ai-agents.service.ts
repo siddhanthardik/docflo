@@ -1272,7 +1272,30 @@ export class AIAgentsService {
     const isPolyclinic = facilityType === "POLYCLINIC";
     const acceptsGovtPanels = config?.acceptsGovtPanels === true;
     const acceptedPanelsList = config?.acceptedPanelsList || "CGHS, ECHS, Ayushman Bharat, DGEHS";
-    const labRateCard = config?.rateCardText || "";
+
+    // Categorized Rate Lists (Normal, CGHS, ECHS, Corporate/Other)
+    const rateCardNormal = config?.rateCardNormal || config?.rateCardText || "";
+    const rateCardCGHS = config?.rateCardCGHS || "";
+    const rateCardECHS = config?.rateCardECHS || "";
+    const rateCardOther = config?.rateCardOther || "";
+
+    const compiledRateCardParts: string[] = [];
+    if (rateCardNormal?.trim()) {
+      compiledRateCardParts.push(`📋 Standard / Normal Private Rates:\n${rateCardNormal.trim()}`);
+    }
+    if (rateCardCGHS?.trim()) {
+      compiledRateCardParts.push(`🏛️ CGHS Panel Approved Rates:\n${rateCardCGHS.trim()}`);
+    }
+    if (rateCardECHS?.trim()) {
+      compiledRateCardParts.push(`🎖️ ECHS Panel Approved Rates:\n${rateCardECHS.trim()}`);
+    }
+    if (rateCardOther?.trim()) {
+      compiledRateCardParts.push(`🏢 Corporate / Other Panel Rates:\n${rateCardOther.trim()}`);
+    }
+    if (compiledRateCardParts.length === 0 && config?.rateCardText?.trim()) {
+      compiledRateCardParts.push(config.rateCardText.trim());
+    }
+    const labRateCard = compiledRateCardParts.join("\n\n").trim();
     const homeSampleCollectionFee = config?.homeSampleCollectionFee || "";
     const testsNotAvailable = config?.testsNotAvailable || "MRI, CT Scan, PET Scan";
 
