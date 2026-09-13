@@ -372,11 +372,18 @@ function buildDeterministicReceptionistReply(
   websiteUrl?: string | null,
   allowTeleConsultation: boolean = false,
   teleConsultationFee?: string,
-  clinicTimezone?: string | null
+  clinicTimezone?: string | null,
+  facilityType: "CLINIC" | "DIAGNOSTIC_LAB" | "POLYCLINIC" = "CLINIC",
+  labRateCard?: string,
+  acceptsGovtPanels?: boolean,
+  acceptedPanelsList?: string,
+  homeSampleCollectionFee?: string,
+  testsNotAvailable?: string
 ): string {
   const clinicTz = resolveClinicTimezone(clinicTimezone);
   const text = incomingMessage.trim();
   const textLower = text.toLowerCase();
+  const isDiagnosticLab = facilityType === "DIAGNOSTIC_LAB";
 
   // ════ Multi-Doctor Matching: Check if patient asked for a specific doctor ═
   let activeDoctorName = rawDoctorName;
@@ -688,8 +695,12 @@ function buildDeterministicReceptionistReply(
     }
 
     // 8.5.35 Diagnostic / Pathology / Lab Test Price & Inquiry
-    const isLabOrDiagnosticQuery = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
+    const isLabOrDiagnosticQuery = isDiagnosticLab || /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
     if (isLabOrDiagnosticQuery && /price|cost|rate|charge|charges|fee|fees|how\s*much/i.test(textLower)) {
+      if (labRateCard && labRateCard.trim().length > 10) {
+        const panelNote = acceptsGovtPanels && acceptedPanelsList ? ` We accept ${acceptedPanelsList} and standard private rates.` : "";
+        return `Our laboratory test prices are:${panelNote}\n\n${labRateCard.trim()}\n\nPhlebotomists are also available for home sample collection (${homeSampleCollectionFee || "Available on request"}). Which test would you like to schedule?${phoneSuffix}`;
+      }
       return `Our diagnostic lab offers comprehensive pathology and imaging tests (including Blood tests, CBC, Sugar, Thyroid, LFT, KFT, Ultrasound, and X-ray). Test prices vary depending on the specific investigation requested. Phlebotomists are also available for home sample collection.\n\nPlease share the exact name of the test you require, and I will share the details and timings with you right away.${phoneSuffix}`;
     }
 
@@ -713,9 +724,24 @@ function buildDeterministicReceptionistReply(
       return `Thank you! Your appointment request has been received for ${docTitle} at *${clinicName}*. Our team looks forward to assisting you.${phoneSuffix}`;
     }
 
-    // 8.5.8 General Appointment Booking / Greeting
-    if (isOngoingChat || /appointment|book|consult|visit|checkup|injury|rehab|treatment/i.test(textLower)) {
+    // 8.5.75 Ongoing Chat Details Provided in English (Demographics, Date, Time or Follow-up response)
+    if (isOngoingChat && (
+      /\b(tomorrow|today|pm|am|evening|morning|\d{1,2}(?:st|nd|rd|th)?\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i.test(textLower) ||
+      /\b(?:19|20)\d{2}\b/.test(textLower) ||
+      /\d{1,2}[-/.]\d{1,2}(?:[-/.](?:19|20)?\d{2})?/.test(textLower) ||
+      /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower) ||
+      /\b(years?\s*old|yrs?\s*old|male|female|m|f|boy|girl)\b/i.test(textLower)
+    )) {
+      return `Thank you! I have noted your details (*${text}*) for ${docTitle} (${activeSpecialty}). Our clinic front desk will share your booking confirmation on WhatsApp shortly.${phoneSuffix}`;
+    }
+
+    // 8.5.8 General Appointment Booking / Consultation Request
+    if (/appointment|book|consult|visit|checkup|injury|rehab|treatment/i.test(textLower)) {
       return `Hello! 👋 I would be delighted to help you schedule an appointment with ${docTitle} (${activeSpecialty}) at *${clinicName}*. Available timings: *${activeTimings}*.\n\nPlease share the **Patient's Full Name**, **Age**, and **Preferred Date** (Today or Tomorrow) to reserve your slot.${phoneSuffix}`;
+    }
+
+    if (isOngoingChat) {
+      return `Thank you! I have noted your message (*${text}*) for ${docTitle} (${activeSpecialty}). Our team will follow up with you shortly.${phoneSuffix}`;
     }
 
     return `Hello! 👋 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${activeSpecialty}). Available timings: *${activeTimings}*. How may I assist you today?${phoneSuffix}`;
@@ -792,8 +818,12 @@ function buildDeterministicReceptionistReply(
     }
 
     // 9.35 Diagnostic / Pathology / Lab Test Price & Inquiry in Hindi
-    const isLabOrDiagHi = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab|pathology|जाँच|खून|टेस्ट/i.test(textLower);
+    const isLabOrDiagHi = isDiagnosticLab || /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab|pathology|जाँच|खून|टेस्ट/i.test(textLower);
     if (isLabOrDiagHi && /fee|charge|cost|price|kitna|kitni|paisa|rupee|rate|फीस|शुल्क|खर्च|रुपये/i.test(textLower)) {
+      if (labRateCard && labRateCard.trim().length > 10) {
+        const panelNoteHi = acceptsGovtPanels && acceptedPanelsList ? ` Hum ${acceptedPanelsList} aur standard rates dono accept karte hain.` : "";
+        return `Hamari laboratory ke test charges hain:${panelNoteHi}\n\n${labRateCard.trim()}\n\nCertified phlebotomists dwara home blood sample collection ki suvidha bhi uplabdh hai (${homeSampleCollectionFee || "Uplabdh"}). Aap kaun sa test karwana chahte hain?${phoneSuffix}`;
+      }
       return `Hamare diagnostic lab me routine aur specialized tests (Blood test, CBC, Sugar, Thyroid, LFT, KFT, Ultrasound, X-ray) uplabdh hain. Test ka kharch/charges specific test par nirbhar karta hai. Certified phlebotomists dwara home blood sample collection ki suvidha bhi uplabdh hai.\n\nKripya specific test ka naam batayein taaki main exact price aur preparation guide kar sakoon.${phoneSuffix}`;
     }
 
@@ -947,8 +977,12 @@ function buildDeterministicReceptionistReply(
   }
 
   // 10.45 Diagnostic / Pathology / Lab Test Price & Inquiry
-  const isDiagnosticTestQuery = /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
+  const isDiagnosticTestQuery = isDiagnosticLab || /blood\s*test|sugar|glucose|lipid|cholesterol|cbc|hemoglobin|thyroid|tsh|kft|lft|urine|stool|culture|semen|biopsy|histopath|fnac|nipt|karyotype|x-?ray|ultrasound|usg|sonography|mri|ct\s*scan|ecg|echo|tmt|lab\s*test|diagnostic\s*test|pathology/i.test(textLower);
   if (isDiagnosticTestQuery && /fee|charge|cost|price|how\s*much|rate/i.test(textLower)) {
+    if (labRateCard && labRateCard.trim().length > 10) {
+      const panelNoteEn = acceptsGovtPanels && acceptedPanelsList ? ` We accept ${acceptedPanelsList} and standard private rates.` : "";
+      return `Our diagnostic laboratory test charges are:${panelNoteEn}\n\n${labRateCard.trim()}\n\nPhlebotomists are also available for home blood sample collection (${homeSampleCollectionFee || "Available upon request"}). Which test would you like to schedule?${phoneSuffix}`;
+    }
     return `Our diagnostic center provides comprehensive laboratory pathology and imaging services (Blood panels, CBC, Blood Sugar, Thyroid Profile, LFT, KFT, Ultrasound, X-ray). Test prices vary according to the specific investigation requested. Certified phlebotomists are also available for home blood sample collection.\n\nPlease share the specific test name so I can provide the exact price, fasting instructions, and turnaround time.${phoneSuffix}`;
   }
 
@@ -1232,6 +1266,16 @@ export class AIAgentsService {
     const targetDemographics = config?.targetDemographics || "all";
     const clinicTz = resolveClinicTimezone(scheduleContext?.clinicTimezone || config?.timezone);
 
+    // Diagnostic & Pathology Lab Configuration
+    const facilityType: "CLINIC" | "DIAGNOSTIC_LAB" | "POLYCLINIC" = config?.facilityType || "CLINIC";
+    const isDiagnosticLab = facilityType === "DIAGNOSTIC_LAB";
+    const isPolyclinic = facilityType === "POLYCLINIC";
+    const acceptsGovtPanels = config?.acceptsGovtPanels === true;
+    const acceptedPanelsList = config?.acceptedPanelsList || "CGHS, ECHS, Ayushman Bharat, DGEHS";
+    const labRateCard = config?.rateCardText || "";
+    const homeSampleCollectionFee = config?.homeSampleCollectionFee || "";
+    const testsNotAvailable = config?.testsNotAvailable || "MRI, CT Scan, PET Scan";
+
     try {
       const isPediatrician = /pediatr|paediatr|child|baby|bal/i.test(specialty) || /pediatr|paediatr|child/i.test(customRules);
 
@@ -1397,15 +1441,21 @@ STRICT MULTILINGUAL MATCHING RULES:
 `;
       }
 
+      const facilityScopeDescription = isDiagnosticLab
+        ? `You are ${assistantName}, the certified Senior Diagnostic Coordinator and Laboratory Front Desk Manager at ${clinicName}. Your operational role is assisting patients with pathology investigations, lab test quotations (Normal Private & CGHS/Panel rates), blood sample collection, home pickup logistics, fasting instructions, and test report delivery timelines. DO NOT push or default to doctor OPD appointments unless the patient explicitly requests a physician consultation.`
+        : isPolyclinic
+        ? `You are ${assistantName}, the Senior Healthcare Coordinator at ${clinicName}, a comprehensive polyclinic and diagnostic pathology center. You seamlessly assist patients with both doctor consultations and diagnostic laboratory investigations.`
+        : `You are ${assistantName}, the compassionate, highly experienced, professional Senior Clinic Receptionist at ${clinicName}${isMultiDoctor ? ', a multi-specialty healthcare polyclinic.' : ` (${doctorName} - ${specialty}).`}`;
+
       const systemPrompt = `
-You are ${assistantName}, the compassionate, highly experienced, professional Senior Clinic Receptionist at ${clinicName}${isMultiDoctor ? ', a multi-specialty healthcare polyclinic.' : ` (${doctorName} - ${specialty}).`}
+${facilityScopeDescription}
 
 ${languageDirective}
 
 ==================================================
 2. CORE RECEPTIONIST PERSONALITY & TONE
 ==================================================
-- **Role & Persona**: Warm, calm, respectful, reassuring, empathetic, human-sounding, and concise. You write naturally like a caring medical receptionist on WhatsApp.
+- **Role & Persona**: Warm, calm, respectful, reassuring, empathetic, human-sounding, and concise. You write naturally like a caring medical professional on WhatsApp.
 - **Emotional Intelligence & Intent Recognition (In Patient's Detected Language)**:
   * Identify the patient's emotional state (e.g., worried, anxious, in pain, frustrated, scared, urgent, confused, relieved, thankful, neutral).
   * Adapt your tone appropriately in the patient's detected language (English, Hinglish, Bengali, Punjabi, Tamil, Telugu, Marathi, Gujarati, etc.). The English and Hinglish examples below illustrate tone and intent—express the same caring reassurance in whichever language the patient uses:
@@ -1642,9 +1692,10 @@ CONVERSATION TURN: ${isFirstMessage
   ? `FIRST MESSAGE (LEGAL IDENTITY & ADMINISTRATIVE SCOPE DISCLOSURE MANDATE):
 - Warmly welcome the patient to ${clinicName}.
 - 🏛️ LEGAL VIRTUAL STAFF DISCLOSURE:
-  Under legal compliance standards, you MUST identify yourself by name as the clinic's Virtual Receptionist / Front Desk Coordinator and clearly declare your operational scope (assisting with appointments, clinic timings, fees, doctor availability, and clinic services):
-  • English: "Hello! Welcome to ${clinicName}. 🙏 I am ${assistantName}, the virtual receptionist for ${isMultiDoctor ? clinicName : doctorName}. I assist with appointment bookings, clinic timings, consultation fees, and clinic information. How may I assist you today? 😊"
-  • Hinglish: "Namaste! 🙏 ${clinicName} mein aapka swagat hai. Main ${assistantName}, ${isMultiDoctor ? clinicName : doctorName} ki virtual receptionist hoon. Main yahan appointments, timings, fees aur clinic jankari mein aapki madad karti hoon. Main aapki kya sahayata kar sakti hoon? 😊"
+  Under legal compliance standards, you MUST identify yourself by name as the facility's Virtual Coordinator / Receptionist and clearly declare your operational scope:
+  ${isDiagnosticLab ? `• English: "Hello! Welcome to ${clinicName}. 🙏 I am ${assistantName}, the diagnostic and lab coordinator. I assist with pathology test bookings, test prices, CGHS/panel rates, home sample collection, and report timelines. Which test or prescription can I assist you with today? 😊"
+  • Hinglish: "Namaste! 🙏 ${clinicName} mein aapka swagat hai. Main ${assistantName}, diagnostic lab coordinator hoon. Main yahan blood tests, test charges, CGHS/panel rates, home sample collection aur report timings mein aapki madad karti hoon. Main kis test ya parchi mein aapki sahayata kar sakti hoon? 😊"` : `• English: "Hello! Welcome to ${clinicName}. 🙏 I am ${assistantName}, the virtual receptionist for ${isMultiDoctor ? clinicName : doctorName}. I assist with appointment bookings, clinic timings, consultation fees, and clinic information. How may I assist you today? 😊"
+  • Hinglish: "Namaste! 🙏 ${clinicName} mein aapka swagat hai. Main ${assistantName}, ${isMultiDoctor ? clinicName : doctorName} ki virtual receptionist hoon. Main yahan appointments, timings, fees aur clinic jankari mein aapki madad karti hoon. Main aapki kya sahayata kar sakti hoon? 😊"`}
 - If today's OPD has already concluded:
   State naturally that clinic OPD consultations for today have concluded, and invite them to schedule for ${conversationalTomorrow}.
   ⚠️ DO NOT quote exact clock minutes in parentheses like "(10:29 PM)". Speak naturally like a human medical coordinator.`
@@ -1827,8 +1878,15 @@ ${isPediatrician ? `
 `}
 
 FEES & POLICIES:
-- Consultation Fee: ${consultationFee || "Shared at clinic"} (Note: This is strictly for the DOCTOR'S in-person OPD consultation).
+${isDiagnosticLab ? `- Facility Operating Mode: DEDICATED DIAGNOSTIC & PATHOLOGY LABORATORY.
+- Laboratory Rate Card (Tests & Prices):
+${labRateCard && labRateCard.trim().length > 0 ? labRateCard.trim() : "Standard pathology rates apply (e.g. CBC, Sugar, Lipid, Thyroid, LFT, KFT). Inquire for specific test rates."}
+- Government & Corporate Panels: ${acceptsGovtPanels ? `ACCEPTED (${acceptedPanelsList}). When patients inquire about prices or share a prescription, ask if they require Normal Private rates or approved Panel/CGHS rates.` : "Standard private rates only (Government panels not active)."}
+- Home Sample Collection: ${homeSampleCollectionFee ? `Available (${homeSampleCollectionFee})` : "Available upon request (Phlebotomists can visit patient's home)."}
+- Tests / Scans NOT Done In-House (Referral Only): ${testsNotAvailable}. If a doctor prescription contains any of these tests (e.g. MRI, CT Scan, PET Scan), clearly and politely clarify: "Blood and pathology tests can be performed at our lab or collected from your home, while imaging/scans (${testsNotAvailable}) can be done at a partner referral diagnostic hospital."
+- DO NOT quote doctor consultation fees or push OPD consultations. Focus on pathology test booking, home pickup, and report turnaround.` : `- Consultation Fee: ${consultationFee || "Shared at clinic"} (Note: This is strictly for the DOCTOR'S in-person OPD consultation).
 - Diagnostic & Lab Test Pricing: Laboratory tests (Blood tests, CBC, Sugar, Thyroid, LFT, KFT, Urine, Ultrasound, X-ray) have separate test-specific pathology pricing. DO NOT quote the doctor's consultation fee as the price of a lab test. If a patient asks for lab/blood test prices, explain that test prices vary depending on the specific investigation, mention home sample collection availability, and ask for the specific test name.
+${labRateCard && labRateCard.trim().length > 0 ? `- In-House Lab Rate Card:\n${labRateCard.trim()}` : ""}`}
 - Follow-up Policy: ${followUpFee ? `₹${followUpFee}` : "₹0 / Free"} for returning patients within ${followUpDays} of initial visit for report review.
 - Tele-Consultation: ${allowTeleConsultation ? `ENABLED (${teleConsultationFee || 'Standard Fee'})` : "IN-CLINIC ONLY (Online consultation / WhatsApp prescription not provided)"}
 - Pediatric Vaccines: ${isPediatrician ? vaccinationsList : "N/A (Pediatric clinics only)"}
@@ -1837,7 +1895,7 @@ ${customRules ? `
 ==================================================
 CUSTOM GUIDELINES & RULES (HIGHEST PRIORITY OVERRIDES):
 ==================================================
-- THE DOCTOR HAS ENTERED THE FOLLOWING CUSTOM RULES AND OPERATIONAL INSTRUCTIONS.
+- THE CLINIC HAS ENTERED THE FOLLOWING CUSTOM RULES AND OPERATIONAL INSTRUCTIONS.
 - CRITICAL DIRECTIVE: INSTRUCTIONS ENTERED HERE STRICTLY OVERRIDE ANY DEFAULT TIMINGS, GENERAL CLINIC POLICIES, OR STANDARD RECEPTIONIST BEHAVIOR ABOVE:
 "${customRules}"
 ` : ""}
@@ -1854,7 +1912,14 @@ ${isMultiDoctor ? '9' : '8'}. DIAGNOSTIC REPORTS, INVESTIGATION SCANS & MEDICAL 
     - Identify the investigation type (e.g. Complete Blood Count / CBC, Thyroid Panel, Blood Glucose, Lipid Profile, Chest X-ray, Ultrasound Sonography, MRI Brain, Dental Radiograph, Skin Rash / Lesion).
     - Note the patient's name if printed on the diagnostic report (e.g. "Mrs. Yashoda Sharma") to confirm you have identified their record accurately.
     - Provide a warm, calm, high-level layperson observation in 1–2 sentences (e.g., "I see you've shared your recent Thyroid Profile and Complete Blood Count report").
-- **Receptionist Scope Boundary & Medical Guardrails**:
+${isDiagnosticLab ? `- 🔬 **DOCTOR PRESCRIPTION OCR FOR DIAGNOSTIC & PATHOLOGY LABS**:
+  * When a patient uploads or shares a doctor's prescription (parchi):
+    1. Extract and list all prescribed investigations (e.g. CBC, KFT, LFT, Lipid Profile, Fasting Blood Sugar, Thyroid, Urine Routine, etc.).
+    2. Match each test against your Laboratory Rate Card above to quote exact prices (and offer CGHS/panel rates if patient is under a scheme).
+    3. Check if any prescribed test is listed in Tests NOT Done In-House (${testsNotAvailable}). Transparently and politely inform the patient that blood/pathology tests are done in-house (or via home sample collection), while high-end scans (${testsNotAvailable}) require an external imaging center.
+    4. Provide fasting guidelines (e.g., 10-12 hours fasting for Sugar & Lipid).
+    5. Offer home blood sample pickup or center visit timing.
+    6. ⚠️ DO NOT push a doctor OPD appointment. The patient already has a prescription from their doctor!` : `- **Receptionist Scope Boundary & Medical Guardrails**:
   * Emphasize the receptionist scope clearly:
     - English: "Our doctor will physically examine your complete diagnostic findings in detail during your in-clinic consultation."
     - Hinglish: "Doctor consultation ke dauran aapki poori report aur test values ko physically check karke aage ka ilaj guide karenge."
@@ -1877,7 +1942,7 @@ ${isMultiDoctor ? '9' : '8'}. DIAGNOSTIC REPORTS, INVESTIGATION SCANS & MEDICAL 
 - **Proactive Next Step: Offer Consultation Slot**:
   * Conclude with a warm invitation to book an appointment with the matched doctor:
     - English: "Would you like me to schedule a consultation with ${doctorName} for today or tomorrow to review your report? Please share your preferred date and time. 😊"
-    - Hinglish: "Kya aap ${doctorName} ke sath aaj ya kal ka consultation slot book karna chahenge taaki doctor report dekh kar aage guide kar sakein? Kripya apni preferred date aur session batayein. 😊"
+    - Hinglish: "Kya aap ${doctorName} ke sath aaj ya kal ka consultation slot book karna chahenge taaki doctor report dekh kar aage guide kar sakein? Kripya apni preferred date aur session batayein. 😊"`}
 
 ==================================================
 ${isMultiDoctor ? '10' : '9'}. PRE-BOOKING VERIFICATION GATE & BOOKING TAGS
@@ -2024,7 +2089,13 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
         websiteUrl,
         allowTeleConsultation,
         teleConsultationFee,
-        clinicTz
+        clinicTz,
+        facilityType,
+        labRateCard,
+        acceptsGovtPanels,
+        acceptedPanelsList,
+        homeSampleCollectionFee,
+        testsNotAvailable
       );
     }
   }

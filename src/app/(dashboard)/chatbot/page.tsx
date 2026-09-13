@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck, Compass, Target, Radar } from "lucide-react";
+import { Bot, Calendar, MessageSquare, Megaphone, TrendingUp, Power, Settings, RefreshCcw, ShieldAlert, Key, Sliders, CheckCircle2, PhoneCall, Copy, Check, Zap, Sparkles, Stethoscope, Clock, ArrowUpRight, Star, Phone, Mail, UserCheck, ShieldCheck, Compass, Target, Radar, TestTube, FlaskConical } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -630,11 +630,44 @@ export default function AIAgentsHubPage() {
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                       <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
-                      1. Receptionist Identity & Persona
+                      1. Facility Persona & Receptionist Identity
                     </h4>
                     <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
                       Human Conversational Tone
                     </span>
+                  </div>
+
+                  {/* Facility Persona Type Selector */}
+                  <div className="space-y-1.5 p-3.5 rounded-xl bg-gradient-to-r from-slate-50 to-indigo-50/30 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <FlaskConical className="w-4 h-4 text-indigo-600" />
+                        Facility Role & Operating Persona
+                      </Label>
+                      <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                        {configDraft.facilityType === "DIAGNOSTIC_LAB" ? "🔬 Diagnostic Lab Mode" : configDraft.facilityType === "POLYCLINIC" ? "🏥 Polyclinic + Lab Mode" : "🩺 Clinic OPD Mode"}
+                      </span>
+                    </div>
+                    <Select
+                      value={configDraft.facilityType || "CLINIC"}
+                      onValueChange={(v) => setConfigDraft({ ...configDraft, facilityType: v })}
+                    >
+                      <SelectTrigger className="h-10 bg-white text-xs sm:text-sm border-slate-200 w-full min-w-0 font-medium">
+                        <SelectValue placeholder="Select Facility Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CLINIC">🩺 Doctor Clinic / OPD Practice (Doctor consultations & in-clinic visits)</SelectItem>
+                        <SelectItem value="DIAGNOSTIC_LAB">🔬 Pathology & Diagnostic Laboratory (Lab tests, CGHS/Panel rates & home collection)</SelectItem>
+                        <SelectItem value="POLYCLINIC">🏥 Multi-Specialty Polyclinic & Diagnostic Center (Doctor OPD + Pathology Lab)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-slate-500">
+                      {configDraft.facilityType === "DIAGNOSTIC_LAB" 
+                        ? "AI introduces itself as a Diagnostic Coordinator, itemizes prescription tests, provides lab rates, and organizes home sample collection without quoting doctor OPD fees."
+                        : configDraft.facilityType === "POLYCLINIC"
+                        ? "AI handles both doctor appointments and diagnostic lab testing seamlessly."
+                        : "AI behaves as the doctor's clinic receptionist for outpatient OPD appointments."}
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -784,6 +817,95 @@ export default function AIAgentsHubPage() {
                       className="h-10 text-xs sm:text-sm bg-white border-slate-200 focus:ring-2 focus:ring-indigo-500/20"
                     />
                     <p className="text-[10px] text-slate-400">Pediatric clinics will answer vaccination inquiries with these exact vaccines. Non-pediatric clinics will politely inform patients that child vaccines are not provided.</p>
+                  </div>
+                </div>
+
+                {/* 🔬 3.5 DIAGNOSTIC LAB & MULTI-PANEL RATE CARD */}
+                <div className="space-y-3 sm:space-y-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-indigo-200/80 shadow-xs min-w-0 bg-gradient-to-br from-white via-indigo-50/15 to-purple-50/20">
+                  <div className="flex items-start sm:items-center justify-between gap-3 pb-2 border-b border-indigo-100">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-2">
+                        <TestTube className="w-4 h-4 text-indigo-600 shrink-0" />
+                        Diagnostic & Pathology Rate Card (Normal, CGHS & Panels)
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Define test prices, government panel accepted rates (CGHS/ECHS), and out-of-scope scans.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-full shrink-0">
+                      OCR & Price Auto-Quote
+                    </span>
+                  </div>
+
+                  {/* Panel Acceptance Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/60 border border-indigo-100">
+                    <div className="space-y-0.5 pr-2">
+                      <Label className="text-xs font-bold text-indigo-950">Accept Government / Corporate Panels (CGHS, ECHS, etc.)</Label>
+                      <p className="text-[10px] text-slate-500">Enable if your lab accepts approved government schemes or corporate health cards.</p>
+                    </div>
+                    <Switch
+                      checked={!!configDraft.acceptsGovtPanels}
+                      onCheckedChange={(checked) => setConfigDraft({ ...configDraft, acceptsGovtPanels: checked })}
+                      className="shrink-0"
+                    />
+                  </div>
+
+                  {configDraft.acceptsGovtPanels && (
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-semibold text-slate-700">Accepted Panels / Schemes</Label>
+                      <Input
+                        placeholder="e.g., CGHS, ECHS, DGEHS, Ayushman Bharat, Railway"
+                        value={configDraft.acceptedPanelsList || ""}
+                        onChange={(e) => setConfigDraft({ ...configDraft, acceptedPanelsList: e.target.value })}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200"
+                      />
+                      <p className="text-[10px] text-slate-400">AI will ask patients whether they seek Normal Private rates or approved CGHS/Panel rates.</p>
+                    </div>
+                  )}
+
+                  {/* Rate Card Text / Test Menu */}
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-700">Test Menu & Rate List (Normal & Panel Rates)</Label>
+                      <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                        Supports Test Name & Rates
+                      </span>
+                    </div>
+                    <Textarea
+                      placeholder={"Enter or paste your test rates, for example:\n• CBC (Complete Blood Count): ₹350 (CGHS: ₹135)\n• Fasting Blood Sugar: ₹100 (CGHS: ₹40)\n• Lipid Profile: ₹750 (CGHS: ₹250)\n• Thyroid Profile (T3 T4 TSH): ₹500 (CGHS: ₹200)\n• Liver Function Test (LFT): ₹700 (CGHS: ₹250)\n• Kidney Function Test (KFT): ₹700 (CGHS: ₹250)\n• Ultrasound Whole Abdomen: ₹1200 (CGHS: ₹450)\n• Digital X-Ray Chest: ₹400 (CGHS: ₹150)"}
+                      value={configDraft.rateCardText || ""}
+                      onChange={(e) => setConfigDraft({ ...configDraft, rateCardText: e.target.value })}
+                      className="resize-none text-xs bg-white border-slate-200 leading-relaxed font-mono"
+                      rows={6}
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      AI matches tests from doctor prescriptions and patient queries against this list to quote accurate Normal vs. CGHS prices.
+                    </p>
+                  </div>
+
+                  {/* Home Sample Collection & Out-of-scope Scans */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-semibold text-slate-700">Home Sample Collection Policy</Label>
+                      <Input
+                        placeholder="e.g., Free above ₹500, else ₹100 (Timings: 7:00 AM - 10:30 AM)"
+                        value={configDraft.homeSampleCollectionFee || ""}
+                        onChange={(e) => setConfigDraft({ ...configDraft, homeSampleCollectionFee: e.target.value })}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200"
+                      />
+                      <p className="text-[10px] text-slate-400">Shared when patients request home blood sample pickup.</p>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-0">
+                      <Label className="text-xs font-semibold text-slate-700">Tests Not Available In-House (Referral)</Label>
+                      <Input
+                        placeholder="e.g., MRI, CT Scan, PET-CT"
+                        value={configDraft.testsNotAvailable || ""}
+                        onChange={(e) => setConfigDraft({ ...configDraft, testsNotAvailable: e.target.value })}
+                        className="h-10 text-xs sm:text-sm bg-white border-slate-200"
+                      />
+                      <p className="text-[10px] text-slate-400">If prescribed on parchi, AI clarifies they are external while booking in-house blood tests.</p>
+                    </div>
                   </div>
                 </div>
 
