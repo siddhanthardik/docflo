@@ -21,6 +21,9 @@ export async function GET() {
         appointments: {
           take: 1,
           orderBy: { date: 'desc' }
+        },
+        primaryPractitioner: {
+          select: { name: true }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -33,6 +36,8 @@ export async function GET() {
       "Phone",
       "Gender",
       "Age",
+      "Status",
+      "Doctor",
       "Last Visit",
       "Created At",
       "Tags",
@@ -41,8 +46,16 @@ export async function GET() {
     const rows = patients.map(p => {
       let age = "";
       if (p.dateOfBirth) {
-        const diff = Date.now() - new Date(p.dateOfBirth).getTime();
-        age = Math.floor(diff / 31557600000).toString();
+        const dob = new Date(p.dateOfBirth);
+        if (!isNaN(dob.getTime())) {
+          const today = new Date();
+          let years = today.getFullYear() - dob.getFullYear();
+          const m = today.getMonth() - dob.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+            years--;
+          }
+          age = years >= 0 ? years.toString() : "";
+        }
       }
       
       const lastVisit = p.appointments && p.appointments.length > 0 
@@ -51,10 +64,12 @@ export async function GET() {
 
       return [
         p.id,
-        `${p.firstName} ${p.lastName}`,
+        `${p.firstName} ${p.lastName}`.trim(),
         p.phone || "",
         p.gender || "",
         age,
+        p.patientType || "ACTIVE",
+        p.primaryPractitioner?.name || "Unassigned",
         lastVisit,
         p.createdAt.toISOString(),
         p.tags ? p.tags.join(", ") : "",

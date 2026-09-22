@@ -1058,6 +1058,8 @@ export interface DoctorScheduleContext {
   opdStatus?: string; // ACTIVE, RUNNING_LATE, PAUSED, CANCELLED
   opdDelayMinutes?: number;
   opdStatusNote?: string | null;
+  opdPausedUntil?: string | null;
+  opdPauseReason?: string | null;
   maxDailyAiBookings?: number | null;
   todayAiCount?: number;
   isTodayQuotaFull?: boolean;
@@ -1410,6 +1412,31 @@ export class AIAgentsService {
       const opdStatus = scheduleContext?.opdStatus || "ACTIVE";
       const opdDelay = scheduleContext?.opdDelayMinutes || 0;
       const todayQuotaFull = Boolean(scheduleContext?.isTodayQuotaFull);
+      const isOpdPaused = opdStatus === "PAUSED";
+      const pausedUntilIso = scheduleContext?.opdPausedUntil;
+      const pauseReason = scheduleContext?.opdPauseReason;
+
+      let formattedReturnDate = "";
+      let returnWeekday = "";
+      if (pausedUntilIso) {
+        const d = new Date(pausedUntilIso);
+        if (!isNaN(d.getTime())) {
+          formattedReturnDate = d.toLocaleDateString("en-IN", { timeZone: clinicTz, month: "short", day: "numeric" });
+          returnWeekday = d.toLocaleDateString("en-IN", { timeZone: clinicTz, weekday: "long" });
+        }
+      }
+
+      let pauseReasonText = "out of station / conducting external OPD";
+      if (pauseReason === "HOLIDAY" || pauseReason === "VACATION") {
+        pauseReasonText = "on planned leave / holiday";
+      } else if (pauseReason === "CONFERENCE") {
+        pauseReasonText = "attending an official medical conference";
+      } else if (pauseReason === "EMERGENCY") {
+        pauseReasonText = "tending to a hospital / personal emergency";
+      } else if (pauseReason === "RENOVATION") {
+        pauseReasonText = "carrying out clinic maintenance";
+      }
+
       const bookedSlots = scheduleContext?.bookedSlotsToday && scheduleContext.bookedSlotsToday.length > 0
         ? `\n- Currently Booked Slots for Today: ${scheduleContext.bookedSlotsToday.join(", ")}`
         : "";
@@ -1860,12 +1887,21 @@ CRITICAL OPERATIONAL RULES WHEN TODAY'S OPD HAS CONCLUDED:
    - When asking for preferences (e.g. name, session, in-clinic vs online), explicitly state that it is for tomorrow:
      • Example (English): "Our clinic has concluded consultations for today. Dr. ${doctorName} will be available ${conversationalTomorrow} for in-clinic OPD consultations. I would be happy to help reserve a slot for you. Could you please share the patient's full name and whether you prefer a morning or evening visit?"
      • Example (Hinglish): "Aaj ke clinic consultations conclude ho chuke hain. Dr. ${doctorName} kal (${tomorrowDayName}) OPD consultations ke liye uplabdh rahenge. Main aapke liye kal ka slot reserve kar sakti hoon. Kripya patient ka full name aur session (Morning/Evening) batayein."` : `- Clinic OPD Status: OPEN / ACTIVE for today.`}
+${isOpdPaused ? `\n🚨 DOCTOR LIVE STATUS: CONSULTATIONS CURRENTLY PAUSED!
+- The doctor's OPD consultations are currently paused (${formattedReturnDate ? `until ${returnWeekday}, ${formattedReturnDate}` : "temporarily"}).
+- Reason: Doctor is ${pauseReasonText}.
+- ⚠️ CRITICAL INSTRUCTION ON PAUSED SCHEDULE (ZERO FALSE BOOKINGS):
+  1. ⛔ STRICTLY DO NOT OFFER, DRAFT, OR EMIT [BOOK_APPOINTMENT] FOR ANY DATE BEFORE ${formattedReturnDate || 'the doctor returns'}!
+  2. Inform inquiring patients with warmth and professionalism:
+     • English: "Dr. ${doctorName} is currently ${pauseReasonText} and consultations are paused until ${returnWeekday}, ${formattedReturnDate || 'further notice'}. We would be happy to help reserve an advance priority slot for you starting from ${formattedReturnDate || 'the return date'}. Would you like to schedule for ${formattedReturnDate || 'then'}?"
+     • Hinglish: "Dr. ${doctorName} filhal ${pauseReasonText} hain aur clinic consultations ${returnWeekday}, ${formattedReturnDate || 'aage ke date'} tak paused hain. Hum aapke liye ${formattedReturnDate || 'return date'} ka advance priority slot book kar sakte hain. Kripya batayein kya aap ${formattedReturnDate || 'us din'} ka slot schedule karna chahenge?"
+  3. If emergency: Remind patients to immediately visit the nearest hospital emergency department if symptoms are acute.` : ""}
 ${isMultiDoctor ? `- Clinic Facility Name: ${clinicName} (Multi-Doctor Healthcare Polyclinic)` : `- Primary Doctor: ${doctorName}\n- Specialty: ${specialty}\n- Clinic Name: ${clinicName}`}
 - Morning OPD Hours: ${morningOpd || "Not Active / Check Schedule"}
 - Evening OPD Hours: ${eveningOpd || "Not Active / Check Schedule"}
 - Full Schedule: ${clinicTimings}
 - Sunday Policy: ${sundayRule}
-- Doctor Live Status Today: ${opdStatus} ${opdDelay > 0 ? `(Running ~${opdDelay} mins late due to hospital procedures)` : ""}
+- Doctor Live Status Today: ${isOpdPaused ? `PAUSED (${formattedReturnDate ? `Returning ${returnWeekday}, ${formattedReturnDate} - ${pauseReasonText}` : "Consultations paused"})` : `${opdStatus} ${opdDelay > 0 ? `(Running ~${opdDelay} mins late due to hospital procedures)` : ""}`}
 - Today's Quota Status: ${todayQuotaFull ? "FULLY BOOKED FOR TODAY (QUOTA REACHED)" : "SLOTS AVAILABLE"}
 ${bookedSlots}
 ${websiteUrl ? `- Official Clinic Website: ${websiteUrl}` : ""}

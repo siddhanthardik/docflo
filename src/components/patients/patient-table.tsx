@@ -250,11 +250,28 @@ export function PatientTable({
               {patients.map((patient) => {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                const lastActivityDate = patient.appointments && patient.appointments[0] 
-                  ? new Date(patient.appointments[0].date) 
-                  : new Date(patient.createdAt);
-                const isInactive = patient.patientType === "INACTIVE" || lastActivityDate < oneYearAgo;
-                const displayStatus = isInactive ? "INACTIVE" : "ACTIVE";
+                const hasVisits = patient.appointments && patient.appointments.length > 0;
+                const lastActivityDate = hasVisits ? new Date(patient.appointments![0].date) : null;
+
+                let displayStatus = patient.patientType || "ACTIVE";
+                if (patient.patientType === "LEAD") {
+                  displayStatus = "LEAD";
+                } else if (patient.patientType === "INACTIVE") {
+                  displayStatus = "INACTIVE";
+                } else if (lastActivityDate && lastActivityDate < oneYearAgo) {
+                  displayStatus = "INACTIVE";
+                } else if (!hasVisits && (patient.tags?.includes("WhatsApp Lead") || patient.tags?.includes("WhatsApp Inquiry"))) {
+                  displayStatus = "LEAD";
+                }
+
+                const badgeClass =
+                  displayStatus === "LEAD"
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : displayStatus === "INACTIVE"
+                    ? "bg-amber-100 text-amber-700 border border-amber-200"
+                    : displayStatus === "LOST"
+                    ? "bg-rose-100 text-rose-700 border border-rose-200"
+                    : "bg-emerald-100 text-emerald-700 border border-emerald-200";
 
                 return (
                 <TableRow
@@ -273,11 +290,7 @@ export function PatientTable({
                             {patient.firstName} {patient.lastName}
                           </p>
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                              displayStatus === "INACTIVE"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${badgeClass}`}
                           >
                             {displayStatus}
                           </span>
@@ -380,12 +393,19 @@ export function PatientTable({
                             Edit Profile
                           </DropdownMenuItem>
                           
-                          {patient.patientType === "INACTIVE" ? (
+                          {patient.patientType === "INACTIVE" && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(patient.id, "ACTIVE"); }}>
                               <UserCheck className="h-4 w-4 mr-2 text-emerald-600" />
                               Reactivate Patient
                             </DropdownMenuItem>
-                          ) : (
+                          )}
+                          {patient.patientType === "LEAD" && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(patient.id, "ACTIVE"); }}>
+                              <UserCheck className="h-4 w-4 mr-2 text-emerald-600" />
+                              Convert to Active Patient
+                            </DropdownMenuItem>
+                          )}
+                          {patient.patientType !== "INACTIVE" && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(patient.id, "INACTIVE"); }}>
                               <UserX className="h-4 w-4 mr-2 text-amber-600" />
                               Mark Inactive

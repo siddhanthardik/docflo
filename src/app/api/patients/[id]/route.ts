@@ -289,8 +289,29 @@ export async function DELETE(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    await prisma.patient.delete({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      // 1. Unlink any conversations associated with this patient (retain chat logs intact)
+      await tx.conversation.updateMany({
+        where: { patientId: id },
+        data: { patientId: null },
+      });
+
+      // 2. Unlink any waitlist entries
+      await tx.waitlistEntry.updateMany({
+        where: { patientId: id },
+        data: { patientId: null },
+      });
+
+      // 3. Unlink any campaign recipients
+      await tx.campaignRecipient.updateMany({
+        where: { patientId: id },
+        data: { patientId: null },
+      });
+
+      // 4. Safely delete the patient profile
+      await tx.patient.delete({
+        where: { id },
+      });
     });
 
     return NextResponse.json({ message: "Patient deleted successfully" });

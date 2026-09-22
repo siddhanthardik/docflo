@@ -118,6 +118,7 @@ export default function PatientsPage() {
           {[
             { id: "ALL", label: "All Patients" },
             { id: "ACTIVE", label: "Active Patients" },
+            { id: "LEAD", label: "Leads & Inquiries" },
             { id: "INACTIVE", label: "Inactive" },
           ].map((tab) => (
             <button

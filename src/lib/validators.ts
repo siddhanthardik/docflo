@@ -25,7 +25,10 @@ export const loginSchema = z.object({
 });
 
 export const patientSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required"),
+  firstName: z.string().trim().min(1, "First name is required").refine(
+    (val) => !/^[\d\s+\-()]{6,}$/.test(val),
+    { message: "First name cannot be a phone number or purely numeric digits" }
+  ),
   lastName: z.string().trim().optional().nullable().default(""),
   phone: z.string().min(10, "Valid phone number is required"),
   email: z.string().email("Invalid email").optional().nullable().or(z.literal("")),

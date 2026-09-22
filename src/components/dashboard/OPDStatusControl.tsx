@@ -6,11 +6,14 @@ import {
   AlertCircle, 
   PlayCircle, 
   ChevronDown, 
-  Activity,
-  PauseCircle,
-  ShieldAlert,
-  CheckCircle2,
-  Info
+  Activity, 
+  PauseCircle, 
+  ShieldAlert, 
+  CheckCircle2, 
+  Info,
+  Calendar,
+  Sparkles,
+  Plane
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -36,6 +39,45 @@ export function OPDStatusControl() {
   const [showAdjustDelay, setShowAdjustDelay] = useState<boolean>(false);
   const [confirmingAction, setConfirmingAction] = useState<"PAUSE" | "CANCEL" | "DELAY" | null>(null);
 
+  // Multi-day Pause State
+  const [pauseDurationType, setPauseDurationType] = useState<"today" | "2d" | "3d" | "7d" | "custom">("today");
+  const [customReturnDate, setCustomReturnDate] = useState<string>("");
+  const [pauseReasonCategory, setPauseReasonCategory] = useState<string>("OUT_OF_STATION");
+
+  const minCustomDate = useMemo(() => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    return tmr.toISOString().split("T")[0];
+  }, []);
+
+  const calculatedReturnDate = useMemo(() => {
+    const now = new Date();
+    if (pauseDurationType === "custom" && customReturnDate) {
+      const [y, m, d] = customReturnDate.split("-").map(Number);
+      const target = new Date();
+      target.setFullYear(y, m - 1, d);
+      return target;
+    }
+    const days = pauseDurationType === "today" ? 1 : pauseDurationType === "2d" ? 2 : pauseDurationType === "3d" ? 3 : 7;
+    return new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  }, [pauseDurationType, customReturnDate]);
+
+  const returnDateFormatted = useMemo(() => {
+    return calculatedReturnDate.toLocaleDateString("en-IN", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }, [calculatedReturnDate]);
+
+  const returnDateFullLabel = useMemo(() => {
+    return calculatedReturnDate.toLocaleDateString("en-IN", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+  }, [calculatedReturnDate]);
+
   const fetchStatus = async () => {
     try {
       setLoading(true);
@@ -55,7 +97,10 @@ export function OPDStatusControl() {
     fetchStatus();
   }, []);
 
-  const handleAction = async (action: "RESUME" | "DELAY" | "PAUSE_TODAY" | "CANCEL_TODAY") => {
+  const handleAction = async (
+    action: "RESUME" | "DELAY" | "PAUSE" | "PAUSE_TODAY" | "CANCEL_TODAY",
+    options?: { days?: number; pausedUntil?: string; reasonCategory?: string }
+  ) => {
     try {
       setUpdating(true);
       const res = await fetch("/api/doctor/opd-status", {
@@ -65,6 +110,9 @@ export function OPDStatusControl() {
           action,
           delayMinutes: selectedDelay,
           notifyPatients,
+          days: options?.days,
+          pausedUntil: options?.pausedUntil,
+          reasonCategory: options?.reasonCategory,
         }),
       });
 
@@ -101,6 +149,37 @@ export function OPDStatusControl() {
   const currentDelay = doctor?.opdDelayMinutes || 0;
   const maxAiBookings = doctor?.maxDailyAiBookings ?? "Unlimited";
 
+  const aiPreviewSpeech = useMemo(() => {
+    let reasonPhrase = "out of station for external OPD consultations";
+    if (pauseReasonCategory === "VACATION") reasonPhrase = "on annual planned leave / holiday";
+    else if (pauseReasonCategory === "CONFERENCE") reasonPhrase = "attending an official medical conference";
+    else if (pauseReasonCategory === "EMERGENCY") reasonPhrase = "tending to a personal / hospital emergency";
+    else if (pauseReasonCategory === "RENOVATION") reasonPhrase = "carrying out clinic maintenance";
+    else if (pauseReasonCategory === "GENERAL") reasonPhrase = "temporarily unavailable for consultations";
+
+    const docDisplayName = doctor?.name ? (doctor.name.startsWith("Dr") ? doctor.name : `Dr. ${doctor.name}`) : "Doctor";
+
+    return `"${docDisplayName} is currently ${reasonPhrase} and consultations are paused until ${returnDateFullLabel}. I would be happy to help reserve an advance priority slot for you starting from ${returnDateFormatted}. Would you like me to book for then?"`;
+  }, [doctor?.name, pauseReasonCategory, returnDateFullLabel, returnDateFormatted]);
+
+  const handleConfirmPause = () => {
+    if (pauseDurationType === "custom" && !customReturnDate) {
+      toast({
+        title: "Please choose a return date",
+        description: "Select when the doctor will resume OPD consultations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const days = pauseDurationType === "today" ? 1 : pauseDurationType === "2d" ? 2 : pauseDurationType === "3d" ? 3 : pauseDurationType === "7d" ? 7 : 1;
+    handleAction("PAUSE", {
+      days,
+      pausedUntil: pauseDurationType === "custom" ? customReturnDate : undefined,
+      reasonCategory: pauseReasonCategory,
+    });
+  };
+
   // Earliest upcoming appointment time for preview
   const previewStartTime = useMemo(() => {
     const now = new Date();
@@ -120,6 +199,10 @@ export function OPDStatusControl() {
     return null;
   }
 
+  const pausedUntilLabel = doctor?.opdPausedUntil
+    ? new Date(doctor.opdPausedUntil).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
+    : null;
+
   return (
     <>
       {/* ── Top Header Pill Button ──────────────────────────────────────── */}
@@ -135,6 +218,8 @@ export function OPDStatusControl() {
             ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80"
             : opdStatus === "RUNNING_LATE"
             ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100/80"
+            : opdStatus === "PAUSED"
+            ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100/80"
             : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/80"
         }`}
       >
@@ -144,6 +229,8 @@ export function OPDStatusControl() {
               ? "bg-emerald-500"
               : opdStatus === "RUNNING_LATE"
               ? "bg-amber-500 animate-pulse"
+              : opdStatus === "PAUSED"
+              ? "bg-amber-500"
               : "bg-rose-500"
           }`}
         />
@@ -154,7 +241,7 @@ export function OPDStatusControl() {
             : opdStatus === "RUNNING_LATE"
             ? `Delayed (+${currentDelay}m)`
             : opdStatus === "PAUSED"
-            ? "OPD Paused"
+            ? (pausedUntilLabel ? `OPD Paused (Until ${pausedUntilLabel})` : "OPD Paused")
             : "OPD Cancelled"}
         </span>
 
@@ -256,40 +343,113 @@ export function OPDStatusControl() {
                 </div>
                 <div>
                   <DialogTitle className="text-base font-bold text-slate-900">
-                    Pause New WhatsApp Bookings?
+                    Pause New WhatsApp Bookings
                   </DialogTitle>
-                  <p className="text-xs text-slate-500">Confirm temporary booking pause for today</p>
+                  <p className="text-xs text-slate-500">Prevent false bookings during out-of-station OPD or leave</p>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-2 leading-relaxed">
-                <p>
-                  <strong>What happens when paused:</strong>
-                </p>
-                <ul className="list-disc pl-4 space-y-1 text-amber-800 text-[11px]">
-                  <li>New patient booking requests on WhatsApp will be paused for today.</li>
-                  <li>Inquiring patients will be guided to tomorrow&apos;s slots or direct clinic walk-in tokens.</li>
-                  <li><strong>Existing booked appointments ({todayTotalCount}) remain untouched and valid.</strong></li>
-                </ul>
+              {/* Duration selector chips */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
+                  <span>How long will you pause bookings?</span>
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                    Return: {returnDateFormatted}
+                  </span>
+                </Label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    { id: "today", label: "Today" },
+                    { id: "2d", label: "2 Days" },
+                    { id: "3d", label: "3 Days" },
+                    { id: "7d", label: "1 Week" },
+                    { id: "custom", label: "Custom" },
+                  ].map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setPauseDurationType(chip.id as any)}
+                      className={`py-2 text-[11px] font-bold rounded-xl border transition-all text-center ${
+                        pauseDurationType === chip.id
+                          ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Date Input */}
+                {pauseDurationType === "custom" && (
+                  <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-1.5 animate-fadeIn">
+                    <Label htmlFor="custom-return-date" className="text-[11px] font-semibold text-amber-900 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                      Doctor Resumes OPD On (Return Date):
+                    </Label>
+                    <input
+                      id="custom-return-date"
+                      type="date"
+                      min={minCustomDate}
+                      value={customReturnDate}
+                      onChange={(e) => setCustomReturnDate(e.target.value)}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-lg border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 pt-2">
+              {/* Pause Reason Category */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pause-reason-select" className="text-xs font-semibold text-slate-800">
+                  Reason for Pause (Used by AI Receptionist):
+                </Label>
+                <select
+                  id="pause-reason-select"
+                  value={pauseReasonCategory}
+                  onChange={(e) => setPauseReasonCategory(e.target.value as any)}
+                  className="w-full text-xs px-3 py-2 bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800 font-medium"
+                >
+                  <option value="OUT_OF_STATION">✈️ Out of station / OPD in another city</option>
+                  <option value="VACATION">🏖️ Vacation / Personal leave</option>
+                  <option value="CONFERENCE">🎓 Medical Conference / Seminar</option>
+                  <option value="EMERGENCY">⚠️ Personal / Family Emergency</option>
+                  <option value="RENOVATION">🔨 Clinic Maintenance / Renovation</option>
+                  <option value="GENERAL">⏸️ General OPD Pause</option>
+                </select>
+              </div>
+
+              {/* AI Receptionist Speech Preview */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>AI Receptionist WhatsApp Response:</span>
+                </div>
+                <p className="text-[11px] text-slate-600 bg-white p-2.5 rounded-lg border border-slate-100 italic leading-relaxed">
+                  &ldquo;{aiPreviewSpeech}&rdquo;
+                </p>
+                <p className="text-[10px] text-slate-500 pt-0.5">
+                  ✅ Existing booked appointments ({todayTotalCount}) remain safe and untouched.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setConfirmingAction(null)}
                   disabled={updating}
                   className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
                 >
-                  Cancel (Keep Active)
+                  Go Back
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAction("PAUSE_TODAY")}
+                  onClick={handleConfirmPause}
                   disabled={updating}
                   className="py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
                   {updating ? <Activity className="w-4 h-4 animate-spin" /> : <PauseCircle className="w-4 h-4" />}
-                  Confirm Pause
+                  Pause (Resume {returnDateFormatted})
                 </button>
               </div>
             </div>
@@ -398,25 +558,63 @@ export function OPDStatusControl() {
                 {/* ── STATE: PAUSED ── */}
                 {opdStatus === "PAUSED" && (
                   <div className="space-y-3.5 pt-1">
-                    <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs space-y-1.5">
+                    <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 text-xs space-y-2">
                       <div className="flex items-center gap-2 font-bold text-amber-900">
                         <PauseCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Online WhatsApp Bookings are Paused for Today</span>
+                        <span>Online WhatsApp Bookings are Paused</span>
                       </div>
-                      <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
-                        Existing appointments remain intact. Inquiring patients on WhatsApp are politely guided to tomorrow&apos;s slots or direct walk-in tokens.
-                      </p>
+
+                      <div className="text-[11px] text-amber-800 leading-relaxed pl-6 space-y-1">
+                        {doctor?.opdPausedUntil && (
+                          <div className="flex items-center gap-1.5 font-semibold text-amber-950">
+                            <Calendar className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            <span>
+                              Doctor Resumes OPD:{" "}
+                              <span className="underline">
+                                {new Date(doctor.opdPausedUntil).toLocaleDateString("en-IN", {
+                                  weekday: "short",
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </span>
+                          </div>
+                        )}
+
+                        {doctor?.opdPauseReason && (
+                          <p className="text-amber-700 italic">
+                            Reason: {doctor.opdPauseReason}
+                          </p>
+                        )}
+
+                        <p className="pt-0.5 text-amber-800/90">
+                          Existing appointments remain intact. Inquiring patients on WhatsApp are guided to schedule on or after your return date.
+                        </p>
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleAction("RESUME")}
-                      disabled={updating}
-                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 active:scale-98"
-                    >
-                      {updating ? <Activity className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
-                      Resume Online Bookings (Normal Schedule)
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingAction("PAUSE")}
+                        disabled={updating}
+                        className="py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                        Adjust Return Date
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAction("RESUME")}
+                        disabled={updating}
+                        className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-98"
+                      >
+                        {updating ? <Activity className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                        Resume Now
+                      </button>
+                    </div>
 
                     <div className="pt-2 border-t border-slate-100 text-center">
                       <button

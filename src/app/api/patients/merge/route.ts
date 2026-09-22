@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getSessionData } from "@/lib/session";
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const doctorId = session.user.doctorId || session.user.id;
+    const { doctorId } = await getSessionData();
     const body = await req.json();
     const { primaryPatientId, duplicatePatientId } = body;
 
@@ -76,7 +71,28 @@ export async function POST(req: Request) {
         data: { patientId: primaryPatientId }
       });
 
-      // 6. Merge tags, notes, and demographic details into primary patient
+      // 6. Safely migrate vaccine records (avoid unique constraint violations on [patientId, vaccineCode])
+      const [duplicateVaccines, primaryVaccines] = await Promise.all([
+        tx.patientVaccineRecord.findMany({ where: { patientId: duplicatePatientId } }),
+        tx.patientVaccineRecord.findMany({ where: { patientId: primaryPatientId } })
+      ]);
+      const primaryVaccineCodes = new Set(primaryVaccines.map((v) => v.vaccineCode));
+
+      for (const vac of duplicateVaccines) {
+        if (!primaryVaccineCodes.has(vac.vaccineCode)) {
+          await tx.patientVaccineRecord.update({
+            where: { id: vac.id },
+            data: { patientId: primaryPatientId }
+          });
+        } else {
+          // If primary already has this vaccine record, remove duplicate copy to avoid constraint conflict
+          await tx.patientVaccineRecord.delete({
+            where: { id: vac.id }
+          });
+        }
+      }
+
+      // 7. Merge tags, notes, and demographic details into primary patient
       const combinedTags = Array.from(new Set([...(primaryPatient.tags || []), ...(duplicatePatient.tags || [])]));
       const updates: any = {
         tags: combinedTags
@@ -103,13 +119,32 @@ export async function POST(req: Request) {
         data: updates
       });
 
-      // 7. Safely delete the duplicate patient row
+      // 8. Safely delete the duplicate patient row
       await tx.patient.delete({
         where: { id: duplicatePatientId }
       });
 
       return updatedPrimary;
     });
+
+    // Record audit log for patient merge
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: doctorId,
+          userType: "CLINIC",
+          action: "PATIENT_MERGED",
+          details: {
+            primaryPatientId,
+            duplicatePatientId,
+            primaryName: `${primaryPatient.firstName} ${primaryPatient.lastName || ""}`.trim(),
+            duplicateName: `${duplicatePatient.firstName} ${duplicatePatient.lastName || ""}`.trim()
+          }
+        }
+      });
+    } catch (auditErr) {
+      console.warn("[PatientMerge] Audit log creation failed:", auditErr);
+    }
 
     return NextResponse.json({
       success: true,

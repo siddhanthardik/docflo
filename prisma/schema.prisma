@@ -108,6 +108,8 @@ model Doctor {
   opdDelayMinutes       Int       @default(0)
   opdStatusNote         String?
   opdStatusUpdatedAt    DateTime?
+  opdPausedUntil        DateTime?
+  opdPauseReason        String?
 
   @@map("doctors")
 }

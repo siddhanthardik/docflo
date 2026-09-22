@@ -24,6 +24,8 @@ export async function GET(req: Request) {
         opdDelayMinutes: true,
         opdStatusNote: true,
         opdStatusUpdatedAt: true,
+        opdPausedUntil: true,
+        opdPauseReason: true,
         maxDailyAiBookings: true,
         maxMorningAiBookings: true,
         maxEveningAiBookings: true,
@@ -47,21 +49,31 @@ export async function GET(req: Request) {
       ? new Date(doctor.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: clinicTz })
       : null;
 
-    if (statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr && doctor.opdStatus !== "ACTIVE") {
+    // If PAUSED with an active opdPausedUntil still in the future, DO NOT RESET!
+    const isPauseStillActive =
+      doctor.opdStatus === "PAUSED" &&
+      doctor.opdPausedUntil &&
+      new Date(doctor.opdPausedUntil) > nowClinic;
+
+    if (!isPauseStillActive && statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr && doctor.opdStatus !== "ACTIVE") {
       await prisma.doctor.update({
         where: { id: doctorId },
         data: {
           opdStatus: "ACTIVE",
           opdDelayMinutes: 0,
           opdStatusNote: null,
+          opdPausedUntil: null,
+          opdPauseReason: null,
           opdStatusUpdatedAt: new Date(),
         },
       });
       doctor.opdStatus = "ACTIVE";
       doctor.opdDelayMinutes = 0;
       doctor.opdStatusNote = null;
+      doctor.opdPausedUntil = null;
+      doctor.opdPauseReason = null;
       doctor.opdStatusUpdatedAt = new Date();
-      console.log(`[OPD Status] Auto-reset yesterday's OPD delay/status to ACTIVE for doctor ${doctorId}`);
+      console.log(`[OPD Status] Auto-reset expired OPD delay/status to ACTIVE for doctor ${doctorId}`);
     }
 
     const { startOfDay: todayStart, endOfDay: todayEnd } = getClinicDayBounds(nowClinic, clinicTz);
@@ -129,6 +141,8 @@ export async function POST(req: Request) {
           opdStatus: "ACTIVE",
           opdDelayMinutes: 0,
           opdStatusNote: null,
+          opdPausedUntil: null,
+          opdPauseReason: null,
           opdStatusUpdatedAt: new Date(),
         },
       });
@@ -209,15 +223,64 @@ export async function POST(req: Request) {
       });
     }
 
-    if (action === "PAUSE_TODAY" || action === "CANCEL_TODAY") {
-      const isCancel = action === "CANCEL_TODAY";
-      const statusToSet = isCancel ? "CANCELLED" : "PAUSED";
+    if (action === "PAUSE" || action === "PAUSE_TODAY") {
+      const numDays = Math.max(1, parseInt(body.days, 10) || 1);
+      const pauseReason = body.reasonCategory || body.reason || "OUT_OF_STATION";
+
+      // Compute exact return timestamp in clinic timezone (defaulting to 9:00 AM clinic opening)
+      let returnDateTime: Date;
+      const startHour = 9;
+      const startMin = 0;
+      if (body.pausedUntil && typeof body.pausedUntil === "string" && body.pausedUntil.includes("-")) {
+        const [y, m, d] = body.pausedUntil.split("-").map(Number);
+        // Create return date at clinic opening hour in UTC/clinic context
+        const temp = new Date();
+        temp.setFullYear(y, m - 1, d);
+        temp.setHours(startHour, startMin, 0, 0);
+        returnDateTime = temp;
+      } else {
+        const nowInClinic = new Date();
+        const returnDay = new Date(nowInClinic.getTime() + numDays * 24 * 60 * 60 * 1000);
+        returnDay.setHours(startHour, startMin, 0, 0);
+        returnDateTime = returnDay;
+      }
+
+      const returnDateLabel = returnDateTime.toLocaleDateString("en-IN", {
+        timeZone: clinicTz,
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+
+      const noteText = body.note || (numDays === 1 ? "Paused new online bookings for today" : `Paused bookings until ${returnDateLabel}`);
+
+      const updated = await prisma.doctor.update({
+        where: { id: doctorId },
+        data: {
+          opdStatus: "PAUSED",
+          opdPausedUntil: returnDateTime,
+          opdPauseReason: pauseReason,
+          opdStatusNote: noteText,
+          opdStatusUpdatedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Bookings paused until ${returnDateLabel}`,
+        doctor: updated,
+      });
+    }
+
+    if (action === "CANCEL_TODAY") {
+      const isCancel = true;
+      const statusToSet = "CANCELLED";
 
       const updated = await prisma.doctor.update({
         where: { id: doctorId },
         data: {
           opdStatus: statusToSet,
-          opdStatusNote: reason || (isCancel ? "Emergency leave today" : "Paused new online bookings for today"),
+          opdStatusNote: reason || "Emergency leave today",
           opdStatusUpdatedAt: new Date(),
         },
       });

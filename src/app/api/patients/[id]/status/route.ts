@@ -11,6 +11,20 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  return handleStatusUpdate(req, params);
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return handleStatusUpdate(req, params);
+}
+
+async function handleStatusUpdate(
+  req: Request,
+  params: Promise<{ id: string }>
+) {
   try {
     const { id } = await params;
     const { doctorId } = await getSessionData();

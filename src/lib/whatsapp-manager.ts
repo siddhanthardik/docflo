@@ -21,7 +21,7 @@ import { formatAppointmentConfirmationCard } from '@/lib/whatsapp-formatter';
 import { resolveExactClinicLocation } from '@/lib/maps-helper';
 import { formatPatientSalutation } from '@/lib/salutation';
 import { VaccinationService } from '@/services/vaccination.service';
-import { sanitizePersonName, isBotTemplateEcho } from '@/lib/utils';
+import { sanitizePersonName, isLikelyPersonName, isBotTemplateEcho } from '@/lib/utils';
 
 // Obfuscate directory resolution from Next.js Turbopack / Webpack static file tracer
 function getAuthBaseDir(): string {
@@ -877,6 +877,8 @@ class WhatsAppManager {
                 opdDelayMinutes: true,
                 opdStatusNote: true,
                 opdStatusUpdatedAt: true,
+                opdPausedUntil: true,
+                opdPauseReason: true,
                 maxDailyAiBookings: true,
                 maxMorningAiBookings: true,
                 maxEveningAiBookings: true,
@@ -1005,7 +1007,7 @@ class WhatsAppManager {
             }
 
             const pushNameRaw = sanitizePersonName(msg.pushName || "");
-            const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw);
+            const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw) && isLikelyPersonName(pushNameRaw);
 
             const rawPatientName = isStaff
               ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor")
@@ -1449,12 +1451,13 @@ class WhatsAppManager {
                           }
                         });
                         if (!newPatient) {
+                          const normalizedPhone = phoneDigits.length === 10 ? `+91${phoneDigits}` : (phoneDigits.startsWith("+") ? phoneDigits : `+${phoneDigits}`);
                           newPatient = await prisma.patient.create({
                             data: {
                               doctorId,
                               firstName: nameParts[0],
                               lastName: nameParts.slice(1).join(' ') || '',
-                              phone: phoneDigits,
+                              phone: normalizedPhone,
                               patientType: 'ACTIVE'
                             }
                           });
@@ -1882,7 +1885,13 @@ class WhatsAppManager {
                   ? new Date(doctorInfo.opdStatusUpdatedAt).toLocaleDateString("en-CA", { timeZone: clinicTzForApts })
                   : null;
 
-                const isStaleOpdStatus = statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr;
+                // Check if multi-day pause is still active in the future
+                const isPauseActive =
+                  doctorInfo?.opdStatus === "PAUSED" &&
+                  doctorInfo?.opdPausedUntil &&
+                  new Date(doctorInfo.opdPausedUntil) > nowClinic;
+
+                const isStaleOpdStatus = !isPauseActive && statusUpdatedDateStr && statusUpdatedDateStr < todayClinicDateStr;
                 const effectiveOpdStatus = (isStaleOpdStatus || !doctorInfo?.opdStatus) ? "ACTIVE" : doctorInfo.opdStatus;
                 const effectiveOpdDelay = isStaleOpdStatus ? 0 : (doctorInfo?.opdDelayMinutes || 0);
                 const effectiveOpdNote = isStaleOpdStatus ? null : (doctorInfo?.opdStatusNote || null);
@@ -1890,7 +1899,7 @@ class WhatsAppManager {
                 if (isStaleOpdStatus && doctorInfo?.opdStatus !== "ACTIVE") {
                   prisma.doctor.update({
                     where: { id: doctorId },
-                    data: { opdStatus: "ACTIVE", opdDelayMinutes: 0, opdStatusNote: null, opdStatusUpdatedAt: new Date() }
+                    data: { opdStatus: "ACTIVE", opdDelayMinutes: 0, opdStatusNote: null, opdPausedUntil: null, opdPauseReason: null, opdStatusUpdatedAt: new Date() }
                   }).catch(e => console.warn(`[WhatsAppManager] Failed to background auto-reset stale OPD status:`, e));
                 }
 
@@ -1970,6 +1979,8 @@ class WhatsAppManager {
                   opdStatus: effectiveOpdStatus,
                   opdDelayMinutes: effectiveOpdDelay,
                   opdStatusNote: effectiveOpdNote,
+                  opdPausedUntil: isPauseActive && doctorInfo?.opdPausedUntil ? doctorInfo.opdPausedUntil.toISOString() : null,
+                  opdPauseReason: isPauseActive ? (doctorInfo?.opdPauseReason || "OUT_OF_STATION") : null,
                   maxDailyAiBookings: maxDaily,
                   todayAiCount,
                   isTodayQuotaFull,
@@ -2243,12 +2254,13 @@ class WhatsAppManager {
                         }
                       });
                       if (!newPatient) {
+                        const normalizedPrefilled = prefilledPhone.length === 10 ? `+91${prefilledPhone}` : (prefilledPhone.startsWith("+") ? prefilledPhone : `+${prefilledPhone}`);
                         newPatient = await prisma.patient.create({
                           data: {
                             doctorId,
                             firstName: nameParts[0],
                             lastName: nameParts.slice(1).join(' ') || '',
-                            phone: prefilledPhone,
+                            phone: normalizedPrefilled,
                             patientType: 'ACTIVE'
                           }
                         });
@@ -2870,13 +2882,14 @@ class WhatsAppManager {
                         }
 
                         // Create dedicated patient profile for this booking
-                        const defaultPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+                        const normalizedPatientPhone = patientPhone.length === 10 ? `+91${patientPhone}` : (patientPhone.startsWith("+") ? patientPhone : `+${patientPhone}`);
+                        const defaultPractitioner = practitioners.length === 1 ? practitioners[0] : (practitioners.find(p => p.isOwner) || null);
                         targetPatient = await prisma.patient.create({
                           data: {
                             doctorId,
                             firstName: candidateFirstName,
                             lastName: candidateLastName,
-                            phone: patientPhone,
+                            phone: normalizedPatientPhone,
                             gender: parsedGender,
                             dateOfBirth: approximateDob,
                             patientType: "ACTIVE",
@@ -2931,6 +2944,24 @@ class WhatsAppManager {
                     }
                     
                     if (!isNaN(appointmentDate.getTime()) && appointmentDate >= today) {
+                      // ── HARD SAFETY GATE: Block bookings if doctor OPD is paused and requested date is in paused window ──
+                      if (doctorInfo?.opdStatus === "PAUSED" && doctorInfo?.opdPausedUntil) {
+                        const pauseExpires = new Date(doctorInfo.opdPausedUntil);
+                        if (appointmentDate < pauseExpires) {
+                          console.log(`[WhatsAppManager] 🛑 Blocked booking attempt on ${appointmentDate.toISOString()} because doctor is PAUSED until ${pauseExpires.toISOString()}`);
+                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                          const returnLabel = pauseExpires.toLocaleDateString("en-IN", {
+                            timeZone: clinicTz,
+                            weekday: "long",
+                            month: "short",
+                            day: "numeric"
+                          });
+                          finalAiReply = `Doctor filhal clinic mein uplabdh nahi hain aur consultations *${returnLabel}* tak paused hain. Kripya ${returnLabel} ya uske baad ka appointment slot schedule karein. 🙏`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, patient?.id || null, patient?.firstName || "Patient");
+                          return;
+                        }
+                      }
+
                       // Check daily quota for that date in clinic timezone
                       const { startOfDay: startOfBookingDay, endOfDay: endOfBookingDay } = getClinicDayBounds(appointmentDate, clinicTz);
 
