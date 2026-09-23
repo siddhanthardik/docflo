@@ -29,6 +29,93 @@ interface Conversation {
   patient?: { patientType?: string }
 }
 
+function FormattedChatMessage({ content, isOut }: { content: string; isOut: boolean }) {
+  if (!content) return null
+
+  const lines = content.split("\n")
+
+  return (
+    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+      {lines.map((line, lineIdx) => {
+        if (!line) {
+          return <div key={lineIdx} className="h-1.5" />
+        }
+        return (
+          <span key={lineIdx} className="block">
+            {parseWhatsAppInline(line, isOut)}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function parseWhatsAppInline(text: string, isOut: boolean) {
+  // Matches URLs, code blocks, bold (**text** or *text*), italic (_text_), strikethrough (~text~)
+  const tokenRegex = /(https?:\/\/[^\s]+)|```([^`]+)```|\*\*([^*]+)\*\*|\*([^*\n]+)\*|_([^_]+)_|~([^~]+)~/g
+  let match: RegExpExecArray | null
+  let lastIndex = 0
+  const elements: React.ReactNode[] = []
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      elements.push(text.substring(lastIndex, match.index))
+    }
+
+    const key = `token-${match.index}`
+    if (match[1]) {
+      const url = match[1]
+      elements.push(
+        <a
+          key={key}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={isOut ? "underline text-white font-medium hover:text-indigo-100" : "underline text-indigo-600 font-medium hover:text-indigo-800"}
+        >
+          {url}
+        </a>
+      )
+    } else if (match[2]) {
+      elements.push(
+        <code
+          key={key}
+          className={`font-mono text-xs px-1 py-0.5 rounded ${isOut ? "bg-indigo-700/50 text-indigo-100" : "bg-gray-100 text-gray-800"}`}
+        >
+          {match[2]}
+        </code>
+      )
+    } else if (match[3] || match[4]) {
+      const boldText = match[3] || match[4]
+      elements.push(
+        <strong key={key} className="font-semibold">
+          {boldText}
+        </strong>
+      )
+    } else if (match[5]) {
+      elements.push(
+        <em key={key} className="italic">
+          {match[5]}
+        </em>
+      )
+    } else if (match[6]) {
+      elements.push(
+        <del key={key} className="line-through opacity-75">
+          {match[6]}
+        </del>
+      )
+    }
+
+    lastIndex = tokenRegex.lastIndex
+  }
+
+  if (lastIndex < text.length) {
+    elements.push(text.substring(lastIndex))
+  }
+
+  return elements.length > 0 ? elements : text
+}
+
 export function ChatWindow({
   conversation,
   messages,
@@ -244,7 +331,7 @@ export function ChatWindow({
                   {msg.senderName && !isOut && (
                     <p className="text-xs font-semibold text-indigo-600 mb-0.5">{msg.senderName}</p>
                   )}
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                  <FormattedChatMessage content={msg.content} isOut={isOut} />
                   <p
                     className={`text-xs mt-1.5 ${
                       isOut ? "text-indigo-200 text-right" : "text-gray-400"

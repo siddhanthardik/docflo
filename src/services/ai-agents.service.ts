@@ -1924,6 +1924,9 @@ ${scheduleContext?.activeAppointments && scheduleContext.activeAppointments.leng
 - ⚠️ DO NOT OFFER TO BOOK A NEW APPOINTMENT!
 - ⚠️ NEVER ASK: "Kya aap aaj ya kal ke liye appointment schedule karna chahenge?" or "Please share Name, Age, Preferred Date to reserve your slot".
 - ⚠️ DO NOT trigger or repeat the appointment booking intake script!
+- ⚠️ ⛔ ABSOLUTELY NEVER EMIT [BOOK_APPOINTMENT] for this patient again unless they explicitly request to change dates/times (which requires [RESCHEDULE_APPOINTMENT])!
+- If the patient replies with an acknowledgment, confirmation, or gratitude ("Ok", "Okay", "Thank you", "Thanks", "Thik hai", "Ji", "Theek", "Confirm", "Got it"):
+  Simply acknowledge warmly with a polite closing ("You are most welcome! We look forward to seeing you at the clinic. Have a wonderful day! 🙏😊"). DO NOT emit any booking tags!
 - Instead:
   1. Acknowledge their existing confirmed appointment:
      • Hinglish: "Jaise ki ${scheduleContext.activeAppointments[0].patientName || 'patient'} ka appointment aaj/upcoming ${scheduleContext.activeAppointments[0].date} ko ${scheduleContext.activeAppointments[0].time} baje ${scheduleContext.activeAppointments[0].doctorName || doctorName} ke sath confirmed hai..."

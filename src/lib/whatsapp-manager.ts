@@ -201,6 +201,18 @@ class WhatsAppManager {
     this.aiReplyHistory.set(key, timestamps);
   }
 
+  // Normalizes standard Markdown to WhatsApp-compatible native markdown formatting:
+  // Converts double/triple asterisks (**bold** -> *bold*) and cleans up stray formatting
+  private sanitizeWhatsAppMarkdown(text: string): string {
+    if (!text) return "";
+    let clean = text;
+    // 1. Replace double or triple asterisks with single asterisk for WhatsApp mobile clients
+    clean = clean.replace(/\*{2,}([^*\n]+)\*{2,}/g, (_, p1) => `*${p1.trim()}*`);
+    // 2. Remove accidental leftover double asterisks
+    clean = clean.replace(/\*{2,}/g, "*");
+    return clean;
+  }
+
   private isDuplicateMessage(msgId?: string | null): boolean {
     if (!msgId) return false;
     const now = Date.now();
@@ -387,8 +399,9 @@ class WhatsAppManager {
       }
       this.lastMessageSentAt.set(doctorId, Date.now());
 
+      const cleanText = this.sanitizeWhatsAppMarkdown(text);
       const patientJid = `${normalizedPhone}@s.whatsapp.net`;
-      const sent = await sock.sendMessage(patientJid, { text });
+      const sent = await sock.sendMessage(patientJid, { text: cleanText });
       console.log(`[WhatsAppManager] 📤 Outbound WhatsApp sent to ${patientJid}`);
 
       let sentDate = new Date();
@@ -440,7 +453,7 @@ class WhatsAppManager {
           conversationId: conversation.id,
           direction: "OUTGOING",
           messageType: "text",
-          content: text,
+          content: cleanText,
           senderName: "AI Assistant",
           createdAt: sentDate,
         }
@@ -3073,12 +3086,16 @@ class WhatsAppManager {
                           orderBy: { date: 'asc' }
                         });
 
+                        let shouldNotifyDoctor = false;
+                        let actionTitle = "New Appointment booked";
+
                         if (activeAppointment) {
                           const isSameDate = getClinicDateOnlyString(activeAppointment.date, clinicTz) === dateOnlyStr;
                           const isSameTime = activeAppointment.startTime && Math.abs(activeAppointment.startTime.getTime() - startTime.getTime()) < 5 * 60 * 1000;
 
                           if (isSameDate && isSameTime) {
-                            console.log(`[WhatsAppManager] ℹ️ Duplicate booking request for same slot ${dateOnlyStr} ${slotTimeStr}. Resending existing card.`);
+                            console.log(`[WhatsAppManager] ℹ️ Duplicate booking request for same slot ${dateOnlyStr} ${slotTimeStr}. Resending existing card, skipping doctor update alert.`);
+                            shouldNotifyDoctor = false;
                           } else {
                             // Patient is moving / re-booking to a new slot (e.g. after cancellation or slot change)
                             // Atomically update the existing appointment to the new slot in the database
@@ -3095,6 +3112,8 @@ class WhatsAppManager {
                               }
                             });
                             console.log(`[WhatsAppManager] 🔄 Updated appointment ${activeAppointment.id} to new slot ${dateOnlyStr} ${slotTimeStr} for ${candidateFirstName} ${candidateLastName}`);
+                            shouldNotifyDoctor = true;
+                            actionTitle = "Patient Appointment Updated / Shifted";
                           }
                         } else {
                           // Fresh appointment creation in CRM
@@ -3115,6 +3134,8 @@ class WhatsAppManager {
                           });
 
                           console.log(`[WhatsAppManager] 📅 Successfully booked ${appointmentType} appointment for ${candidateFirstName} ${candidateLastName} with ${chosenPractitioner?.name || "Doctor"} (${patientPhone}) at ${dateOnlyStr} ${hour}:${minute} in ${clinicTz}`);
+                          shouldNotifyDoctor = true;
+                          actionTitle = "New Appointment booked";
                         }
 
                         // If pediatric clinic, auto-initialize IAP vaccination schedule based on patient's DOB
@@ -3151,8 +3172,8 @@ class WhatsAppManager {
                           mapsUrl: clinicMapsUri
                         });
 
-                        // Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics
-                        if (doctorInfo?.phone) {
+                        // Notify Doctor on WhatsApp with AI Receptionist Name & Patient Demographics (Only on real booking or real shift)
+                        if (shouldNotifyDoctor && doctorInfo?.phone) {
                           const aiConfig = await prisma.aIAgentConfig.findUnique({
                             where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } }
                           });
@@ -3170,8 +3191,8 @@ class WhatsAppManager {
                           const cleanPtName = `${candidateFirstName} ${candidateLastName}`.trim();
                           const bookedDoctorLabel = formatDoctorDisplayName(chosenPractitioner?.name || doctorInfo?.name);
                           
-                          const actionTitle = activeAppointment ? "Patient Appointment Updated / Shifted" : "New Appointment booked";
-                          const docAlert = `🔔 *${actionTitle} by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been ${activeAppointment ? "updated in" : "added to"} your Gyrex calendar.`;
+                          const isShift = actionTitle.includes("Updated");
+                          const docAlert = `🔔 *${actionTitle} by your AI Receptionist ${assistantName} (${isTele ? "🌐 Video Tele-Consult" : "🏥 In-Clinic Visit"})*\n\n👤 Patient: *${cleanPtName}*${demoBadge} (${patientPhone})\n👨‍⚕️ Doctor: *${bookedDoctorLabel}* (${chosenPractitioner?.specialty || "General"})\n📅 Slot: *${dateLabel} at ${timeLabel}* (${sessionStr.trim()})\n\n✨ This appointment has been ${isShift ? "updated in" : "added to"} your Gyrex calendar.`;
                           await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, docAlert).catch(() => {});
                         }
                       }
@@ -3264,6 +3285,7 @@ class WhatsAppManager {
                 // Send reply via Baileys
                 // Strip any stray internal AI action tags before sending to doctor or patient
                 finalAiReply = finalAiReply.replace(/\[(RESCHEDULE_APPOINTMENT|CANCEL_APPOINTMENT|CANCEL_PATIENT_APPOINTMENT|PATIENT_CANCEL_APPOINTMENT|BOOK_NEW_APPOINTMENT|MESSAGE_PATIENT|BOOK_APPOINTMENT|RESEND_CONFIRMATION|RECORD_CHILD_DOB_AND_VACCINES|OPT_IN_VACCINATION_REMINDERS)(?::.*?)?\]/gi, "").trim();
+                finalAiReply = this.sanitizeWhatsAppMarkdown(finalAiReply);
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage
