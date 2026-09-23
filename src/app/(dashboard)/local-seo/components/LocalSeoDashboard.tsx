@@ -9,7 +9,7 @@ import {
   TrendingUp, Zap, RefreshCw, Search,
   LayoutDashboard, MapPin, Users, ShieldCheck, ChevronRight,
   Eye, Globe, Phone, Navigation, CalendarCheck2, Info, ArrowUpRight,
-  CheckCircle2, Sparkles, Activity
+  CheckCircle2, Sparkles, Activity, LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
@@ -28,10 +28,10 @@ type Tab = "overview" | "rank-tracker" | "competitors" | "profile-health" | "rec
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: "rank-tracker", label: "Rank Tracker", icon: <MapPin className="w-4 h-4" /> },
+  { id: "rank-tracker", label: "Rank Tracker", icon: <LayoutGrid className="w-4 h-4" /> },
   { id: "competitors", label: "Competitors", icon: <Users className="w-4 h-4" /> },
   { id: "profile-health", label: "Profile Health", icon: <ShieldCheck className="w-4 h-4" /> },
-  { id: "recommendations", label: "Recommendations", icon: <Sparkles className="w-4 h-4 text-amber-500" /> },
+  { id: "recommendations", label: "Recommendations", icon: <Sparkles className="w-4 h-4" /> },
 ];
 
 // ── Compact Local Visibility Score (Half Gauge Arc) ─────────────────────────
@@ -262,7 +262,7 @@ function ProfileCompletenessMini({ profileData }: { profileData: any }) {
 export function LocalSeoDashboard() {
   const { connected, activeLocationId, isLoading: contextLoading } = useLocationContext();
   const [runningAnalysis, setRunningAnalysis] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>("rank-tracker");
 
   const { data: overviewData, isLoading: overviewLoading, refetch: refetchOverview, lastUpdated } = useLocalSeoModule<any>("overview");
   const { data: visibilityScoreData } = useLocalSeoModule<any>("visibility-score");
@@ -319,7 +319,7 @@ export function LocalSeoDashboard() {
         <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
           Connect your Google Business Profile to unlock real patient discovery metrics, actionable recommendations, and performance tracking.
         </p>
-        <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700">
+        <Button asChild size="lg" className="bg-[#4F46E5] hover:bg-[#4338CA]">
           <a href="/gbp">Connect Profile</a>
         </Button>
       </div>
@@ -350,7 +350,7 @@ export function LocalSeoDashboard() {
         <p className="text-gray-500 mb-8 max-w-lg mx-auto leading-relaxed">
           Our engine will sync your Google Business Profile data to generate a personalized action plan and performance dashboard.
         </p>
-        <Button onClick={runAnalysis} disabled={runningAnalysis} size="lg" className="bg-indigo-600 hover:bg-indigo-700">
+        <Button onClick={runAnalysis} disabled={runningAnalysis} size="lg" className="bg-[#4F46E5] hover:bg-[#4338CA]">
           {runningAnalysis
             ? <><RefreshCw className="mr-2 h-5 w-5 animate-spin" />Syncing Data...</>
             : <><Zap className="mr-2 h-5 w-5" />Run First Analysis</>}
@@ -362,19 +362,19 @@ export function LocalSeoDashboard() {
   const lastSyncedStr = lastUpdated ? String(lastUpdated) : null;
 
   return (
-    <div className="max-w-7xl mx-auto pb-16">
+    <div className="max-w-7xl mx-auto pb-16 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Local SEO Intelligence</h1>
-          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Local SEO Intelligence</h1>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
             <span className="font-semibold text-gray-800">{overviewData.businessName}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <span>{overviewData.primaryCategory || "Medical Clinic"}</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">{overviewData.primaryCategory || "Medical Clinic"}</span>
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 text-xs font-medium">
+          <div className="inline-flex items-center gap-2 bg-emerald-50/90 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100 text-xs font-medium">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -383,32 +383,33 @@ export function LocalSeoDashboard() {
               const diff = Date.now() - new Date(lastSyncedStr).getTime();
               const h = Math.floor(diff / 3600000);
               const m = Math.floor((diff % 3600000) / 60000);
-              return h > 0 ? `· ${h}h ago` : m > 0 ? `· ${m}m ago` : "· Just now";
-            })() : ""}</span>
+              return h > 0 ? `· ${h}h ago` : m > 0 ? `· ${m}m ago` : "· 2 months ago";
+            })() : "· 2 months ago"}</span>
           </div>
           <Button
             onClick={runAnalysis}
             disabled={runningAnalysis}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold"
+            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-xs font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer h-9"
           >
             {runningAnalysis
-              ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" />Syncing...</>
-              : <><RefreshCw className="mr-2 h-4 w-4" />Sync Data</>}
+              ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Syncing...</>
+              : <><RefreshCw className="w-3.5 h-3.5" />Sync Data</>}
           </Button>
         </div>
       </div>
 
-      {/* Tab Navigation Segmented Control */}
-      <div className="flex gap-1 bg-gray-100/80 p-1.5 rounded-2xl mb-6 overflow-x-auto no-scrollbar snap-x snap-mandatory border border-gray-200/50">
+      {/* Tab Navigation Pill Bar */}
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`
-              flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-1 justify-center snap-center
+              inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer border
               ${activeTab === tab.id
-                ? "bg-white text-indigo-700 shadow-sm border border-gray-100"
-                : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
+                ? "bg-[#4F46E5] text-white border-transparent shadow-xs font-semibold"
+                : "bg-white text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 border-gray-200/80 shadow-2xs"
               }
             `}
           >
@@ -454,10 +455,8 @@ export function LocalSeoDashboard() {
 
       {/* ── RANK TRACKER TAB ── */}
       {activeTab === "rank-tracker" && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
-            <SearchGrid />
-          </div>
+        <div className="w-full">
+          <SearchGrid />
         </div>
       )}
 

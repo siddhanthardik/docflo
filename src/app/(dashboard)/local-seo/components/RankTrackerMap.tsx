@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Navigation, Layers, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Navigation, Plus, Minus, LocateFixed } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 export interface GridCell {
@@ -27,18 +27,15 @@ function getBadgeColors(rank: number, found: boolean, isCenter: boolean) {
     return { bg: "#4F46E5", border: "#3730A3", text: "#FFFFFF", label: "★" };
   }
   if (!found || rank === 0) {
-    return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: ">20" };
+    return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: "-" };
   }
   if (rank <= 3) {
     return { bg: "#10B981", border: "#059669", text: "#FFFFFF", label: String(rank) };
   }
-  if (rank <= 7) {
+  if (rank <= 8) {
     return { bg: "#F59E0B", border: "#D97706", text: "#FFFFFF", label: String(rank) };
   }
-  if (rank <= 15) {
-    return { bg: "#F97316", border: "#EA580C", text: "#FFFFFF", label: String(rank) };
-  }
-  return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: ">15" };
+  return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: rank > 15 ? ">15" : String(rank) };
 }
 
 function getDirectionLabel(dRow: number, dCol: number): string {
@@ -196,28 +193,72 @@ export function RankTrackerMap({
       validCells.forEach((cell) => {
         const isCenter = cell.row === centerRow && cell.col === centerCol;
         const colors = getBadgeColors(cell.rank, cell.found, isCenter);
-        const size = isCenter ? 44 : 36;
-        const fontSize = colors.label.length > 2 ? 11 : 13;
+        const size = 34;
+        const fontSize = colors.label.length > 2 ? 10 : 12;
 
         latLngs.push([cell.lat, cell.lng]);
 
-        const iconHtml = `
-          <div style="
+        const iconHtml = isCenter ? `
+          <div role="button" tabindex="0" title="Your Clinic (Center Location)" aria-label="Your Clinic (Center Location)" style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -85%);
+            pointer-events: auto;
+          ">
+            <div style="
+              width: 28px;
+              height: 28px;
+              background: #4F46E5;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+              border: 2px solid #FFFFFF;
+            ">
+              <div style="
+                width: 9px;
+                height: 9px;
+                background: #FFFFFF;
+                border-radius: 50%;
+                transform: rotate(45deg);
+              "></div>
+            </div>
+            <div style="
+              margin-top: 3px;
+              background: #FFFFFF;
+              color: #111827;
+              font-size: 11px;
+              font-weight: 700;
+              padding: 2px 8px;
+              border-radius: 6px;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+              border: 1px solid rgba(0,0,0,0.08);
+              white-space: nowrap;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            ">
+              Your Clinic
+            </div>
+          </div>
+        ` : `
+          <div role="button" tabindex="0" title="${!cell.found || cell.rank === 0 ? 'Unranked' : `Rank ${cell.rank}`}" aria-label="${!cell.found || cell.rank === 0 ? 'Unranked' : `Rank ${cell.rank}`}" style="
             width: ${size}px;
             height: ${size}px;
             background-color: ${colors.bg};
-            border: 2.5px solid ${colors.border};
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-weight: 800;
+            font-weight: 700;
             font-size: ${fontSize}px;
-            font-family: system-ui, -apple-system, sans-serif;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.22);
             cursor: pointer;
-            ${isCenter ? 'ring: 4px solid rgba(79, 70, 229, 0.4); animation: pulse 2s infinite;' : ''}
+            border: 1.5px solid rgba(255,255,255,0.4);
+            transform: translate(-50%, -50%);
           ">
             ${colors.label}
           </div>
@@ -226,9 +267,9 @@ export function RankTrackerMap({
         const customIcon = L.divIcon({
           className: "rank-badge-icon",
           html: iconHtml,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-          popupAnchor: [0, -size / 2],
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+          popupAnchor: [0, isCenter ? -42 : -18],
         });
 
         const dRow = centerRow - cell.row;
@@ -238,10 +279,10 @@ export function RankTrackerMap({
         const rankText = !cell.found || cell.rank === 0 ? "Not Found in Top 20" : cell.rank > 15 ? "> 15" : `#${cell.rank}`;
 
         const popupContent = `
-          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 4px 2px; min-width: 190px;">
+          <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px 2px; min-width: 190px;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
               <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${colors.bg};"></span>
-              <strong style="font-size: 14px; color: #111827;">
+              <strong style="font-size: 13px; color: #111827;">
                 ${isCenter ? businessName : `Search Rank ${rankText}`}
               </strong>
             </div>
@@ -293,7 +334,7 @@ export function RankTrackerMap({
   };
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xs bg-slate-50">
+    <div className="relative w-full rounded-2xl overflow-hidden border border-gray-200/80 shadow-2xs bg-slate-50">
       {/* Map Container */}
       <div
         ref={mapContainerRef}
@@ -304,23 +345,24 @@ export function RankTrackerMap({
       {/* Loading Overlay */}
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 backdrop-blur-xs z-1000">
-          <div className="flex items-center gap-2 text-sm text-gray-700 font-semibold bg-white px-4 py-2.5 rounded-xl shadow-md border border-gray-200">
-            <Navigation className="w-4 h-4 animate-spin text-indigo-600" />
+          <div className="flex items-center gap-2 text-xs text-gray-700 font-semibold bg-white px-3.5 py-2 rounded-xl shadow-xs border border-gray-200">
+            <Navigation className="w-3.5 h-3.5 animate-spin text-indigo-600" />
             Loading Interactive Geo Map...
           </div>
         </div>
       )}
 
-      {/* Floating Map Controls Top-Right */}
-      <div className="absolute top-3 right-3 z-1000 flex flex-col gap-2">
-        {/* Layer Toggle */}
-        <div className="bg-white/95 backdrop-blur-md rounded-xl p-1 shadow-md border border-gray-200 flex">
+      {/* Floating Roads / Satellite Toggle Top-Right */}
+      <div className="absolute top-3 right-3 z-1000">
+        <div className="bg-white/95 backdrop-blur-xs rounded-xl p-1 shadow-sm border border-gray-200/80 flex items-center gap-1" role="group" aria-label="Map style selector">
           <button
             type="button"
+            aria-pressed={mapType === "streets"}
+            aria-label="Roads map view"
             onClick={() => setMapType("streets")}
-            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mapType === "streets"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-[#4F46E5] text-white shadow-xs"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
@@ -328,68 +370,52 @@ export function RankTrackerMap({
           </button>
           <button
             type="button"
+            aria-pressed={mapType === "satellite"}
+            aria-label="Satellite map view"
             onClick={() => setMapType("satellite")}
-            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mapType === "satellite"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-[#4F46E5] text-white shadow-xs"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
             Satellite
           </button>
         </div>
+      </div>
 
-        {/* Zoom & Reset Controls */}
-        <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-md border border-gray-200 flex flex-col overflow-hidden">
+      {/* Floating Zoom & Fit Bounds Controls Bottom-Right */}
+      <div className="absolute bottom-4 right-4 z-1000 flex flex-col gap-2">
+        <div className="bg-white/95 backdrop-blur-xs rounded-xl shadow-sm border border-gray-200/80 flex flex-col overflow-hidden" role="group" aria-label="Map zoom controls">
           <button
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-b border-gray-100 transition-colors"
+            aria-label="Zoom In"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-b border-gray-100 transition-colors cursor-pointer"
           >
-            <ZoomIn className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-b border-gray-100 transition-colors"
+            aria-label="Zoom Out"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
           >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleResetBounds}
-            title="Fit All Points"
-            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
+            <Minus className="w-4 h-4" />
           </button>
         </div>
-      </div>
 
-      {/* Floating Legend Overlay Bottom-Left */}
-      <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-1000 bg-white/95 backdrop-blur-md rounded-xl p-2.5 sm:p-3 shadow-md border border-gray-100 text-[10px] sm:text-[11px] text-gray-600 flex flex-wrap items-center gap-2 sm:gap-3 max-w-[calc(100%-1.5rem)]">
-        <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-[8px]">1-3</span>
-          Top 3 Pack
-        </div>
-        <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-[8px]">4-7</span>
-          Ranks 4–7
-        </div>
-        <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-3.5 h-3.5 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-[8px]">8-15</span>
-          Ranks 8–15
-        </div>
-        <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-3.5 h-3.5 rounded-full bg-red-500 text-white font-bold flex items-center justify-center text-[8px]">&gt;15</span>
-          &gt;15 / Unranked
-        </div>
-        <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-3.5 h-3.5 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[8px]">★</span>
-          Clinic Center
-        </div>
+        <button
+          type="button"
+          onClick={handleResetBounds}
+          title="Fit All Points"
+          aria-label="Fit All Points"
+          className="bg-white/95 backdrop-blur-xs p-2 rounded-xl shadow-sm border border-gray-200/80 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer flex items-center justify-center"
+        >
+          <LocateFixed className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
