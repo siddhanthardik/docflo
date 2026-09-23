@@ -460,24 +460,29 @@ model WaitlistEntry {
 }
 
 model GBPPost {
-  id           String      @id @default(cuid())
-  doctorId     String
-  title        String
-  content      String
-  postType     String
-  imageUrl     String?
-  ctaType      String?
-  ctaLink      String?
-  status       PostStatus  @default(DRAFT)
-  scheduledFor DateTime?
-  publishedAt  DateTime?
-  gbpPostId    String?
-  metrics      Json?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  gbpAccountId String?
-  doctor       Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  gbpAccount   GbpAccount? @relation(fields: [gbpAccountId], references: [id])
+  id             String      @id @default(cuid())
+  doctorId       String
+  title          String
+  content        String
+  postType       String
+  imageUrl       String?
+  ctaType        String?
+  ctaLink        String?
+  status         PostStatus  @default(DRAFT)
+  scheduledFor   DateTime?
+  publishedAt    DateTime?
+  gbpPostId      String?
+  metrics        Json?
+  lastError      String?
+  eventTitle     String?
+  eventStartDate DateTime?
+  eventEndDate   DateTime?
+  retryCount     Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  gbpAccountId   String?
+  doctor         Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  gbpAccount     GbpAccount? @relation(fields: [gbpAccountId], references: [id])
 
   @@index([doctorId])
   @@index([gbpAccountId])

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown } from "lucide-react"
+import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown, Maximize2, Minimize2 } from "lucide-react"
 import { format, isToday, isYesterday } from "date-fns"
 import { sanitizePersonName } from "@/lib/utils"
 
@@ -44,10 +44,32 @@ export function ChatWindow({
 }) {
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
+  const [isMaximized, setIsMaximized] = useState(false)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const activeConversationIdRef = useRef<string | null>(null)
   const isNearBottomRef = useRef(true)
+
+  // Exit maximize on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMaximized) {
+        setIsMaximized(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isMaximized])
+
+  // Chronologically stable sorting with incoming-before-outgoing tie breaker
+  const sortedMessages = [...messages].sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime()
+    const timeB = new Date(b.createdAt).getTime()
+    if (timeA !== timeB) return timeA - timeB
+    if (a.direction === "INCOMING" && b.direction === "OUTGOING") return -1
+    if (a.direction === "OUTGOING" && b.direction === "INCOMING") return 1
+    return (a.id || "").localeCompare(b.id || "")
+  })
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     if (chatContainerRef.current) {
@@ -111,9 +133,9 @@ export function ChatWindow({
   const name = sanitizePersonName(conversation.patientName || "") || conversation.patientPhone
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className={isMaximized ? "fixed inset-0 z-50 bg-white h-screen w-screen flex flex-col shadow-2xl" : "h-full flex flex-col relative"}>
       {/* Chat Header */}
-      <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white flex items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <button
@@ -161,6 +183,24 @@ export function ChatWindow({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsMaximized((prev) => !prev)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1.5"
+            title={isMaximized ? "Restore view (Esc)" : "Maximize chat view"}
+          >
+            {isMaximized ? (
+              <>
+                <Minimize2 className="h-4 w-4 text-gray-600" />
+                <span className="hidden sm:inline text-xs text-gray-500">Minimize (Esc)</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-4 w-4 text-gray-600" />
+                <span className="hidden sm:inline text-xs text-gray-500">Maximize</span>
+              </>
+            )}
+          </button>
           <a
             href={`tel:${conversation.patientPhone}`}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -173,15 +213,15 @@ export function ChatWindow({
 
       {/* Messages */}
       <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
-        {messages.length === 0 && (
+        {sortedMessages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-xs text-gray-400">No messages yet. Start the conversation below.</p>
           </div>
         )}
-        {messages.map((msg, index) => {
+        {sortedMessages.map((msg, index) => {
           const isOut = msg.direction === "OUTGOING"
           const currentMsgDate = format(new Date(msg.createdAt), "yyyy-MM-dd")
-          const prevMsgDate = index > 0 ? format(new Date(messages[index - 1].createdAt), "yyyy-MM-dd") : null
+          const prevMsgDate = index > 0 ? format(new Date(sortedMessages[index - 1].createdAt), "yyyy-MM-dd") : null
           const showDateDivider = currentMsgDate !== prevMsgDate
 
           return (

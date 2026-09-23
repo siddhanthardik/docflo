@@ -28,7 +28,18 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { title, content, postType, scheduledDate, imageUrl, ctaType, ctaLink } = body;
+    const {
+      title,
+      content,
+      postType,
+      scheduledDate,
+      imageUrl,
+      ctaType,
+      ctaLink,
+      eventTitle,
+      eventStartDate,
+      eventEndDate,
+    } = body;
 
     const doctorId = session.user.id;
 
@@ -80,7 +91,13 @@ export async function POST(req: Request) {
           postType || "STANDARD",
           imageUrl,
           effectiveCtaType,
-          ctaLink
+          ctaLink,
+          "en-US",
+          {
+            title: eventTitle || title,
+            startDate: eventStartDate,
+            endDate: eventEndDate,
+          }
         );
         gbpPostId = res.name;
         status = "PUBLISHED";
@@ -115,6 +132,10 @@ export async function POST(req: Request) {
         publishedAt,
         status: status as any,
         gbpPostId,
+        eventTitle: eventTitle || title || null,
+        eventStartDate: eventStartDate ? new Date(eventStartDate) : null,
+        eventEndDate: eventEndDate ? new Date(eventEndDate) : null,
+        lastError: null,
       },
     });
 

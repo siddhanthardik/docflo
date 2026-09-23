@@ -89,7 +89,13 @@ export async function POST(
       post.postType || "STANDARD",
       post.imageUrl || undefined,
       effectiveCtaType,
-      post.ctaLink || undefined
+      post.ctaLink || undefined,
+      "en-US",
+      {
+        title: post.eventTitle,
+        startDate: post.eventStartDate,
+        endDate: post.eventEndDate,
+      }
     );
 
     // 4. Update database status to PUBLISHED
@@ -102,6 +108,7 @@ export async function POST(
         publishedAt: new Date(),
         gbpPostId: res.name,
         gbpAccountId: account.id,
+        lastError: null,
       },
     });
 
@@ -109,10 +116,24 @@ export async function POST(
   } catch (error: any) {
     console.error("Error publishing draft post to GBP:", error);
     const interpretation = error.interpretation;
+    const friendlyMsg = interpretation?.friendlyMessage || error.message || "Failed to publish post to Google Business Profile.";
+
+    try {
+      await prisma.gBPPost.update({
+        where: { id },
+        data: {
+          status: "FAILED",
+          lastError: friendlyMsg,
+        },
+      });
+    } catch (dbErr) {
+      console.error("Failed to update post status to FAILED:", dbErr);
+    }
+
     return NextResponse.json(
       {
         error: error.message || "Failed to publish post to Google Business Profile.",
-        friendlyMessage: interpretation?.friendlyMessage || error.message,
+        friendlyMessage: friendlyMsg,
         suggestedFix: interpretation?.suggestedFix || "Please check your post details and try again.",
         policyViolationType: interpretation?.policyViolationType || "GENERAL",
         field: interpretation?.field || "general",

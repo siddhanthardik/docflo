@@ -17,7 +17,7 @@ export function InboxView() {
       {/* Conversation Sidebar List */}
       <div className={`w-full md:w-80 flex-shrink-0 border-r border-gray-100 ${selectedId ? "hidden md:block" : "block"}`}>
         <ConversationList
-          conversations={conversations}
+          conversations={conversations.map((c: any) => c.id === selectedId ? { ...c, unreadCount: 0 } : c)}
           loading={loading}
           selectedId={selectedId}
           onSelect={(id) => setSelectedId(id)}

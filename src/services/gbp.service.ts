@@ -85,7 +85,7 @@ export function sanitizeGbpPostSummary(summary: string): { cleanSummary: string;
 
 export interface GbpErrorInterpretation {
   friendlyMessage: string;
-  policyViolationType: "MEDIA" | "PHONE" | "URL" | "LENGTH" | "POLICY" | "INTERNAL" | "AUTH" | "GENERAL";
+  policyViolationType: "MEDIA" | "PHONE" | "URL" | "LENGTH" | "POLICY" | "INTERNAL" | "AUTH" | "EVENT_SCHEDULE" | "GENERAL";
   suggestedFix: string;
   field?: string;
   rawDetails?: any;
@@ -204,6 +204,24 @@ export function interpretGbpError(status: number, errorText: string): GbpErrorIn
       policyViolationType: "INTERNAL",
       suggestedFix: "This occurs if your Google location is still pending verification with Google, or Google experienced a temporary service glitch. You can use the 'Copy Post & Open Google' button below to publish directly on Google Maps.",
       field: "general",
+      rawDetails: parsed || errorText,
+    };
+  }
+
+  // 7. Event / Schedule validation issues
+  if (
+    combinedText.includes("event") ||
+    combinedText.includes("schedule") ||
+    combinedText.includes("start_date") ||
+    combinedText.includes("end_date") ||
+    violatedField.includes("event") ||
+    violatedField.includes("schedule")
+  ) {
+    return {
+      friendlyMessage: "Google requires a valid event title and schedule for Event posts.",
+      policyViolationType: "EVENT_SCHEDULE",
+      suggestedFix: "For Event posts, Google strictly requires a valid event title, start date, and end date. You can also publish as an 'Update' (Standard) post.",
+      field: "event",
       rawDetails: parsed || errorText,
     };
   }
@@ -757,7 +775,12 @@ export class GBPService {
     imageUrl?: string,
     ctaType?: string,
     ctaLink?: string,
-    languageCode: string = "en-US"
+    languageCode: string = "en-US",
+    eventOptions?: {
+      title?: string | null;
+      startDate?: Date | string | null;
+      endDate?: Date | string | null;
+    }
   ) {
     try {
       if (!locationName.startsWith("accounts/")) {
@@ -773,12 +796,45 @@ export class GBPService {
         effectiveCtaType = "CALL";
       }
 
+      const normalizedTopic = (topicType || "STANDARD").toUpperCase();
+
       // Build the request body for GBP API
       const body: any = {
         summary: cleanSummary || summary,
         languageCode,
-        topicType: topicType || "STANDARD",
+        topicType: normalizedTopic,
       };
+
+      // Construct compliant event structure if topicType is EVENT or OFFER
+      if (normalizedTopic === "EVENT" || normalizedTopic === "OFFER") {
+        const start = eventOptions?.startDate ? new Date(eventOptions.startDate) : new Date();
+        const fallbackEnd = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000); // 7-day default window
+        const end = eventOptions?.endDate ? new Date(eventOptions.endDate) : fallbackEnd;
+        const validEnd = end >= start ? end : fallbackEnd;
+
+        // Google requires title max 58 characters
+        let eventTitle = (eventOptions?.title || "").trim();
+        if (!eventTitle) {
+          const firstSentence = (cleanSummary || summary).split(/[.\n]/)[0].trim();
+          eventTitle = firstSentence.slice(0, 55) || "Health & Wellness Event";
+        }
+
+        body.event = {
+          title: eventTitle.slice(0, 58),
+          schedule: {
+            startDate: {
+              year: start.getFullYear(),
+              month: start.getMonth() + 1,
+              day: start.getDate(),
+            },
+            endDate: {
+              year: validEnd.getFullYear(),
+              month: validEnd.getMonth() + 1,
+              day: validEnd.getDate(),
+            },
+          },
+        };
+      }
 
       // Add Media (Image)
       if (imageUrl) {

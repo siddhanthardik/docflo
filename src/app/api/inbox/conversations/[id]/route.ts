@@ -22,7 +22,10 @@ export async function GET(
       where: { id, doctorId },
       include: {
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: [
+            { createdAt: "asc" },
+            { id: "asc" }
+          ],
         },
         patient: {
           include: {
@@ -37,6 +40,13 @@ export async function GET(
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    if (conversation.unreadCount > 0) {
+      prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { unreadCount: 0 }
+      }).catch(() => {});
     }
 
     const cleanPatientName = sanitizePersonName(conversation.patientName || "") || conversation.patientPhone;
@@ -63,6 +73,7 @@ export async function GET(
 
     return NextResponse.json({
       ...conversation,
+      unreadCount: 0,
       patientName: cleanPatientName,
       patient: cleanPatient
     });

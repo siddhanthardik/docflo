@@ -76,7 +76,13 @@ export class GbpPostPublisherService {
           post.postType || "STANDARD",
           post.imageUrl || undefined,
           post.ctaType || undefined,
-          post.ctaLink || undefined
+          post.ctaLink || undefined,
+          "en-US",
+          {
+            title: post.eventTitle,
+            startDate: post.eventStartDate,
+            endDate: post.eventEndDate,
+          }
         );
 
         // 4. Update post status to PUBLISHED
@@ -87,6 +93,7 @@ export class GbpPostPublisherService {
             publishedAt: new Date(),
             gbpPostId: res.name,
             gbpAccountId: account.id,
+            lastError: null,
           },
         });
 
@@ -101,11 +108,32 @@ export class GbpPostPublisherService {
       } catch (error: any) {
         console.error(`[GbpPostPublisherService] Failed to publish post ${post.id}:`, error.message);
         failedCount++;
+
+        const interpretation = error.interpretation;
+        const friendlyMsg = interpretation?.friendlyMessage || error.message || "Failed to publish scheduled post to Google Business Profile.";
+        const nextRetry = (post.retryCount || 0) + 1;
+        // If it's a policy/validation error or exceeded 3 retries, mark as FAILED
+        const isFatal = interpretation?.policyViolationType && interpretation.policyViolationType !== "INTERNAL";
+        const newStatus = isFatal || nextRetry >= 3 ? "FAILED" : "SCHEDULED";
+
+        try {
+          await prisma.gBPPost.update({
+            where: { id: post.id },
+            data: {
+              status: newStatus,
+              retryCount: nextRetry,
+              lastError: friendlyMsg,
+            },
+          });
+        } catch (dbErr) {
+          console.error(`[GbpPostPublisherService] Failed to update post ${post.id} status:`, dbErr);
+        }
+
         results.push({
           postId: post.id,
           doctorId: post.doctorId,
           status: "FAILED",
-          error: error.message || "Unknown publishing error",
+          error: friendlyMsg,
         });
       }
     }

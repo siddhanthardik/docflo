@@ -92,6 +92,7 @@ class WhatsAppManager {
   // Rate-limiting and debounce per patient phone: `${doctorId}:${patientPhone}`
   private aiReplyHistory: Map<string, number[]> = new Map(); // key -> timestamps[]
   private lastAiReplyTime: Map<string, number> = new Map(); // key -> timestamp
+  private activeAiInFlight: Set<string> = new Set(); // "doctorId:phoneLast10" to prevent concurrent duplicate AI runs
 
   // Checks if a phone number belongs to ANY clinic, doctor, or staff registered on Gyrex
   async isPlatformClinicPhone(rawPhone: string, currentDoctorId: string): Promise<boolean> {
@@ -169,6 +170,11 @@ class WhatsAppManager {
   private checkAiRateLimit(doctorId: string, patientPhone: string): { allowed: boolean; reason?: string } {
     const key = `${doctorId}:${patientPhone.slice(-10)}`;
     const now = Date.now();
+
+    // 0. Concurrency lock: prevent twin parallel AI responses when patient sends multiple images/messages at once
+    if (this.activeAiInFlight.has(key)) {
+      return { allowed: false, reason: "AI response already processing in-flight for this patient" };
+    }
 
     // 1. Debounce: minimum 4 seconds between AI replies to same phone
     const lastReply = this.lastAiReplyTime.get(key) || 0;
@@ -856,6 +862,7 @@ class WhatsAppManager {
           }
 
           // --- Process the incoming message via AI Agents ---
+          let inFlightKey: string | null = null;
           try {
             // 1. Fetch Doctor and Practitioners to detect Staff
             const doctorInfo = await prisma.doctor.findUnique({
@@ -1142,12 +1149,13 @@ class WhatsAppManager {
                     : defaultReply;
                   
                   await sock.sendMessage(remoteJid, { text: replyText });
+                  const outTime = new Date();
                   await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: messageDate }
+                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: outTime }
                   });
                   await prisma.conversation.update({
                     where: { id: conversation.id },
-                    data: { lastMessageAt: messageDate }
+                    data: { lastMessageAt: outTime }
                   });
 
                   if (pendingAppointment) {
@@ -1165,17 +1173,18 @@ class WhatsAppManager {
             } else if (isSurveyContext && isNo) {
                 const replyText = `We are so sorry to hear that we didn't meet your expectations. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
                 await sock.sendMessage(remoteJid, { text: replyText });
+                const outTimeNo = new Date();
                 await prisma.chatMessage.create({
-                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: messageDate }
+                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: outTimeNo }
                 });
                 await prisma.conversation.update({
                   where: { id: conversation.id },
-                  data: { lastMessageAt: messageDate }
+                  data: { lastMessageAt: outTimeNo }
                 });
                 
                 // Alert Clinic Owner via an internal note
                 await prisma.chatMessage.create({
-                  data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System", createdAt: messageDate }
+                  data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System", createdAt: outTimeNo }
                 });
 
                 if (pendingAppointment) {
@@ -1213,6 +1222,7 @@ class WhatsAppManager {
                 const replyText = `Wonderful! Your appointment is fully confirmed. We're looking forward to seeing you soon. Drive safely! 🚗`;
                 await sock.sendMessage(remoteJid, { text: replyText });
                 
+                const outTimeConf = new Date();
                 await prisma.chatMessage.create({
                   data: {
                     conversationId: conversation.id,
@@ -1220,13 +1230,13 @@ class WhatsAppManager {
                     messageType: "text",
                     content: replyText,
                     senderName: "Clinic",
-                    createdAt: messageDate,
+                    createdAt: outTimeConf,
                   }
                 });
 
                 await prisma.conversation.update({
                   where: { id: conversation.id },
-                  data: { lastMessageAt: messageDate }
+                  data: { lastMessageAt: outTimeConf }
                 });
 
                 return; // Don't pass to AI agent
@@ -1346,66 +1356,70 @@ class WhatsAppManager {
                 return;
               }
 
+              inFlightKey = `${doctorId}:${patientPhone.slice(-10)}`;
+              this.activeAiInFlight.add(inFlightKey);
+
               const { AIAgentsService } = await import('@/services/ai-agents.service');
-              
-              const recentMessages = await prisma.chatMessage.findMany({
-                where: { conversationId: conversation.id },
-                orderBy: { createdAt: "desc" },
-                take: 12,
-              });
-
-              // ── Shield 4: Consecutive AI Turn Circuit Breaker ─────────────────
-              // Protects against infinite bot loops if the bot talks to an automated machine without patient replying.
-              // A patient's incoming reply or a new session (e.g. gap > 2 hours) MUST reset this count so returning patients are never blocked.
-              if (!isStaff) {
-                let consecutiveUnansweredAiCount = 0;
-                // Exclude the current incoming message itself (recentMessages[0]) when evaluating prior history
-                const priorHistory = recentMessages.slice(1);
                 
-                // If the current message arrived after a conversation pause (> 2 hours since last message),
-                // it is a brand new user visit/session — reset consecutive unreplied count immediately.
-                const lastPriorMsgTime = priorHistory[0]?.createdAt ? new Date(priorHistory[0].createdAt).getTime() : 0;
-                const isNewSessionAfterBreak = (messageDate.getTime() - lastPriorMsgTime) > (2 * 60 * 60 * 1000);
+                const recentMessages = await prisma.chatMessage.findMany({
+                  where: { conversationId: conversation.id },
+                  orderBy: { createdAt: "desc" },
+                  take: 12,
+                });
 
-                if (!isNewSessionAfterBreak) {
-                  for (const m of priorHistory) {
-                    if (m.direction === "INCOMING") {
-                      // Patient sent a message previously in this session — unbroken chain of AI messages ends here
-                      break;
-                    }
-                    if (m.direction === "OUTGOING" && (m.senderName === "AI Assistant" || m.senderName === "Clinic")) {
-                      consecutiveUnansweredAiCount++;
-                    } else {
-                      break;
-                    }
-                  }
-                }
+                // ── Shield 4: Consecutive AI Turn Circuit Breaker ─────────────────
+                // Protects against infinite bot loops if the bot talks to an automated machine without patient replying.
+                // A patient's incoming reply or a new session (e.g. gap > 2 hours) MUST reset this count so returning patients are never blocked.
+                if (!isStaff) {
+                  let consecutiveUnansweredAiCount = 0;
+                  // Exclude the current incoming message itself (recentMessages[0]) when evaluating prior history
+                  const priorHistory = recentMessages.slice(1);
+                  
+                  // If the current message arrived after a conversation pause (> 2 hours since last message),
+                  // it is a brand new user visit/session — reset consecutive unreplied count immediately.
+                  const lastPriorMsgTime = priorHistory[0]?.createdAt ? new Date(priorHistory[0].createdAt).getTime() : 0;
+                  const isNewSessionAfterBreak = (messageDate.getTime() - lastPriorMsgTime) > (2 * 60 * 60 * 1000);
 
-                const isExplicitBookingIntent = /appointment|book|schedule|consult|slot|timing|fee|cancel|reschedule/i.test(textMessage);
-                if (consecutiveUnansweredAiCount >= 6 && !isExplicitBookingIntent) {
-                  console.log(`[WhatsAppManager] 🛑 Circuit Breaker tripped: ${consecutiveUnansweredAiCount} consecutive unreplied AI messages in active session for ${patientPhone}. Halting automated replies.`);
-                  if (consecutiveUnansweredAiCount === 6) {
-                    const safetyHandoff = `Thank you! I have shared your inquiry with our clinic front desk team. A staff member will respond to you shortly. 🙏`;
-                    await sock.sendMessage(remoteJid, { text: safetyHandoff });
-                    await prisma.chatMessage.create({
-                      data: {
-                        conversationId: conversation.id,
-                        direction: "OUTGOING",
-                        messageType: "text",
-                        content: safetyHandoff,
-                        senderName: "AI Assistant",
-                        createdAt: messageDate,
+                  if (!isNewSessionAfterBreak) {
+                    for (const m of priorHistory) {
+                      if (m.direction === "INCOMING") {
+                        // Patient sent a message previously in this session — unbroken chain of AI messages ends here
+                        break;
                       }
-                    });
-                    await prisma.conversation.update({
-                      where: { id: conversation.id },
-                      data: { lastMessageAt: messageDate }
-                    });
-                    this.recordAiReply(doctorId, patientPhone);
+                      if (m.direction === "OUTGOING" && (m.senderName === "AI Assistant" || m.senderName === "Clinic")) {
+                        consecutiveUnansweredAiCount++;
+                      } else {
+                        break;
+                      }
+                    }
                   }
-                  return;
+
+                  const isExplicitBookingIntent = /appointment|book|schedule|consult|slot|timing|fee|cancel|reschedule/i.test(textMessage);
+                  if (consecutiveUnansweredAiCount >= 6 && !isExplicitBookingIntent) {
+                    console.log(`[WhatsAppManager] 🛑 Circuit Breaker tripped: ${consecutiveUnansweredAiCount} consecutive unreplied AI messages in active session for ${patientPhone}. Halting automated replies.`);
+                    if (consecutiveUnansweredAiCount === 6) {
+                      const safetyHandoff = `Thank you! I have shared your inquiry with our clinic front desk team. A staff member will respond to you shortly. 🙏`;
+                      await sock.sendMessage(remoteJid, { text: safetyHandoff });
+                      const outHandoffTime = new Date();
+                      await prisma.chatMessage.create({
+                        data: {
+                          conversationId: conversation.id,
+                          direction: "OUTGOING",
+                          messageType: "text",
+                          content: safetyHandoff,
+                          senderName: "AI Assistant",
+                          createdAt: outHandoffTime,
+                        }
+                      });
+                      await prisma.conversation.update({
+                        where: { id: conversation.id },
+                        data: { lastMessageAt: outHandoffTime }
+                      });
+                      this.recordAiReply(doctorId, patientPhone);
+                    }
+                    return;
+                  }
                 }
-              }
 
               const conversationHistoryStrings: string[] = recentMessages
                 .slice()
@@ -1486,8 +1500,9 @@ class WhatsAppManager {
 
                         const confirmMsg = `Done, Doctor! I have created a new patient profile for *${patientName}* and booked their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent to them.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
-                        await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                        const outStaff1 = new Date();
+                        await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaff1 } });
+                        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaff1 } });
                         return;
                       } catch (e) {
                         console.error('[WhatsAppManager] AWAITING_PHONE resolution error:', e);
@@ -1534,8 +1549,9 @@ class WhatsAppManager {
                           }
                          const confirmMsg = `Confirmed, Doctor! I have booked the appointment for *${selectedPatient.firstName} ${selectedPatient.lastName}* on ${dateLabel} at ${timeLabel} and sent them a WhatsApp confirmation.`;
                          await sock.sendMessage(remoteJid, { text: confirmMsg });
-                         await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                         await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                         const outStaff2 = new Date();
+                         await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaff2 } });
+                         await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaff2 } });
                          return;
                        } catch (e) {
                          console.error('[WhatsAppManager] AWAITING_SELECTION resolution error:', e);
@@ -1587,8 +1603,9 @@ class WhatsAppManager {
                         await this.sendOutboundPatientMessage(sock, doctorId, phoneDigits4, ptMsg, newPatient.id, patientName);
                         const confirmMsg = `Done, Doctor! I have created a new profile for *${patientName}* (Phone: ${phoneDigits4}) and confirmed their appointment on ${dateLabel} at ${timeLabel}. A WhatsApp confirmation has been sent.`;
                         await sock.sendMessage(remoteJid, { text: confirmMsg });
-                        await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                        const outStaff3 = new Date();
+                        await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaff3 } });
+                        await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaff3 } });
                         return;
                       } catch (e) {
                         console.error('[WhatsAppManager] New patient from AWAITING_SELECTION error:', e);
@@ -1648,8 +1665,9 @@ class WhatsAppManager {
 
                           const confirmMsg = `✅ Confirmed, Doctor! Your OPD schedule has been delayed by *${delay} minutes* in Gyrex, and WhatsApp delay notifications have been dispatched to *${count} booked patients*.`;
                           await sock.sendMessage(remoteJid, { text: confirmMsg });
-                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                          const outStaffDelay = new Date();
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaffDelay } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffDelay } });
                           return;
                         } else if (action === 'CANCEL') {
                           await prisma.doctor.update({
@@ -1682,8 +1700,9 @@ class WhatsAppManager {
 
                           const confirmMsg = `✅ Confirmed, Doctor! Today's OPD is marked as *Emergency Cancelled* in Gyrex. Cancellation notices have been sent to *${count} booked patients*, and new WhatsApp bookings for today are paused.`;
                           await sock.sendMessage(remoteJid, { text: confirmMsg });
-                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                          const outStaffCancel = new Date();
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaffCancel } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffCancel } });
                           return;
                         } else if (action === 'PAUSE') {
                           await prisma.doctor.update({
@@ -1697,8 +1716,9 @@ class WhatsAppManager {
 
                           const confirmMsg = `✅ Confirmed, Doctor! New online WhatsApp bookings are now *PAUSED for today*. Your existing *${impactedAptIds.length} booked appointment(s)* remain safe and active.`;
                           await sock.sendMessage(remoteJid, { text: confirmMsg });
-                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                          const outStaffPause = new Date();
+                          await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: confirmMsg, senderName: 'AI Assistant', createdAt: outStaffPause } });
+                          await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffPause } });
                           return;
                         }
                       } catch (e) {
@@ -1709,8 +1729,9 @@ class WhatsAppManager {
                       handled = true;
                       const abortMsg = `Understood, Doctor! I have cancelled this request. No changes were made to your Gyrex schedule or patient appointments.`;
                       await sock.sendMessage(remoteJid, { text: abortMsg });
-                      await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: abortMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                      await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                      const outStaffAbort = new Date();
+                      await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: abortMsg, senderName: 'AI Assistant', createdAt: outStaffAbort } });
+                      await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffAbort } });
                       return;
                     }
                   }
@@ -1733,8 +1754,9 @@ class WhatsAppManager {
                   });
                   const resumeMsg = `✅ Done, Doctor! Your OPD status is back to *Active Normal Schedule*. Online WhatsApp bookings are operating as usual.`;
                   await sock.sendMessage(remoteJid, { text: resumeMsg });
-                  await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: resumeMsg, senderName: 'AI Assistant', createdAt: messageDate } });
-                  await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                  const outStaffResume = new Date();
+                  await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: resumeMsg, senderName: 'AI Assistant', createdAt: outStaffResume } });
+                  await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffResume } });
                   return;
                 }
 
@@ -1783,8 +1805,9 @@ class WhatsAppManager {
 
                     const msg = `Doctor, I detected an OPD Schedule Delay request:\n\n⏱️ *Delay*: *${mins} Minutes* for Today's OPD.\n👥 *Impacted Booked Patients* (${todayApts.length}):\n${summaryLines.length > 0 ? summaryLines.join('\n') : '  (No appointments booked yet)'}\n\nShould I shift their appointment times in Gyrex and send polite WhatsApp delay notices to them?\n\n👉 Reply *1* or *CONFIRM* to apply & notify patients.\n👉 Reply *2* or *NO* to cancel.`;
                     await sock.sendMessage(remoteJid, { text: msg });
-                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: messageDate } });
-                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                    const outStaffDelayAlert = new Date();
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: outStaffDelayAlert } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffDelayAlert } });
                     return;
                   } else if (isCancelToday) {
                     this.pendingIntents.set(patientPhone, {
@@ -1795,8 +1818,9 @@ class WhatsAppManager {
 
                     const msg = `⚠️ *Emergency OPD Cancellation Request*\n\nDoctor, you have *${todayApts.length} confirmed appointments* booked for today.\n\nShould I mark today's OPD as Emergency Cancelled, update their status in Gyrex, and send polite cancellation/reschedule messages to all ${todayApts.length} patients?\n\n👉 Reply *1* or *CONFIRM* to proceed.\n👉 Reply *2* or *NO* to keep appointments unchanged.`;
                     await sock.sendMessage(remoteJid, { text: msg });
-                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: messageDate } });
-                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                    const outStaffCancelAlert = new Date();
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: outStaffCancelAlert } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffCancelAlert } });
                     return;
                   } else if (isPauseToday) {
                     this.pendingIntents.set(patientPhone, {
@@ -1807,8 +1831,9 @@ class WhatsAppManager {
 
                     const msg = `Doctor, I received your request to *PAUSE new WhatsApp bookings for today*.\n\n• Existing booked appointments (${todayApts.length}) will remain valid and active.\n• New inquiring patients will be offered tomorrow's slots or clinic walk-in consultations.\n\n👉 Reply *1* or *CONFIRM* to pause today's bookings.\n👉 Reply *2* or *NO* to keep bookings open.`;
                     await sock.sendMessage(remoteJid, { text: msg });
-                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: messageDate } });
-                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: messageDate } });
+                    const outStaffPauseAlert = new Date();
+                    await prisma.chatMessage.create({ data: { conversationId: conversation.id, direction: 'OUTGOING', messageType: 'text', content: msg, senderName: 'AI Assistant', createdAt: outStaffPauseAlert } });
+                    await prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: outStaffPauseAlert } });
                     return;
                   }
                 }
@@ -3242,6 +3267,7 @@ class WhatsAppManager {
                 await sock.sendMessage(remoteJid, { text: finalAiReply });
                 
                 // Create OUTGOING ChatMessage
+                const outgoingTime = new Date();
                 await prisma.chatMessage.create({
                   data: {
                     conversationId: conversation.id,
@@ -3249,13 +3275,13 @@ class WhatsAppManager {
                     messageType: "text",
                     content: finalAiReply,
                     senderName: "AI Assistant",
-                    createdAt: messageDate,
+                    createdAt: outgoingTime,
                   }
                 });
                 
                 await prisma.conversation.update({
                   where: { id: conversation.id },
-                  data: { lastMessageAt: messageDate }
+                  data: { lastMessageAt: outgoingTime }
                 });
 
                 this.recordAiReply(doctorId, patientPhone);
@@ -3268,6 +3294,10 @@ class WhatsAppManager {
               method: 'WA_MESSAGE_PROCESSING_ERROR',
               metadata: { doctorId, remoteJid, textMessage }
             });
+          } finally {
+            if (inFlightKey) {
+              this.activeAiInFlight.delete(inFlightKey);
+            }
           }
         }
       }

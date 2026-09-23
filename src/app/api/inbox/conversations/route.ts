@@ -19,7 +19,10 @@ export async function GET(req: Request) {
       where: { doctorId },
       include: {
         messages: {
-          orderBy: { createdAt: "desc" },
+          orderBy: [
+            { createdAt: "desc" },
+            { id: "desc" }
+          ],
           take: 1,
         },
       },
