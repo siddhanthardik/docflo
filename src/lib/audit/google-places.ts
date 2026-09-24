@@ -181,8 +181,8 @@ export interface CompetitorData {
   rating: number | null;
   reviewCount: number | null;
   placeId: string;
-
   googlePosition: number;  // Real 1-based position in Google search results list
+  distanceMeters?: number | null;
 }
 
 export interface CompetitorSearchResult {
@@ -400,6 +400,7 @@ export async function searchCompetitorsWithRank(
           reviewCount: p.userRatingCount ?? null,
           placeId: p.id || "",
           googlePosition: googlePos, // Real Google list position
+          distanceMeters: distKm != null ? Math.round(distKm * 1000) : null,
         });
 
         if (competitors.length >= 10) break; // Return top 10 authentic competitors
@@ -518,6 +519,7 @@ export async function searchCompetitorsWithRank(
         reviewCount: r.user_ratings_total ?? null,
         placeId: r.place_id,
         googlePosition: classicPos,
+        distanceMeters: distKm != null ? Math.round(distKm * 1000) : null,
       });
 
       if (competitors.length >= 10) break;

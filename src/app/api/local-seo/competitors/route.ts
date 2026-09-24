@@ -209,7 +209,8 @@ export async function GET(request: Request) {
         reviewCount: userReviews,
         rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
         isYou: true,
-        placeId: account.locationId || ""
+        placeId: account.locationId || "",
+        distanceMeters: 0
       },
       ...validCompetitors.map((comp: any, idx: number) => ({
         id: comp.placeId || `comp-${idx}`,
@@ -219,7 +220,8 @@ export async function GET(request: Request) {
         // Real Google search position — not fake index arithmetic
         rank: comp.googlePosition ?? (idx + 1),
         isYou: false,
-        placeId: comp.placeId || ""
+        placeId: comp.placeId || "",
+        distanceMeters: comp.distanceMeters ?? null
       }))
     ].sort((a, b) => a.rank - b.rank);
 
