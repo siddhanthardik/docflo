@@ -7,20 +7,15 @@ import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TrendingUp, Zap, RefreshCw, Search,
-  LayoutDashboard, MapPin, Users, ShieldCheck, ChevronRight,
-  Eye, Globe, Phone, Navigation, CalendarCheck2, Info, ArrowUpRight,
-  CheckCircle2, Sparkles, Activity, LayoutGrid
+  LayoutDashboard, Users, ShieldCheck,
+  Sparkles, LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
+import { OverviewTab } from "./OverviewTab";
 import { ProfileHealth } from "./ProfileHealth";
-import { Reputation } from "./Reputation";
-import { PostingActivity } from "./PostingActivity";
-import { KeywordInsights } from "./KeywordInsights";
 import { CompetitorInsights } from "./CompetitorInsights";
 import { AiSearchReadiness } from "./AiSearchReadiness";
-import ServiceInsights from "./ServiceInsights";
 import { SearchGrid } from "./SearchGrid";
 import { RecommendationsList } from "./RecommendationsList";
 
@@ -33,230 +28,6 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "profile-health", label: "Profile Health", icon: <ShieldCheck className="w-4 h-4" /> },
   { id: "recommendations", label: "Recommendations", icon: <Sparkles className="w-4 h-4" /> },
 ];
-
-// ── Compact Local Visibility Score (Half Gauge Arc) ─────────────────────────
-function CompactVisibilityScore({ score, status }: { score: number; status: string }) {
-  const R = 60;
-  const circumference = Math.PI * R;
-  const strokeColor = score >= 80 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444";
-  const bgColor = score >= 80 ? "#d1fae5" : score >= 50 ? "#fef3c7" : "#fee2e2";
-  const badgeTextColor = score >= 80 ? "#047857" : score >= 50 ? "#b45309" : "#b91c1c";
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <h3 className="text-base font-bold text-gray-900">Visibility Score</h3>
-        </div>
-        <div className="group relative">
-          <Info className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
-          <div className="absolute right-0 top-6 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg z-10">
-            Calculated from your Google search rankings, review strength, and profile completeness.
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center my-2">
-        <div className="relative">
-          <svg width="170" height="95" viewBox="0 0 170 95">
-            <path
-              d="M 15 85 A 70 70 0 0 1 155 85"
-              fill="none"
-              stroke="#f3f4f6"
-              strokeWidth="14"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 15 85 A 70 70 0 0 1 155 85"
-              fill="none"
-              stroke="url(#scoreGrad)"
-              strokeWidth="14"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={circumference - (circumference * Math.min(score, 100)) / 100}
-              className="transition-all duration-1000 ease-out"
-            />
-            <defs>
-              <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="50%" stopColor="#f59e0b" />
-                <stop offset="100%" stopColor="#10b981" />
-              </linearGradient>
-            </defs>
-            <text x="85" y="72" textAnchor="middle" fontSize="32" fontWeight="800" fill="#111827">
-              {score}
-            </text>
-            <text x="85" y="88" textAnchor="middle" fontSize="11" fontWeight="600" fill="#9ca3af">
-              / 100
-            </text>
-          </svg>
-        </div>
-        <span
-          className="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mt-1"
-          style={{ backgroundColor: bgColor, color: badgeTextColor }}
-        >
-          {status}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between pt-3 border-t border-gray-50 text-xs text-gray-500">
-        <span>Benchmark rank</span>
-        <span className="font-semibold text-emerald-600 flex items-center gap-0.5">
-          Top 30% Local Clinics
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Google Performance Compact Card ───────────────────────────────────────
-function CompactPerformanceCard({ performanceData, overviewData }: { performanceData: any; overviewData: any }) {
-  let desktopSearch = 0;
-  let mobileSearch = 0;
-  let desktopMaps = 0;
-  let mobileMaps = 0;
-  let websiteClicks = 0;
-  let callClicks = 0;
-  let directionRequests = 0;
-  let bookings = 0;
-
-  if (performanceData?.multiDailyMetricTimeSeries) {
-    for (const multiSeries of performanceData.multiDailyMetricTimeSeries) {
-      if (!multiSeries.dailyMetricTimeSeries) continue;
-      for (const series of multiSeries.dailyMetricTimeSeries) {
-        let sum = 0;
-        if (series.timeSeries?.datedValues) {
-          for (const val of series.timeSeries.datedValues) {
-            sum += parseInt(val.value || "0", 10);
-          }
-        }
-        switch (series.dailyMetric) {
-        case "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH": desktopSearch = sum; break;
-        case "BUSINESS_IMPRESSIONS_MOBILE_SEARCH": mobileSearch = sum; break;
-        case "BUSINESS_IMPRESSIONS_DESKTOP_MAPS": desktopMaps = sum; break;
-        case "BUSINESS_IMPRESSIONS_MOBILE_MAPS": mobileMaps = sum; break;
-        case "WEBSITE_CLICKS": websiteClicks = sum; break;
-        case "CALL_CLICKS": callClicks = sum; break;
-        case "BUSINESS_DIRECTION_REQUESTS": directionRequests = sum; break;
-        case "BUSINESS_BOOKINGS": bookings = sum; break;
-        }
-      }
-    }
-  }
-
-  const rawViews = desktopSearch + mobileSearch + desktopMaps + mobileMaps;
-  const totalViews = rawViews || overviewData?.data?.views || overviewData?.views || 0;
-  const finalCalls = callClicks || overviewData?.data?.calls || overviewData?.calls || 0;
-  const finalWeb = websiteClicks || overviewData?.data?.websiteClicks || overviewData?.websiteClicks || 0;
-  const finalDirections = directionRequests || overviewData?.data?.directionRequests || overviewData?.directionRequests || 0;
-
-  const pieData = [
-    { name: "Search Mobile", value: mobileSearch, color: "#f59e0b" },
-    { name: "Search Desktop", value: desktopSearch, color: "#3b82f6" },
-    { name: "Maps Mobile", value: mobileMaps, color: "#ef4444" },
-    { name: "Maps Desktop", value: desktopMaps, color: "#10b981" },
-  ].filter((d) => d.value > 0);
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-bold text-gray-900">Google Performance</h3>
-        <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full font-medium">Last 30 Days</span>
-      </div>
-
-      <div className="flex items-center gap-4 my-2">
-        <div className="flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-gray-900">{totalViews.toLocaleString()}</span>
-            <span className="text-xs font-semibold text-emerald-600 flex items-center">
-              <ArrowUpRight className="w-3.5 h-3.5" /> views
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Globe className="w-3 h-3 text-blue-500 shrink-0" />Web</span>
-              <span className="text-xs font-bold text-gray-900">{finalWeb}</span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Navigation className="w-3 h-3 text-emerald-500 shrink-0" />Maps</span>
-              <span className="text-xs font-bold text-gray-900">{finalDirections}</span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3 text-amber-500 shrink-0" />Calls</span>
-              <span className="text-xs font-bold text-gray-900">{finalCalls}</span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 rounded-lg p-2 sm:px-2.5 sm:py-1.5 border border-gray-100/50 gap-1 sm:gap-0">
-              <span className="text-xs text-gray-500 flex items-center gap-1"><CalendarCheck2 className="w-3 h-3 text-purple-500 shrink-0" />Book</span>
-              <span className="text-xs font-bold text-gray-900">{bookings}</span>
-            </div>
-          </div>
-        </div>
-
-        {pieData.length > 0 && (
-          <div className="w-24 h-24 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={28} outerRadius={42} dataKey="value" stroke="none" paddingAngle={3}>
-                  {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip formatter={(v: any) => v?.toLocaleString()} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,.1)", fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      <div className="pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-500">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Mobile Search</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Desktop</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Profile Completeness Sidebar Card ──────────────────────────────────────
-function ProfileCompletenessMini({ profileData }: { profileData: any }) {
-  if (!profileData) return null;
-
-  const fields = [
-    profileData.name,
-    profileData.primaryCategory,
-    profileData.description,
-    profileData.phone,
-    profileData.website,
-    profileData.hours,
-    profileData.hasPhotos,
-    profileData.appointmentUrl,
-  ];
-  const completed = fields.filter(Boolean).length;
-  const pct = Math.round((completed / fields.length) * 100);
-
-  const barColor = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500";
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-gray-900">Profile Completeness</h3>
-        <span className="text-sm font-extrabold text-indigo-600">{pct}%</span>
-      </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-        <span>{completed} of {fields.length} fields completed</span>
-        {pct < 100 && <span className="text-indigo-600 font-semibold cursor-pointer hover:underline">Complete profile →</span>}
-      </div>
-    </div>
-  );
-}
-
 
 // ── Main Dashboard ──────────────────────────────────────────────────────────
 export function LocalSeoDashboard() {
@@ -271,6 +42,7 @@ export function LocalSeoDashboard() {
   const { data: performanceData } = useLocalSeoModule<any>("performance");
   const { data: keywordData } = useLocalSeoModule<any>("keywords");
   const { data: postData } = useLocalSeoModule<any>("posts");
+  const { data: servicesData } = useLocalSeoModule<any>("services");
 
   const queryClient = useQueryClient();
   const loading = contextLoading || overviewLoading;
@@ -366,12 +138,13 @@ export function LocalSeoDashboard() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Local SEO Intelligence</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Local Presence</h1>
           <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
             <span className="font-semibold text-gray-800">{overviewData.businessName}</span>
             <span className="text-gray-300">|</span>
             <span className="text-gray-500">{overviewData.primaryCategory || "Medical Clinic"}</span>
           </p>
+          <p className="text-xs text-gray-400 mt-0.5">Your Google visibility, profile performance and patient discovery.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center gap-2 bg-emerald-50/90 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100 text-xs font-medium">
@@ -421,36 +194,17 @@ export function LocalSeoDashboard() {
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
-          {/* Top Row: Score (1/3) + Google Performance (2/3) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <CompactVisibilityScore
-                score={visibilityScoreData?.score || 0}
-                status={visibilityScoreData?.status || "Calculating..."}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <CompactPerformanceCard performanceData={performanceData} overviewData={overviewData} />
-            </div>
-          </div>
-
-          {/* Middle Row: Google Posts & Activity (Full Width) */}
-          <div className="w-full">
-            <PostingActivity />
-          </div>
-
-          {/* Third Row: Reputation (1/2) + Keywords (1/2) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Reputation />
-            <KeywordInsights />
-          </div>
-
-          {/* Bottom Row: Full width Services */}
-          <div className="w-full mt-6">
-            <ServiceInsights />
-          </div>
-        </div>
+        <OverviewTab
+          overviewData={overviewData}
+          visibilityScoreData={visibilityScoreData}
+          profileHealthData={profileHealthData}
+          reputationData={reputationData}
+          performanceData={performanceData}
+          keywordData={keywordData}
+          postData={postData}
+          servicesData={servicesData}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
       )}
 
       {/* ── RANK TRACKER TAB ── */}
