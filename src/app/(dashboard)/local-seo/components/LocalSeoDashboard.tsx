@@ -139,12 +139,14 @@ export function LocalSeoDashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Local Presence</h1>
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-            <span className="font-semibold text-gray-800">{overviewData.businessName}</span>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Your Google visibility, profile performance and patient discovery.
+          </p>
+          <p className="text-xs sm:text-sm text-gray-700 mt-1.5 flex items-center gap-2">
+            <span className="font-semibold text-gray-900">{overviewData.businessName}</span>
             <span className="text-gray-300">|</span>
             <span className="text-gray-500">{overviewData.primaryCategory || "Medical Clinic"}</span>
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">Your Google visibility, profile performance and patient discovery.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center gap-2 bg-emerald-50/90 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100 text-xs font-medium">
