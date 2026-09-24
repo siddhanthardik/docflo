@@ -262,7 +262,7 @@ function ProfileCompletenessMini({ profileData }: { profileData: any }) {
 export function LocalSeoDashboard() {
   const { connected, activeLocationId, isLoading: contextLoading } = useLocationContext();
   const [runningAnalysis, setRunningAnalysis] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("rank-tracker");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   const { data: overviewData, isLoading: overviewLoading, refetch: refetchOverview, lastUpdated } = useLocalSeoModule<any>("overview");
   const { data: visibilityScoreData } = useLocalSeoModule<any>("visibility-score");
@@ -463,21 +463,23 @@ export function LocalSeoDashboard() {
       {/* ── COMPETITORS TAB ── */}
       {activeTab === "competitors" && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-indigo-500" />
-                <h2 className="text-lg font-bold text-gray-900">Local Competitor Analysis</h2>
+          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5" />
               </div>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {overviewData.primaryCategory || "Medical Clinic"} · Sorted by patient engagement
-              </p>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Local Competitor Analysis</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {overviewData.primaryCategory || "Medical Clinic"} · Sorted by patient engagement
+                </p>
+              </div>
             </div>
-            <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100">
+            <div className="text-xs text-gray-400 bg-gray-50/80 rounded-xl px-3 py-1.5 border border-gray-100 font-medium">
               From Google Places API
             </div>
           </div>
-          <div className="p-2 sm:p-4 md:p-6">
+          <div className="p-4 sm:p-6">
             <CompetitorInsights />
           </div>
         </div>

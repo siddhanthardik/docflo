@@ -6,7 +6,7 @@ import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus, 
-  MessageSquare, Edit3, ShieldCheck, Award, Layers, MapPin, Target, ExternalLink, Activity 
+  MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,20 +35,20 @@ function RankBadge({ rank }: { rank: number }) {
   const isGood = rank <= 3;
   const isOk = rank <= 7;
   const color = isGood
-    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : isOk
-    ? "bg-amber-100 text-amber-700 border-amber-200"
-    : "bg-rose-100 text-rose-700 border-rose-200";
+    ? "bg-amber-50 text-amber-700 border-amber-200"
+    : "bg-rose-50 text-rose-700 border-rose-200";
 
   return (
-    <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-xs font-bold ${color}`}>
+    <span className={`inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold ${color}`}>
       #{rank}
     </span>
   );
 }
 
 function ReviewCount({ count }: { count: number }) {
-  const color = count >= 200 ? "text-emerald-600" : count >= 50 ? "text-amber-600" : "text-orange-500";
+  const color = count >= 200 ? "text-emerald-600" : count >= 50 ? "text-amber-600" : "text-red-500";
   return <span className={`font-bold text-sm ${color}`}>{count ? count.toLocaleString() : 0}</span>;
 }
 
@@ -285,12 +285,14 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
   };
 
   return (
-    <div className="mb-6 p-5 bg-white rounded-2xl border border-gray-200/80 shadow-2xs space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-indigo-600" />
+    <div className="p-5 bg-white rounded-2xl border border-gray-200/80 shadow-2xs space-y-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+            <Search className="w-4 h-4" />
+          </div>
           <h3 className="font-bold text-gray-900 text-sm">Competitor Search Term Intercept</h3>
-          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100/80">
             High-Intent Patient Searches
           </span>
         </div>
@@ -305,10 +307,10 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
         {dynamicKeywords.map((kw, idx) => (
           <DropdownMenu key={idx}>
             <DropdownMenuTrigger asChild>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50/70 border border-indigo-100 text-indigo-800 rounded-full text-xs font-semibold hover:bg-indigo-100 transition-all shadow-2xs capitalize">
-                <Sparkles className="w-3 h-3 text-indigo-600" />
-                {kw}
-                <ChevronDown className="w-3 h-3 text-indigo-500" />
+              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50/60 border border-indigo-100/80 text-indigo-900 rounded-full text-xs font-medium hover:bg-indigo-100/70 hover:border-indigo-200 transition-all shadow-2xs">
+                <span className="text-indigo-400 font-semibold">#</span>
+                <span>{kw}</span>
+                <ChevronDown className="w-3 h-3 text-indigo-400 ml-0.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60 bg-white border border-gray-100 shadow-lg rounded-xl p-1.5">
@@ -345,144 +347,14 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
   );
 }
 
-// 4-Pillar Side-by-Side Competitive Benchmark Matrix
-function CompetitiveBenchmarkMatrix({ 
-  competitors, 
-  doctorRating = 0, 
-  doctorReviewCount = 0, 
-  userRank = 5, 
-  overviewData,
-  postsThisMonth = 0
-}: { 
-  competitors: any[]; 
-  doctorRating?: number; 
-  doctorReviewCount?: number; 
-  userRank?: number; 
-  overviewData?: any;
-  postsThisMonth?: number;
-}) {
-  const clinicsAhead = Math.max(0, userRank - 1);
-  const competitorsOnly = competitors.filter(c => !c.isYou);
-  const topReviewComp = [...competitorsOnly].sort((a, b) => b.reviewCount - a.reviewCount)[0];
-
-  const reviewGap = topReviewComp ? Math.max(0, topReviewComp.reviewCount - doctorReviewCount) : 0;
-  const avgCompRating = competitorsOnly.length > 0 ? (competitorsOnly.reduce((sum, c) => sum + (c.rating || 0), 0) / competitorsOnly.length).toFixed(1) : "4.9";
-  const ratingGap = (parseFloat(avgCompRating) - doctorRating).toFixed(1);
-
-  // Dynamic Category Coverage
-  const docCatCount = (overviewData?.categories?.length || 0) + 1;
-  const targetCatText = docCatCount >= 3 ? "Optimal Coverage" : `Target ${3 - docCatCount} More`;
-  const targetSubText = docCatCount >= 3 ? "Secondary categories active." : "Add secondary categories in GMB Settings.";
-
-  return (
-    <div className="mb-6 p-5 bg-white text-gray-900 rounded-2xl shadow-2xs border border-gray-200/80 space-y-4">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
-          <Award className="w-5 h-5 text-indigo-600" />
-          <h3 className="font-bold text-sm text-gray-900">4-Pillar Competitor Gap Matrix</h3>
-        </div>
-        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${userRank === 1 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-          {userRank === 1 ? "#1 Top Ranked Clinic" : `${clinicsAhead} Clinics Ahead`}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-        {/* Pillar 1: Review Count Gap */}
-        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-gray-500 font-semibold mb-1">
-              <span>Review Count Gap</span>
-              <Layers className="w-3.5 h-3.5 text-indigo-600" />
-            </div>
-            <p className="text-xl font-black text-gray-900">+{reviewGap} reviews</p>
-            <p className="text-[11px] text-amber-700 font-medium line-clamp-1">
-              {reviewGap > 0 ? `To equal ${topReviewComp?.name?.slice(0, 24) || 'top competitor'}...` : "You lead in review count!"}
-            </p>
-          </div>
-          <p className="text-[10px] text-gray-500 pt-1.5 border-t border-gray-200/60 font-medium">
-            {reviewGap > 0 ? "Goal: 10–15 WhatsApp reviews/mo to close 90-day pace." : "Maintaining top local review volume."}
-          </p>
-        </div>
-
-        {/* Pillar 2: Rating Score Gap */}
-        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-gray-500 font-semibold mb-1">
-              <span>Rating Quality</span>
-              <Star className="w-3.5 h-3.5 text-amber-500" />
-            </div>
-            <p className="text-xl font-black text-gray-900">{parseFloat(ratingGap) > 0 ? `+${ratingGap} ★` : `${doctorRating > 0 ? doctorRating.toFixed(1) : "5.0"} ★ Rating`}</p>
-            <p className="text-[11px] text-gray-600">
-              Top competitors average {avgCompRating}★.
-            </p>
-          </div>
-          <p className="text-[10px] text-gray-500 pt-1.5 border-t border-gray-200/60 font-medium">
-            {doctorRating >= parseFloat(avgCompRating) ? "Outstanding patient sentiment advantage." : "Focus on 5-star Google review collection."}
-          </p>
-        </div>
-
-        {/* Pillar 3: Category Coverage */}
-        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-gray-500 font-semibold mb-1">
-              <span>Category Coverage</span>
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            </div>
-            <p className="text-xl font-black text-gray-900">{targetCatText}</p>
-            <p className="text-[11px] text-emerald-700 font-medium">
-              {targetSubText}
-            </p>
-          </div>
-          <p className="text-[10px] text-gray-500 pt-1.5 border-t border-gray-200/60 font-medium">
-            Multi-category coverage increases local pack reach by 40%.
-          </p>
-        </div>
-
-        {/* Pillar 4: Posting & Freshness Velocity */}
-        <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200/80 space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-gray-500 font-semibold mb-1">
-              <span>Activity Cadence</span>
-              <Activity className="w-3.5 h-3.5 text-indigo-600" />
-            </div>
-            <p className="text-xl font-black text-gray-900">{postsThisMonth}/4 Posts</p>
-            <p className="text-[11px] text-indigo-700 font-medium">
-              {postsThisMonth >= 4 ? "Target achieved this month!" : `${4 - postsThisMonth} more needed this month`}
-            </p>
-          </div>
-          <p className="text-[10px] text-gray-500 pt-1.5 border-t border-gray-200/60 font-medium">
-            Google algorithm rewards weekly updates over dormant listings.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 export function CompetitorInsights() {
   const router = useRouter();
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
-  const { data: postData } = useLocalSeoModule<any>('posts');
   const { data: competitors, isLoading, refetch } = useLocalSeoModule<any[]>('competitors');
   const [showAll, setShowAll] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
-
-  // Compute posts published this month to feed Pillar 4 of the Benchmark Matrix
-  let postsThisMonth = 0;
-  if (postData?.posts && Array.isArray(postData.posts)) {
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = now.getMonth();
-    postsThisMonth = postData.posts.filter((p: any) => {
-      const d = new Date(p.createTime || p.updateTime);
-      return d.getFullYear() === curYear && d.getMonth() === curMonth;
-    }).length;
-  } else if (typeof postData?.thisMonth === "number") {
-    postsThisMonth = postData.thisMonth;
-  }
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -552,260 +424,282 @@ export function CompetitorInsights() {
   const displayList = showAll ? allRows : allRows.slice(0, 6);
 
   return (
-    <div className="space-y-0">
-      {/* 4-Pillar Side-by-Side Competitive Benchmark Matrix */}
-      <CompetitiveBenchmarkMatrix 
-        competitors={allRows} 
-        doctorRating={doctorRating} 
-        doctorReviewCount={doctorReviewCount} 
-        userRank={userRank} 
-        overviewData={overviewData} 
-        postsThisMonth={postsThisMonth}
-      />
-
-      {/* Competitor Keywords Intercept with 1-Click Action Menus (Placed Above Table) */}
+    <div className="space-y-6">
+      {/* Competitor Search Term Intercept (Directly below Local Competitor Analysis header) */}
       <CompetitorKeywords competitors={allRows} primaryCategory={primaryCategory} keywordsData={keywordsData} />
 
-      {/* Table Header & Refresh */}
-      <div className="flex flex-col gap-2 mb-4 pt-2">
-        <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-500 font-medium">Top Competitors for <strong className="text-gray-800">{primaryCategory}</strong> near your location (click to inspect)</p>
+      {/* Top Competitors Header & Refresh */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <p className="text-xs sm:text-sm text-gray-600 font-medium">
+            Top Competitors for <strong className="text-gray-900 font-bold">{primaryCategory}</strong> near your location (click to inspect)
+          </p>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-600 transition-colors shrink-0 font-semibold"
+            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
-      </div>
 
-      {/* Table header */}
-      <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-        <div>Business</div>
-        <div className="text-center w-16">Rating</div>
-        <div className="text-center w-16">Reviews</div>
-        <div className="text-center w-16">Distance</div>
-        <div className="text-center w-16" title="Real position in Google Search for your specialty near your location">Position ↑</div>
-      </div>
+        {/* Table column headers */}
+        <div className="hidden md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+          <div>Business</div>
+          <div className="text-center">Rating</div>
+          <div className="text-center">Reviews</div>
+          <div className="text-center">Distance</div>
+          <div className="text-center">Position</div>
+        </div>
 
-      {/* Unified Competitor Rows (sorted by Map Rank) */}
-      <div className="divide-y divide-gray-100">
-        {displayList.map((comp, idx) => {
-          if (comp.isYou) {
-            return (
-              <div
-                key="you-row"
-                className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto_auto] gap-2 md:gap-x-4 px-3.5 py-4 md:py-3.5 items-center bg-indigo-50/70 rounded-xl border border-indigo-200/90 shadow-2xs my-1"
-              >
-                <div className="min-w-0 w-full">
-                  <p className="text-sm font-bold text-indigo-950 flex items-center gap-1.5 truncate">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
-                    </span>
-                    {comp.name} <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full border border-indigo-200">(YOU)</span>
-                  </p>
-                  <p className="text-xs text-indigo-600/80 mt-0.5">Your official Google Business Profile</p>
-                </div>
-                <div className="flex items-center gap-6 md:gap-0 w-full col-span-4 md:grid md:grid-cols-4 md:items-center">
-                  <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                    <span className="text-sm font-bold text-indigo-950">{comp.rating.toFixed(1)}</span>
-                  </div>
-                  <div className="md:w-16 text-center flex items-center justify-center">
-                    <ReviewCount count={comp.reviewCount} />
-                  </div>
-                  <div className="md:w-16 text-center flex items-center justify-center text-xs font-bold text-indigo-700">
-                    Your Clinic
-                  </div>
-                  <div className="ml-auto md:ml-0 md:w-16 flex justify-end md:justify-center">
-                    <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-full border text-xs font-bold ${userRank === 1 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
-                      #{userRank}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-
-          const isExpanded = expandedPlaceId === comp.placeId;
-
-          return (
-            <div key={comp.placeId || idx} className="py-1">
-              <div
-                onClick={() => setExpandedPlaceId(prev => prev === comp.placeId ? null : comp.placeId)}
-                className={`flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto_auto] gap-2 md:gap-x-4 px-3 py-3 rounded-xl hover:bg-gray-50/80 transition-all cursor-pointer group ${isExpanded ? "bg-gray-50/90 border border-gray-200/80" : ""}`}
-              >
-                <div className="min-w-0 flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-800 line-clamp-2 md:line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                    {comp.name}
-                  </p>
-                  <span className="text-xs text-gray-300 group-hover:text-indigo-400 hidden sm:inline">
-                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </span>
-                </div>
-                <div className="flex items-center gap-6 md:gap-0 col-span-4 md:grid md:grid-cols-4 md:items-center">
-                  <div className="md:w-16 flex items-center justify-start md:justify-center gap-1">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                    <span className="text-sm font-semibold text-gray-800">
-                      {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
-                    </span>
-                    <span className="text-xs text-gray-400 md:hidden ml-1">(Rating)</span>
-                  </div>
-                  <div className="md:w-16 text-center flex items-center justify-center gap-1.5">
-                    <ReviewCount count={comp.reviewCount} />
-                    <span className="text-xs text-gray-400 md:hidden">Reviews</span>
-                  </div>
-                  <div className="md:w-16 text-center flex items-center justify-center gap-1 text-xs text-gray-500 font-medium">
-                    <MapPin className="w-3 h-3 text-gray-400 shrink-0 hidden md:inline" />
-                    {formatDistance(comp.distanceMeters)}
-                  </div>
-                  <div className="ml-auto md:ml-0 md:w-16 flex items-center justify-end md:justify-center gap-1">
-                    <RankBadge rank={comp.rank} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Expandable Strategy & Details Drawer */}
-              {isExpanded && (() => {
-                const intel = getCompetitorIntelligence(comp, doctorReviewCount, doctorRating, primaryCategory);
-
-                return (
-                  <div className="mx-2 mb-3 p-4 bg-white rounded-2xl border border-gray-200/90 shadow-xs space-y-3.5 animate-in fade-in duration-200">
-                    {/* Top Bar: Clinic Name + Google Maps Button */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
-                        </div>
-                        <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2">
-                          <span>{comp.reviewCount} patient reviews</span>
-                          <span>·</span>
-                          <span>{comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"}</span>
-                          {comp.distanceMeters != null && (
-                            <>
-                              <span>·</span>
-                              <span>{formatDistance(comp.distanceMeters)} away</span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-700 shadow-2xs transition-colors shrink-0"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
-                        View on Google Maps
-                      </a>
+        {/* Unified Competitor Rows */}
+        <div className="space-y-1.5">
+          {displayList.map((comp, idx) => {
+            if (comp.isYou) {
+              return (
+                <div
+                  key="you-row"
+                  className="flex flex-col md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-2 md:gap-x-4 px-3.5 py-3 items-center bg-indigo-50/50 hover:bg-indigo-50/70 rounded-xl border border-indigo-100/90 transition-colors my-1"
+                >
+                  <div className="min-w-0 w-full flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Activity className="w-4 h-4" />
                     </div>
-
-                    {/* Identified Ranking Signal */}
-                    <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1.5">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${intel.signalBadge.color}`}>
-                          <Sparkles className="w-3 h-3" />
-                          {intel.signalBadge.label}
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-900 flex items-center gap-2 truncate">
+                        {comp.name}
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                          You
                         </span>
-                        {intel.reviewGap > 0 && (
-                          <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                            +{intel.reviewGap} reviews ahead
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-700 leading-relaxed">
-                        {intel.explanation}
+                      </p>
+                      <p className="text-xs text-indigo-600/80 truncate">Your official Google Business Profile</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                      <span className="text-sm font-bold text-gray-900">{comp.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Reviews</span>
+                    <span className="text-sm font-bold text-gray-900">{comp.reviewCount || 0}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Distance</span>
+                    <span className="text-xs text-gray-400 font-medium">—</span>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center px-3 py-0.5 rounded-full bg-indigo-100/70 border border-indigo-200 text-indigo-700 text-xs font-medium">
+                        Your Clinic
+                      </span>
+                      <span className="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200">
+                        #{userRank}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            const isExpanded = expandedPlaceId === comp.placeId;
+
+            return (
+              <div key={comp.placeId || idx} className="rounded-xl transition-all">
+                <div
+                  onClick={() => setExpandedPlaceId(prev => prev === comp.placeId ? null : comp.placeId)}
+                  className={`flex flex-col md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-2 md:gap-x-4 px-3.5 py-3 rounded-xl hover:bg-gray-50/80 transition-all cursor-pointer group items-center ${isExpanded ? "bg-gray-50/90 border border-gray-200/80" : "border border-transparent"}`}
+                >
+                  <div className="min-w-0 w-full flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50/70 flex items-center justify-center text-indigo-500 shrink-0 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                        {comp.name}
                       </p>
                     </div>
+                  </div>
 
-                    {/* Extracted Search Keywords for THIS Competitor */}
-                    {intel.detectedKeywords.length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                          Detected Search Terms in Listing
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {intel.detectedKeywords.map((kw, kIdx) => (
-                            <button
-                              key={kIdx}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-medium border border-indigo-100 transition-colors"
-                              title={`Draft Google Post targeting "${kw}"`}
-                            >
-                              <Target className="w-3 h-3 text-indigo-500" />
-                              {kw}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Plan & Targeted Buttons */}
-                    <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="text-xs text-gray-700">
-                        <p className="font-semibold text-indigo-950">Recommended Counter-Action:</p>
-                        <p className="text-gray-600 mt-0.5">{intel.counterActionNote}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
-                          }}
-                          className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex-1 sm:flex-initial"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 mr-1" />
-                          Draft Post ({intel.primaryCounterKeyword.slice(0, 16)}...)
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/reviews?targetKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
-                          }}
-                          className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-xl flex-1 sm:flex-initial"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                          Target in Reviews
-                        </Button>
-                      </div>
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                      <span className="text-sm font-semibold text-gray-800">
+                        {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
+                      </span>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* "X more ahead" + show more toggle */}
-      {!showAll && allRows.length > 6 && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="w-full py-3 text-xs text-gray-500 text-center hover:text-indigo-600 transition-colors font-medium border-t border-gray-100 mt-2"
-        >
-          Show all {allRows.length} nearby clinics...
-          <ChevronDown className="w-3 h-3 inline ml-1" />
-        </button>
-      )}
-      {showAll && allRows.length > 6 && (
-        <button
-          onClick={() => setShowAll(false)}
-          className="w-full py-3 text-xs text-gray-500 text-center hover:text-indigo-600 transition-colors font-medium border-t border-gray-100 mt-2"
-        >
-          Show top 6 <ChevronUp className="w-3 h-3 inline ml-1" />
-        </button>
-      )}
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Reviews</span>
+                    <ReviewCount count={comp.reviewCount} />
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Distance</span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {formatDistance(comp.distanceMeters)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                    <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
+                    <div className="flex items-center gap-3">
+                      <RankBadge rank={comp.rank} />
+                      <span className="text-gray-400 group-hover:text-indigo-500 transition-colors">
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expandable Strategy & Details Drawer */}
+                {isExpanded && (() => {
+                  const intel = getCompetitorIntelligence(comp, doctorReviewCount, doctorRating, primaryCategory);
+
+                  return (
+                    <div className="mt-2 mx-1 p-4 bg-white rounded-2xl border border-gray-200/90 shadow-xs space-y-3.5 animate-in fade-in duration-200">
+                      {/* Top Bar: Clinic Name + Google Maps Button */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
+                          </div>
+                          <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2">
+                            <span>{comp.reviewCount} patient reviews</span>
+                            <span>·</span>
+                            <span>{comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"}</span>
+                            {comp.distanceMeters != null && (
+                              <>
+                                <span>·</span>
+                                <span>{formatDistance(comp.distanceMeters)} away</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-700 shadow-2xs transition-colors shrink-0"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                          View on Google Maps
+                        </a>
+                      </div>
+
+                      {/* Identified Ranking Signal */}
+                      <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-100 space-y-1.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${intel.signalBadge.color}`}>
+                            <Sparkles className="w-3 h-3" />
+                            {intel.signalBadge.label}
+                          </span>
+                          {intel.reviewGap > 0 && (
+                            <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                              +{intel.reviewGap} reviews ahead
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-700 leading-relaxed">
+                          {intel.explanation}
+                        </p>
+                      </div>
+
+                      {/* Extracted Search Keywords for THIS Competitor */}
+                      {intel.detectedKeywords.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                            Detected Search Terms in Listing
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {intel.detectedKeywords.map((kw, kIdx) => (
+                              <button
+                                key={kIdx}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-medium border border-indigo-100 transition-colors"
+                                title={`Draft Google Post targeting "${kw}"`}
+                              >
+                                <Target className="w-3 h-3 text-indigo-500" />
+                                {kw}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Plan & Targeted Buttons */}
+                      <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="text-xs text-gray-700">
+                          <p className="font-semibold text-indigo-950">Recommended Counter-Action:</p>
+                          <p className="text-gray-600 mt-0.5">{intel.counterActionNote}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                            }}
+                            className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex-1 sm:flex-initial"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 mr-1" />
+                            Draft Post ({intel.primaryCounterKeyword.slice(0, 16)}...)
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/reviews?targetKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                            }}
+                            className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-xl flex-1 sm:flex-initial"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                            Target in Reviews
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* "X more ahead" + show more toggle */}
+        {!showAll && allRows.length > 6 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="w-full py-4 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer"
+          >
+            Show all {allRows.length} nearby clinics <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {showAll && allRows.length > 6 && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="w-full py-4 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer"
+          >
+            Show top 6 <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
