@@ -36,6 +36,8 @@ export interface GbpAccountInsights {
   categories?: GbpCategories | null;
   description?: string;
   regularHours?: Record<string, unknown> | null;
+  appointmentUrl?: string;
+  attributes?: any[];
   accountName?: string;
   totalReviews?: number;
   photoCount?: number;
@@ -90,3 +92,20 @@ export interface GbpAccount {
   insights?: GbpAccountInsights;
   recentReviews?: GbpApiReview[];
 }
+
+export interface PlaceActionLink {
+  name?: string;
+  uri: string;
+  placeActionType: "APPOINTMENT" | "ONLINE_APPOINTMENT" | "DINING_RESERVATION";
+  isPreferred?: boolean;
+  isEditable?: boolean;
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface GbpAttribute {
+  name: string;
+  valueType?: "BOOL" | "ENUM" | "URL" | "REPEATED_ENUM";
+  values?: any[];
+}
+

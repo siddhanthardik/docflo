@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getValidGbpAccessToken } from "@/lib/gbp-auth";
+import { GBPService } from "@/services/gbp.service";
 
 export async function GET(request: Request) {
   try {
@@ -37,11 +39,43 @@ export async function GET(request: Request) {
       hours = `Mon-Sat ${doctor.workingHoursStart} - ${doctor.workingHoursEnd}`;
     }
 
+    let appointmentUrl = snapshotData.appointmentUrl || insights.appointmentUrl || null;
+    let attributes = snapshotData.attributes || insights.attributes || [];
+
+    // Live Google Read-Back: If appointmentUrl or attributes are missing locally, verify against Google APIs
+    if ((!appointmentUrl || attributes.length === 0) && account.locationName) {
+      try {
+        const tokenData = await getValidGbpAccessToken(session.doctorId);
+        if (tokenData?.accessToken) {
+          const gbpService = new GBPService(tokenData.accessToken, session.doctorId);
+          if (!appointmentUrl) {
+            const links = await gbpService.getPlaceActionLinks(account.locationName);
+            const apptLink = links.find((l) => l.placeActionType === "APPOINTMENT" || l.placeActionType === "ONLINE_APPOINTMENT");
+            if (apptLink?.uri) {
+              appointmentUrl = apptLink.uri;
+            }
+          }
+          if (attributes.length === 0) {
+            const attrs = await gbpService.getLocationAttributes(account.locationName);
+            if (attrs && attrs.length > 0) {
+              attributes = attrs.map((a) => {
+                const parts = a.name.split("/");
+                return parts[parts.length - 1];
+              });
+            }
+          }
+        }
+      } catch (readErr) {
+        console.warn("[Profile Health GET] Google read-back notice:", readErr);
+      }
+    }
+
     const mergedData = {
       ...insights,
       ...snapshotData,
       hours: hours || null,
-      attributes: snapshotData.attributes || insights.attributes || [],
+      appointmentUrl: appointmentUrl || null,
+      attributes: attributes || [],
       doctorName: doctor?.name || "Doctor",
       doctorSpecialty: doctor?.specialty || "Specialist",
       clinicName: doctor?.clinicName || account.locationName || "Clinic",

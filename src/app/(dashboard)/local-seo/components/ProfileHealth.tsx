@@ -75,7 +75,7 @@ export function ProfileHealth() {
       isComplete: !!profileData.name,
       valueDisplay: profileData.name || "Missing",
       currentValue: profileData.name || "",
-      advice: "Your official practice or clinic title registered on Google Maps.",
+      advice: "Your official practice or clinic title registered on Google Maps. Changes to your registered Business Profile name must be managed directly on Google Maps to prevent listing suspension.",
     },
     {
       key: "primaryCategory",
@@ -327,19 +327,25 @@ export function ProfileHealth() {
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs pl-6">
                 <span className="text-gray-400 font-medium">Status: <strong className="text-gray-700">{field.valueDisplay}</strong></span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleOpenFixModal(field)}
-                  className={`h-7 text-xs font-semibold px-2.5 rounded-lg transition-all ${
-                    field.isComplete
-                      ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
-                      : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100"
-                  }`}
-                >
-                  <Edit3 className="mr-1 h-3.5 w-3.5 text-indigo-500" />
-                  {field.isComplete ? "Edit" : "Update"}
-                </Button>
+                {field.key === "name" ? (
+                  <span className="text-[11px] font-medium text-gray-500 bg-gray-100/90 px-2.5 py-1 rounded-lg border border-gray-200">
+                    Managed directly on Google
+                  </span>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenFixModal(field)}
+                    className={`h-7 text-xs font-semibold px-2.5 rounded-lg transition-all ${
+                      field.isComplete
+                        ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                        : "text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100"
+                    }`}
+                  >
+                    <Edit3 className="mr-1 h-3.5 w-3.5 text-indigo-500" />
+                    {field.isComplete ? "Edit" : "Update"}
+                  </Button>
+                )}
               </div>
             </div>
           ))}

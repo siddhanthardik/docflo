@@ -445,11 +445,11 @@ export function CompetitorInsights() {
         </div>
 
         {/* Table column headers */}
-        <div className="hidden md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+        <div className="hidden md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
           <div>Business</div>
           <div className="text-center">Rating</div>
           <div className="text-center">Reviews</div>
-          <div className="text-center">Distance</div>
+          <div className="text-center">Distance from Clinic (Approx)</div>
           <div className="text-center">Position</div>
         </div>
 
@@ -460,7 +460,7 @@ export function CompetitorInsights() {
               return (
                 <div
                   key="you-row"
-                  className="flex flex-col md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-2 md:gap-x-4 px-3.5 py-3 items-center bg-indigo-50/50 hover:bg-indigo-50/70 rounded-xl border border-indigo-100/90 transition-colors my-1"
+                  className="flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3 items-center bg-indigo-50/50 hover:bg-indigo-50/70 rounded-xl border border-indigo-100/90 transition-colors my-1"
                 >
                   <div className="min-w-0 w-full flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
@@ -516,7 +516,7 @@ export function CompetitorInsights() {
               <div key={comp.placeId || idx} className="rounded-xl transition-all">
                 <div
                   onClick={() => setExpandedPlaceId(prev => prev === comp.placeId ? null : comp.placeId)}
-                  className={`flex flex-col md:grid md:grid-cols-[1fr_80px_80px_90px_150px] gap-2 md:gap-x-4 px-3.5 py-3 rounded-xl hover:bg-gray-50/80 transition-all cursor-pointer group items-center ${isExpanded ? "bg-gray-50/90 border border-gray-200/80" : "border border-transparent"}`}
+                  className={`flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3 rounded-xl hover:bg-gray-50/80 transition-all cursor-pointer group items-center ${isExpanded ? "bg-gray-50/90 border border-gray-200/80" : "border border-transparent"}`}
                 >
                   <div className="min-w-0 w-full flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-indigo-50/70 flex items-center justify-center text-indigo-500 shrink-0 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
-import { GBPService } from "@/services/gbp.service";
+import { GBPService, normalizeGoogleCategory, interpretGbpError } from "@/services/gbp.service";
 import { formatOperatingHours, convertToGoogleRegularHours } from "@/lib/operating-hours";
 
 export async function POST(req: Request) {
@@ -17,6 +17,18 @@ export async function POST(req: Request) {
 
     if (!field) {
       return NextResponse.json({ error: "Missing field name" }, { status: 400 });
+    }
+
+    // CRITICAL SAFETY RULE: Business Name must remain read-only.
+    // Never allow Business Name edits through the normal QuickFixModal flow.
+    if (field === "name" || field === "title") {
+      return NextResponse.json(
+        {
+          error: "Business Name changes must be managed directly on Google Business Profile to prevent automated listing suspension.",
+          field,
+        },
+        { status: 400 }
+      );
     }
 
     const account = await prisma.gbpAccount.findFirst({
@@ -75,7 +87,11 @@ export async function POST(req: Request) {
       insightsData.categories.additionalCategories = (Array.isArray(value) ? value : [value]).map((c: string) => ({ displayName: c }));
     } else if (field === "primaryCategory") {
       if (!insightsData.categories) insightsData.categories = {};
-      insightsData.categories.primaryCategory = { displayName: value };
+      const normCat = normalizeGoogleCategory(value);
+      insightsData.categories.primaryCategory = {
+        displayName: normCat ? normCat.displayName : value,
+        name: normCat ? normCat.name : undefined,
+      };
     } else if (field === "hours") {
       insightsData.hours = formatOperatingHours(value);
       insightsData.regularHours = convertToGoogleRegularHours(value);
@@ -97,7 +113,7 @@ export async function POST(req: Request) {
       }).catch(e => console.warn("Could not sync phone to doctor:", e));
     }
 
-    // 4. Push update directly to Google Business Profile API (Google Maps sync)
+    // 4. Push update directly to Google Business Profile API (Google Maps live sync)
     let googleSynced = false;
     let googleSyncError: string | null = null;
 
@@ -115,9 +131,10 @@ export async function POST(req: Request) {
           updateMask = ["websiteUri"];
           patchData = { websiteUri: value };
         } else if (field === "appointmentUrl") {
-          // In Google Business Information API, websiteUri or metadata links can hold booking URL
-          updateMask = ["websiteUri"];
-          patchData = { websiteUri: value };
+          // CRITICAL BUG FIX: An appointment URL must NEVER overwrite the clinic's primary website!
+          // Use Google's official Place Actions API (APPOINTMENT action type).
+          await gbpService.upsertPlaceActionLink(account.locationName, value, "APPOINTMENT");
+          googleSynced = true;
         } else if (field === "phone") {
           updateMask = ["phoneNumbers.primaryPhone"];
           patchData = { phoneNumbers: { primaryPhone: value } };
@@ -125,12 +142,59 @@ export async function POST(req: Request) {
           updateMask = ["regularHours"];
           patchData = { regularHours: convertToGoogleRegularHours(value) };
         } else if (field === "primaryCategory") {
+          // CATEGORY SAFETY: Resolve to valid Google category resource
+          const normalized = normalizeGoogleCategory(value);
+          if (!normalized) {
+            return NextResponse.json(
+              { error: `"${value}" could not be recognized as a valid Google medical category. Please select a recognized specialty.` },
+              { status: 400 }
+            );
+          }
           updateMask = ["categories.primaryCategory"];
-          patchData = { categories: { primaryCategory: { displayName: value } } };
+          patchData = {
+            categories: {
+              primaryCategory: {
+                name: normalized.name,
+                displayName: normalized.displayName,
+              },
+            },
+          };
         } else if (field === "categories") {
+          // CATEGORY SAFETY: Validate all additional categories
+          const rawCats = Array.isArray(value) ? value : [value];
+          const validCats: { name: string; displayName: string }[] = [];
+          const invalidCats: string[] = [];
+
+          for (const c of rawCats) {
+            const norm = normalizeGoogleCategory(c);
+            if (norm) {
+              validCats.push(norm);
+            } else {
+              invalidCats.push(c);
+            }
+          }
+
+          if (validCats.length === 0 && rawCats.length > 0) {
+            return NextResponse.json(
+              { error: `None of the selected categories could be mapped to recognized Google categories: ${invalidCats.join(", ")}` },
+              { status: 400 }
+            );
+          }
+
           updateMask = ["categories.additionalCategories"];
-          const cats = (Array.isArray(value) ? value : [value]).map((c: string) => ({ displayName: c }));
-          patchData = { categories: { additionalCategories: cats } };
+          patchData = {
+            categories: {
+              additionalCategories: validCats.map((vc) => ({
+                name: vc.name,
+                displayName: vc.displayName,
+              })),
+            },
+          };
+        } else if (field === "attributes") {
+          // ATTRIBUTES SYNC: Use Google Business Information Attributes API
+          const rawAttrs = Array.isArray(value) ? value : [value];
+          await gbpService.updateLocationAttributes(account.locationName, rawAttrs);
+          googleSynced = true;
         }
 
         if (updateMask.length > 0) {
@@ -139,8 +203,19 @@ export async function POST(req: Request) {
         }
       }
     } catch (gErr: any) {
-      console.warn("[Profile Update] Google live sync note:", gErr.message);
-      googleSyncError = gErr.message || "Failed to push live to Google Maps";
+      console.warn("[Profile Update] Google live sync error:", gErr);
+      const msg = gErr.message || "";
+      if (msg.includes("403") || msg.includes("PERMISSION_DENIED")) {
+        googleSyncError = "Google account permissions insufficient or authorization expired.";
+      } else if (msg.includes("404") || msg.includes("NOT_FOUND")) {
+        googleSyncError = "Connected Google Business location was not found or has been moved.";
+      } else if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")) {
+        googleSyncError = "Google API rate limit reached. Please wait a few minutes before updating again.";
+      } else if (msg.includes("INVALID_ARGUMENT") || msg.includes("400")) {
+        googleSyncError = `Google rejected this value: ${msg.replace(/Google Business Profile API error \d+:?/, "").trim() || "Invalid format"}`;
+      } else {
+        googleSyncError = msg || "Failed to push live to Google Maps";
+      }
     }
 
     return NextResponse.json({
@@ -150,11 +225,12 @@ export async function POST(req: Request) {
       field,
       value,
       message: googleSynced
-        ? `"${field}" updated and synced directly with Google Maps!`
-        : `"${field}" saved to your clinic profile.`,
+        ? `"${field}" submitted and synced with Google Maps!`
+        : `"${field}" saved locally to clinic profile. (Google sync notice: ${googleSyncError || "Offline"})`,
     });
   } catch (error: any) {
     console.error("Profile Health Update API Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
+

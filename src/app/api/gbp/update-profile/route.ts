@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { entitlementGuard } from "@/lib/withEntitlements";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
-import { GBPService } from "@/services/gbp.service";
+import { GBPService, normalizeGoogleCategory } from "@/services/gbp.service";
 import { formatOperatingHours, convertToGoogleRegularHours } from "@/lib/operating-hours";
 
 export async function POST(req: Request) {
@@ -34,11 +34,18 @@ export async function POST(req: Request) {
     }
     if (category !== undefined) {
       if (!insightsData.categories) insightsData.categories = {};
-      insightsData.categories.primaryCategory = { displayName: category, categoryId: `gcid:${category.toLowerCase().replace(/\s+/g, '_')}` };
+      const normCat = normalizeGoogleCategory(category);
+      insightsData.categories.primaryCategory = {
+        displayName: normCat ? normCat.displayName : category,
+        categoryId: normCat ? normCat.name.replace("categories/", "") : `gcid:${category.toLowerCase().replace(/\s+/g, '_')}`
+      };
     }
     if (categories !== undefined) {
       if (!insightsData.categories) insightsData.categories = {};
-      insightsData.categories.additionalCategories = (Array.isArray(categories) ? categories : [categories]).map((c: string) => ({ displayName: c }));
+      insightsData.categories.additionalCategories = (Array.isArray(categories) ? categories : [categories]).map((c: string) => {
+        const norm = normalizeGoogleCategory(c);
+        return { displayName: norm ? norm.displayName : c };
+      });
     }
     if (hours !== undefined) {
       insightsData.hours = formatOperatingHours(hours);
@@ -73,6 +80,8 @@ export async function POST(req: Request) {
       if (hours !== undefined) snapData.hours = formatOperatingHours(hours);
       if (phone !== undefined) snapData.phone = phone;
       if (website !== undefined) snapData.website = website;
+      if (appointmentUrl !== undefined) snapData.appointmentUrl = appointmentUrl;
+      if (attributes !== undefined) snapData.attributes = Array.isArray(attributes) ? attributes : [attributes];
       await prisma.profileSnapshot.update({
         where: { id: snapshot.id },
         data: { json: snapData, date: new Date() }
@@ -107,18 +116,36 @@ export async function POST(req: Request) {
           patchData.regularHours = convertToGoogleRegularHours(hours);
         }
         if (category !== undefined) {
-          updateMask.push("categories.primaryCategory");
-          if (!patchData.categories) patchData.categories = {};
-          patchData.categories.primaryCategory = { displayName: category };
+          const norm = normalizeGoogleCategory(category);
+          if (norm) {
+            updateMask.push("categories.primaryCategory");
+            if (!patchData.categories) patchData.categories = {};
+            patchData.categories.primaryCategory = { name: norm.name, displayName: norm.displayName };
+          }
         }
         if (categories !== undefined) {
-          updateMask.push("categories.additionalCategories");
-          if (!patchData.categories) patchData.categories = {};
-          patchData.categories.additionalCategories = (Array.isArray(categories) ? categories : [categories]).map((c: string) => ({ displayName: c }));
+          const rawCats = Array.isArray(categories) ? categories : [categories];
+          const validCats = rawCats.map((c) => normalizeGoogleCategory(c)).filter(Boolean);
+          if (validCats.length > 0) {
+            updateMask.push("categories.additionalCategories");
+            if (!patchData.categories) patchData.categories = {};
+            patchData.categories.additionalCategories = validCats.map((vc: any) => ({ name: vc.name, displayName: vc.displayName }));
+          }
         }
 
         if (updateMask.length > 0) {
           await gbpService.patchLocation(account.locationName, updateMask, patchData);
+          googleSynced = true;
+        }
+
+        if (appointmentUrl !== undefined && appointmentUrl.trim()) {
+          await gbpService.upsertPlaceActionLink(account.locationName, appointmentUrl, "APPOINTMENT");
+          googleSynced = true;
+        }
+
+        if (attributes !== undefined) {
+          const rawAttrs = Array.isArray(attributes) ? attributes : [attributes];
+          await gbpService.updateLocationAttributes(account.locationName, rawAttrs);
           googleSynced = true;
         }
       }

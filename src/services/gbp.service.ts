@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { GbpAccountInsights as GBPInsights } from "@/types/gbp";
+import type { GbpAccountInsights as GBPInsights, PlaceActionLink, GbpAttribute } from "@/types/gbp";
 
 interface GBPAccount {
   name: string;
@@ -37,6 +37,114 @@ const BUSINESS_INFORMATION_BASE =
   "https://mybusinessbusinessinformation.googleapis.com/v1";
 const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
 const LEGACY_GBP_BASE = "https://mybusiness.googleapis.com/v4";
+const PLACE_ACTIONS_BASE = "https://mybusinessplaceactions.googleapis.com/v1";
+
+export const GOOGLE_MEDICAL_CATEGORIES: Record<string, string> = {
+  "doctor": "gcid:doctor",
+  "medical clinic": "gcid:medical_clinic",
+  "clinic": "gcid:medical_clinic",
+  "general physician": "gcid:general_practitioner",
+  "general practitioner": "gcid:general_practitioner",
+  "family doctor": "gcid:family_practice_physician",
+  "family practice physician": "gcid:family_practice_physician",
+  "consultant physician": "gcid:general_practitioner",
+  "physician": "gcid:general_practitioner",
+  "pediatrician": "gcid:pediatrician",
+  "pediatric care clinic": "gcid:pediatrician",
+  "children's health clinic": "gcid:pediatrician",
+  "child specialist": "gcid:pediatrician",
+  "gynecologist": "gcid:obstetrician_gynecologist",
+  "gynaecologist": "gcid:obstetrician_gynecologist",
+  "obstetrician-gynecologist": "gcid:obstetrician_gynecologist",
+  "women's health clinic": "gcid:womens_health_clinic",
+  "maternity hospital": "gcid:maternity_hospital",
+  "fertility clinic": "gcid:fertility_clinic",
+  "dermatologist": "gcid:dermatologist",
+  "skin care clinic": "gcid:skin_care_clinic",
+  "hair specialist clinic": "gcid:hair_transplant_clinic",
+  "hair transplant clinic": "gcid:hair_transplant_clinic",
+  "dentist": "gcid:dentist",
+  "dental clinic": "gcid:dental_clinic",
+  "orthodontist": "gcid:orthodontist",
+  "cosmetic dentist": "gcid:cosmetic_dentist",
+  "pediatric dentist": "gcid:pediatric_dentist",
+  "orthopedic surgeon": "gcid:orthopedic_surgeon",
+  "orthopedist": "gcid:orthopedic_clinic",
+  "bone & joint clinic": "gcid:orthopedic_clinic",
+  "sports medicine clinic": "gcid:sports_medicine_clinic",
+  "cardiologist": "gcid:cardiologist",
+  "heart care clinic": "gcid:heart_hospital",
+  "cardiovascular center": "gcid:heart_hospital",
+  "physiotherapist": "gcid:physiotherapist",
+  "physical therapist": "gcid:physical_therapist",
+  "physical therapy clinic": "gcid:physical_therapy_clinic",
+  "ent specialist": "gcid:ear_nose_and_throat_doctor",
+  "ear nose throat clinic": "gcid:ear_nose_and_throat_doctor",
+  "ophthalmologist": "gcid:ophthalmologist",
+  "eye care clinic": "gcid:eye_care_center",
+  "eye specialist": "gcid:ophthalmologist",
+  "specialist clinic": "gcid:specialized_clinic",
+  "healthcare center": "gcid:medical_clinic",
+  "wellness clinic": "gcid:wellness_center",
+  "hospital": "gcid:hospital",
+  "diagnostic center": "gcid:medical_diagnostic_imaging_center",
+  "ultrasound scan center": "gcid:medical_diagnostic_imaging_center",
+};
+
+export function normalizeGoogleCategory(categoryInput: string): { name: string; displayName: string } | null {
+  if (!categoryInput || typeof categoryInput !== "string") return null;
+  const clean = categoryInput.trim();
+  if (!clean) return null;
+
+  if (clean.startsWith("categories/")) {
+    return { name: clean, displayName: clean.replace("categories/gcid:", "").replace("categories/", "") };
+  }
+  if (clean.startsWith("gcid:")) {
+    return { name: `categories/${clean}`, displayName: clean.replace("gcid:", "") };
+  }
+
+  const lookupKey = clean.toLowerCase();
+  const matchedGcid = GOOGLE_MEDICAL_CATEGORIES[lookupKey];
+  if (matchedGcid) {
+    return { name: `categories/${matchedGcid}`, displayName: clean };
+  }
+
+  const safeId = clean.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (safeId.length >= 3) {
+    return { name: `categories/gcid:${safeId}`, displayName: clean };
+  }
+
+  return null;
+}
+
+export const GOOGLE_ATTRIBUTE_MAPPING: Record<string, string> = {
+  "wheelchair accessible entrance": "has_wheelchair_accessible_entrance",
+  "wheelchair accessible restroom": "has_wheelchair_accessible_restroom",
+  "appointments recommended": "requires_appointments",
+  "online consultations available": "has_online_care",
+  "restroom available": "has_restroom",
+  "emergency care available": "has_emergency_service",
+  "wheelchair access": "has_wheelchair_accessible_entrance",
+  "wheelchair accessible": "has_wheelchair_accessible_entrance",
+  "restroom": "has_restroom",
+  "toilet": "has_restroom",
+  "online appointment": "has_online_care",
+  "appointment required": "requires_appointments",
+};
+
+export function normalizeGoogleAttribute(attrInput: string): string | null {
+  if (!attrInput || typeof attrInput !== "string") return null;
+  const clean = attrInput.trim();
+  if (!clean) return null;
+
+  if (/^[a-z0-9_]+$/.test(clean) && (clean.startsWith("has_") || clean.startsWith("requires_") || clean.startsWith("is_"))) {
+    return clean;
+  }
+
+  const lookupKey = clean.toLowerCase();
+  return GOOGLE_ATTRIBUTE_MAPPING[lookupKey] || null;
+}
+
 
 const LOCATION_READ_MASK = [
   "name",
@@ -398,6 +506,141 @@ export class GBPService {
       body: JSON.stringify(data),
     });
   }
+
+  async getPlaceActionLinks(locationName: string): Promise<PlaceActionLink[]> {
+    const cleanName = locationName.includes("/locations/")
+      ? `locations/${locationName.split("/locations/")[1]}`
+      : locationName;
+    try {
+      const url = `${PLACE_ACTIONS_BASE}/${cleanName}/placeActionLinks`;
+      const data = await this.googleFetch<{ placeActionLinks?: PlaceActionLink[] }>(url);
+      return data.placeActionLinks || [];
+    } catch (err: any) {
+      console.warn("[GBP getPlaceActionLinks] Error reading place action links:", err.message);
+      return [];
+    }
+  }
+
+  async upsertPlaceActionLink(
+    locationName: string,
+    uri: string,
+    actionType: "APPOINTMENT" | "ONLINE_APPOINTMENT" = "APPOINTMENT"
+  ): Promise<PlaceActionLink> {
+    const cleanName = locationName.includes("/locations/")
+      ? `locations/${locationName.split("/locations/")[1]}`
+      : locationName;
+
+    let cleanUri = uri.trim();
+    if (!cleanUri.startsWith("http://") && !cleanUri.startsWith("https://")) {
+      cleanUri = `https://${cleanUri}`;
+    }
+
+    // 1. Fetch existing place action links to check for existing links for this actionType
+    const existingLinks = await this.getPlaceActionLinks(cleanName);
+    const editableLink = existingLinks.find((l) => l.placeActionType === actionType && l.isEditable !== false);
+    const nonEditableLink = existingLinks.find((l) => l.placeActionType === actionType && l.isEditable === false);
+
+    if (editableLink?.name) {
+      // Update existing editable link
+      const updateUrl = `${PLACE_ACTIONS_BASE}/${editableLink.name}?updateMask=uri,isPreferred`;
+      console.log(`[GBP upsertPlaceActionLink] Patching editable action link ${editableLink.name} with URI: ${cleanUri}`);
+      return this.googleFetch<PlaceActionLink>(updateUrl, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uri: cleanUri,
+          isPreferred: true,
+        }),
+      });
+    }
+
+    // Create new place action link if no editable link exists.
+    // If a non-editable third-party link is present and Google prevents adding another, report a friendly message.
+    const createUrl = `${PLACE_ACTIONS_BASE}/${cleanName}/placeActionLinks`;
+    console.log(`[GBP upsertPlaceActionLink] Creating new action link at ${createUrl} with URI: ${cleanUri}`);
+    try {
+      return await this.googleFetch<PlaceActionLink>(createUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uri: cleanUri,
+          placeActionType: actionType,
+          isPreferred: true,
+        }),
+      });
+    } catch (createErr: any) {
+      if (nonEditableLink) {
+        throw new Error(
+          "Your Google Business Profile currently has an appointment booking link managed by an external provider (such as Practo or Reserve with Google). Google does not permit overriding this provider link directly."
+        );
+      }
+      throw createErr;
+    }
+  }
+
+  async deletePlaceActionLink(linkName: string): Promise<any> {
+    const url = `${PLACE_ACTIONS_BASE}/${linkName}`;
+    return this.googleFetch(url, { method: "DELETE" });
+  }
+
+  async getLocationAttributes(locationName: string): Promise<GbpAttribute[]> {
+    const cleanName = locationName.includes("/locations/")
+      ? `locations/${locationName.split("/locations/")[1]}`
+      : locationName;
+    try {
+      const url = `${BUSINESS_INFORMATION_BASE}/${cleanName}/attributes`;
+      const data = await this.googleFetch<{ attributes?: GbpAttribute[] }>(url);
+      return data.attributes || [];
+    } catch (err: any) {
+      console.warn("[GBP getLocationAttributes] Error reading attributes:", err.message);
+      return [];
+    }
+  }
+
+  async updateLocationAttributes(locationName: string, attributeDisplayNames: string[]): Promise<any> {
+    const cleanName = locationName.includes("/locations/")
+      ? `locations/${locationName.split("/locations/")[1]}`
+      : locationName;
+
+    const attributes: GbpAttribute[] = [];
+    const unmapped: string[] = [];
+
+    for (const item of attributeDisplayNames) {
+      const attrId = normalizeGoogleAttribute(item);
+      if (attrId) {
+        attributes.push({
+          name: `${cleanName}/attributes/${attrId}`,
+          values: [true],
+        });
+      } else {
+        unmapped.push(item);
+      }
+    }
+
+    if (attributes.length === 0 && attributeDisplayNames.length > 0) {
+      throw new Error(`None of the provided attributes could be mapped to recognized Google attribute IDs: ${unmapped.join(", ")}`);
+    }
+
+    // Build exact FieldMask dynamically containing only the attribute paths being updated
+    // e.g. attributeMask=attributes/has_wheelchair_accessible_entrance,attributes/has_restroom
+    const attributeMask = attributes
+      .map((a) => {
+        const parts = a.name.split("/attributes/");
+        const attrId = parts[1] || a.name;
+        return `attributes/${attrId}`;
+      })
+      .join(",");
+
+    const url = `${BUSINESS_INFORMATION_BASE}/${cleanName}/attributes?attributeMask=${encodeURI(attributeMask)}`;
+    console.log(`[GBP updateLocationAttributes] Updating attributes for ${cleanName} with mask ${attributeMask}:`, JSON.stringify(attributes));
+
+    return this.googleFetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attributes }),
+    });
+  }
+
 
   async getInsights(locationName: string, startDate: Date, endDate: Date): Promise<GBPInsights> {
     try {

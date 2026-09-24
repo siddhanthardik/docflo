@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Sparkles, Check, RefreshCcw, Save, Link2, FileText, Layers, Clock, Phone, Globe, ShieldCheck, Plus } from "lucide-react";
+import { X, Sparkles, Check, RefreshCcw, Save, Link2, FileText, Layers, Clock, Phone, Globe, ShieldCheck, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { formatOperatingHours } from "@/lib/operating-hours";
@@ -28,6 +28,7 @@ export function QuickFixModal({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [confirmingPrimaryCat, setConfirmingPrimaryCat] = useState(false);
 
   // Field states
   const [textVal, setTextVal] = useState("");
@@ -36,6 +37,7 @@ export function QuickFixModal({
 
   useEffect(() => {
     if (isOpen) {
+      setConfirmingPrimaryCat(false);
       if (fieldKey === "categories") {
         setCategoryTags(Array.isArray(currentValue) ? currentValue : []);
       } else if (fieldKey === "attributes") {
@@ -121,6 +123,22 @@ export function QuickFixModal({
   };
 
   const handleSave = async () => {
+    // Safety guard: Business Name cannot be saved through QuickFixModal
+    if (fieldKey === "name" || fieldKey === "title") {
+      toast({
+        title: "Managed Directly on Google",
+        description: "Business Name changes require separate verification and cannot be updated here.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Confirmation guard for primary category
+    if (fieldKey === "primaryCategory" && !confirmingPrimaryCat) {
+      setConfirmingPrimaryCat(true);
+      return;
+    }
+
     try {
       setSaving(true);
       let payloadValue: any = textVal;
@@ -146,13 +164,14 @@ export function QuickFixModal({
       if (res.ok) {
         if (resData.googleSynced) {
           toast({
-            title: "Synced to Google Maps! 🚀",
-            description: `"${fieldLabel}" updated and pushed live to your Google listing.`,
+            title: "Submitted to Google Business Profile",
+            description: `"${fieldLabel}" was submitted to Google. Changes may take some time to appear on Google Maps.`,
           });
         } else {
           toast({
-            title: "Profile Updated",
-            description: `"${fieldLabel}" saved to clinic profile.${resData.googleSyncError ? ` (Note: ${resData.googleSyncError})` : ""}`,
+            title: "Saved Locally · Google Sync Notice",
+            description: `"${fieldLabel}" saved to clinic profile. (Google notice: ${resData.googleSyncError || "Google API not reachable"})`,
+            variant: "destructive",
           });
         }
         onSaved();
@@ -289,6 +308,24 @@ export function QuickFixModal({
             </div>
           )}
 
+          {/* BUSINESS NAME (READ-ONLY) */}
+          {fieldKey === "name" && (
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200/90 rounded-xl p-4 text-xs text-amber-900 leading-relaxed space-y-2">
+                <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                  <ShieldCheck className="w-4 h-4 text-amber-600" /> Managed Directly on Google
+                </p>
+                <p>
+                  Changes to your official Business Profile name require separate verification from Google to prevent listing suspension. Please update your registered business name directly inside your Google Business Profile manager.
+                </p>
+              </div>
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
+                <span className="text-[11px] text-gray-500 font-medium block">Current Registered Name</span>
+                <span className="text-sm font-bold text-gray-900">{textVal || "Clinic"}</span>
+              </div>
+            </div>
+          )}
+
           {/* PRIMARY CATEGORY */}
           {fieldKey === "primaryCategory" && (
             <div className="space-y-3">
@@ -296,17 +333,33 @@ export function QuickFixModal({
               <input
                 type="text"
                 value={textVal}
-                onChange={(e) => setTextVal(e.target.value)}
+                onChange={(e) => {
+                  setTextVal(e.target.value);
+                  setConfirmingPrimaryCat(false);
+                }}
                 placeholder="e.g. Physiotherapist, Pediatrician, Dental Clinic, Gynecologist"
                 className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-hidden"
               />
+              {confirmingPrimaryCat && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1 animate-in fade-in">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> Confirm Category Change
+                  </p>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Changing your primary category can affect how your clinic appears in Google Search and Maps. Are you sure you want to update this to &ldquo;{textVal}&rdquo;?
+                  </p>
+                </div>
+              )}
               <p className="text-[11px] text-gray-500 font-medium">Quick Suggestions:</p>
               <div className="flex gap-2 flex-wrap">
                 {["Physiotherapist", "General Physician", "Dental Clinic", "Pediatrician", "Gynecologist", "Dermatologist", "Orthopedic Surgeon"].map((preset) => (
                   <button
                     key={preset}
                     type="button"
-                    onClick={() => setTextVal(preset)}
+                    onClick={() => {
+                      setTextVal(preset);
+                      setConfirmingPrimaryCat(false);
+                    }}
                     className="text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-700 px-2.5 py-1 rounded-lg border border-gray-200 transition-all"
                   >
                     {preset}
@@ -394,33 +447,51 @@ export function QuickFixModal({
             </div>
           )}
 
-          <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-[11px] text-emerald-800 leading-relaxed flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span><strong>Direct Google Maps Sync:</strong> When saved, changes are automatically pushed directly to your live Google Business Profile and reflected on Google Maps.</span>
-          </div>
+          {fieldKey !== "name" && fieldKey !== "title" && (
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-[11px] text-emerald-800 leading-relaxed flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span><strong>Direct Google Maps Sync:</strong> When saved, changes are submitted directly to your connected Google Business Profile and reflected live on Google Search and Maps.</span>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
         <div className="shrink-0 p-3.5 sm:p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2.5 sm:gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving} className="text-xs font-medium text-gray-600">
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-2xs px-4"
-          >
-            {saving ? (
-              <>
-                <RefreshCcw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-3.5 h-3.5 mr-1.5" /> Save Changes
-              </>
-            )}
-          </Button>
+          {fieldKey === "name" || fieldKey === "title" ? (
+            <Button
+              size="sm"
+              onClick={onClose}
+              className="bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-2xs px-5"
+            >
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={onClose} disabled={saving} className="text-xs font-medium text-gray-600">
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-2xs px-4"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCcw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...
+                  </>
+                ) : fieldKey === "primaryCategory" && confirmingPrimaryCat ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> Confirm &amp; Sync Category
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5 mr-1.5" /> Save Changes
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
