@@ -11,25 +11,41 @@ export async function GET() {
 
     const doctorId = sessionData.doctorId;
 
-    // Fetch review metrics from the Appointment table
-    const stats = await prisma.appointment.groupBy({
-      by: ['reviewStatus'],
-      where: {
-        doctorId,
-        status: "COMPLETED" // only completed appointments matter for this funnel
-      },
-      _count: {
-        _all: true
-      }
-    });
+    const [stats, positiveFollowUps, negativeFollowUps] = await Promise.all([
+      prisma.appointment.groupBy({
+        by: ['reviewStatus'],
+        where: {
+          doctorId,
+          status: "COMPLETED" // only completed appointments matter for this funnel
+        },
+        _count: {
+          _all: true
+        }
+      }),
+      prisma.appointmentFollowUp.count({
+        where: {
+          appointment: { doctorId, status: "COMPLETED" },
+          type: "SURVEY_RESPONSE_POSITIVE"
+        }
+      }),
+      prisma.appointmentFollowUp.count({
+        where: {
+          appointment: { doctorId, status: "COMPLETED" },
+          type: "SURVEY_RESPONSE_NEGATIVE"
+        }
+      })
+    ]);
 
     const metrics = {
       surveySent: 0,
-      positiveResponses: 0,
-      negativeResponses: 0,
+      positiveResponses: positiveFollowUps,
+      negativeResponses: negativeFollowUps,
       linkSent: 0,
       cooldownSkipped: 0 // We map reviewRequested = true AND reviewStatus = NOT_SENT as skipped
     };
+
+    let legacyPositive = 0;
+    let legacyNegative = 0;
 
     stats.forEach(stat => {
       switch (stat.reviewStatus) {
@@ -37,20 +53,26 @@ export async function GET() {
           metrics.surveySent += stat._count._all;
           break;
         case "POSITIVE_RESPONSE":
-          metrics.positiveResponses += stat._count._all;
+          legacyPositive += stat._count._all;
           metrics.surveySent += stat._count._all;
           break;
         case "NEGATIVE_RESPONSE":
-          metrics.negativeResponses += stat._count._all;
+          legacyNegative += stat._count._all;
           metrics.surveySent += stat._count._all;
           break;
         case "LINK_SENT":
           metrics.linkSent += stat._count._all;
-          metrics.positiveResponses += stat._count._all;
           metrics.surveySent += stat._count._all;
           break;
       }
     });
+
+    if (metrics.positiveResponses === 0 && legacyPositive > 0) {
+      metrics.positiveResponses = legacyPositive;
+    }
+    if (metrics.negativeResponses === 0 && legacyNegative > 0) {
+      metrics.negativeResponses = legacyNegative;
+    }
 
     // Calculate Cooldown Skipped
     const skipped = await prisma.appointment.count({

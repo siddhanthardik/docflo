@@ -60,15 +60,26 @@ export async function resolveGoogleReviewLink(doctorId: string): Promise<string>
   throw new Error("Google Business Profile is not connected. Please connect your GBP profile in GBP Profile settings to send Google review requests.");
 }
 
+export const REVIEW_REQUEST_DELAY_HOURS = 24;
+
 export class ReviewDispatcherService {
   /**
    * Evaluates recently completed appointments and sends review surveys
    * according to the configured delay and cooldown rules.
+   * Also dispatches delayed neutral Google review invitations to patients
+   * who completed the experience survey 24+ hours ago.
    */
   static async evaluateAppointments() {
-    console.log("[ReviewDispatcherService] Evaluating appointments for review surveys...");
+    console.log("[ReviewDispatcherService] Evaluating appointments for review surveys & delayed review invitations...");
     
-    // Find all doctors with review automation enabled
+    // 1. Dispatch 24-hour delayed neutral Google review invitations to eligible survey respondents
+    try {
+      await this.dispatchDelayedReviewInvitations();
+    } catch (delayedErr) {
+      console.error("[ReviewDispatcherService] Error dispatching delayed review invitations:", delayedErr);
+    }
+    
+    // 2. Find all doctors with review automation enabled
     const doctors = await prisma.doctor.findMany({
       where: { reviewAutomationEnabled: true },
       select: {
@@ -174,6 +185,149 @@ export class ReviewDispatcherService {
   }
 
   /**
+   * Dispatches delayed neutral Google review invitations to eligible patients
+   * who completed the experience survey at least REVIEW_REQUEST_DELAY_HOURS ago.
+   * Enforces atomic claim-before-send concurrency control.
+   */
+  static async dispatchDelayedReviewInvitations(delayHours: number = REVIEW_REQUEST_DELAY_HOURS): Promise<number> {
+    const cutoff = new Date(Date.now() - delayHours * 3600 * 1000);
+
+    // 1. Find all survey responses completed at or before the cutoff
+    const completedSurveyFollowUps = await prisma.appointmentFollowUp.findMany({
+      where: {
+        type: { in: ["SURVEY_RESPONSE_POSITIVE", "SURVEY_RESPONSE_NEGATIVE", "SURVEY_RESPONSE_CUSTOM", "SURVEY_RESPONSE_RECEIVED"] },
+        sentAt: { lte: cutoff },
+        appointment: {
+          status: "COMPLETED",
+          NOT: { reviewStatus: "LINK_SENT" },
+          patient: { isBlocked: false }
+        }
+      },
+      include: {
+        appointment: {
+          include: {
+            patient: true,
+            doctor: {
+              select: {
+                id: true,
+                name: true,
+                clinicName: true,
+                googleReviewLink: true,
+              }
+            },
+            followUps: true
+          }
+        }
+      },
+      orderBy: { sentAt: "asc" }
+    });
+
+    let sentCount = 0;
+    const processedAppointmentIds = new Set<string>();
+
+    for (const record of completedSurveyFollowUps) {
+      const appointment = record.appointment;
+      if (!appointment || processedAppointmentIds.has(appointment.id)) continue;
+      processedAppointmentIds.add(appointment.id);
+
+      // Idempotency: skip if already sent or already marked LINK_SENT
+      const alreadySent = appointment.followUps.some(f => f.type === "GOOGLE_REVIEW_INVITATION_SENT");
+      if (alreadySent || appointment.reviewStatus === "LINK_SENT") {
+        continue;
+      }
+
+      const patient = appointment.patient;
+      if (!patient || patient.isBlocked || !patient.phone) {
+        continue;
+      }
+
+      const doctor = appointment.doctor;
+      if (!doctor || !whatsappManager.isConnected(doctor.id)) {
+        continue;
+      }
+
+      // Resolve Google review link before claiming
+      let reviewLink = "";
+      try {
+        reviewLink = await resolveGoogleReviewLink(doctor.id);
+      } catch (err: any) {
+        console.warn(`[ReviewDispatcherService] Doctor ${doctor.id} has no valid Google review URL: ${err.message}`);
+        continue;
+      }
+
+      if (!reviewLink || !reviewLink.trim()) {
+        console.warn(`[ReviewDispatcherService] Blank Google review URL for doctor ${doctor.id}. Skipping.`);
+        continue;
+      }
+
+      // ATOMIC CLAIM BEFORE SENDING (Pattern A Concurrency Control)
+      // Transition reviewStatus to LINK_SENT atomically. If another worker claimed it, count is 0.
+      const currentStatus = appointment.reviewStatus;
+      const claim = await prisma.appointment.updateMany({
+        where: {
+          id: appointment.id,
+          reviewStatus: currentStatus,
+          NOT: { reviewStatus: "LINK_SENT" }
+        },
+        data: {
+          reviewStatus: "LINK_SENT"
+        }
+      });
+
+      if (!claim || claim.count === 0) {
+        continue;
+      }
+
+      // Neutral, Google Policy Compliant Message Copy
+      const rawDocName = doctor.name || "Doctor";
+      const docName = rawDocName.startsWith("Dr.") ? rawDocName : `Dr. ${rawDocName}`;
+      const clinicName = doctor.clinicName || `${docName}'s Clinic`;
+      const neutralMessage = `Thank you for visiting ${clinicName}.\n\nWe'd value your honest feedback about your experience.\n\nIf you'd like to share your experience publicly, you can leave a review on Google:\n\n${reviewLink}\n\nYour feedback helps us understand what we're doing well and where we can improve.\n\n*(Reply STOP to opt out of automated messages)*`;
+
+      try {
+        await whatsappManager.sendMessage(doctor.id, patient.phone, neutralMessage);
+
+        // Record persistent follow-up record
+        await prisma.appointmentFollowUp.create({
+          data: {
+            appointmentId: appointment.id,
+            type: "GOOGLE_REVIEW_INVITATION_SENT",
+            sentAt: new Date(),
+          }
+        });
+
+        // Record non-repudiation audit log
+        await prisma.auditLog.create({
+          data: {
+            userId: doctor.id,
+            userType: "CLINIC",
+            action: "REVIEW_INVITATION_SENT",
+            details: {
+              appointmentId: appointment.id,
+              patientId: patient.id,
+              channel: "WHATSAPP",
+              reason: "COMPLETED_EXPERIENCE_SURVEY",
+              sentAt: new Date().toISOString()
+            }
+          }
+        });
+
+        sentCount++;
+        console.log(`[ReviewDispatcherService] Sent neutral Google review invitation to ${patient.phone} for appointment ${appointment.id}`);
+      } catch (sendErr: any) {
+        console.error(`[ReviewDispatcherService] WhatsApp send failed for appointment ${appointment.id}:`, sendErr);
+        // Rollback claim on failure so future cron run can retry
+        await prisma.appointment.update({
+          where: { id: appointment.id },
+          data: { reviewStatus: currentStatus }
+        }).catch(rbErr => console.error(`[ReviewDispatcherService] Failed to rollback claim:`, rbErr));
+      }
+    }
+
+    return sentCount;
+  }
+
+  /**
    * Manual send review request or direct Google review link by staff
    */
   static async manualSendReviewRequest(
@@ -209,7 +363,7 @@ export class ReviewDispatcherService {
 
     if (requestType === "GOOGLE_REVIEW") {
       const reviewLink = await resolveGoogleReviewLink(doctorId);
-      const defaultReply = `Hi ${patient.firstName}, we hope you had a wonderful experience with us. If you feel we took great care of you, sharing a quick review on Google helps other patients find the care they need:\n\n${reviewLink}`;
+      const defaultReply = `Hi ${patient.firstName}, thank you for visiting ${doctor.clinicName || "our clinic"}.\n\nWe'd value your honest feedback about your experience. If you'd like to share your experience publicly, you can leave a review on Google:\n\n${reviewLink}\n\nYour feedback helps us understand what we're doing well and where we can improve.`;
       finalMessage = doctor.reviewGoogleInvitationMessage 
         ? doctor.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`)
         : defaultReply;
@@ -228,6 +382,15 @@ export class ReviewDispatcherService {
         where: { id: appointmentId },
         data: { reviewStatus: requestType === "GOOGLE_REVIEW" ? "LINK_SENT" : "SURVEY_SENT", reviewRequested: true }
       });
+      if (requestType === "GOOGLE_REVIEW") {
+        await prisma.appointmentFollowUp.create({
+          data: {
+            appointmentId,
+            type: "GOOGLE_REVIEW_INVITATION_SENT",
+            sentAt: new Date(),
+          }
+        }).catch(() => {});
+      }
     }
 
     await prisma.patient.update({
@@ -238,3 +401,4 @@ export class ReviewDispatcherService {
     return true;
   }
 }
+

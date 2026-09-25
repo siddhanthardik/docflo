@@ -1020,6 +1020,22 @@ class WhatsAppManager {
                 }
               }
 
+              if (patient && !isStaff && /^(stop|unsubscribe|optout|opt-out)$/i.test(textMessage.trim())) {
+                await prisma.patient.update({
+                  where: { id: patient.id },
+                  data: { isBlocked: true }
+                });
+                console.log(`[WhatsAppManager] 🛑 Patient ${patientPhone} requested STOP. Marked isBlocked = true.`);
+                
+                try {
+                  const optOutReply = "You have successfully opted out of automated messages from our clinic. You will no longer receive automated surveys or reminders.";
+                  await sock.sendMessage(remoteJid, { text: optOutReply });
+                } catch (e: any) {
+                  console.warn(`[WhatsAppManager] Failed to send opt-out confirmation to ${patientPhone}:`, e.message);
+                }
+                continue;
+              }
+
               if (patient && patient.isBlocked) {
                 console.log(`[WhatsAppManager] Ignored message from BLOCKED patient ${patientPhone}`);
                 continue; // Skip processing
@@ -1144,46 +1160,66 @@ class WhatsAppManager {
               textLower === "yes" || textLower === "yeah" || textLower === "sure" || textLower === "ok" || textLower === "okay";
             const isNo = /^(no|n|nope|nah|never|bad|2)$/i.test(textLower) || textLower === "no" || textLower === "bad" || textLower === "poor";
 
-            if (isSurveyContext && isYes) {
+            // ── DECOUPLED SURVEY RESPONSE HANDLING ──────────────────────────
+            // Google Policy Compliance: Survey result NEVER gates Google review invitation.
+            // All respondents are scheduled for a delayed neutral Google review invitation 24 hours later.
+            if (isSurveyContext) {
               const doctorData = await prisma.doctor.findUnique({ 
                 where: { id: doctorId }, 
-                select: { clinicName: true, reviewGoogleInvitationMessage: true, enableGoogleReviewAutoDispatch: true }
+                select: { clinicName: true, name: true }
               });
+              const clinicName = doctorData?.clinicName || "our clinic";
 
-              if (doctorData?.enableGoogleReviewAutoDispatch !== false) {
-                try {
-                  const reviewLink = await resolveGoogleReviewLink(doctorId);
-                  
-                  const displayName = (patient?.firstName && patient.firstName !== "Lead" && patient.firstName !== "Patient") ? ` ${patient.firstName}` : "";
-                  const defaultReply = `Hello${displayName},\n\nThank you so much for your positive feedback! We are delighted to hear that you were happy with your care at ${doctorData?.clinicName || "our clinic"}.\n\nIf you have 60 seconds, it would mean the world to our team if you could share your experience on Google:\n\n${reviewLink}\n\nWishing you the very best of health!`;
-                  
-                  const replyText = doctorData?.reviewGoogleInvitationMessage 
-                    ? doctorData.reviewGoogleInvitationMessage.replace("{link}", `\n\n${reviewLink}\n\n`).replace("{firstName}", patient?.firstName || "")
-                    : defaultReply;
-                  
-                  await sock.sendMessage(remoteJid, { text: replyText });
-                  const outTime = new Date();
-                  await prisma.chatMessage.create({
-                    data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: outTime }
-                  });
-                  await prisma.conversation.update({
-                    where: { id: conversation.id },
-                    data: { lastMessageAt: outTime }
+              if (isYes) {
+                // POSITIVE SURVEY RESPONSE: Warm acknowledgment; schedule delayed invitation
+                const replyText = `Thank you so much for your positive feedback! We are delighted to hear that you had a good experience at ${clinicName}. Wishing you the very best of health!`;
+                await sock.sendMessage(remoteJid, { text: replyText });
+                const outTime = new Date();
+                await prisma.chatMessage.create({
+                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: outTime }
+                });
+                await prisma.conversation.update({
+                  where: { id: conversation.id },
+                  data: { lastMessageAt: outTime }
+                });
+
+                if (pendingAppointment) {
+                  await prisma.appointment.update({
+                    where: { id: pendingAppointment.id },
+                    data: { reviewStatus: "POSITIVE_RESPONSE" }
                   });
 
-                  if (pendingAppointment) {
-                    await prisma.appointment.update({
-                      where: { id: pendingAppointment.id },
-                      data: { reviewStatus: "LINK_SENT" }
-                    });
-                  }
-                } catch (e: any) {
-                  console.warn(`[WhatsAppManager] Skipped auto-dispatching Google Review link: ${e.message}`);
+                  // Store immutable survey-completion event timestamp in AppointmentFollowUp
+                  await prisma.appointmentFollowUp.create({
+                    data: {
+                      appointmentId: pendingAppointment.id,
+                      type: "SURVEY_RESPONSE_POSITIVE",
+                      sentAt: messageDate,
+                    }
+                  });
+
+                  // Log scheduling audit entry
+                  await prisma.auditLog.create({
+                    data: {
+                      userId: doctorId,
+                      userType: "CLINIC",
+                      action: "REVIEW_INVITATION_SCHEDULED",
+                      details: {
+                        appointmentId: pendingAppointment.id,
+                        patientId: patient?.id,
+                        channel: "WHATSAPP",
+                        reason: "COMPLETED_EXPERIENCE_SURVEY",
+                        surveyResponse: "POSITIVE",
+                        delayHours: 24,
+                      }
+                    }
+                  });
                 }
-              }
 
-              return; // Don't pass to AI agent
-            } else if (isSurveyContext && isNo) {
+                return; // Don't pass to AI agent
+              } else if (isNo) {
+                // NEGATIVE SURVEY RESPONSE: Sincere apology + internal service recovery workflow
+                // CRITICAL: Does NOT suppress the 24h delayed Google review invitation.
                 const replyText = `We are so sorry to hear that we didn't meet your expectations. We take patient feedback very seriously.\n\nCould you please share a bit more about what went wrong? Our management team will review your feedback immediately so we can make things right.`;
                 await sock.sendMessage(remoteJid, { text: replyText });
                 const outTimeNo = new Date();
@@ -1195,7 +1231,7 @@ class WhatsAppManager {
                   data: { lastMessageAt: outTimeNo }
                 });
                 
-                // Alert Clinic Owner via an internal note
+                // Alert Clinic Owner via an internal note for service recovery
                 await prisma.chatMessage.create({
                   data: { conversationId: conversation.id, direction: "INTERNAL_NOTE", messageType: "text", content: "🚨 ALERT: Patient expressed dissatisfaction with their recent consultation.", senderName: "System", createdAt: outTimeNo }
                 });
@@ -1205,10 +1241,81 @@ class WhatsAppManager {
                     where: { id: pendingAppointment.id },
                     data: { reviewStatus: "NEGATIVE_RESPONSE" }
                   });
+
+                  // Store immutable survey-completion event timestamp in AppointmentFollowUp
+                  await prisma.appointmentFollowUp.create({
+                    data: {
+                      appointmentId: pendingAppointment.id,
+                      type: "SURVEY_RESPONSE_NEGATIVE",
+                      sentAt: messageDate,
+                    }
+                  });
+
+                  // Log scheduling audit entry
+                  await prisma.auditLog.create({
+                    data: {
+                      userId: doctorId,
+                      userType: "CLINIC",
+                      action: "REVIEW_INVITATION_SCHEDULED",
+                      details: {
+                        appointmentId: pendingAppointment.id,
+                        patientId: patient?.id,
+                        channel: "WHATSAPP",
+                        reason: "COMPLETED_EXPERIENCE_SURVEY",
+                        surveyResponse: "NEGATIVE",
+                        delayHours: 24,
+                      }
+                    }
+                  });
+                }
+
+                return; // Don't pass to AI agent
+              } else {
+                // ARBITRARY / FREE-TEXT / NEUTRAL SURVEY RESPONSE:
+                // Per policy: Do NOT classify as POSITIVE_RESPONSE. Acknowledge and schedule review invitation.
+                const replyText = `Thank you for sharing your feedback with our clinic team. We truly appreciate you taking the time to help us improve.`;
+                await sock.sendMessage(remoteJid, { text: replyText });
+                const outTimeOther = new Date();
+                await prisma.chatMessage.create({
+                  data: { conversationId: conversation.id, direction: "OUTGOING", messageType: "text", content: replyText, senderName: "Clinic", createdAt: outTimeOther }
+                });
+                await prisma.conversation.update({
+                  where: { id: conversation.id },
+                  data: { lastMessageAt: outTimeOther }
+                });
+
+                if (pendingAppointment) {
+                  // Keep reviewStatus intact (do not assign false positive status)
+                  // Store immutable survey-completion event timestamp in AppointmentFollowUp
+                  await prisma.appointmentFollowUp.create({
+                    data: {
+                      appointmentId: pendingAppointment.id,
+                      type: "SURVEY_RESPONSE_CUSTOM",
+                      sentAt: messageDate,
+                    }
+                  });
+
+                  // Log scheduling audit entry
+                  await prisma.auditLog.create({
+                    data: {
+                      userId: doctorId,
+                      userType: "CLINIC",
+                      action: "REVIEW_INVITATION_SCHEDULED",
+                      details: {
+                        appointmentId: pendingAppointment.id,
+                        patientId: patient?.id,
+                        channel: "WHATSAPP",
+                        reason: "COMPLETED_EXPERIENCE_SURVEY",
+                        surveyResponse: "CUSTOM",
+                        delayHours: 24,
+                      }
+                    }
+                  });
                 }
 
                 return; // Don't pass to AI agent
               }
+            }
 
             // Check if patient is confirming an appointment
             const textLowerConfirm = textMessage.trim().toLowerCase();
