@@ -2,39 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { AIAgentsService } from "@/services/ai-agents.service";
-
-function getSuggestedCategories(specialtyOrCategory: string): string {
-  const s = (specialtyOrCategory || "").toLowerCase();
-  if (s.includes("pediat") || s.includes("child")) {
-    return "Pediatrician, Children's Health Clinic, Child Specialist";
-  }
-  if (s.includes("gynaec") || s.includes("gynec") || s.includes("obstetr") || s.includes("women")) {
-    return "Gynecologist, Women's Health Clinic, Maternity Hospital";
-  }
-  if (s.includes("derma") || s.includes("skin") || s.includes("hair")) {
-    return "Dermatologist, Skin Care Clinic, Cosmetology Clinic";
-  }
-  if (s.includes("dent") || s.includes("orthodont") || s.includes("teeth")) {
-    return "Dentist, Dental Clinic, Orthodontist";
-  }
-  if (s.includes("ortho") || s.includes("bone") || s.includes("joint")) {
-    return "Orthopedic Surgeon, Bone & Joint Clinic, Sports Medicine Clinic";
-  }
-  if (s.includes("cardio") || s.includes("heart")) {
-    return "Cardiologist, Heart Care Clinic";
-  }
-  if (s.includes("ent") || s.includes("ear") || s.includes("throat")) {
-    return "ENT Specialist, Ear Nose Throat Clinic";
-  }
-  if (s.includes("ophthal") || s.includes("eye") || s.includes("vision")) {
-    return "Ophthalmologist, Eye Care Clinic";
-  }
-  if (s.includes("physician") || s.includes("general") || s.includes("internal") || s.includes("family")) {
-    return "General Physician, Family Doctor, Medical Clinic";
-  }
-  const cleanName = specialtyOrCategory.replace(/clinic|doctor|specialist/gi, "").trim();
-  return `${cleanName || "Specialist"} Clinic, Healthcare Center`;
-}
+import { LocalSeoOpportunityService } from "@/services/local-seo-opportunity.service";
 
 export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: string) {
   const [doctor, account, agentConfig] = await Promise.all([
@@ -80,12 +48,6 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
     : [];
 
   const primaryCategory = profileData.primaryCategory || insights.primaryCategory || doctor?.specialty || "Medical Clinic";
-  const secondaryCats: string[] = profileData.categories || insights.categories || [];
-  const description: string = profileData.description || insights.description || "";
-  const phone: string = profileData.phone || insights.phone || "";
-  const website: string = profileData.website || insights.website || "";
-  const appointmentUrl: string = profileData.appointmentUrl || insights.appointmentUrl || "";
-  const hours = profileData.hours || insights.hours || null;
 
   // Unanswered reviews count
   const unansweredCount = await prisma.review.count({
@@ -119,19 +81,7 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
     });
   }
 
-  // 2. Secondary Category Expansion
-  if (secondaryCats.length < 2) {
-    const suggested = getSuggestedCategories(primaryCategory);
-    tasks.push({
-      category: "PROFILE",
-      title: "Add secondary categories to your Google profile",
-      description: `Your profile currently lists ${secondaryCats.length === 0 ? "no secondary categories" : "only 1 secondary category"}. Adding relevant categories like ${suggested} helps patients find you for specific clinical services.`,
-      priority: "HIGH",
-      impact: "Expands search reach for relevant specialties",
-    });
-  }
-
-  // 3. Competitor Review Count Gap
+  // 2. Competitor Review Count Gap
   if (compReviewGap > 20) {
     tasks.push({
       category: "REVIEWS",
@@ -142,41 +92,7 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
     });
   }
 
-  // 4. Description Optimization
-  if (!description || description.length < 200) {
-    tasks.push({
-      category: "PROFILE",
-      title: "Complete your clinic overview description",
-      description: `Your profile description is currently ${description.length ? `brief (${description.length} characters)` : "empty"}. A complete 250+ character overview detailing your clinical specialties, doctor qualifications, and available facilities helps prospective patients choose your practice.`,
-      priority: "MEDIUM",
-      impact: "Helps patients understand your full scope of care",
-    });
-  }
-
-  // 5. Appointment Link
-  if (!appointmentUrl) {
-    tasks.push({
-      category: "PROFILE",
-      title: "Add an online appointment booking link",
-      description: "Patients searching on Google Maps prefer direct booking options. Adding your booking link helps convert profile viewers into booked appointments.",
-      priority: "HIGH",
-      impact: "Makes it easy for patients to book consultations",
-    });
-  }
-
-  // 6. Contact & Hours
-  if (!phone || !website || !hours) {
-    const missing = [!phone && "phone number", !website && "website", !hours && "operating hours"].filter(Boolean).join(", ");
-    tasks.push({
-      category: "PROFILE",
-      title: "Complete essential contact and schedule details",
-      description: `Ensure your ${missing || "contact details and consultation schedule"} are verified on Google to prevent patients from calling during closed hours.`,
-      priority: "HIGH",
-      impact: "Ensures patients can reach and visit your practice",
-    });
-  }
-
-  // 7. Weekly Google Update
+  // 3. Weekly Google Update
   const targetPostKeyword = userKeywords[0] || primaryCategory;
   tasks.push({
     category: "CONTENT",
@@ -186,7 +102,7 @@ export async function generateAlgorithmicTasks(doctorId: string, gbpAccountId: s
     impact: "Maintains an active presence on Google Maps",
   });
 
-  // 8. Custom Target Keyword Optimization
+  // 4. Custom Target Keyword Optimization
   if (userKeywords.length > 1) {
     const additionalKeywords = userKeywords.slice(1, 3).join(", ");
     tasks.push({
@@ -257,31 +173,15 @@ export async function GET(req: Request) {
       ]
     });
 
-    // Auto-generate initial recommendations if 0 tasks exist
+    // Auto-generate initial recommendations using opportunity engine if 0 tasks exist
     if (recommendations.length === 0) {
-      const initialTasks = await generateAlgorithmicTasks(session.doctorId, gbpAccount.id);
-
-      for (const task of initialTasks) {
-        await prisma.seoRecommendation.create({
-          data: {
-            gbpAccountId: gbpAccount.id,
-            category: task.category,
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            impact: task.impact,
-            status: "PENDING"
-          }
-        }).catch(e => console.warn("Could not create initial SEO task:", e));
-      }
-
-      recommendations = await prisma.seoRecommendation.findMany({
-        where: { gbpAccountId: gbpAccount.id },
-        orderBy: [
-          { status: 'desc' },
-          { createdAt: 'desc' }
-        ]
-      });
+      const evalContext = {
+        doctorId: session.doctorId,
+        gbpAccountId: gbpAccount.id,
+      };
+      const initialOpps = await LocalSeoOpportunityService.evaluateAll(evalContext);
+      const result = await LocalSeoOpportunityService.reconcileOpportunities(evalContext, initialOpps);
+      recommendations = result.allRecommendations;
     }
 
     return NextResponse.json({ recommendations });
@@ -316,57 +216,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No GBP Account found" }, { status: 404 });
     }
 
-    // Generate real-data algorithmic tasks
-    const freshTasks = await generateAlgorithmicTasks(doctorId, gbpAccount.id);
+    // Evaluate all growth opportunities across ranking, grid, competitors, reviews, and content
+    const evalContext = {
+      doctorId,
+      gbpAccountId: gbpAccount.id,
+    };
+    const freshOpps = await LocalSeoOpportunityService.evaluateAll(evalContext);
 
-    // Save or update tasks
-    const savedRecs = [];
-    for (const task of freshTasks) {
-      // Find matching pending task by title or category/intent
-      const existing = await prisma.seoRecommendation.findFirst({
-        where: {
-          gbpAccountId: gbpAccount.id,
-          category: task.category,
-          status: "PENDING"
-        }
-      });
+    // Reconcile deterministically with existing database records
+    const result = await LocalSeoOpportunityService.reconcileOpportunities(evalContext, freshOpps);
 
-      if (!existing) {
-        const created = await prisma.seoRecommendation.create({
-          data: {
-            gbpAccountId: gbpAccount.id,
-            category: task.category,
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            impact: task.impact,
-            status: "PENDING"
-          }
-        });
-        savedRecs.push(created);
-      } else {
-        // Refresh existing task details to remove any legacy robotic text
-        await prisma.seoRecommendation.update({
-          where: { id: existing.id },
-          data: {
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            impact: task.impact
-          }
-        });
-      }
-    }
-
-    const allRecommendations = await prisma.seoRecommendation.findMany({
-      where: { gbpAccountId: gbpAccount.id },
-      orderBy: [
-        { status: 'desc' },
-        { createdAt: 'desc' }
-      ]
+    return NextResponse.json({
+      recommendations: result.allRecommendations,
+      newTasksCount: result.createdCount,
     });
-
-    return NextResponse.json({ recommendations: allRecommendations, newTasksCount: savedRecs.length });
   } catch (error) {
     console.error("POST /api/local-seo/recommendations error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -251,7 +251,7 @@ export function LocalSeoDashboard() {
 
       {/* ── RECOMMENDATIONS TAB ── */}
       {activeTab === "recommendations" && (
-        <RecommendationsList />
+        <RecommendationsList onNavigateTab={(tab) => setActiveTab(tab)} />
       )}
     </div>
   );
