@@ -90,6 +90,7 @@ export function OverviewTab({
 
   // ── 2. Profile Health Summary ──────────────────────────────────────────────
   const pData = profileHealthData || {};
+  const hasAppointmentLink = !!pData.appointmentUrl;
   const secondaryCount = pData.categories ? pData.categories.length : 0;
   const descLength = pData.description ? pData.description.length : 0;
 
@@ -98,7 +99,7 @@ export function OverviewTab({
     { key: "primaryCategory", label: "Primary Category", isComplete: !!pData.primaryCategory },
     { key: "categories", label: "Secondary Categories", isComplete: secondaryCount >= 1 },
     { key: "description", label: "Description", isComplete: descLength >= 100 },
-    { key: "appointmentUrl", label: "Appointment Link", isComplete: !!pData.appointmentUrl },
+    { key: "appointmentUrl", label: "Appointment Link", isComplete: hasAppointmentLink },
     { key: "hours", label: "Hours", isComplete: !!pData.hours },
     { key: "phone", label: "Phone", isComplete: !!pData.phone },
     { key: "website", label: "Website", isComplete: !!pData.website },
@@ -251,44 +252,96 @@ export function OverviewTab({
   return (
     <div className="space-y-6">
       {/* ──────────────────────────────────────────────────────────────────────────
-          1. ATTENTION BANNER (Matches screenshot top banner)
+          1. ATTENTION BANNER (Dynamically reflects real Google status)
       ────────────────────────────────────────────────────────────────────────── */}
-      <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] text-[#D97706] flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-600 fill-amber-500/20" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-gray-900">
-              2 things need your attention
-            </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Improving these can help more patients find and contact your clinic.
-            </p>
-          </div>
-        </div>
+      {(() => {
+        const attentionList: { id: string; text: string; dotColor: string }[] = [];
+        if (thisMonth === 0) {
+          attentionList.push({
+            id: "posts",
+            text: "No recent Google posts this month",
+            dotColor: "bg-red-500",
+          });
+        }
+        if (!hasAppointmentLink) {
+          attentionList.push({
+            id: "appointment",
+            text: "Appointment booking link is missing",
+            dotColor: "bg-amber-500",
+          });
+        }
+        if (unanswered > 0) {
+          attentionList.push({
+            id: "reviews",
+            text: `${unanswered} unanswered patient review${unanswered > 1 ? "s" : ""}`,
+            dotColor: "bg-amber-500",
+          });
+        }
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full md:w-auto">
-          <div className="space-y-1.5 text-xs font-medium">
-            <div className="flex items-center gap-2 text-gray-800">
-              <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">!</span>
-              <span>No recent Google posts this month</span>
+        if (attentionList.length === 0) {
+          return (
+            <div className="bg-[#F0FDF4] border border-[#DCFCE7] rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    Your Google profile is in good shape.
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    All core profile information, reviews, and activity indicators are currently performing well.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab("recommendations")}
+                className="bg-white hover:bg-gray-50 text-[#4F46E5] text-xs font-semibold px-4 py-2 rounded-xl border border-gray-200 shadow-2xs inline-flex items-center gap-1.5 transition-all shrink-0 cursor-pointer self-end sm:self-center"
+              >
+                View Recommendations <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="flex items-center gap-2 text-gray-800">
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">!</span>
-              <span>Appointment booking link is missing</span>
+          );
+        }
+
+        return (
+          <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] text-[#D97706] flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600 fill-amber-500/20" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">
+                  {attentionList.length} {attentionList.length === 1 ? "thing needs" : "things need"} your attention
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Improving these can help more patients find and contact your clinic.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full md:w-auto">
+              <div className="space-y-1.5 text-xs font-medium">
+                {attentionList.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 text-gray-800">
+                    <span className={`w-4 h-4 rounded-full ${item.dotColor} text-white flex items-center justify-center text-[10px] font-bold shrink-0`}>!</span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onNavigateTab("recommendations")}
+                className="bg-white hover:bg-gray-50 text-[#4F46E5] text-xs font-semibold px-4 py-2 rounded-xl border border-gray-200 shadow-2xs inline-flex items-center gap-1.5 transition-all shrink-0 cursor-pointer self-end sm:self-center"
+              >
+                View Recommendations <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab("recommendations")}
-            className="bg-white hover:bg-gray-50 text-[#4F46E5] text-xs font-semibold px-4 py-2 rounded-xl border border-gray-200 shadow-2xs inline-flex items-center gap-1.5 transition-all shrink-0 cursor-pointer self-end sm:self-center"
-          >
-            View Recommendations <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ──────────────────────────────────────────────────────────────────────────
           2. PRIMARY SUMMARY ROW
@@ -788,37 +841,61 @@ export function OverviewTab({
               {/* Website */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="flex items-center gap-2 text-gray-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {pData.website ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
                   Website
                 </span>
-                <span className="font-bold text-emerald-600">Configured</span>
+                <span className={pData.website ? "font-bold text-emerald-600" : "font-bold text-amber-600"}>
+                  {pData.website ? "Configured" : "Not configured"}
+                </span>
               </div>
 
               {/* Phone Number */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="flex items-center gap-2 text-gray-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {pData.phone ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
                   Phone Number
                 </span>
-                <span className="font-bold text-emerald-600">Configured</span>
+                <span className={pData.phone ? "font-bold text-emerald-600" : "font-bold text-amber-600"}>
+                  {pData.phone ? "Configured" : "Not configured"}
+                </span>
               </div>
 
               {/* Appointment Link */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="flex items-center gap-2 text-gray-600">
-                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  {hasAppointmentLink ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
                   Appointment Link
                 </span>
-                <span className="font-bold text-amber-600">Not configured</span>
+                <span className={hasAppointmentLink ? "font-bold text-emerald-600" : "font-bold text-amber-600"}>
+                  {hasAppointmentLink ? "Configured" : "Not configured"}
+                </span>
               </div>
 
               {/* Business Hours */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="flex items-center gap-2 text-gray-600">
-                  <Clock className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {pData.hours ? (
+                    <Clock className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
                   Business Hours
                 </span>
-                <span className="font-bold text-emerald-600">Configured</span>
+                <span className={pData.hours ? "font-bold text-emerald-600" : "font-bold text-amber-600"}>
+                  {pData.hours ? "Configured" : "Not configured"}
+                </span>
               </div>
 
               {/* Attributes */}

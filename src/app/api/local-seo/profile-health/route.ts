@@ -39,21 +39,19 @@ export async function GET(request: Request) {
       hours = `Mon-Sat ${doctor.workingHoursStart} - ${doctor.workingHoursEnd}`;
     }
 
-    let appointmentUrl = snapshotData.appointmentUrl || insights.appointmentUrl || null;
+    let appointmentUrl: string | null = null;
     let attributes = snapshotData.attributes || insights.attributes || [];
 
-    // Live Google Read-Back: If appointmentUrl or attributes are missing locally, verify against Google APIs
-    if ((!appointmentUrl || attributes.length === 0) && account.locationName) {
+    // Canonical Google Read-Back: Google Place Actions API is the authoritative source for appointmentUrl
+    if (account.locationName) {
       try {
         const tokenData = await getValidGbpAccessToken(session.doctorId);
         if (tokenData?.accessToken) {
           const gbpService = new GBPService(tokenData.accessToken, session.doctorId);
-          if (!appointmentUrl) {
-            const links = await gbpService.getPlaceActionLinks(account.locationName);
-            const apptLink = links.find((l) => l.placeActionType === "APPOINTMENT" || l.placeActionType === "ONLINE_APPOINTMENT");
-            if (apptLink?.uri) {
-              appointmentUrl = apptLink.uri;
-            }
+          const links = await gbpService.getPlaceActionLinks(account.locationName);
+          const apptLink = links.find((l) => l.placeActionType === "APPOINTMENT");
+          if (apptLink?.uri) {
+            appointmentUrl = apptLink.uri;
           }
           if (attributes.length === 0) {
             const attrs = await gbpService.getLocationAttributes(account.locationName);
@@ -67,7 +65,19 @@ export async function GET(request: Request) {
         }
       } catch (readErr) {
         console.warn("[Profile Health GET] Google read-back notice:", readErr);
+        // Fallback to local snapshot only if Google API request fails
+        appointmentUrl = snapshotData.appointmentUrl || insights.appointmentUrl || null;
       }
+    } else {
+      appointmentUrl = snapshotData.appointmentUrl || insights.appointmentUrl || null;
+    }
+
+    if (snapshot && snapshotData.appointmentUrl !== appointmentUrl) {
+      snapshotData.appointmentUrl = appointmentUrl;
+      await prisma.profileSnapshot.update({
+        where: { id: snapshot.id },
+        data: { json: snapshotData },
+      }).catch((e) => console.warn("Could not cache appointmentUrl to snapshot:", e));
     }
 
     const mergedData = {
