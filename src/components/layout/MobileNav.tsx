@@ -162,9 +162,12 @@ export function MobileNav() {
                     return true;
                   }
                   if (role === "MANAGER") {
-                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/reviews", "/reports", "/settings"].includes(item.href);
+                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/reviews", "/reports", "/settings"].includes(item.href);
                   }
-                  if (["RECEPTIONIST", "NURSE", "STAFF"].includes(role)) {
+                  if (["RECEPTIONIST", "STAFF"].includes(role)) {
+                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing"].includes(item.href);
+                  }
+                  if (role === "NURSE") {
                     return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);
                   }
                   return true;

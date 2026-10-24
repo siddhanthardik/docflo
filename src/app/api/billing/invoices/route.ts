@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionData } from "@/lib/session";
 import { getCurrencySymbol } from "@/lib/currency";
+import { hasPermission } from "@/lib/permissions";
 
 export async function GET(req: Request) {
   try {
-    const { doctorId } = await getSessionData();
+    const { doctorId, role, isSuperAdmin } = await getSessionData();
+    if (!isSuperAdmin && !hasPermission(role, "VIEW_PATIENT_BILLING")) {
+      return NextResponse.json({ error: "Permission Denied: Unauthorized to view invoices" }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
@@ -33,7 +37,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { doctorId } = await getSessionData();
+    const { doctorId, role, isSuperAdmin } = await getSessionData();
+    if (!isSuperAdmin && !hasPermission(role, "CREATE_PATIENT_BILLING")) {
+      return NextResponse.json({ error: "Permission Denied: You do not have permission to create invoices." }, { status: 403 });
+    }
     const body = await req.json();
     const { patientId, appointmentId, dueDate, notes, items, discountType = "FLAT", discountValue = 0, taxAmount = 0 } = body;
 

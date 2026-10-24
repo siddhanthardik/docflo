@@ -4,10 +4,14 @@ import { getSessionData } from "@/lib/session";
 import { whatsappManager } from "@/lib/whatsapp-manager";
 import { generateInvoicePDF } from "@/lib/pdf";
 import { formatPatientSalutation } from "@/lib/salutation";
+import { hasPermission } from "@/lib/permissions";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { doctorId } = await getSessionData();
+    const { doctorId, role, isSuperAdmin } = await getSessionData();
+    if (!isSuperAdmin && !hasPermission(role, "COLLECT_PATIENT_PAYMENT")) {
+      return NextResponse.json({ error: "Permission Denied: Unauthorized to record payments" }, { status: 403 });
+    }
     const { id: invoiceId } = await params;
     
     const body = await req.json();

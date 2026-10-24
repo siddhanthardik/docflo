@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { ArrowLeft, Printer, MessageCircle, CreditCard, CheckCircle2, Clock, AlertCircle, Loader2, Ban } from "lucide-react";
 import { format } from "date-fns";
@@ -13,6 +14,10 @@ export default function InvoiceDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { data: session } = useSession();
+
+  const userRole = ((session?.user as any)?.role || "DOCTOR").toUpperCase();
+  const canCancelInvoice = ["DOCTOR", "OWNER", "MANAGER", "ADMIN", "SUPERADMIN"].includes(userRole);
   
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -230,15 +235,17 @@ export default function InvoiceDetailsPage() {
                 </button>
               )}
 
-              <button
-                onClick={() => {
-                  setCancellationReason("");
-                  setShowCancelModal(true);
-                }}
-                className="px-4 py-2 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Ban className="w-4 h-4" /> Cancel Invoice
-              </button>
+              {canCancelInvoice && (
+                <button
+                  onClick={() => {
+                    setCancellationReason("");
+                    setShowCancelModal(true);
+                  }}
+                  className="px-4 py-2 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <Ban className="w-4 h-4" /> Cancel Invoice
+                </button>
+              )}
             </>
           )}
         </div>
