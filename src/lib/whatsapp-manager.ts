@@ -3182,6 +3182,27 @@ class WhatsAppManager {
                           chosenPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
                         }
 
+                        // ── Deterministic Schedule Guard: Enforce Day-of-Week & Operating Hours ──
+                        const { validateAppointmentSlot } = await import("@/lib/schedule-validator");
+                        const slotValidation = validateAppointmentSlot({
+                          appointmentDate,
+                          hour,
+                          minute,
+                          modality: appointmentType,
+                          clinicTimezone: clinicTz,
+                          config: effectiveConfig,
+                          doctorInfo,
+                          practitioner: chosenPractitioner
+                        });
+
+                        if (!slotValidation.isValid) {
+                          console.log(`[WhatsAppManager] 🛑 Slot validation blocked invalid booking: ${dateOnlyStr} ${slotTimeStr} for ${chosenPractitioner?.name || "Doctor"} (${slotValidation.reason})`);
+                          finalAiReply = finalAiReply.replace(fullTag, "").trim();
+                          finalAiReply = slotValidation.correctiveMessage || `Clinic is not available for in-clinic consultations at ${slotTimeStr} on ${slotValidation.dayOfWeek}. Please choose a time within active OPD hours.`;
+                          await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, finalAiReply, targetPatient.id, `${candidateFirstName} ${candidateLastName}`.trim());
+                          return;
+                        }
+
                         // Check if this patient already has an active upcoming appointment
                         const activeAppointment = await prisma.appointment.findFirst({
                           where: {

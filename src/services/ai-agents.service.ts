@@ -6,11 +6,13 @@ import { memoryCache } from "@/lib/memory-cache";
 import { resolveClinicTimezone } from "@/lib/timezone";
 import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
-// Prioritized Gemini models: Primary gemini-3.7-flash (Low Thinking) -> Fallbacks: 3.6-flash -> 3.5-flash-lite
+// Prioritized Gemini models: official fast models with zero thinking latency
 const CANDIDATE_MODELS = [
-  "gemini-3.7-flash",      // Primary Gemini model with LOW thinking effort
-  "gemini-3.6-flash",      // Fallback 1
-  "gemini-3.5-flash-lite"  // Fallback 2
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-3.7-flash"
 ];
 
 import { formatDoctorDisplayName } from "@/lib/utils";
@@ -1116,17 +1118,13 @@ export async function generateWithFallback(
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       for (const modelName of CANDIDATE_MODELS) {
         try {
-          const is37 = modelName.includes("3.7");
           const configObj: any = {
             temperature: 0.3,
-            maxOutputTokens: 600
-          };
-          if (is37) {
-            // Configure Low Thinking Effort for sub-second conversational latency
-            configObj.thinkingConfig = {
+            maxOutputTokens: 2048,
+            thinkingConfig: {
               thinkingBudget: 0
-            };
-          }
+            }
+          };
 
           let contents: any = prompt;
           if (hasAttachment && attachment) {
@@ -1227,7 +1225,7 @@ export async function generateWithFallback(
       const openaiPromise = openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages,
-        max_tokens: 450,
+        max_tokens: 1200,
         temperature: 0.3
       });
       const completion = await withTimeout(openaiPromise, timeoutMs, "OpenAI gpt-4o-mini");
@@ -2108,6 +2106,20 @@ ${isDiagnosticLab ? `- 🔬 **DOCTOR PRESCRIPTION OCR FOR DIAGNOSTIC & PATHOLOGY
 ${isMultiDoctor ? '10' : '9'}. PRE-BOOKING VERIFICATION GATE & BOOKING TAGS
 ==================================================
 🚨 CRITICAL 2-STEP PRE-BOOKING VERIFICATION GATE (DRAFT & CONFIRM MANDATE):
+- 🚨 MANDATORY CALENDAR DAY-OF-WEEK & MODALITY RULES (NEVER CONFUSE IN-CLINIC WITH ONLINE):
+  * Before drafting any Appointment Summary or confirming any slot:
+    1. Calculate the day of the week for the requested date (e.g. Sunday, Monday, etc.).
+    2. Check the operating hours FOR THAT EXACT DAY OF WEEK:
+       - Check Sunday Policy: "${sundayRule}".
+       - If the requested date is a Sunday and Sunday in-clinic hours are restricted (e.g. "In-clinic 10:00 AM - 12:00 PM"):
+         * Any in-clinic booking outside those hours (e.g. Sunday 5:00 PM) is STRICTLY PROHIBITED!
+         * If the patient requests 5:00 PM on Sunday, you MUST politely explain:
+           "On Sundays, in-clinic consultations are only conducted from 10:00 AM to 12:00 PM. However, at 5:00 PM, online video consultation is available, or we can schedule your in-clinic visit for Monday."
+         * NEVER draft an in-clinic appointment summary for Sunday evening!
+         * Only draft an in-clinic slot if it falls strictly within in-clinic hours for that day.
+         * Only draft an online consultation if the patient explicitly requested or agreed to an online consult.
+       - For Weekdays (Monday-Saturday):
+         * Verify that the requested time falls within the doctor's active Morning OPD (${morningOpd || "Morning"}) or Evening OPD (${eveningOpd || "Evening"}) hours.
 - YOU MUST NEVER EMIT [BOOK_APPOINTMENT] ON THE SAME TURN WHERE THE PATIENT JUST PROVIDED DETAILS!
 - Step 1: DRAFT & REVIEW SUMMARY TURN:
   When the patient or parent provides the necessary details (Name, Age/DOB, and agreed time):
