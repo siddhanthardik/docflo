@@ -42,6 +42,7 @@ interface Conversation {
   status: string
   lastMessageAt: string
   unreadCount: number
+  patientId?: string | null
   messages: { content: string; direction: string }[]
 }
 
@@ -158,13 +159,25 @@ export function ConversationList({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <p
-                        className={`text-sm font-medium truncate ${
-                          isSelected ? "text-indigo-700" : "text-gray-900"
-                        }`}
-                      >
-                        {name}
-                      </p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p
+                          className={`text-sm font-medium truncate ${
+                            isSelected ? "text-indigo-700" : "text-gray-900"
+                          }`}
+                        >
+                          {name}
+                        </p>
+                        {!conv.patientId && !name.toLowerCase().includes("doctor") && !name.toLowerCase().includes("staff") && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 uppercase tracking-wider shrink-0 border border-amber-200/60">
+                            Lead
+                          </span>
+                        )}
+                        {conv.patientId && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase tracking-wider shrink-0 border border-emerald-200/60">
+                            Patient
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-400 flex-shrink-0">
                         {formatWhatsAppDate(conv.lastMessageAt)}
                       </span>

@@ -8,8 +8,8 @@ import { useConversations, useConversation } from "@/hooks/use-inbox"
 
 export function InboxView() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const { conversations, loading } = useConversations()
-  const { conversation, messages, sendMessage, assignToStaff, updateStatus, updatePatientStatus } = useConversation(selectedId || "")
+  const { conversations, loading, refetch: refetchConversations } = useConversations()
+  const { conversation, messages, sendMessage, assignToStaff, updateStatus, updatePatientStatus, refetch: refetchConversation } = useConversation(selectedId || "")
 
   return (
     <div className="flex h-[calc(100vh-12rem)] md:h-[calc(100vh-13rem)] bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -32,6 +32,10 @@ export function InboxView() {
           onSendMessage={sendMessage}
           onUpdatePatientStatus={updatePatientStatus}
           onBack={() => setSelectedId(null)}
+          onPatientConverted={() => {
+            refetchConversation()
+            refetchConversations()
+          }}
         />
       </div>
 

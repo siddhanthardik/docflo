@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown, Maximize2, Minimize2, FileText, Image as ImageIcon, Sparkles, Smartphone, Download, ExternalLink, Calendar } from "lucide-react"
+import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown, Maximize2, Minimize2, FileText, Image as ImageIcon, Sparkles, Smartphone, Download, ExternalLink, Calendar, CheckCircle2, UserPlus, Loader2 } from "lucide-react"
 import { format, isToday, isYesterday } from "date-fns"
 import { sanitizePersonName } from "@/lib/utils"
+import { toast } from "sonner"
 
 function safeFormatDate(dateStr: string | Date | undefined, formatPattern: string, fallback: string = ""): string {
   if (!dateStr) return fallback
@@ -35,7 +36,14 @@ interface Conversation {
   patientName?: string
   patientPhone: string
   status: string
-  patient?: { patientType?: string }
+  patientId?: string | null
+  patient?: {
+    id: string
+    firstName?: string
+    lastName?: string
+    patientType?: string
+    appointments?: any[]
+  } | null
 }
 
 interface MedicalAttachmentInfo {
@@ -267,17 +275,50 @@ export function ChatWindow({
   onSendMessage,
   onUpdatePatientStatus,
   onBack,
+  onPatientConverted,
 }: {
   conversation: Conversation | null
   messages: Message[]
   onSendMessage: (content: string) => Promise<void>
   onUpdatePatientStatus?: (type: string) => void
   onBack?: () => void
+  onPatientConverted?: (updatedPatient: any) => void
 }) {
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [localPatient, setLocalPatient] = useState<any>(conversation?.patient || null)
+
+  useEffect(() => {
+    setLocalPatient(conversation?.patient || null)
+  }, [conversation?.patient, conversation?.id])
+
+  const handleRegisterPatient = async () => {
+    if (!conversation) return
+    setRegistering(true)
+    try {
+      const res = await fetch(`/api/inbox/conversations/${conversation.id}/register-patient`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setLocalPatient(data.patient)
+        toast.success(`Patient "${data.patient.firstName} ${data.patient.lastName || ''}".trim() registered successfully!`)
+        if (onPatientConverted) {
+          onPatientConverted(data.patient)
+        }
+      } else {
+        toast.error(data.error || "Failed to register patient")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred while registering patient")
+    } finally {
+      setRegistering(false)
+    }
+  }
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const activeConversationIdRef = useRef<string | null>(null)
   const isNearBottomRef = useRef(true)
@@ -363,6 +404,15 @@ export function ChatWindow({
   }
 
   const name = sanitizePersonName(conversation.patientName || "") || conversation.patientPhone
+  const isDoctorOrStaff = name.toLowerCase().includes("doctor") || name.toLowerCase().includes("staff")
+  const isRegisteredPatient = Boolean((conversation.patientId || localPatient?.id) && (conversation.patient || localPatient))
+  const registeredPatient = localPatient || conversation.patient
+
+  const officialPatientName = registeredPatient?.firstName
+    ? `${registeredPatient.firstName} ${registeredPatient.lastName || ""}`.trim()
+    : name
+
+  const isWhatsAppNicknameOnly = !isRegisteredPatient && !isDoctorOrStaff && Boolean(conversation.patientName && conversation.patientName !== conversation.patientPhone)
 
   return (
     <div className={isMaximized ? "fixed inset-0 z-50 bg-white h-screen w-screen flex flex-col shadow-2xl" : "h-full flex flex-col relative"}>
@@ -379,8 +429,16 @@ export function ChatWindow({
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700 flex-shrink-0">
-            {name
+          <div
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-2xs ${
+              isDoctorOrStaff
+                ? "bg-purple-100 text-purple-700"
+                : isRegisteredPatient
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-amber-100 text-amber-800"
+            }`}
+          >
+            {(isRegisteredPatient ? officialPatientName : name)
               .split(" ")
               .map((w: string) => w[0])
               .slice(0, 2)
@@ -389,32 +447,97 @@ export function ChatWindow({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-gray-900 truncate">{name}</h3>
-              {name.toLowerCase().includes("doctor") ? (
-                <span className="bg-purple-50 text-purple-700 border border-purple-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  Doctor
-                </span>
-              ) : name.toLowerCase().includes("staff") ? (
-                <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  Staff
+              <h3 className="text-sm font-bold text-gray-900 truncate">
+                {isRegisteredPatient ? officialPatientName : name}
+              </h3>
+              {isDoctorOrStaff ? (
+                name.toLowerCase().includes("doctor") ? (
+                  <span className="bg-purple-50 text-purple-700 border border-purple-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    Doctor
+                  </span>
+                ) : (
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    Staff
+                  </span>
+                )
+              ) : isRegisteredPatient ? (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-flex items-center gap-1 shadow-2xs">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Registered Patient</span>
                 </span>
               ) : (
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  Patient
+                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-flex items-center gap-1 shadow-2xs">
+                  <UserPlus className="w-3 h-3 text-amber-600" />
+                  <span>Inquirer / Lead</span>
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-              <span
-                className={`inline-block w-1.5 h-1.5 rounded-full ${
-                  conversation.status === "OPEN" ? "bg-green-500" : "bg-gray-300"
-                }`}
-              />
-              {conversation.status === "OPEN" ? "Chat Active" : conversation.status.toLowerCase()}
-            </p>
+            <div className="flex items-center gap-2 text-xs mt-0.5">
+              {isDoctorOrStaff ? (
+                <span className="text-slate-400">Clinic Team Member · {conversation.patientPhone}</span>
+              ) : isRegisteredPatient ? (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Chart Active
+                  </span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-slate-500">{conversation.patientPhone}</span>
+                  {registeredPatient?.id && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <a
+                        href={`/patients/${registeredPatient.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline font-semibold inline-flex items-center gap-0.5"
+                      >
+                        <span>View Chart</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs">
+                  {isWhatsAppNicknameOnly ? (
+                    <span className="text-slate-500">
+                      WhatsApp Profile Name · <span className="text-amber-700 font-semibold">Unregistered</span> · {conversation.patientPhone}
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">
+                      <span className="text-amber-700 font-semibold">Unregistered WhatsApp Visitor</span> · {conversation.patientPhone}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!isRegisteredPatient && !isDoctorOrStaff && (
+            <button
+              type="button"
+              onClick={handleRegisterPatient}
+              disabled={registering}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+              title="Add this contact into clinic records as a registered patient"
+            >
+              {registering ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                  <span>Registering...</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">Register as Patient</span>
+                  <span className="sm:hidden">Register</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setIsMaximized((prev) => !prev)}
