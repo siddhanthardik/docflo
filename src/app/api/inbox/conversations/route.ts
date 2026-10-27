@@ -25,44 +25,40 @@ export async function GET(req: Request) {
           ],
           take: 1,
         },
+        patient: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        }
       },
       orderBy: { lastMessageAt: "desc" },
     });
 
-    // Ensure conversation.lastMessageAt reflects actual latest timestamp & patientName has zero emojis
+    // Ensure conversation.lastMessageAt reflects actual latest timestamp & patientName syncs with official patient records
     const synchronizedConversations = conversations
       .map((c) => {
         const latestMessageDate = c.messages?.[0]?.createdAt;
-        const cleanName = sanitizePersonName(c.patientName || "") || c.patientPhone;
+        const isDoctorOrStaff = (c.patientName || "").toLowerCase().includes("doctor") || (c.patientName || "").toLowerCase().includes("staff");
+        const formattedPhone = c.patientPhone ? (c.patientPhone.startsWith("+") ? c.patientPhone : `+${c.patientPhone}`) : "";
 
-        // Asynchronously self-heal database record if emojis were present
-        if (c.patientName && c.patientName !== cleanName && cleanName) {
+        let cleanName = c.patientPhone;
+        if (c.patient) {
+          const ptFirst = sanitizePersonName(c.patient.firstName || "");
+          const ptLast = sanitizePersonName(c.patient.lastName || "");
+          cleanName = `${ptFirst} ${ptLast}`.trim() || "Patient";
+        } else if (isDoctorOrStaff) {
+          cleanName = sanitizePersonName(c.patientName || "") || "Clinic Team";
+        } else {
+          cleanName = formattedPhone;
+        }
+
+        // Asynchronously self-heal database record if out of sync
+        if (c.patientName !== cleanName && cleanName) {
           prisma.conversation.update({
             where: { id: c.id },
             data: { patientName: cleanName }
-          }).catch(() => {});
-
-          const last10 = (c.patientPhone || "").slice(-10);
-          prisma.patient.findFirst({
-            where: {
-              doctorId,
-              OR: [
-                { phone: c.patientPhone },
-                { phone: `+${c.patientPhone}` },
-                ...(last10.length >= 10 ? [{ phone: { endsWith: last10 } }] : [])
-              ]
-            }
-          }).then((p) => {
-            if (p) {
-              const cleanFirst = sanitizePersonName(p.firstName || "");
-              const cleanLast = sanitizePersonName(p.lastName || "");
-              if (cleanFirst !== p.firstName || cleanLast !== p.lastName) {
-                prisma.patient.update({
-                  where: { id: p.id },
-                  data: { firstName: cleanFirst || "Patient", lastName: cleanLast }
-                }).catch(() => {});
-              }
-            }
           }).catch(() => {});
         }
 

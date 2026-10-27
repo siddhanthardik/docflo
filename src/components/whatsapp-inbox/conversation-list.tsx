@@ -43,6 +43,11 @@ interface Conversation {
   lastMessageAt: string
   unreadCount: number
   patientId?: string | null
+  patient?: {
+    id?: string
+    firstName?: string
+    lastName?: string
+  } | null
   messages: { content: string; direction: string }[]
 }
 
@@ -141,7 +146,7 @@ export function ConversationList({
             </div>
           )
           : filtered.map((conv) => {
-              const isRegisteredPatient = Boolean(conv.patientId)
+              const isRegisteredPatient = Boolean(conv.patientId || conv.patient?.id)
               const isDoctorOrStaff = Boolean(
                 conv.patientName?.toLowerCase().includes("doctor") || 
                 conv.patientName?.toLowerCase().includes("staff")
@@ -150,8 +155,14 @@ export function ConversationList({
                 ? (conv.patientPhone.startsWith("+") ? conv.patientPhone : `+${conv.patientPhone}`)
                 : "Unregistered"
 
+              const officialPatientName = conv.patient?.firstName
+                ? `${conv.patient.firstName} ${conv.patient.lastName || ""}`.trim()
+                : (conv.patientName && conv.patientName !== conv.patientPhone && !conv.patientName.startsWith("+")
+                    ? sanitizePersonName(conv.patientName)
+                    : formattedPhone)
+
               const displayName = isRegisteredPatient
-                ? (sanitizePersonName(conv.patientName || "") || formattedPhone)
+                ? officialPatientName
                 : (isDoctorOrStaff ? (conv.patientName || "Clinic Team") : formattedPhone)
 
               const lastMsg = conv.messages?.[0]?.content || "No messages yet"
@@ -170,9 +181,11 @@ export function ConversationList({
                   {/* Avatar */}
                   <div
                     className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-semibold ${
-                      !isRegisteredPatient && !isDoctorOrStaff
-                        ? "bg-slate-100 text-slate-600 border border-slate-200/60"
-                        : getAvatarColor(conv.id)
+                      isRegisteredPatient
+                        ? "bg-emerald-100 text-emerald-800"
+                        : isDoctorOrStaff
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-slate-100 text-slate-600 border border-slate-200/60"
                     }`}
                   >
                     {!isRegisteredPatient && !isDoctorOrStaff ? (
