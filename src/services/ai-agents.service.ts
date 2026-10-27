@@ -410,6 +410,17 @@ function buildDeterministicReceptionistReply(
       if (matchedDoctor.consultationFee) {
         activeFee = String(matchedDoctor.consultationFee);
       }
+    } else {
+      // Default to owner practitioner or first practitioner if activeSpecialty is generic or missing
+      const ownerDoc = practitioners.find(p => p.isOwner) || practitioners[0];
+      if (ownerDoc) {
+        if (!activeSpecialty || activeSpecialty === "Medical Specialist" || activeSpecialty === "General Physician" || activeSpecialty === "Specialist Physician") {
+          activeSpecialty = ownerDoc.specialty || activeSpecialty;
+        }
+        if (!activeDoctorName || activeDoctorName === "Doctor") {
+          activeDoctorName = ownerDoc.name;
+        }
+      }
     }
   }
 
@@ -1292,10 +1303,11 @@ export class AIAgentsService {
     scheduleContext?: DoctorScheduleContext,
     mediaAttachment?: MediaAttachment
   ) {
-    const rawDocName = doctorProfile?.doctorName || config?.doctorName || "Doctor";
+    const ownerPractitioner = practitioners?.find(p => p.isOwner) || practitioners?.[0];
+    const rawDocName = doctorProfile?.doctorName || config?.doctorName || ownerPractitioner?.name || "Doctor";
     const doctorName = formatDoctorDisplayName(rawDocName);
     const clinicName = doctorProfile?.clinicName || config?.clinicName || (doctorName !== "the Doctor" ? `${doctorName}'s Clinic` : "our Clinic");
-    const specialty = doctorProfile?.specialty || config?.specialty || "Medical Specialist";
+    const specialty = doctorProfile?.specialty || config?.specialty || ownerPractitioner?.specialty || "Specialist Physician";
 
     // OPD Schedule Configuration
     const morningOpd = config?.morningOpdHours || config?.morningOpd || "";

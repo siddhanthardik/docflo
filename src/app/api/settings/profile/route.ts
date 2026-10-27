@@ -161,6 +161,14 @@ export async function PUT(req: Request) {
       },
     });
 
+    // Auto-sync owner practitioner specialty if specialty was updated
+    if (specialty) {
+      await prisma.practitioner.updateMany({
+        where: { doctorId: session.user.id, isOwner: true },
+        data: { specialty },
+      }).catch(err => console.error("Failed to sync owner practitioner specialty:", err));
+    }
+
     return NextResponse.json(updatedDoctor);
   } catch (error) {
     console.error("Error updating profile:", error);

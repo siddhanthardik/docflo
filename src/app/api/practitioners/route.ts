@@ -73,6 +73,18 @@ export async function POST(req: Request) {
       },
     });
 
+    // Auto-sync Doctor.specialty if currently empty
+    const currentDoc = await prisma.doctor.findUnique({
+      where: { id: session.doctorId },
+      select: { specialty: true }
+    });
+    if (!currentDoc?.specialty && validatedData.specialty) {
+      await prisma.doctor.update({
+        where: { id: session.doctorId },
+        data: { specialty: validatedData.specialty }
+      }).catch(err => console.error("[POST_PRACTITIONERS] Failed to sync Doctor.specialty:", err));
+    }
+
     return NextResponse.json(practitioner, { status: 201 });
   } catch (error: any) {
     console.error("POST_PRACTITIONERS_ERROR", error);

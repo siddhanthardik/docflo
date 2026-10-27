@@ -66,6 +66,27 @@ export async function PATCH(
       data: updateData,
     });
 
+    // If the practitioner is clinic owner, synchronize specialty and name to Doctor record
+    if (existingPractitioner.isOwner) {
+      const doctorSyncData: { specialty?: string; name?: string; phone?: string } = {};
+      if (validatedData.specialty !== undefined && validatedData.specialty !== null) {
+        doctorSyncData.specialty = validatedData.specialty;
+      }
+      if (validatedData.name) {
+        doctorSyncData.name = validatedData.name;
+      }
+      if (validatedData.phone) {
+        doctorSyncData.phone = validatedData.phone;
+      }
+
+      if (Object.keys(doctorSyncData).length > 0) {
+        await prisma.doctor.update({
+          where: { id: session.doctorId },
+          data: doctorSyncData,
+        }).catch(err => console.error("[PATCH_PRACTITIONER] Failed to sync Doctor record:", err));
+      }
+    }
+
     return NextResponse.json(updatedPractitioner);
   } catch (error: any) {
     console.error("PATCH_PRACTITIONER_ERROR", error);

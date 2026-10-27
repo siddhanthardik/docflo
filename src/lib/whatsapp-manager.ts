@@ -965,6 +965,29 @@ class WhatsAppManager {
               orderBy: { displayOrder: "asc" }
             });
 
+            // Cascading specialty resolution:
+            // 1. Doctor.specialty (direct setting)
+            // 2. Owner Practitioner specialty (Settings -> Doctors & OPD)
+            // 3. First active Practitioner specialty
+            // 4. GBP Primary Category (from Google Business Profile insightsData)
+            const ownerPractitioner = practitioners.find(p => p.isOwner) || practitioners[0];
+            const gbpPrimaryCategory = gbpInsights?.categories?.primaryCategory?.displayName ||
+              (typeof gbpInsights?.primaryCategory === 'string' ? gbpInsights.primaryCategory : undefined);
+
+            const effectiveDoctorSpecialty = 
+              doctorInfo?.specialty?.trim() ||
+              ownerPractitioner?.specialty?.trim() ||
+              gbpPrimaryCategory?.trim() ||
+              undefined;
+
+            // Auto-heal Doctor.specialty in DB if missing but available via Owner Practitioner or GBP
+            if (!doctorInfo?.specialty?.trim() && effectiveDoctorSpecialty) {
+              prisma.doctor.update({
+                where: { id: doctorId },
+                data: { specialty: effectiveDoctorSpecialty }
+              }).catch(() => {});
+            }
+
             const staffMembers = await prisma.staffMember.findMany({
               where: { doctorId, isActive: true },
               select: { id: true, name: true, phone: true, role: true }
@@ -2154,8 +2177,8 @@ class WhatsAppManager {
                 const activeAppointments = upcomingApts.map(a => ({
                   date: a.date.toLocaleDateString("en-IN", { timeZone: clinicTzForApts, weekday: "long", year: "numeric", month: "long", day: "numeric" }),
                   time: a.startTime ? a.startTime.toLocaleTimeString("en-IN", { timeZone: clinicTzForApts, hour: "numeric", minute: "2-digit", hour12: true }) : "Scheduled Session",
-                  doctorName: a.practitioner?.name || doctorInfo?.name || "Doctor",
-                  specialty: a.practitioner?.specialty || doctorInfo?.specialty || "General",
+                  doctorName: a.practitioner?.name || doctorInfo?.name || ownerPractitioner?.name || "Doctor",
+                  specialty: a.practitioner?.specialty || effectiveDoctorSpecialty || "General",
                   status: a.status,
                   type: a.type,
                   patientName: a.patient ? `${a.patient.firstName} ${a.patient.lastName || ''}`.trim() : "Patient"
@@ -2185,9 +2208,9 @@ class WhatsAppManager {
                   effectiveConfig,
                   clinicPhone,
                   {
-                    doctorName: doctorInfo?.name || undefined,
+                    doctorName: doctorInfo?.name || ownerPractitioner?.name || undefined,
                     clinicName: doctorInfo?.clinicName || undefined,
-                    specialty: doctorInfo?.specialty || undefined
+                    specialty: effectiveDoctorSpecialty || effectiveConfig?.specialty || undefined
                   },
                   clinicAddress,
                   clinicMapsUri,
@@ -2456,8 +2479,8 @@ class WhatsAppManager {
                       });
                       const ptMsg = formatAppointmentConfirmationCard({
                         patient: newPatient,
-                        doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name,
-                        specialty: matchedPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                        doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name || ownerPractitioner?.name,
+                        specialty: matchedPractitioner?.specialty || effectiveDoctorSpecialty || "General Physician",
                         clinicName: doctorInfo?.clinicName,
                         startTime: startTime,
                         clinicTz: clinicTz,
@@ -2493,8 +2516,8 @@ class WhatsAppManager {
                         if (pt.phone) {
                           const ptMsg = formatAppointmentConfirmationCard({
                             patient: pt,
-                            doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name,
-                            specialty: matchedPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                            doctorName: matchedPractitioner?.name || staffName || doctorInfo?.name || ownerPractitioner?.name,
+                            specialty: matchedPractitioner?.specialty || effectiveDoctorSpecialty || "General Physician",
                             clinicName: doctorInfo?.clinicName,
                             startTime: startTime,
                             clinicTz: clinicTz,
@@ -2718,8 +2741,8 @@ class WhatsAppManager {
                           gender: existingActiveApt.patient?.gender || patient?.gender,
                           dateOfBirth: existingActiveApt.patient?.dateOfBirth
                         },
-                        doctorName: resPractitioner?.name || doctorInfo?.name,
-                        specialty: resPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                        doctorName: resPractitioner?.name || doctorInfo?.name || ownerPractitioner?.name,
+                        specialty: resPractitioner?.specialty || effectiveDoctorSpecialty || "General Physician",
                         clinicName: doctorInfo?.clinicName,
                         startTime: startTime,
                         clinicTz: clinicTz,
@@ -2792,8 +2815,8 @@ class WhatsAppManager {
                           gender: activeAppointment.patient?.gender || patient?.gender,
                           dateOfBirth: activeAppointment.patient?.dateOfBirth
                         },
-                        doctorName: pDoc?.name || doctorInfo?.name,
-                        specialty: pDoc?.specialty || doctorInfo?.specialty || "General Physician",
+                        doctorName: pDoc?.name || doctorInfo?.name || ownerPractitioner?.name,
+                        specialty: pDoc?.specialty || effectiveDoctorSpecialty || "General Physician",
                         clinicName: doctorInfo?.clinicName,
                         startTime: activeAppointment.startTime,
                         clinicTz: clinicTz,
@@ -3310,7 +3333,7 @@ class WhatsAppManager {
                         // If pediatric clinic, auto-initialize IAP vaccination schedule based on patient's DOB
                         if (targetPatient.dateOfBirth) {
                           const isPediatricDoctor = Boolean(
-                            (doctorInfo?.specialty && /pediatric|child|infant|neonato|neonat/i.test(doctorInfo.specialty)) ||
+                            (effectiveDoctorSpecialty && /pediatric|child|infant|neonato|neonat/i.test(effectiveDoctorSpecialty)) ||
                             (chosenPractitioner?.specialty && /pediatric|child|infant|neonato|neonat/i.test(chosenPractitioner.specialty))
                           );
                           if (isPediatricDoctor) {
@@ -3329,8 +3352,8 @@ class WhatsAppManager {
                             age: parsedAge,
                             dateOfBirth: targetPatient.dateOfBirth
                           },
-                          doctorName: chosenPractitioner?.name || doctorInfo?.name,
-                          specialty: chosenPractitioner?.specialty || doctorInfo?.specialty || "General Physician",
+                          doctorName: chosenPractitioner?.name || doctorInfo?.name || ownerPractitioner?.name,
+                          specialty: chosenPractitioner?.specialty || effectiveDoctorSpecialty || "General Physician",
                           clinicName: doctorInfo?.clinicName,
                           startTime: startTime,
                           clinicTz: clinicTz,
