@@ -729,13 +729,15 @@ class WhatsAppManager {
           const mime = (isDoc ? docMsg?.mimetype : imgMsg?.mimetype) || (isDoc ? "application/pdf" : "image/jpeg");
           const cleanMime = mime.split(";")[0].trim();
 
-          // Set textMessage so message processing is not skipped
+          // Set textMessage with attachment marker so both CRM display and AI agent recognize the file
+          const attachmentMarker = isDoc
+            ? `[Patient shared diagnostic document: ${fileName}]`
+            : `[Patient shared a medical image/photo]`;
+
           if (rawCaption && rawCaption.trim()) {
-            textMessage = rawCaption.trim();
+            textMessage = `${rawCaption.trim()}\n${attachmentMarker}`;
           } else if (!textMessage) {
-            textMessage = isDoc
-              ? `[Patient shared diagnostic document: ${fileName}]`
-              : `[Patient shared a medical image/photo]`;
+            textMessage = attachmentMarker;
           }
 
           // Ingest media buffer (up to 15MB) for Multimodal OCR

@@ -23,6 +23,18 @@ function formatWhatsAppDate(dateStr?: string | Date | null): string {
   return format(date, "dd/MM/yyyy")
 }
 
+function formatLastMessagePreview(content?: string): string {
+  if (!content) return "No messages yet"
+  if (/\[Patient shared diagnostic document:\s*([^\]]+)\]/i.test(content)) {
+    const match = content.match(/\[Patient shared diagnostic document:\s*([^\]]+)\]/i)
+    return `📄 ${match?.[1] || "Diagnostic Report"}`
+  }
+  if (/\[Patient shared a medical image\/photo\]/i.test(content)) {
+    return "📷 Medical Photo / Scan"
+  }
+  return content
+}
+
 interface Conversation {
   id: string
   patientName?: string
@@ -158,7 +170,7 @@ export function ConversationList({
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs text-gray-500 truncate">{lastMsg}</p>
+                      <p className="text-xs text-gray-500 truncate">{formatLastMessagePreview(lastMsg)}</p>
                       {conv.unreadCount > 0 && (
                         <span className="flex-shrink-0 bg-indigo-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
                           {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
