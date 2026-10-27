@@ -6,13 +6,12 @@ import { memoryCache } from "@/lib/memory-cache";
 import { resolveClinicTimezone } from "@/lib/timezone";
 import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
-// Prioritized Gemini models: official fast models with zero thinking latency
+// Prioritized active Gemini models: fast production models with zero thinking latency
 const CANDIDATE_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-3.7-flash"
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite"
 ];
 
 import { formatDoctorDisplayName } from "@/lib/utils";
@@ -691,9 +690,14 @@ function buildDeterministicReceptionistReply(
       return `Hello! I would be happy to help you reschedule your appointment. 🙏\n\nPlease let me know your preferred date and session (Morning or Evening: *${activeTimings}*) to shift your visit.${phoneSuffix}`;
     }
 
+    // 8.5.2 Rescheduling / Inability to visit today
+    if (/reschedule|shift|change\s*time|change\s*date|postpone|cannot\s*come|can't\s*come|cannot\s*make\s*it|won'?t\s*be\s*able|unable\s*to\s*visit/i.test(textLower)) {
+      return `No problem at all! 🙏 Would you like to reschedule your consultation with ${docTitle} (${activeSpecialty}) for tomorrow or another day? Please let me know your preferred date and time (${activeTimings}).${phoneSuffix}`;
+    }
+
     // 8.5.3 Cancellation request
-    if (/cancel|cannot\s*make\s*it|won'?t\s*be\s*able/i.test(textLower)) {
-      return `Understood. If you would like to cancel your appointment, please share your Full Name or booking details, and I will assist you immediately.${phoneSuffix}`;
+    if (/cancel/i.test(textLower)) {
+      return `Understood. Would you like me to reschedule your visit for another day, or should I cancel this appointment? Please let me know your preference.${phoneSuffix}`;
     }
 
     // 8.5.35 Diagnostic / Pathology / Lab Test Price & Inquiry
@@ -734,7 +738,7 @@ function buildDeterministicReceptionistReply(
       /\d{1,2}(?::\d{2})?\s*(?:am|pm)/i.test(textLower) ||
       /\b(years?\s*old|yrs?\s*old|male|female|m|f|boy|girl)\b/i.test(textLower)
     )) {
-      return `Thank you! I have noted your details (*${text}*) for ${docTitle} (${activeSpecialty}). Our clinic front desk will share your booking confirmation on WhatsApp shortly.${phoneSuffix}`;
+      return `Thank you! I have noted your details for ${docTitle} (${activeSpecialty}). Our clinic front desk will share your booking confirmation on WhatsApp shortly.${phoneSuffix}`;
     }
 
     // 8.5.8 General Appointment Booking / Consultation Request
@@ -743,7 +747,7 @@ function buildDeterministicReceptionistReply(
     }
 
     if (isOngoingChat) {
-      return `Thank you! I have noted your message (*${text}*) for ${docTitle} (${activeSpecialty}). Our team will follow up with you shortly.${phoneSuffix}`;
+      return `Thank you! I have noted your request for ${docTitle} (${activeSpecialty}). How else may I assist you with your clinic visit or appointment today?${phoneSuffix}`;
     }
 
     return `Hello! 👋 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${activeSpecialty}). Available timings: *${activeTimings}*. How may I assist you today?${phoneSuffix}`;
@@ -806,9 +810,12 @@ function buildDeterministicReceptionistReply(
       return `Ji bilkul! Hamara 24/7 automated receptionist kisi bhi samay agle din ke OPD slot ke liye appointment book kar sakta hai 😊\n\n${docTitle} (${specialty}) OPD me *${clinicTimings}* uplabdh rahenge. Kripya patient ka **Naam** aur **Date (aaj ya kal)** share karein, main turant reserve kar deti hoon!${phoneSuffix}`;
     }
 
-    // 9.2 Late / Traffic / Timing delay
-    if (/late|delay|pahuch|mushkil|already|traffic|time\s*pe|aaj\s*nahi|nahi\s*ho\s*payega|deir|der|time\s*kam|ruk|wait|paunch|मुश्किल|पहुँच|देर/i.test(textLower) || text.includes("मुश्किल")) {
-      return `Koi baat nahi ji! Agar aaj clinic time pe pahunchne me dikkat ho rahi hai, toh kya main aapka slot **kal (tomorrow)** ke liye book kar doon?\n\n${docTitle} kal *${clinicTimings}* OPD me uplabdh rahenge.${phoneSuffix}`;
+    // 9.2 Inability to come today / Delay / Rescheduling in Hindi/Hinglish
+    if (
+      /\b(aaj\s*(?:nahi|nhi|ni)\b|\b(?:nahi|nhi|ni)\s*aa\s*(?:sakti|sakta|sakte|paungi|paunga|payenge|payega)\b|reschedule|postpone|cancel|late|delay|traffic|aaj\s*(?:possible|shakya)\s*(?:nahi|nhi)|kal\s*kar\s*do|shift\s*kar\s*do|nahi\s*ho\s*payega|nhi\s*ho\s*payega)/i.test(textLower) ||
+      text.includes("मुश्किल") || text.includes("नहीं आ")
+    ) {
+      return `Koi baat nahi ji! 🙏 Agar aaj clinic aana sambhav nahi hai, toh kya main aapka slot **kal ya kisi aur din** ke liye schedule kar doon?\n\n${docTitle} kal *${clinicTimings}* OPD me uplabdh rahenge. Aap kab aana chahenge?${phoneSuffix}`;
     }
 
     // 9.3 Address / Location / Directions
@@ -896,7 +903,7 @@ function buildDeterministicReceptionistReply(
     }
 
     if (isOngoingChat) {
-      return `Ji dhanyawad! Maine *${text}* ke liye aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ki confirmation details clinic reception se aapko WhatsApp par mil jayegi.${phoneSuffix}`;
+      return `Ji dhanyawad! Maine aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ya appointment ke baare me main aapki kya aur madad kar sakti hoon?${phoneSuffix}`;
     }
 
     return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
@@ -2161,13 +2168,16 @@ ${isMultiDoctor ? '10' : '9'}. PRE-BOOKING VERIFICATION GATE & BOOKING TAGS
   * ⚠️ NEVER emit [BOOK_APPOINTMENT] if the patient only provided a general word like "Morning" or "Evening" without an agreed time! Ask for their preferred time first.
   * When patient shares name/demographics in a subsequent turn without repeating the time, RECALL the exact time from previous turns and put it in Parameter 2.
   * Only emit a general session name if the patient explicitly confirmed they have no preference (e.g. "any time is fine", "koi bhi chalega").
-- **PATIENT CANCELLATION DIRECTIVE (MANDATORY)**:
-  * If a patient or family member asks to cancel an appointment (e.g., "Sushmita ka appointment cancel karna hai", "Cancel appointment", "Appointment cancel kar do", "nahi aa paunga", "slot cancel", "aana cancel"):
-    1. Acknowledge the cancellation warmly in 1-2 polite sentences.
-    2. ⚠️ MANDATORY: Append this exact tag at the very end of your reply:
+- **PATIENT CANCELLATION & INABILITY TO VISIT DIRECTIVE (MANDATORY)**:
+  * When a patient or family member says they cannot come today, want to postpone, or cancel (e.g., "aaj nahi aa sakti", "aaj nahi aa paungi", "nahi aa sakte", "cancel kardo", "late ho gaya", "reschedule karna hai", "Sushmita ka appointment cancel karna hai"):
+    1. Respond with genuine human warmth, understanding, and proactive rescheduling:
+       - Hinglish: "Koi baat nahi ji! 🙏 Agar aaj clinic aana sambhav nahi hai, toh kya main aapka slot kal ya kisi aur din ke liye schedule kar doon? Aap kab aana pasand karenge?"
+       - English: "No problem at all! If you are unable to visit today, would you like me to reschedule your appointment for tomorrow or another day? Please let me know what day and time works best for you. 😊"
+    2. If an active appointment exists on record to cancel:
+       Append this exact tag at the very end of your reply:
        [CANCEL_PATIENT_APPOINTMENT: Patient Full Name]
        *(e.g., [CANCEL_PATIENT_APPOINTMENT: Sushmita] or [CANCEL_PATIENT_APPOINTMENT: Patient Full Name])*
-    3. NEVER omit this tag when acknowledging a cancellation! The system requires this tag to update and cancel the booking in the clinic database.
+    3. NEVER respond with a cold, generic support ticket line like "Our team will follow up with you shortly"!
 - If patient explicitly asks to reschedule an existing booking:
   [RESCHEDULE_APPOINTMENT: YYYY-MM-DD, Exact Time, Patient Full Name]
 - If patient asks to send/resend confirmation or status (e.g. "Send me confirmation", "Confirmation bhej do", "Is my appointment confirmed"):
@@ -2193,7 +2203,14 @@ OUTPUT REQUIREMENT (CRITICAL SCRIPT & LANGUAGE MATCH):
 - SCRIPT MATCHING:
   * If the patient's message above is written in English/Latin letters (e.g., Romanized Bengali "Amar baba to bangla hi jane", "Apni ki amar songe bangla bolte parben", Romanized Hindi/Hinglish, Romanized Punjabi, etc.), your response MUST be in ROMAN/LATIN letters! DO NOT use native Bengali (বাংলা), Devanagari, or Gurmukhi script.
   * If the patient's message above is written in native script (বাংলা, देवनागरी, etc.), reply in that native script.
-- SPAM & BROADCAST SILENCE: If the patient's message is an unrelated promotional advertisement, sports match score/lineup, fantasy sports, lottery, or spam forward with zero medical intent, output ONLY "[NO_REPLY]".
+- SPAM, PROMOTIONAL & NON-PATIENT SILENCE:
+  * If the incoming message is:
+    - An academic webinar, CME invite, or clinical symposium announcement
+    - A pharmaceutical product update, Medical Representative (MR) message, or drug brochure
+    - Academic journal publishing assistance, Scopus / Embase indexing spam (e.g. Apex Scholar)
+    - A sports score, lottery, crypto, fantasy sports, or banking OTP
+    - An informal personal chat addressed to the doctor casually by first name (e.g. "Hi Manvi, hw r u", "call me when free dear") without medical queries
+  * You MUST output ONLY "[NO_REPLY]". Do NOT draft an appointment summary, do NOT ask for Name and Age, and do NOT dump OPD timings or fees.
 - Output only the receptionist's warm, direct reply:
       `;
 

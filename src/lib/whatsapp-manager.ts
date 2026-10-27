@@ -839,7 +839,7 @@ class WhatsAppManager {
           const hasUrl = /https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9-]+\.(?:com|co|io|link|app|xyz|me|club|live|tv)\/[^\s]*/i.test(textMessage);
           if (hasUrl) {
             const clinicalKeywords = [
-              "doctor", "dr.", "appointment", "clinic", "hospital", "consult", "consultation",
+              "appointment", "clinic", "hospital", "consult", "consultation",
               "fever", "cough", "cold", "pain", "headache", "vomiting", "diarrhea", "rash",
               "baby", "child", "infant", "pediatric", "bache", "bimar", "dawai", "medicine",
               "report", "test", "scan", "ultrasound", "blood", "cbc", "kft", "lft", "timing",
@@ -1112,6 +1112,47 @@ class WhatsAppManager {
                 createdAt: messageDate,
               }
             });
+
+            // 🛡️ UPSTREAM MULTI-CLASS INTENT GATEKEEPER (Pharma, CME, Academic Spam, Personal, OTPs)
+            if (!isStaff) {
+              const { classifyWhatsAppMessage } = await import("@/lib/whatsapp-intent-classifier");
+              const classification = classifyWhatsAppMessage(textMessage, doctorInfo?.name, patientPhone);
+
+              if (classification.category === "TRANSACTIONAL_OTP" || classification.category === "ACADEMIC_PUBLISHING_SPAM") {
+                console.log(`[WhatsAppManager] 🛡️ Ignored ${classification.category} from ${patientPhone} (${classification.reason}). 0 tokens spent.`);
+                return;
+              }
+
+              if (classification.category === "CME_ACADEMIC_WEBINAR") {
+                console.log(`[WhatsAppManager] 🎓 CME / Academic Webinar detected from ${patientPhone}. Forwarding event notification to Doctor and suppressing outbound patient reply.`);
+                const docPhoneClean = (doctorInfo?.phone || "").replace(/\D/g, '');
+                if (docPhoneClean.length >= 10 && !this.isPhoneMatch(docPhoneClean, patientPhone)) {
+                  const alertMsg = `🎓 *CME / Academic Webinar Received*\n\nA clinical webinar invitation was received on clinic WhatsApp from *${patientPhone}*:\n\n${classification.doctorNotificationBody || textMessage.slice(0, 300)}`;
+                  await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, alertMsg).catch(() => {});
+                }
+                return;
+              }
+
+              if (classification.category === "PHARMA_MEDICAL_REP") {
+                console.log(`[WhatsAppManager] 💊 Pharma / MR Promo detected from ${patientPhone}. Forwarding notification to Doctor and suppressing outbound appointment booking.`);
+                const docPhoneClean = (doctorInfo?.phone || "").replace(/\D/g, '');
+                if (docPhoneClean.length >= 10 && !this.isPhoneMatch(docPhoneClean, patientPhone)) {
+                  const alertMsg = `💊 *Pharma / MR Update Received*\n\nFrom: *${patientPhone}*\n\n"${textMessage.slice(0, 250)}..."`;
+                  await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, alertMsg).catch(() => {});
+                }
+                return;
+              }
+
+              if (classification.category === "PERSONAL_PEER") {
+                console.log(`[WhatsAppManager] 📱 Personal peer / friend message detected from ${patientPhone}. Silently alerting doctor without dumping clinic schedule.`);
+                const docPhoneClean = (doctorInfo?.phone || "").replace(/\D/g, '');
+                if (docPhoneClean.length >= 10 && !this.isPhoneMatch(docPhoneClean, patientPhone)) {
+                  const alertMsg = `📱 *Personal Message Received*\n\nFrom: *${patientPhone}*\n"${textMessage}"\n\n_(The AI receptionist stayed silent so you can reply personally.)_`;
+                  await this.sendOutboundPatientMessage(sock, doctorId, docPhoneClean, alertMsg).catch(() => {});
+                }
+                return;
+              }
+            }
 
             // Check if this is a reply to the review survey or a recent completed appointment
             let pendingAppointment = null;
