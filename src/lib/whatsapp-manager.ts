@@ -1067,15 +1067,14 @@ class WhatsAppManager {
               }
             }
 
-            const pushNameRaw = sanitizePersonName(msg.pushName || "");
-            const hasValidPushName = pushNameRaw && pushNameRaw.toLowerCase() !== "patient" && !pushNameRaw.startsWith("+") && !/whatsapp/i.test(pushNameRaw) && isLikelyPersonName(pushNameRaw);
+            const formattedPhoneName = patientPhone.startsWith("+") ? patientPhone : `+${patientPhone}`;
 
             const rawPatientName = isStaff
               ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor")
               : (patient
                   ? `${patient.firstName} ${patient.lastName}`.trim()
-                  : (hasValidPushName ? pushNameRaw : (patientPhone.startsWith("+") ? patientPhone : `+${patientPhone}`)));
-            const patientName = sanitizePersonName(rawPatientName) || "Patient";
+                  : formattedPhoneName);
+            const patientName = isStaff || patient ? (sanitizePersonName(rawPatientName) || "Patient") : formattedPhoneName;
 
             // Find or create Conversation (deduplicate by 10-digit suffix)
             const last10Incoming = patientPhone.slice(-10);
@@ -1114,6 +1113,9 @@ class WhatsAppManager {
               }
               if (patient && patient.firstName !== "Patient" && (!conversation.patientName || conversation.patientName === "Patient" || conversation.patientName.includes("+"))) {
                 updatedData.patientName = `${patient.firstName} ${patient.lastName}`.trim();
+              } else if (!patient && !isStaff && conversation.patientName !== formattedPhoneName) {
+                // If unregistered, ensure name is strictly the phone number, removing legacy pushNames
+                updatedData.patientName = formattedPhoneName;
               }
               await prisma.conversation.update({
                 where: { id: conversation.id },

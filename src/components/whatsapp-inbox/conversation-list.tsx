@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search } from "lucide-react"
+import { Search, User } from "lucide-react"
 import { format, isToday, isYesterday, differenceInCalendarDays } from "date-fns"
 import { sanitizePersonName } from "@/lib/utils"
 
@@ -60,8 +60,15 @@ export function ConversationList({
   const [query, setQuery] = useState("")
 
   const filtered = conversations.filter((c) => {
-    const cleanName = sanitizePersonName(c.patientName || "") || c.patientPhone
-    return cleanName.toLowerCase().includes(query.toLowerCase())
+    const isRegisteredPatient = Boolean(c.patientId)
+    const isDoctorOrStaff = Boolean(
+      c.patientName?.toLowerCase().includes("doctor") || 
+      c.patientName?.toLowerCase().includes("staff")
+    )
+    const displayName = isRegisteredPatient || isDoctorOrStaff
+      ? (sanitizePersonName(c.patientName || "") || c.patientPhone)
+      : c.patientPhone
+    return displayName.toLowerCase().includes(query.toLowerCase()) || c.patientPhone.includes(query)
   })
 
   function getInitials(name: string) {
@@ -134,8 +141,19 @@ export function ConversationList({
             </div>
           )
           : filtered.map((conv) => {
-              const rawName = sanitizePersonName(conv.patientName || "") || conv.patientPhone
-              const name = (rawName.startsWith("Lead") && conv.patientPhone) ? conv.patientPhone : rawName
+              const isRegisteredPatient = Boolean(conv.patientId)
+              const isDoctorOrStaff = Boolean(
+                conv.patientName?.toLowerCase().includes("doctor") || 
+                conv.patientName?.toLowerCase().includes("staff")
+              )
+              const formattedPhone = conv.patientPhone
+                ? (conv.patientPhone.startsWith("+") ? conv.patientPhone : `+${conv.patientPhone}`)
+                : "Unregistered"
+
+              const displayName = isRegisteredPatient
+                ? (sanitizePersonName(conv.patientName || "") || formattedPhone)
+                : (isDoctorOrStaff ? (conv.patientName || "Clinic Team") : formattedPhone)
+
               const lastMsg = conv.messages?.[0]?.content || "No messages yet"
               const isSelected = selectedId === conv.id
               return (
@@ -151,9 +169,17 @@ export function ConversationList({
                 >
                   {/* Avatar */}
                   <div
-                    className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-semibold ${getAvatarColor(conv.id)}`}
+                    className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-semibold ${
+                      !isRegisteredPatient && !isDoctorOrStaff
+                        ? "bg-slate-100 text-slate-600 border border-slate-200/60"
+                        : getAvatarColor(conv.id)
+                    }`}
                   >
-                    {getInitials(name)}
+                    {!isRegisteredPatient && !isDoctorOrStaff ? (
+                      <User className="w-4 h-4 text-slate-500" />
+                    ) : (
+                      getInitials(displayName)
+                    )}
                   </div>
 
                   {/* Info */}
@@ -165,16 +191,21 @@ export function ConversationList({
                             isSelected ? "text-indigo-700" : "text-gray-900"
                           }`}
                         >
-                          {name}
+                          {displayName}
                         </p>
-                        {!conv.patientId && !name.toLowerCase().includes("doctor") && !name.toLowerCase().includes("staff") && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 uppercase tracking-wider shrink-0 border border-amber-200/60">
-                            Lead
+                        {!isRegisteredPatient && !isDoctorOrStaff && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/60 shrink-0">
+                            New
                           </span>
                         )}
-                        {conv.patientId && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase tracking-wider shrink-0 border border-emerald-200/60">
+                        {isRegisteredPatient && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
                             Patient
+                          </span>
+                        )}
+                        {isDoctorOrStaff && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/60 shrink-0">
+                            Team
                           </span>
                         )}
                       </div>

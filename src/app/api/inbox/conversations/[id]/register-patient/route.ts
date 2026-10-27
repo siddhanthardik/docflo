@@ -33,20 +33,23 @@ export async function POST(
       });
     }
 
-    const cleanDigits = (conversation.patientPhone || "").replace(/\D/g, "");
+    const body = await req.json().catch(() => ({}));
+
+    const cleanDigits = (body.phone || conversation.patientPhone || "").replace(/\D/g, "");
     const last10 = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
-    const normalizedPhone = cleanDigits.length === 10 ? `+91${cleanDigits}` : (conversation.patientPhone.startsWith("+") ? conversation.patientPhone : `+${cleanDigits}`);
+    const normalizedPhone = body.phone ? body.phone.trim() : (cleanDigits.length === 10 ? `+91${cleanDigits}` : (conversation.patientPhone.startsWith("+") ? conversation.patientPhone : `+${cleanDigits}`));
 
-    // Parse first name and last name from WhatsApp profile name
-    const rawName = sanitizePersonName(conversation.patientName || "") || "";
-    let firstName = "Patient";
-    let lastName = "";
-
-    if (rawName && !rawName.startsWith("Lead") && rawName !== conversation.patientPhone) {
-      const parts = rawName.split(" ").filter(Boolean);
-      firstName = parts[0] || "Patient";
-      lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
-    }
+    const firstName = (body.firstName || "").trim() || "Patient";
+    const lastName = (body.lastName || "").trim();
+    const email = body.email ? body.email.trim() : undefined;
+    const dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : undefined;
+    const gender = body.gender || undefined;
+    const bloodGroup = body.bloodGroup || undefined;
+    const address = body.address ? body.address.trim() : undefined;
+    const city = body.city ? body.city.trim() : undefined;
+    const medicalNotes = body.medicalNotes ? body.medicalNotes.trim() : undefined;
+    const primaryPractitionerId = body.primaryPractitionerId && body.primaryPractitionerId !== "NONE" ? body.primaryPractitionerId : undefined;
+    const tags = Array.isArray(body.tags) && body.tags.length > 0 ? body.tags : ["Registered from WhatsApp"];
 
     // Check if patient already exists by phone in this clinic
     let targetPatient = await prisma.patient.findFirst({
@@ -69,8 +72,33 @@ export async function POST(
           firstName,
           lastName,
           phone: normalizedPhone,
+          email,
+          dateOfBirth,
+          gender,
+          bloodGroup,
+          address,
+          city,
+          medicalNotes,
+          primaryPractitionerId,
           patientType: "ACTIVE",
-          tags: ["WhatsApp Lead", "Registered from Chat"]
+          tags
+        }
+      });
+    } else {
+      // Update existing patient record with submitted demographics
+      targetPatient = await prisma.patient.update({
+        where: { id: targetPatient.id },
+        data: {
+          firstName: firstName !== "Patient" ? firstName : targetPatient.firstName,
+          lastName: lastName || targetPatient.lastName,
+          email: email || targetPatient.email,
+          dateOfBirth: dateOfBirth || targetPatient.dateOfBirth,
+          gender: gender || targetPatient.gender,
+          bloodGroup: bloodGroup || targetPatient.bloodGroup,
+          address: address || targetPatient.address,
+          city: city || targetPatient.city,
+          medicalNotes: medicalNotes || targetPatient.medicalNotes,
+          primaryPractitionerId: primaryPractitionerId || targetPatient.primaryPractitionerId,
         }
       });
     }

@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown, Maximize2, Minimize2, FileText, Image as ImageIcon, Sparkles, Smartphone, Download, ExternalLink, Calendar, CheckCircle2, UserPlus, Loader2 } from "lucide-react"
+import { Send, MessageSquare, Phone, ArrowLeft, ChevronDown, Maximize2, Minimize2, FileText, Image as ImageIcon, Download, ExternalLink, Calendar, CheckCircle2, UserPlus, User } from "lucide-react"
 import { format, isToday, isYesterday } from "date-fns"
 import { sanitizePersonName } from "@/lib/utils"
 import { toast } from "sonner"
+import { PatientForm } from "@/components/patients/patient-form"
 
 function safeFormatDate(dateStr: string | Date | undefined, formatPattern: string, fallback: string = ""): string {
   if (!dateStr) return fallback
@@ -92,19 +93,19 @@ function MedicalMediaCard({
 
   return (
     <div
-      className={`rounded-xl border p-3.5 my-1.5 transition-all shadow-2xs ${
+      className={`rounded-lg border px-3 py-2.5 my-1.5 transition-all max-w-sm ${
         isOut
-          ? "bg-indigo-700/40 border-indigo-400/40 text-white"
-          : "bg-slate-50 border-slate-200/90 text-slate-800"
+          ? "bg-white/10 border-white/20 text-white"
+          : "bg-white border-slate-200 text-slate-800 shadow-2xs"
       }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         {/* File Icon */}
         <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-2xs ${
+          className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
             isDoc
-              ? isOut ? "bg-rose-500/20 text-rose-200 border border-rose-400/30" : "bg-rose-50 text-rose-600 border border-rose-200"
-              : isOut ? "bg-cyan-500/20 text-cyan-200 border border-cyan-400/30" : "bg-cyan-50 text-cyan-600 border border-cyan-200"
+              ? isOut ? "bg-rose-500/20 text-rose-200" : "bg-rose-50 text-rose-600 border border-rose-100"
+              : isOut ? "bg-cyan-500/20 text-cyan-200" : "bg-cyan-50 text-cyan-600 border border-cyan-100"
           }`}
         >
           {isDoc ? <FileText className="w-5 h-5" /> : <ImageIcon className="w-5 h-5" />}
@@ -112,62 +113,28 @@ function MedicalMediaCard({
 
         {/* File Details */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold text-xs sm:text-sm truncate leading-snug">
-              {attachment.fileName}
-            </p>
-            {attachment.fileExt && (
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
-                  isOut
-                    ? "bg-indigo-800/60 text-indigo-200"
-                    : isDoc ? "bg-rose-100 text-rose-700" : "bg-cyan-100 text-cyan-700"
-                }`}
-              >
-                {attachment.fileExt}
-              </span>
-            )}
-          </div>
-          <p className={`text-[11px] mt-0.5 ${isOut ? "text-indigo-200" : "text-slate-500"}`}>
-            {isDoc ? "Diagnostic Lab / Clinical Report" : "Medical Prescription / Photo"}
+          <p className="font-medium text-xs sm:text-sm truncate">
+            {attachment.fileName}
+          </p>
+          <p className={`text-[11px] ${isOut ? "text-indigo-200" : "text-slate-400"}`}>
+            {isDoc ? "Document" : "Photo"}
+            {attachment.fileExt ? ` · ${attachment.fileExt}` : ""}
           </p>
         </div>
-      </div>
 
-      {/* AI Processing & Storage Status */}
-      <div className={`mt-2.5 pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-[11px] ${
-        isOut ? "border-indigo-500/30 text-indigo-100" : "border-slate-200 text-slate-600"
-      }`}>
-        <div className="flex items-center gap-1.5">
-          <Sparkles className={`w-3.5 h-3.5 ${isOut ? "text-indigo-300" : "text-indigo-600"}`} />
-          <span className="font-medium">Processed by AI Receptionist</span>
-        </div>
-
-        {mediaUrl ? (
+        {/* Download action if mediaUrl provided */}
+        {mediaUrl && (
           <a
             href={mediaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-              isOut
-                ? "bg-white text-indigo-700 hover:bg-indigo-50"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            className={`p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0 ${
+              isOut ? "text-white hover:bg-white/10" : "text-slate-600 hover:text-slate-900"
             }`}
+            title="Download / Open file"
           >
-            <Download className="w-3 h-3" />
-            <span>Open Document</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+            <Download className="w-4 h-4" />
           </a>
-        ) : (
-          <div
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${
-              isOut ? "bg-indigo-800/40 text-indigo-200" : "bg-slate-200/70 text-slate-600"
-            }`}
-            title="Stored securely on clinic WhatsApp mobile to protect server storage from heavy lab reports"
-          >
-            <Smartphone className="w-3 h-3" />
-            <span>Available on Clinic WhatsApp Phone</span>
-          </div>
         )}
       </div>
     </div>
@@ -288,35 +255,32 @@ export function ChatWindow({
   const [sending, setSending] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
-  const [registering, setRegistering] = useState(false)
+  const [isPatientFormOpen, setIsPatientFormOpen] = useState(false)
   const [localPatient, setLocalPatient] = useState<any>(conversation?.patient || null)
 
   useEffect(() => {
     setLocalPatient(conversation?.patient || null)
   }, [conversation?.patient, conversation?.id])
 
-  const handleRegisterPatient = async () => {
+  const handleRegisterPatientSubmit = async (formData: any) => {
     if (!conversation) return
-    setRegistering(true)
-    try {
-      const res = await fetch(`/api/inbox/conversations/${conversation.id}/register-patient`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setLocalPatient(data.patient)
-        toast.success(`Patient "${data.patient.firstName} ${data.patient.lastName || ''}".trim() registered successfully!`)
-        if (onPatientConverted) {
-          onPatientConverted(data.patient)
-        }
-      } else {
-        toast.error(data.error || "Failed to register patient")
+    const res = await fetch(`/api/inbox/conversations/${conversation.id}/register-patient`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    })
+    const data = await res.json()
+    if (res.ok && data.success) {
+      setLocalPatient(data.patient)
+      setIsPatientFormOpen(false)
+      const fullName = `${data.patient.firstName} ${data.patient.lastName || ""}`.trim()
+      toast.success(`Patient "${fullName}" registered successfully!`)
+      if (onPatientConverted) {
+        onPatientConverted(data.patient)
       }
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred while registering patient")
-    } finally {
-      setRegistering(false)
+    } else {
+      toast.error(data.error || "Failed to register patient")
+      throw new Error(data.error || "Failed to register patient")
     }
   }
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -403,16 +367,21 @@ export function ChatWindow({
     )
   }
 
-  const name = sanitizePersonName(conversation.patientName || "") || conversation.patientPhone
-  const isDoctorOrStaff = name.toLowerCase().includes("doctor") || name.toLowerCase().includes("staff")
   const isRegisteredPatient = Boolean((conversation.patientId || localPatient?.id) && (conversation.patient || localPatient))
   const registeredPatient = localPatient || conversation.patient
+  const isDoctorOrStaff = (conversation.patientName || "").toLowerCase().includes("doctor") || (conversation.patientName || "").toLowerCase().includes("staff")
+
+  const formattedPhone = conversation.patientPhone.startsWith("+")
+    ? conversation.patientPhone
+    : `+${conversation.patientPhone}`
 
   const officialPatientName = registeredPatient?.firstName
     ? `${registeredPatient.firstName} ${registeredPatient.lastName || ""}`.trim()
-    : name
+    : formattedPhone
 
-  const isWhatsAppNicknameOnly = !isRegisteredPatient && !isDoctorOrStaff && Boolean(conversation.patientName && conversation.patientName !== conversation.patientPhone)
+  const headerTitle = isRegisteredPatient
+    ? officialPatientName
+    : (isDoctorOrStaff ? (conversation.patientName || "Clinic Team") : formattedPhone)
 
   return (
     <div className={isMaximized ? "fixed inset-0 z-50 bg-white h-screen w-screen flex flex-col shadow-2xl" : "h-full flex flex-col relative"}>
@@ -435,46 +404,49 @@ export function ChatWindow({
                 ? "bg-purple-100 text-purple-700"
                 : isRegisteredPatient
                 ? "bg-emerald-100 text-emerald-800"
-                : "bg-amber-100 text-amber-800"
+                : "bg-slate-100 text-slate-600 border border-slate-200/60"
             }`}
           >
-            {(isRegisteredPatient ? officialPatientName : name)
-              .split(" ")
-              .map((w: string) => w[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
+            {isDoctorOrStaff || isRegisteredPatient ? (
+              headerTitle
+                .split(" ")
+                .map((w: string) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()
+            ) : (
+              <User className="w-4 h-4 text-slate-500" />
+            )}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-gray-900 truncate">
-                {isRegisteredPatient ? officialPatientName : name}
+                {headerTitle}
               </h3>
               {isDoctorOrStaff ? (
-                name.toLowerCase().includes("doctor") ? (
-                  <span className="bg-purple-50 text-purple-700 border border-purple-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                headerTitle.toLowerCase().includes("doctor") ? (
+                  <span className="bg-purple-50 text-purple-700 border border-purple-200/60 text-[10px] font-medium px-2 py-0.5 rounded-md">
                     Doctor
                   </span>
                 ) : (
-                  <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-medium px-2 py-0.5 rounded-md">
                     Staff
                   </span>
                 )
               ) : isRegisteredPatient ? (
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-flex items-center gap-1 shadow-2xs">
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Registered Patient</span>
+                  <span>Patient</span>
                 </span>
               ) : (
-                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-flex items-center gap-1 shadow-2xs">
-                  <UserPlus className="w-3 h-3 text-amber-600" />
-                  <span>Inquirer / Lead</span>
+                <span className="bg-slate-100 text-slate-600 border border-slate-200/80 text-[10px] font-medium px-2 py-0.5 rounded-md shadow-2xs">
+                  New
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 text-xs mt-0.5">
               {isDoctorOrStaff ? (
-                <span className="text-slate-400">Clinic Team Member · {conversation.patientPhone}</span>
+                <span className="text-slate-400">Clinic Team Member · {formattedPhone}</span>
               ) : isRegisteredPatient ? (
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <span className="text-emerald-600 font-semibold flex items-center gap-1">
@@ -482,7 +454,7 @@ export function ChatWindow({
                     Chart Active
                   </span>
                   <span className="text-slate-300">·</span>
-                  <span className="text-slate-500">{conversation.patientPhone}</span>
+                  <span className="text-slate-500">{formattedPhone}</span>
                   {registeredPatient?.id && (
                     <>
                       <span className="text-slate-300">·</span>
@@ -499,17 +471,9 @@ export function ChatWindow({
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-xs">
-                  {isWhatsAppNicknameOnly ? (
-                    <span className="text-slate-500">
-                      WhatsApp Profile Name · <span className="text-amber-700 font-semibold">Unregistered</span> · {conversation.patientPhone}
-                    </span>
-                  ) : (
-                    <span className="text-slate-500">
-                      <span className="text-amber-700 font-semibold">Unregistered WhatsApp Visitor</span> · {conversation.patientPhone}
-                    </span>
-                  )}
-                </div>
+                <span className="text-slate-400">
+                  Unregistered Contact · {formattedPhone}
+                </span>
               )}
             </div>
           </div>
@@ -518,23 +482,13 @@ export function ChatWindow({
           {!isRegisteredPatient && !isDoctorOrStaff && (
             <button
               type="button"
-              onClick={handleRegisterPatient}
-              disabled={registering}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
-              title="Add this contact into clinic records as a registered patient"
+              onClick={() => setIsPatientFormOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors shadow-2xs cursor-pointer"
+              title="Open clinical intake form to register this contact as a patient"
             >
-              {registering ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                  <span>Registering...</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden sm:inline">Register as Patient</span>
-                  <span className="sm:hidden">Register</span>
-                </>
-              )}
+              <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Register as Patient</span>
+              <span className="sm:hidden">Register</span>
             </button>
           )}
 
@@ -665,6 +619,20 @@ export function ChatWindow({
           Press <kbd className="bg-gray-100 px-1 py-0.5 rounded text-gray-600 text-xs">Enter</kbd> to send · <kbd className="bg-gray-100 px-1 py-0.5 rounded text-gray-600 text-xs">Shift+Enter</kbd> for newline
         </p>
       </div>
+
+      {isPatientFormOpen && (
+        <PatientForm
+          open={isPatientFormOpen}
+          onOpenChange={setIsPatientFormOpen}
+          mode="create"
+          initialData={{
+            phone: conversation.patientPhone,
+            firstName: "",
+            lastName: "",
+          }}
+          onSubmit={handleRegisterPatientSubmit}
+        />
+      )}
     </div>
   )
 }
