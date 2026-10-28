@@ -8,10 +8,13 @@ import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
 // Prioritized active Gemini models: fast production models with zero thinking latency
 const CANDIDATE_MODELS = [
-  "gemini-3.8-flash",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
   "gemini-3.7-flash",
   "gemini-3.6-flash",
-  "gemini-3.5-flash-lite"
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-1.5-flash"
 ];
 
 import { formatDoctorDisplayName } from "@/lib/utils";
@@ -691,6 +694,12 @@ function buildDeterministicReceptionistReply(
       return `⚠️ *Emergency Alert*: These symptoms appear potentially serious and require urgent medical care. Please proceed immediately to the nearest hospital emergency room (ICU/Casualty) or call emergency ambulance services (108/112). Clinic outpatient appointments are not suited for medical emergencies.`;
     }
 
+    // 8.5.01 Greeting Check (Greeting recognised whether first turn or returning message)
+    const isGreeting = /^(hello|hi|hey|good\s*(morning|afternoon|evening)|namaste|namaskar|pranam|greetings|salaam)\b/i.test(textLower.trim()) || textLower.trim() === "hi" || textLower.trim() === "hello";
+    if (isGreeting) {
+      return `Hello! 👋 Welcome to *${clinicName}*. I am ${assistantName}, receptionist for ${docTitle} (${activeSpecialty}). Available timings: *${activeTimings}*.\n\nWould you like to schedule an appointment or do you have any questions about clinic timings or consultations?${phoneSuffix}`;
+    }
+
     // 8.5.1 Medication Dosage & Prescription Safety Shield
     if (/\b(dose|dosage|how\s*many\s*ml|how\s*many\s*drops|paracetamol|antibiotic|combiflam|augmentin|medicine\s*dose|prescription)\b/i.test(textLower)) {
       return `Please note: For patient safety, medication dosages can only be evaluated and prescribed by the doctor following an in-person physical examination. Please refer to your clinic prescription or consult ${docTitle} during OPD hours.${phoneSuffix}`;
@@ -753,12 +762,12 @@ function buildDeterministicReceptionistReply(
     }
 
     // 8.5.8 General Appointment Booking / Consultation Request
-    if (/appointment|book|consult|visit|checkup|injury|rehab|treatment/i.test(textLower)) {
+    if (/appointment|book|schedule|consult|visit|checkup|injury|rehab|treatment|slot|need\s*appointment|want\s*appointment/i.test(textLower)) {
       return `Hello! 👋 I would be delighted to help you schedule an appointment with ${docTitle} (${activeSpecialty}) at *${clinicName}*. Available timings: *${activeTimings}*.\n\nPlease share the **Patient's Full Name**, **Age**, and **Preferred Date** (Today or Tomorrow) to reserve your slot.${phoneSuffix}`;
     }
 
     if (isOngoingChat) {
-      return `Thank you! I have noted your request for ${docTitle} (${activeSpecialty}). How else may I assist you with your clinic visit or appointment today?${phoneSuffix}`;
+      return `I am here to assist you with ${docTitle} (${activeSpecialty}) at *${clinicName}*. Available timings: *${activeTimings}*.\n\nWould you like to schedule an appointment or do you have any questions about clinic timings or consultations?${phoneSuffix}`;
     }
 
     return `Hello! 👋 I am ${assistantName}, receptionist at *${clinicName}* (${docTitle} · ${activeSpecialty}). Available timings: *${activeTimings}*. How may I assist you today?${phoneSuffix}`;
@@ -914,7 +923,7 @@ function buildDeterministicReceptionistReply(
     }
 
     if (isOngoingChat) {
-      return `Ji dhanyawad! Maine aapki request note kar li hai. ${docTitle} (${specialty}) ke OPD slot ya appointment ke baare me main aapki kya aur madad kar sakti hoon?${phoneSuffix}`;
+      return `Main *${clinicName}* par ${docTitle} (${specialty}) ke liye uplabdh hoon. Available OPD timings: *${clinicTimings}*.\n\nKya aap OPD consultation ke liye appointment book karna chahte hain ya clinic timings ya fees ke baare me koi jankari chahiye?${phoneSuffix}`;
     }
 
     return `Namaste! 🙏 Main ${assistantName}, *${clinicName}* (${docTitle} · ${specialty}) se bol rahi hoon. Kya aap aaj ya kal ke liye appointment book karna chahenge?${phoneSuffix}`;
@@ -1136,13 +1145,20 @@ export async function generateWithFallback(
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       for (const modelName of CANDIDATE_MODELS) {
         try {
+          const isGemini3x = modelName.includes("3.7") || modelName.includes("3.6") || modelName.includes("3.5");
           const configObj: any = {
-            temperature: 0.3,
             maxOutputTokens: 2048,
-            thinkingConfig: {
-              thinkingBudget: 0
-            }
           };
+          // Only pass temperature for models that support it
+          if (!isGemini3x) {
+            configObj.temperature = 0.3;
+          }
+          // Zero thinking budget for immediate receptionist responses without thinking latency
+          if (modelName.includes("3.7") || modelName.includes("2.5")) {
+            configObj.thinkingConfig = {
+              thinkingBudget: 0
+            };
+          }
 
           let contents: any = prompt;
           if (hasAttachment && attachment) {

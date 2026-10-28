@@ -166,8 +166,8 @@ class WhatsAppManager {
     return false;
   }
 
-  // Rate limiter & cooldown check: minimum 4s debounce and max 3 replies in 60s per sender
-  private checkAiRateLimit(doctorId: string, patientPhone: string): { allowed: boolean; reason?: string } {
+  // Rate limiter & cooldown check: minimum 4s debounce and max 6 replies in 60s per sender
+  private checkAiRateLimit(doctorId: string, patientPhone: string, textMessage?: string): { allowed: boolean; reason?: string } {
     const key = `${doctorId}:${patientPhone.slice(-10)}`;
     const now = Date.now();
 
@@ -176,16 +176,23 @@ class WhatsAppManager {
       return { allowed: false, reason: "AI response already processing in-flight for this patient" };
     }
 
-    // 1. Debounce: minimum 4 seconds between AI replies to same phone
+    // Intent check: if patient expresses appointment/clinical booking intent or direct answer, bypass the 4s cooldown
+    // (a patient responding to a bot prompt quickly e.g. "Need appointment", "Yes", "Dr Chandra" within 1-3 seconds is expected human behavior)
+    const isIntentExpressed = textMessage ? (
+      /\b(?:appointment|book|schedule|consult|timing|timings|slot|slots|fee|fees|doctor|need|chahiye|milna|dr|karna|visit|checkup|test|report|help|aana|aaj|kal|today|tomorrow)\b/i.test(textMessage) ||
+      /^(yes|haan|ha|theek|ok|okay|sure|no|nahi|na|done)\b/i.test(textMessage.trim())
+    ) : false;
+
+    // 1. Debounce: minimum 4 seconds between AI replies to same phone (unless explicit intent or direct answer is expressed)
     const lastReply = this.lastAiReplyTime.get(key) || 0;
-    if (now - lastReply < 4000) {
+    if (!isIntentExpressed && (now - lastReply < 4000)) {
       return { allowed: false, reason: `Cooldown active (${Math.ceil((4000 - (now - lastReply)) / 1000)}s)` };
     }
 
-    // 2. Velocity limit: max 3 AI replies in 60 seconds
+    // 2. Velocity limit: max 6 AI replies in 60 seconds
     const timestamps = (this.aiReplyHistory.get(key) || []).filter(t => now - t < 60000);
-    if (timestamps.length >= 3) {
-      return { allowed: false, reason: `Max 3 AI replies per minute exceeded (${timestamps.length}/3)` };
+    if (timestamps.length >= 6) {
+      return { allowed: false, reason: `Max 6 AI replies per minute exceeded (${timestamps.length}/6)` };
     }
 
     return { allowed: true };
@@ -1538,7 +1545,18 @@ class WhatsAppManager {
               }
 
               // ── Shield 3: Sliding-Window Rate Limiter & Debounce Cooldown ────
-              const rateCheck = this.checkAiRateLimit(doctorId, patientPhone);
+              let rateCheck = this.checkAiRateLimit(doctorId, patientPhone, textMessage);
+              if (!rateCheck.allowed && rateCheck.reason?.startsWith("Cooldown active")) {
+                const key = `${doctorId}:${patientPhone.slice(-10)}`;
+                const lastReply = this.lastAiReplyTime.get(key) || 0;
+                const waitMs = Math.max(100, 4000 - (Date.now() - lastReply));
+                if (waitMs <= 4000) {
+                  console.log(`[WhatsAppManager] ⏳ Message arrived during cooldown for ${patientPhone}. Awaiting ${waitMs}ms before processing...`);
+                  await new Promise(resolve => setTimeout(resolve, waitMs));
+                  rateCheck = this.checkAiRateLimit(doctorId, patientPhone, textMessage);
+                }
+              }
+
               if (!rateCheck.allowed) {
                 console.log(`[WhatsAppManager] ⏳ AI Rate limit / cooldown triggered for ${patientPhone}: ${rateCheck.reason}. Skipping AI auto-reply.`);
                 return;

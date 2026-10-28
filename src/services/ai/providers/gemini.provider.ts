@@ -3,9 +3,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 
 const CANDIDATE_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
   'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-3.5-flash-lite'
+  'gemini-3.5-flash-lite',
+  'gemini-1.5-flash'
 ];
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -93,15 +96,18 @@ export class GeminiProvider implements AIProvider {
     let lastError: any = null;
     for (const modelName of CANDIDATE_MODELS) {
       try {
+        const isGemini3x = modelName.includes('3.7') || modelName.includes('3.6') || modelName.includes('3.5');
         const generationConfig: any = {
-          temperature: baseConfig.temperature,
           maxOutputTokens: baseConfig.maxOutputTokens,
         };
 
-        // In Gemini 3.7, internal thinking/reasoning tokens are deducted from maxOutputTokens.
+        if (!isGemini3x) {
+          generationConfig.temperature = baseConfig.temperature;
+        }
+
         // For fast direct text generation (reviews, posts, audits), disable thinking budget
         // so thinking tokens do not deplete the token budget and cause truncated mid-sentence replies.
-        if (modelName.includes('3.7')) {
+        if (modelName.includes('3.7') || modelName.includes('2.5')) {
           generationConfig.thinkingConfig = {
             thinkingBudget: 0,
           };
