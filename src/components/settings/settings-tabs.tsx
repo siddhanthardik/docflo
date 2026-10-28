@@ -37,6 +37,10 @@ export function SettingsTabs() {
   const activePillRef = useRef<HTMLAnchorElement>(null);
 
   const userRole = ((session?.user as any)?.role || "DOCTOR").toUpperCase();
+  const isStaff =
+    ["MANAGER", "RECEPTIONIST", "NURSE", "STAFF"].includes(userRole) ||
+    (Boolean((session?.user as any)?.doctorId) &&
+      (session?.user as any)?.doctorId !== (session?.user as any)?.id);
 
   const allTabs: TabItem[] = [
     {
@@ -97,11 +101,13 @@ export function SettingsTabs() {
     },
     {
       key: "account",
-      label: "Account & Security",
-      description: "Login credentials, recovery phone, password & sessions",
+      label: isStaff ? "My Security" : "Account & Security",
+      description: isStaff
+        ? "Personal profile, credentials & password"
+        : "Login credentials, recovery phone, password & sessions",
       icon: Shield,
       href: "/settings",
-      roles: ["DOCTOR", "ADMIN"],
+      roles: ["DOCTOR", "ADMIN", "MANAGER", "RECEPTIONIST", "NURSE", "STAFF"],
     },
   ];
 

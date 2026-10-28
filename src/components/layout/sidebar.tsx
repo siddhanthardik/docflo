@@ -198,22 +198,26 @@ export function Sidebar() {
           {!isCollapsed && <span>Help & Support</span>}
         </Link>
 
-        {(!session?.user?.role || !["RECEPTIONIST", "NURSE", "STAFF"].includes(session.user.role)) && (
-          <Link
-            href="/settings"
-            className={cn(
-              "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
-              isCollapsed ? "justify-center" : "gap-3",
-              pathname.startsWith("/settings")
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
-            )}
-            title="Settings"
-          >
-            <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/settings") ? "text-white" : "text-slate-400")} />
-            {!isCollapsed && <span>Settings</span>}
-          </Link>
-        )}
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-150",
+            isCollapsed ? "justify-center" : "gap-3",
+            pathname.startsWith("/settings")
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200"
+          )}
+          title={session?.user?.role && ["RECEPTIONIST", "NURSE", "STAFF"].includes(session.user.role) ? "My Security" : "Settings"}
+        >
+          <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/settings") ? "text-white" : "text-slate-400")} />
+          {!isCollapsed && (
+            <span>
+              {session?.user?.role && ["RECEPTIONIST", "NURSE", "STAFF"].includes(session.user.role)
+                ? "My Security"
+                : "Settings"}
+            </span>
+          )}
+        </Link>
 
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

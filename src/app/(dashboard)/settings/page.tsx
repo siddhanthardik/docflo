@@ -3,17 +3,18 @@
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Key, Smartphone, Laptop, LogOut, ShieldAlert, UserCheck, Lock } from "lucide-react";
+import { Loader2, Key, Laptop, LogOut, ShieldAlert, UserCheck, Lock, Building2 } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 const getPhoneParts = (fullPhone: string) => {
+  if (!fullPhone) return { countryCode: "IN", dialCode: "+91", number: "" };
   for (const c of COUNTRIES) {
     if (fullPhone.startsWith(c.dialCode)) {
       return { countryCode: c.code, dialCode: c.dialCode, number: fullPhone.slice(c.dialCode.length) };
     }
   }
-  return { countryCode: "US", dialCode: "+1", number: fullPhone };
+  return { countryCode: "IN", dialCode: "+91", number: fullPhone };
 };
 
 export default function AccountAndSecurityPage() {
@@ -23,10 +24,13 @@ export default function AccountAndSecurityPage() {
 
   // Profile state
   const [profile, setProfile] = useState({
+    isStaff: false,
     name: "",
     email: "",
     phone: "",
     role: "",
+    clinicName: "",
+    doctorName: "",
   });
 
   // Password state
@@ -47,10 +51,13 @@ export default function AccountAndSecurityPage() {
       if (response.ok) {
         const data = await response.json();
         setProfile({
+          isStaff: Boolean(data.isStaff),
           name: data.name || "",
           email: data.email || "",
           phone: data.phone || "",
           role: data.role || "DOCTOR",
+          clinicName: data.clinicName || "",
+          doctorName: data.doctorName || "",
         });
       }
     } catch (error) {
@@ -73,7 +80,12 @@ export default function AccountAndSecurityPage() {
         }),
       });
       if (response.ok) {
-        toast({ title: "Success", description: "Account profile updated successfully" });
+        toast({
+          title: "Success",
+          description: profile.isStaff
+            ? "Your staff profile was updated successfully"
+            : "Account profile updated successfully",
+        });
       } else {
         const data = await response.json();
         throw new Error(data.error || "Failed to update profile");
@@ -109,7 +121,12 @@ export default function AccountAndSecurityPage() {
       });
 
       if (response.ok) {
-        toast({ title: "Success", description: "Password updated successfully" });
+        toast({
+          title: "Success",
+          description: profile.isStaff
+            ? "Your password has been updated successfully"
+            : "Password updated successfully",
+        });
         setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
         const data = await response.json();
@@ -135,119 +152,254 @@ export default function AccountAndSecurityPage() {
     <div className="min-h-screen bg-slate-50/50 pb-12 space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-2xs space-y-1">
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Settings</h1>
-        <p className="text-slate-500 text-xs sm:text-sm">Manage your clinic, staff, integrations, and account credentials</p>
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          {profile.isStaff ? "My Security & Profile" : "Settings"}
+        </h1>
+        <p className="text-slate-500 text-xs sm:text-sm">
+          {profile.isStaff
+            ? "Manage your individual staff credentials, login password, and clinic access"
+            : "Manage your clinic, staff, integrations, and account credentials"}
+        </p>
       </div>
 
       <SettingsTabs />
 
       <div className="space-y-6 max-w-4xl">
-        {/* Account Details Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs space-y-5">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-indigo-600" />
-              Account Owner & Login Details
-            </h3>
-            {profile.role && (
-              <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {profile.role}
-              </span>
+        {/* Profile Details Card - Conditional for Staff vs Doctor */}
+        {profile.isStaff ? (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs space-y-5">
+            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-indigo-600" />
+                My Profile & Clinic Association
+              </h3>
+              {profile.role && (
+                <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  {profile.role}
+                </span>
+              )}
+            </div>
+
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+              </div>
+            ) : (
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                {/* Clinic Workspace Banner */}
+                {profile.clinicName && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                        <Building2 className="h-4.5 w-4.5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          {profile.clinicName}
+                        </p>
+                        {profile.doctorName && (
+                          <p className="text-[11px] text-slate-500">
+                            Clinic Lead: {profile.doctorName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="self-start sm:self-auto text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
+                      Assigned Workspace
+                    </span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div>
+                    <label htmlFor="staffName" className={labelClass}>Your Full Name</label>
+                    <input
+                      id="staffName"
+                      className={inputClass}
+                      value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                      placeholder="Enter your name"
+                      required
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Your display name across clinic conversations and audit logs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="staffEmail" className={labelClass}>Login Email Address</label>
+                    <div className="relative">
+                      <input
+                        id="staffEmail"
+                        className={`${inputClass} bg-slate-50 text-slate-500 cursor-not-allowed pr-8`}
+                        value={profile.email}
+                        disabled
+                      />
+                      <Lock className="h-3.5 w-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Your staff login identity. Managed by clinic administration.
+                    </p>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="staffPhone" className={labelClass}>Your Mobile Number (Optional)</label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={getPhoneParts(profile.phone).countryCode}
+                        onValueChange={(v) => {
+                          const newDialCode = COUNTRIES.find((c) => c.code === v)?.dialCode || "+91";
+                          setProfile({ ...profile, phone: newDialCode + getPhoneParts(profile.phone).number });
+                        }}
+                      >
+                        <SelectTrigger className="w-[120px] sm:w-[140px] h-10 border-slate-200 bg-white text-xs sm:text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.code} ({c.dialCode})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        id="staffPhone"
+                        type="tel"
+                        className={inputClass}
+                        value={getPhoneParts(profile.phone).number}
+                        onChange={(e) => setProfile({ ...profile, phone: getPhoneParts(profile.phone).dialCode + e.target.value.replace(/\D/g, "") })}
+                        placeholder="9876543210"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      Your personal contact number for internal clinic communication.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl px-6 text-sm font-bold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20"
+                  >
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {loading ? "Saving Details..." : "Save My Profile"}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
-
-          {profileLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs space-y-5">
+            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-indigo-600" />
+                Account Owner & Login Details
+              </h3>
+              {profile.role && (
+                <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  {profile.role}
+                </span>
+              )}
             </div>
-          ) : (
-            <form onSubmit={handleProfileUpdate} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                <div>
-                  <label htmlFor="name" className={labelClass}>Account Owner Name</label>
-                  <input
-                    id="name"
-                    className={inputClass}
-                    value={profile.name}
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    placeholder="Dr. John Doe"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Your name as the administrator / account holder of this clinic workspace.
-                  </p>
-                </div>
 
-                <div>
-                  <label htmlFor="email" className={labelClass}>Login Email Address</label>
-                  <input
-                    id="email"
-                    className={`${inputClass} bg-slate-50 text-slate-500 cursor-not-allowed`}
-                    value={profile.email}
-                    disabled
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Primary login identity. Contact support to change your registered email address.
-                  </p>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="phone" className={labelClass}>Account Login & Recovery Mobile</label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={getPhoneParts(profile.phone).countryCode}
-                      onValueChange={(v) => {
-                        const newDialCode = COUNTRIES.find(c => c.code === v)?.dialCode || "+1";
-                        setProfile({ ...profile, phone: newDialCode + getPhoneParts(profile.phone).number });
-                      }}
-                    >
-                      <SelectTrigger className="w-[120px] sm:w-[140px] h-10 border-slate-200 bg-white text-xs sm:text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COUNTRIES.map(c => (
-                          <SelectItem key={c.code} value={c.code}>{c.code} ({c.dialCode})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+              </div>
+            ) : (
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div>
+                    <label htmlFor="name" className={labelClass}>Account Owner Name</label>
                     <input
-                      id="phone"
-                      type="tel"
+                      id="name"
                       className={inputClass}
-                      value={getPhoneParts(profile.phone).number}
-                      onChange={(e) => setProfile({ ...profile, phone: getPhoneParts(profile.phone).dialCode + e.target.value.replace(/\D/g, '') })}
-                      placeholder="9876543210"
+                      value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                      placeholder="Dr. John Doe"
+                      required
                     />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Your name as the administrator / account holder of this clinic workspace.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
-                    Used strictly for account security, OTP verification, and critical billing alerts.
-                    To configure public clinic front desk numbers or doctor OPD contact routing, visit <strong>Clinic Profile</strong> or <strong>Doctors & OPD</strong>.
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex justify-end pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl px-6 text-sm font-bold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20"
-                >
-                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Saving Details..." : "Save Account Details"}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+                  <div>
+                    <label htmlFor="email" className={labelClass}>Login Email Address</label>
+                    <input
+                      id="email"
+                      className={`${inputClass} bg-slate-50 text-slate-500 cursor-not-allowed`}
+                      value={profile.email}
+                      disabled
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Primary login identity. Contact support to change your registered email address.
+                    </p>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="phone" className={labelClass}>Account Login & Recovery Mobile</label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={getPhoneParts(profile.phone).countryCode}
+                        onValueChange={(v) => {
+                          const newDialCode = COUNTRIES.find((c) => c.code === v)?.dialCode || "+91";
+                          setProfile({ ...profile, phone: newDialCode + getPhoneParts(profile.phone).number });
+                        }}
+                      >
+                        <SelectTrigger className="w-[120px] sm:w-[140px] h-10 border-slate-200 bg-white text-xs sm:text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.code} ({c.dialCode})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        id="phone"
+                        type="tel"
+                        className={inputClass}
+                        value={getPhoneParts(profile.phone).number}
+                        onChange={(e) => setProfile({ ...profile, phone: getPhoneParts(profile.phone).dialCode + e.target.value.replace(/\D/g, "") })}
+                        placeholder="9876543210"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      Used strictly for account security, OTP verification, and critical billing alerts.
+                      To configure public clinic front desk numbers or doctor OPD contact routing, visit <strong>Clinic Profile</strong> or <strong>Doctors & OPD</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl px-6 text-sm font-bold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20"
+                  >
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {loading ? "Saving Details..." : "Save Account Details"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
 
         {/* Password Management Card */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-8 shadow-xs space-y-5">
           <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
             <Key className="h-4 w-4 text-indigo-600" />
-            <h3 className="text-sm font-bold text-slate-900">Password Management</h3>
+            <h3 className="text-sm font-bold text-slate-900">
+              {profile.isStaff ? "Change My Password" : "Password Management"}
+            </h3>
           </div>
           <p className="text-xs text-slate-500">
-            Ensure your account is protected with a secure, 8+ character password.
+            {profile.isStaff
+              ? "Update your individual login password for this clinic workspace. Does not affect clinic owner or other staff members."
+              : "Ensure your account is protected with a secure, 8+ character password."}
           </p>
 
           <form onSubmit={handlePasswordChange} className="space-y-5">
@@ -301,7 +453,7 @@ export default function AccountAndSecurityPage() {
                 className="w-full sm:w-auto h-10 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-xl px-6 text-sm font-bold flex items-center justify-center gap-2 transition"
               >
                 {passwordLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {passwordLoading ? "Updating..." : "Update Password"}
+                {passwordLoading ? "Updating..." : profile.isStaff ? "Update My Password" : "Update Password"}
               </button>
             </div>
           </form>
