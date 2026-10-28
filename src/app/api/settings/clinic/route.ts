@@ -48,10 +48,18 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    let doctorId = session.user.id;
-    const role = (session.user as any).role;
+    let doctorId = session.user.doctorId || session.user.id;
+    const role = (session.user as any).role || "";
 
-    if (role === "RECEPTIONIST" || role === "STAFF") {
+    // Subordinate staff cannot alter clinic operating hours or settings
+    if (["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      return NextResponse.json(
+        { error: "Forbidden: Access restricted to clinic managers and doctors" },
+        { status: 403 }
+      );
+    }
+
+    if (role === "MANAGER") {
       const staff = await prisma.staffMember.findUnique({
         where: { id: session.user.id },
         select: { doctorId: true },

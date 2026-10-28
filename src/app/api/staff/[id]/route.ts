@@ -3,6 +3,10 @@ import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
+// Strict role whitelists for privilege escalation defense
+const MANAGER_ALLOWED_STAFF_ROLES = ["RECEPTIONIST", "STAFF", "NURSE"];
+const DOCTOR_ALLOWED_STAFF_ROLES = ["RECEPTIONIST", "STAFF", "NURSE", "MANAGER"];
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -27,9 +31,46 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { email, password, name, role, isActive, phone } = await req.json()
     
-    // Prevent privilege escalation: managers cannot elevate staff to ADMIN
-    if (currentRole === "MANAGER" && (role === "ADMIN" || role === "SUPERADMIN")) {
-      return NextResponse.json({ error: "Only the clinic doctor can assign ADMIN role" }, { status: 403 })
+    // Strict Privilege Escalation Protection:
+    // 1. If caller is a MANAGER:
+    if (currentRole === "MANAGER") {
+      // A manager cannot alter their own role or escalate themselves
+      if (id === session.user.id && role !== undefined && role !== existingStaff.role) {
+        return NextResponse.json(
+          { error: "Forbidden: Managers cannot change their own access level or role." },
+          { status: 403 }
+        )
+      }
+      // A manager cannot edit or modify another manager's account
+      if (existingStaff.role === "MANAGER" && id !== session.user.id) {
+        return NextResponse.json(
+          { error: "Forbidden: Managers cannot modify other manager accounts. Only the clinic doctor can modify manager accounts." },
+          { status: 403 }
+        )
+      }
+      // A manager can only assign subordinate roles (RECEPTIONIST, STAFF, NURSE)
+      if (role !== undefined && !MANAGER_ALLOWED_STAFF_ROLES.includes(role)) {
+        return NextResponse.json(
+          { error: "Forbidden: Managers can only assign Receptionist, Staff, or Nurse roles." },
+          { status: 403 }
+        )
+      }
+    }
+
+    // 2. If caller is a DOCTOR:
+    if (currentRole === "DOCTOR") {
+      // A doctor can only assign clinic staff roles, never ADMIN or SUPERADMIN
+      if (role !== undefined && !DOCTOR_ALLOWED_STAFF_ROLES.includes(role)) {
+        return NextResponse.json(
+          { error: "Forbidden: Doctors can only assign Receptionist, Staff, Nurse, or Manager roles. Platform Admin and Superadmin roles cannot be assigned." },
+          { status: 403 }
+        )
+      }
+    }
+
+    // 3. Fallback for any other unauthorized role
+    if (!["MANAGER", "DOCTOR"].includes(currentRole)) {
+      return NextResponse.json({ error: "Forbidden: Unauthorized to update staff." }, { status: 403 })
     }
 
     // Prepare update data
@@ -91,6 +132,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     if (!existingStaff || existingStaff.doctorId !== doctorId) {
       return NextResponse.json({ error: "Staff member not found or access denied" }, { status: 404 })
+    }
+
+    // Strict Privilege Escalation Protection:
+    // A Manager cannot delete another Manager account (only Doctor can remove a manager)
+    if (currentRole === "MANAGER" && existingStaff.role === "MANAGER") {
+      return NextResponse.json(
+        { error: "Forbidden: Managers cannot remove other manager accounts. Only the clinic doctor can remove a manager." },
+        { status: 403 }
+      )
     }
 
     await prisma.staffMember.delete({

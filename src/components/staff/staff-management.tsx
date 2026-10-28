@@ -13,7 +13,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Plus, ShieldAlert, User, Shield, AlertTriangle, Pen, Trash2, ShieldOff, ShieldCheck } from "lucide-react"
 
-export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
+export function StaffManagement({ 
+  initialStaff,
+  currentUserRole = "DOCTOR",
+  currentUserId = "",
+}: { 
+  initialStaff: any[]
+  currentUserRole?: string
+  currentUserId?: string
+}) {
   const { toast } = useToast()
   const [staff, setStaff] = useState(initialStaff)
   const [loading, setLoading] = useState(false)
@@ -99,6 +107,14 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
   }
 
   const handleToggleStatus = async (staffMember: any) => {
+    if (staffMember.id === currentUserId) {
+      toast({ title: "Action not allowed", description: "You cannot suspend your own account.", variant: "destructive" })
+      return
+    }
+    if (currentUserRole === "MANAGER" && staffMember.role === "MANAGER") {
+      toast({ title: "Action not allowed", description: "Only clinic doctors can change the status of manager accounts.", variant: "destructive" })
+      return
+    }
     try {
       const newStatus = !staffMember.isActive
       const res = await fetch(`/api/staff/${staffMember.id}`, {
@@ -118,6 +134,14 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
 
   const handleDelete = async () => {
     if (!selectedStaff) return
+    if (selectedStaff.id === currentUserId) {
+      toast({ title: "Action not allowed", description: "You cannot delete your own account.", variant: "destructive" })
+      return
+    }
+    if (currentUserRole === "MANAGER" && selectedStaff.role === "MANAGER") {
+      toast({ title: "Action not allowed", description: "Only clinic doctors can remove manager accounts.", variant: "destructive" })
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/staff/${selectedStaff.id}`, {
@@ -224,20 +248,32 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEdit(s)} className="cursor-pointer">
-                              <Pen className="mr-2 h-4 w-4 text-gray-500" /> Edit Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleStatus(s)} className="cursor-pointer">
-                              {s.isActive ? (
-                                <><ShieldOff className="mr-2 h-4 w-4 text-amber-500" /> Suspend Access</>
-                              ) : (
-                                <><ShieldCheck className="mr-2 h-4 w-4 text-green-500" /> Restore Access</>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openDelete(s)} className="cursor-pointer text-red-600 focus:text-red-700">
-                              <Trash2 className="mr-2 h-4 w-4" /> Remove permanently
-                            </DropdownMenuItem>
+                            {currentUserRole === "MANAGER" && s.role === "MANAGER" && s.id !== currentUserId ? (
+                              <DropdownMenuItem disabled className="text-gray-400 cursor-not-allowed text-xs">
+                                <Shield className="mr-2 h-4 w-4 text-gray-400" /> Managed by Clinic Owner
+                              </DropdownMenuItem>
+                            ) : (
+                              <>
+                                <DropdownMenuItem onClick={() => openEdit(s)} className="cursor-pointer">
+                                  <Pen className="mr-2 h-4 w-4 text-gray-500" /> Edit Details
+                                </DropdownMenuItem>
+                                {s.id !== currentUserId && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(s)} className="cursor-pointer">
+                                      {s.isActive ? (
+                                        <><ShieldOff className="mr-2 h-4 w-4 text-amber-500" /> Suspend Access</>
+                                      ) : (
+                                        <><ShieldCheck className="mr-2 h-4 w-4 text-green-500" /> Restore Access</>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => openDelete(s)} className="cursor-pointer text-red-600 focus:text-red-700">
+                                      <Trash2 className="mr-2 h-4 w-4" /> Remove permanently
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -280,7 +316,9 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
                   <SelectContent>
                     <SelectItem value="RECEPTIONIST">Receptionist (Appointments, Chat)</SelectItem>
                     <SelectItem value="NURSE">Nurse (Patients, Reports)</SelectItem>
-                    <SelectItem value="MANAGER">Manager (Full Access)</SelectItem>
+                    {currentUserRole !== "MANAGER" && (
+                      <SelectItem value="MANAGER">Manager (Full Operational Access)</SelectItem>
+                    )}
                     <SelectItem value="STAFF">Standard Staff</SelectItem>
                   </SelectContent>
                 </Select>
@@ -301,7 +339,7 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col p-0 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200/90 overflow-hidden">
           <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 bg-white">
             <DialogTitle className="text-lg font-bold text-slate-900">Edit Staff Details</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">Update the role or name of {selectedStaff?.name}.</DialogDescription>
+            <DialogDescription className="text-xs text-slate-500 mt-1">Update the role or details of {selectedStaff?.name}.</DialogDescription>
           </div>
           <form id="edit-staff-form" onSubmit={handleEdit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -311,17 +349,30 @@ export function StaffManagement({ initialStaff }: { initialStaff: any[] }) {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">Role</Label>
-                <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
-                  <SelectTrigger className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
-                    <SelectItem value="NURSE">Nurse</SelectItem>
-                    <SelectItem value="MANAGER">Manager</SelectItem>
-                    <SelectItem value="STAFF">Standard Staff</SelectItem>
-                  </SelectContent>
-                </Select>
+                {selectedStaff?.id === currentUserId ? (
+                  <div className="space-y-1">
+                    <Input 
+                      value={selectedStaff.role} 
+                      disabled 
+                      className="h-11 text-sm rounded-xl border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed font-medium" 
+                    />
+                    <p className="text-[11px] text-amber-700 font-medium">Your access level is managed by the clinic account owner.</p>
+                  </div>
+                ) : (
+                  <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                    <SelectTrigger className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
+                      <SelectItem value="NURSE">Nurse</SelectItem>
+                      {currentUserRole !== "MANAGER" && (
+                        <SelectItem value="MANAGER">Manager</SelectItem>
+                      )}
+                      <SelectItem value="STAFF">Standard Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">Reset Password (Optional)</Label>

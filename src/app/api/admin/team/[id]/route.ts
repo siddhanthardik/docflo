@@ -14,6 +14,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { role, isActive, password, kycStatus } = body;
 
+    const targetUser = await prisma.platformUser.findUnique({
+      where: { id: resolvedParams.id },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: "Team member not found" }, { status: 404 });
+    }
+
+    // Privilege escalation protection:
+    // Only a SUPERADMIN can assign the SUPERADMIN role or modify a SUPERADMIN user
+    if (session.user?.role !== "SUPERADMIN") {
+      if (role === "SUPERADMIN") {
+        return NextResponse.json({ error: "Forbidden: Only Superadmins can assign the Superadmin role." }, { status: 403 });
+      }
+      if (targetUser.role === "SUPERADMIN") {
+        return NextResponse.json({ error: "Forbidden: Only Superadmins can modify Superadmin accounts." }, { status: 403 });
+      }
+    }
+
     const dataToUpdate: any = {};
     if (role) dataToUpdate.role = role;
     if (isActive !== undefined) dataToUpdate.isActive = isActive;

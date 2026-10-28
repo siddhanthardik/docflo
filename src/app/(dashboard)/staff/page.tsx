@@ -42,7 +42,11 @@ export default async function StaffPage() {
 
       {/* Main Content */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <StaffManagement initialStaff={staff} />
+        <StaffManagement 
+          initialStaff={staff} 
+          currentUserRole={session.user.role || "DOCTOR"}
+          currentUserId={session.user.id}
+        />
       </div>
     </div>
   )

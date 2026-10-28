@@ -31,6 +31,10 @@ export async function GET() {
   return NextResponse.json(staff)
 }
 
+// Strict role whitelists for privilege escalation defense
+const MANAGER_ALLOWED_STAFF_ROLES = ["RECEPTIONIST", "STAFF", "NURSE"];
+const DOCTOR_ALLOWED_STAFF_ROLES = ["RECEPTIONIST", "STAFF", "NURSE", "MANAGER"];
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -43,9 +47,32 @@ export async function POST(req: Request) {
   const { email, password, name, role } = await req.json()
   const cleanEmail = email.trim().toLowerCase()
 
-  // Prevent privilege escalation: managers cannot create ADMIN accounts
-  if (currentRole === "MANAGER" && (role === "ADMIN" || role === "SUPERADMIN")) {
-    return NextResponse.json({ error: "Only the clinic doctor can create ADMIN staff members" }, { status: 403 })
+  // Strict Privilege Escalation Protection:
+  // 1. Managers can only create subordinate staff (RECEPTIONIST, STAFF, NURSE).
+  //    Managers CANNOT create other Managers, Doctors, Admins, or Superadmins.
+  if (currentRole === "MANAGER") {
+    if (!role || !MANAGER_ALLOWED_STAFF_ROLES.includes(role)) {
+      return NextResponse.json(
+        { error: "Forbidden: Managers can only create Receptionist, Staff, or Nurse accounts." },
+        { status: 403 }
+      )
+    }
+  }
+
+  // 2. Doctors can only create clinic staff (RECEPTIONIST, STAFF, NURSE, MANAGER).
+  //    Doctors CANNOT create Platform Admin or Superadmin accounts.
+  if (currentRole === "DOCTOR") {
+    if (!role || !DOCTOR_ALLOWED_STAFF_ROLES.includes(role)) {
+      return NextResponse.json(
+        { error: "Forbidden: Doctors can only assign Receptionist, Staff, Nurse, or Manager roles. Platform Admin and Superadmin roles cannot be created." },
+        { status: 403 }
+      )
+    }
+  }
+
+  // 3. Fallback for unauthorized roles
+  if (!["MANAGER", "DOCTOR"].includes(currentRole)) {
+    return NextResponse.json({ error: "Forbidden: Unauthorized role creation." }, { status: 403 })
   }
 
   // Check if email already belongs to a Doctor

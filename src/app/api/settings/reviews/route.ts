@@ -41,9 +41,16 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { doctorId } = await getSessionData();
+    const { doctorId, role } = await getSessionData();
     if (!doctorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      return NextResponse.json(
+        { error: "Forbidden: Access restricted to clinic managers and doctors" },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();

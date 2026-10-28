@@ -159,6 +159,14 @@ export async function PUT(req: Request) {
     });
 
     if (staffMember) {
+      // Prevent privilege escalation: staff cannot alter their role
+      if (body.role !== undefined && body.role !== staffMember.role) {
+        return NextResponse.json(
+          { error: "Forbidden: Staff members cannot alter their own access level or role." },
+          { status: 403 }
+        );
+      }
+
       const {
         name,
         phone,
@@ -285,6 +293,14 @@ export async function PUT(req: Request) {
 
     if (!doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+    }
+
+    // Prevent privilege escalation: doctors cannot escalate to ADMIN or SUPERADMIN
+    if (body.role !== undefined && body.role !== doctor.role) {
+      return NextResponse.json(
+        { error: "Forbidden: Doctors cannot escalate or alter their account role." },
+        { status: 403 }
+      );
     }
 
     const {
