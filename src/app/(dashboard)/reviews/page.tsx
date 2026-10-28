@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, MessageSquare, CheckCircle, Clock, Search, ExternalLink, Bot, ThumbsUp, Send, Sparkles } from "lucide-react";
@@ -46,7 +48,17 @@ function formatTimeAgo(dateStr: string) {
 }
 
 export default function ReviewsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const { connected, activeLocation, activeLocationId, isLoading: contextLoading, refresh } = useLocationContext();
+
+  useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      router.replace("/dashboard");
+    }
+  }, [session, router]);
+
   const [reviews, setReviews] = useState<any[]>(null as any);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);

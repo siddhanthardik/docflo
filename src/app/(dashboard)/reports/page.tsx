@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Users, Calendar, Star, TrendingUp, Eye, MousePointerClick, Phone, Navigation, UserPlus, Search, Loader2, BarChart3, Bot, Clock, MessageSquare, ShieldAlert, CreditCard, Download, Printer, DollarSign
 } from "lucide-react";
@@ -17,7 +19,16 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
 type TabKey = "operations" | "financial" | "patients" | "reviews" | "automation";
 
 export default function ReportsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      router.replace("/dashboard");
+    }
+  }, [session, router]);
   
   const getLocalYMD = (date: Date) => {
     const year = date.getFullYear();
