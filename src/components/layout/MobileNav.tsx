@@ -155,23 +155,24 @@ export function MobileNav() {
                 </Link>
               )}
 
-              {allNavItems
-                .filter((item) => {
-                  const role = session?.user?.role || "DOCTOR";
-                  if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+              {(() => {
+                const role = session?.user?.role || "DOCTOR";
+                return allNavItems
+                  .filter((item) => {
+                    if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+                      return true;
+                    }
+                    if (role === "MANAGER") {
+                      return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/reviews", "/reports", "/settings"].includes(item.href);
+                    }
+                    if (["RECEPTIONIST", "STAFF"].includes(role)) {
+                      return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/settings"].includes(item.href);
+                    }
+                    if (role === "NURSE") {
+                      return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/settings"].includes(item.href);
+                    }
                     return true;
-                  }
-                  if (role === "MANAGER") {
-                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/reviews", "/reports", "/settings"].includes(item.href);
-                  }
-                  if (["RECEPTIONIST", "STAFF"].includes(role)) {
-                    return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing"].includes(item.href);
-                  }
-                  if (role === "NURSE") {
-                    return ["/dashboard", "/whatsapp", "/patients", "/appointments"].includes(item.href);
-                  }
-                  return true;
-                })
+                  })
                 .map((item) => {
                 const isActive =
                   item.href === "/dashboard"
@@ -204,10 +205,15 @@ export function MobileNav() {
                     )}
                   >
                     <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-slate-400")} />
-                    <span>{item.name}</span>
+                    <span>
+                      {item.href === "/settings" && ["RECEPTIONIST", "NURSE", "STAFF"].includes(role)
+                        ? "My Security"
+                        : item.name}
+                    </span>
                   </Link>
                 );
-              })}
+              });
+            })()}
             </div>
 
             {/* User profile & Sign Out footer */}

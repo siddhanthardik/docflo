@@ -43,6 +43,19 @@ export async function POST(req: Request) {
   const { email, password, name, role } = await req.json()
   const cleanEmail = email.trim().toLowerCase()
 
+  // Prevent privilege escalation: managers cannot create ADMIN accounts
+  if (currentRole === "MANAGER" && (role === "ADMIN" || role === "SUPERADMIN")) {
+    return NextResponse.json({ error: "Only the clinic doctor can create ADMIN staff members" }, { status: 403 })
+  }
+
+  // Check if email already belongs to a Doctor
+  const existingDoctor = await prisma.doctor.findFirst({
+    where: { email: { equals: cleanEmail, mode: "insensitive" } }
+  })
+  if (existingDoctor) {
+    return NextResponse.json({ error: "This email is already registered as a clinic account owner" }, { status: 409 })
+  }
+
   // Check if staff email already exists
   const existingStaff = await prisma.staffMember.findUnique({
     where: { email: cleanEmail }

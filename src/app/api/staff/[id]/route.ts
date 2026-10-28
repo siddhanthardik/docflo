@@ -27,9 +27,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { email, password, name, role, isActive, phone } = await req.json()
     
+    // Prevent privilege escalation: managers cannot elevate staff to ADMIN
+    if (currentRole === "MANAGER" && (role === "ADMIN" || role === "SUPERADMIN")) {
+      return NextResponse.json({ error: "Only the clinic doctor can assign ADMIN role" }, { status: 403 })
+    }
+
     // Prepare update data
     const dataToUpdate: any = {}
-    if (email !== undefined) dataToUpdate.email = email.trim().toLowerCase()
+    if (email !== undefined) {
+      const cleanEmail = email.trim().toLowerCase()
+      // Check if email belongs to Doctor
+      const existingDoctor = await prisma.doctor.findFirst({
+        where: { email: { equals: cleanEmail, mode: "insensitive" } }
+      })
+      if (existingDoctor) {
+        return NextResponse.json({ error: "This email is already registered as a clinic account owner" }, { status: 409 })
+      }
+      dataToUpdate.email = cleanEmail
+    }
     if (name !== undefined) dataToUpdate.name = name.trim()
     if (role !== undefined) dataToUpdate.role = role
     if (isActive !== undefined) dataToUpdate.isActive = isActive
@@ -64,6 +79,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   try {
     const { id } = await params;
     const doctorId = session.user.doctorId || session.user.id;
+
+    // Prevent staff member from deleting their own account
+    if (id === session.user.id) {
+      return NextResponse.json({ error: "You cannot delete your own staff account" }, { status: 400 })
+    }
 
     const existingStaff = await prisma.staffMember.findUnique({
       where: { id },
