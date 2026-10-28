@@ -10,7 +10,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const block = await entitlementGuard(session.user.id, request, { module: "GROWTH_SEO" });
+    const doctorId = (session.user as any).doctorId || session.user.id;
+
+    const block = await entitlementGuard(doctorId, request, { module: "GROWTH_SEO" });
     if (block) return block;
 
     const { searchParams } = new URL(request.url);
@@ -38,8 +40,6 @@ export async function GET(request: Request) {
     }
     
     const fetchedMonth = `${startDate.getFullYear()}-${startDate.getMonth() + 1}`;
-
-    const doctorId = session.user.id;
 
     const account = await prisma.gbpAccount.findFirst({
       where: { 

@@ -127,11 +127,8 @@ export function Sidebar() {
         {navigationItems
           .filter((item) => {
             const role = session?.user?.role || "DOCTOR";
-            if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+            if (["DOCTOR", "ADMIN", "SUPERADMIN", "MANAGER"].includes(role) || isPlatformRole(role)) {
               return true;
-            }
-            if (role === "MANAGER") {
-              return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/reviews", "/reports"].includes(item.href);
             }
             if (["RECEPTIONIST", "STAFF"].includes(role)) {
               return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing"].includes(item.href);

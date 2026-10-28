@@ -159,11 +159,8 @@ export function MobileNav() {
                 const role = session?.user?.role || "DOCTOR";
                 return allNavItems
                   .filter((item) => {
-                    if (["DOCTOR", "ADMIN", "SUPERADMIN"].includes(role) || isPlatformRole(role)) {
+                    if (["DOCTOR", "ADMIN", "SUPERADMIN", "MANAGER"].includes(role) || isPlatformRole(role)) {
                       return true;
-                    }
-                    if (role === "MANAGER") {
-                      return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/reviews", "/reports", "/settings"].includes(item.href);
                     }
                     if (["RECEPTIONIST", "STAFF"].includes(role)) {
                       return ["/dashboard", "/whatsapp", "/patients", "/appointments", "/billing", "/settings"].includes(item.href);

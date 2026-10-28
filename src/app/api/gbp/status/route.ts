@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ connected: false }, { status: 401 });
     }
 
-    const doctorId = session.user.id;
+    const doctorId = (session.user as any).doctorId || session.user.id;
 
     const account = await prisma.gbpAccount.findFirst({
       where: { doctorId },
