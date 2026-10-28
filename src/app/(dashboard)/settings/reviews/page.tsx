@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -23,6 +25,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function ReviewsAndMessagingSettingsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [activePreviewTab, setActivePreviewTab] = useState<"survey" | "reminder" | "confirmation" | "invoice">("survey");
@@ -53,8 +57,13 @@ export default function ReviewsAndMessagingSettingsPage() {
   });
 
   useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      router.replace("/settings");
+      return;
+    }
     fetchSettings();
-  }, []);
+  }, [session, router]);
 
   const fetchSettings = async () => {
     try {

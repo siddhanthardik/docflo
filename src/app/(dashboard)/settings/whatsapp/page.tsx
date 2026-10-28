@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Loader2, CheckCircle2, PowerOff } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 export default function WhatsAppSettingsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [whatsappLoading, setWhatsappLoading] = useState(true);
   const [waStatus, setWaStatus] = useState<"CONNECTING" | "SCAN_QR" | "CONNECTED" | "DISCONNECTED">("DISCONNECTED");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -14,9 +18,14 @@ export default function WhatsAppSettingsPage() {
   const [connectingElapsed, setConnectingElapsed] = useState(0);
 
   useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      router.replace("/settings");
+      return;
+    }
     // Initial fetch triggers connect if not already connected
     fetchWhatsAppConfig(true);
-  }, []);
+  }, [session, router]);
 
   // Track elapsed time when in CONNECTING state
   useEffect(() => {

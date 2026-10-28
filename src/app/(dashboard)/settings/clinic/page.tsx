@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, UploadCloud, X, Lock, AlertTriangle, MapPin, Building2, Phone, Clock, Sun, Moon, Coffee, Sparkles } from "lucide-react";
@@ -11,6 +12,7 @@ import { getIndianStates, getCitiesByState, getPincodesByCity, lookupPincode } f
 import { GoogleTimePicker } from "@/components/ui/google-time-picker";
 
 export default function SettingsClinicPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +130,10 @@ export default function SettingsClinicPage() {
       const response = await fetch("/api/settings/profile");
       if (response.ok) {
         const data = await response.json();
+        if (data.isStaff && !["MANAGER", "ADMIN"].includes(data.role)) {
+          router.replace("/settings");
+          return;
+        }
         const initialCountry = data.country || "India";
         const initialState = data.state || "";
         const initialCity = data.city || "";

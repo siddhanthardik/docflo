@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Loader2, MessageCircle, CheckCircle2, ArrowRight, XCircle, Store, AlertTriangle } from "lucide-react";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { toast } from "@/components/ui/use-toast";
@@ -16,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { useLocationContext } from "@/contexts/LocationContext";
 
 export default function IntegrationsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [waStatus, setWaStatus] = useState<string>("Not Connected");
 
@@ -31,8 +35,13 @@ export default function IntegrationsPage() {
   const { refresh: refreshLocationContext } = useLocationContext();
 
   useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE", "MANAGER"].includes(role)) {
+      router.replace("/settings");
+      return;
+    }
     fetchIntegrations();
-  }, []);
+  }, [session, router]);
 
   const fetchIntegrations = async () => {
     try {

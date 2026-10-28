@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { PractitionerList } from "@/components/practitioners/practitioner-list";
 import { Loader2 } from "lucide-react";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 export default function PractitionersPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [practitioners, setPractitioners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +29,13 @@ export default function PractitionersPage() {
   };
 
   useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (role && ["RECEPTIONIST", "STAFF", "NURSE"].includes(role)) {
+      router.replace("/settings");
+      return;
+    }
     fetchPractitioners();
-  }, []);
+  }, [session, router]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-12 space-y-6 max-w-7xl mx-auto">
