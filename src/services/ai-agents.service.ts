@@ -6,15 +6,12 @@ import { memoryCache } from "@/lib/memory-cache";
 import { resolveClinicTimezone } from "@/lib/timezone";
 import { ReviewReplyService } from "@/services/ai/review-reply.service";
 
-// Prioritized active Gemini models: fast production models with zero thinking latency
+// Active Google Gemini models recommended for production (zero thinking latency)
 const CANDIDATE_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
+  "gemini-3.8-flash",
   "gemini-3.7-flash",
   "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-1.5-flash"
+  "gemini-3.5-flash-lite"
 ];
 
 import { formatDoctorDisplayName } from "@/lib/utils";
@@ -1145,16 +1142,16 @@ export async function generateWithFallback(
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       for (const modelName of CANDIDATE_MODELS) {
         try {
-          const isGemini3x = modelName.includes("3.7") || modelName.includes("3.6") || modelName.includes("3.5");
+          const isGemini3x = modelName.includes("3.8") || modelName.includes("3.7") || modelName.includes("3.6") || modelName.includes("3.5");
           const configObj: any = {
             maxOutputTokens: 2048,
           };
-          // Only pass temperature for models that support it
+          // Omit temperature for Gemini 3.x models to prevent 400 parameter deprecation errors
           if (!isGemini3x) {
             configObj.temperature = 0.3;
           }
           // Zero thinking budget for immediate receptionist responses without thinking latency
-          if (modelName.includes("3.7") || modelName.includes("2.5")) {
+          if (modelName.includes("3.8") || modelName.includes("3.7") || modelName.includes("3.6")) {
             configObj.thinkingConfig = {
               thinkingBudget: 0
             };
