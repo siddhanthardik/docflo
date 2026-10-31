@@ -94,6 +94,47 @@ class WhatsAppManager {
   private lastAiReplyTime: Map<string, number> = new Map(); // key -> timestamp
   private activeAiInFlight: Set<string> = new Set(); // "doctorId:phoneLast10" to prevent concurrent duplicate AI runs
 
+  // Human Takeover tracking: key `${doctorId}:${phoneLast10}` -> expiry timestamp
+  private humanTakeoverUntil: Map<string, number> = new Map();
+
+  recordHumanTakeover(doctorId: string, rawPhone: string, durationMinutes: number = 30) {
+    if (!rawPhone) return;
+    const digits = rawPhone.replace(/\D/g, '');
+    const last10 = digits.slice(-10);
+    if (last10.length === 10) {
+      const key = `${doctorId}:${last10}`;
+      const until = Date.now() + durationMinutes * 60 * 1000;
+      this.humanTakeoverUntil.set(key, until);
+      console.log(`[WhatsAppManager] 🤝 Human takeover active for ${key} until ${new Date(until).toLocaleTimeString()}`);
+    }
+  }
+
+  isUnderHumanTakeover(doctorId: string, rawPhone: string): boolean {
+    if (!rawPhone) return false;
+    const digits = rawPhone.replace(/\D/g, '');
+    const last10 = digits.slice(-10);
+    if (last10.length !== 10) return false;
+    const key = `${doctorId}:${last10}`;
+    const expiry = this.humanTakeoverUntil.get(key);
+    if (!expiry) return false;
+    if (Date.now() > expiry) {
+      this.humanTakeoverUntil.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  clearHumanTakeover(doctorId: string, rawPhone: string) {
+    if (!rawPhone) return;
+    const digits = rawPhone.replace(/\D/g, '');
+    const last10 = digits.slice(-10);
+    if (last10.length === 10) {
+      const key = `${doctorId}:${last10}`;
+      this.humanTakeoverUntil.delete(key);
+      console.log(`[WhatsAppManager] ⚡ Human takeover cleared for ${key}`);
+    }
+  }
+
   // Checks if a phone number belongs to ANY clinic, doctor, or staff registered on Gyrex
   async isPlatformClinicPhone(rawPhone: string, currentDoctorId: string): Promise<boolean> {
     if (!rawPhone) return false;
@@ -685,7 +726,14 @@ class WhatsAppManager {
       if (m.type !== 'notify') return;
       
       for (const msg of m.messages) {
-        if (!msg.message || msg.key.fromMe) continue;
+        if (msg.key.fromMe) {
+          const recipientJid = msg.key.remoteJid;
+          if (recipientJid && !recipientJid.includes('@g.us') && !recipientJid.includes('@broadcast') && !recipientJid.includes('@newsletter')) {
+            this.recordHumanTakeover(doctorId, recipientJid, 30);
+          }
+          continue;
+        }
+        if (!msg.message) continue;
 
         const msgId = msg.key.id;
         if (this.isDuplicateMessage(msgId)) {
@@ -1008,9 +1056,13 @@ class WhatsAppManager {
 
             const isStaff = !!matchedPractitioner || !!matchedStaff || !!isOwnerMatch;
             const staffName = matchedPractitioner?.name || matchedStaff?.name || doctorInfo?.name || "Doctor";
+            const isDiagnosticStaff = Boolean(
+              matchedStaff && 
+              /lab|pathology|diagnostic|radiology|scan|imaging|sample/i.test(matchedStaff.name)
+            );
 
             if (isStaff) {
-              console.log(`[WhatsAppManager] 🩺 Recognized DOCTOR/STAFF: "${staffName}" (${patientPhone}). Routing to Staff Assistant AI.`);
+              console.log(`[WhatsAppManager] 🩺 Recognized DOCTOR/STAFF: "${staffName}" (${patientPhone})${isDiagnosticStaff ? ' [Diagnostic Partner]' : ''}. Routing to Staff Assistant AI.`);
             } else {
               console.log(`[WhatsAppManager] 👤 Recognized PATIENT: ${patientPhone}. Routing to Patient Receptionist AI.`);
             }
@@ -1147,13 +1199,66 @@ class WhatsAppManager {
               }
             });
 
-            // 🛡️ UPSTREAM MULTI-CLASS INTENT GATEKEEPER (Pharma, CME, Academic Spam, Personal, OTPs)
+            // 🛡️ 1. STAFF MEDIA & REPORT UPLOAD SILENCE FILTER
+            // When recognized clinic staff or doctor uploads or shares a report, document, or media file,
+            // silently ingest into the chat history without triggering Staff Assistant AI or consuming tokens.
+            if (isStaff && (mediaAttachment || docMsg || imgMsg)) {
+              console.log(`[WhatsAppManager] 🩺 Staff member "${staffName}" (${patientPhone}) shared media/document. Stored in chat. Bypassing AI agents (0 tokens spent).`);
+              return;
+            }
+
+            // 🛡️ 1b. DIAGNOSTIC LAB / PARTNER SILENT FILTER
+            // When messages or reports arrive from a registered diagnostic lab, pathology center, or scan partner:
+            // silently ingest into conversation without triggering AI Receptionist or consuming tokens.
+            if (isDiagnosticStaff) {
+              console.log(`[WhatsAppManager] 🧪 Recognized DIAGNOSTIC PARTNER / LAB: "${staffName}" (${patientPhone}). Stored in chat history. Suppressing AI auto-replies (0 tokens spent).`);
+              return;
+            }
+
+            // 🛡️ 2. ZERO-TOKEN DIAGNOSTIC REPORT / DOCUMENT INGESTION FILTER
+            // When a patient or external contact shares a diagnostic document (PDF, scan, medical report)
+            // without an explicit booking intent (e.g. appointment, book, slot, timing):
+            // - Bypass multimodal vision OCR (0 tokens spent)
+            // - Acknowledge receipt with the clinic consultation guidance message:
+            //   "Namaste 🙏 Thank you. Your diagnostic report has been received. Please present this report to Dr. {DoctorName} during your consultation."
+            const hasMediaReport = Boolean(mediaAttachment) || Boolean(docMsg) || Boolean(imgMsg);
+            if (hasMediaReport && !isStaff) {
+              const cleanCaption = textMessage
+                .replace(/\[Patient shared diagnostic document:[^\]]*\]/gi, '')
+                .replace(/\[Patient shared a medical image\/photo\]/gi, '')
+                .trim();
+
+              const isExplicitBookingIntent = /(?:appointment|book|schedule|visit|slot|timing|fees?|available|milan|dikhana|dikha sakte|checkup)/i.test(cleanCaption);
+
+              if (!isExplicitBookingIntent) {
+                console.log(`[WhatsAppManager] 📄 Diagnostic document/report received from ${patientPhone} without booking intent. Triggering Zero-Token Consultation Confirmation.`);
+
+                const rawDocName = doctorInfo?.name || "the Doctor";
+                const { formatDoctorDisplayName } = await import("@/lib/utils");
+                const doctorDisplayName = formatDoctorDisplayName(rawDocName);
+
+                const reportReply = `Namaste 🙏 Thank you. Your diagnostic report has been received. Please present this report to ${doctorDisplayName} during your consultation.`;
+
+                await this.sendOutboundPatientMessage(sock, doctorId, patientPhone, reportReply).catch((err) => {
+                  console.warn(`[WhatsAppManager] Failed to send report confirmation to ${patientPhone}:`, err);
+                });
+
+                return;
+              }
+            }
+
+            // 🛡️ UPSTREAM MULTI-CLASS INTENT GATEKEEPER (Pharma, CME, Academic Spam, Personal, OTPs, Diagnostic Lab Alerts)
             if (!isStaff) {
               const { classifyWhatsAppMessage } = await import("@/lib/whatsapp-intent-classifier");
               const classification = classifyWhatsAppMessage(textMessage, doctorInfo?.name, patientPhone);
 
               if (classification.category === "TRANSACTIONAL_OTP" || classification.category === "ACADEMIC_PUBLISHING_SPAM") {
                 console.log(`[WhatsAppManager] 🛡️ Ignored ${classification.category} from ${patientPhone} (${classification.reason}). 0 tokens spent.`);
+                return;
+              }
+
+              if (classification.category === "DIAGNOSTIC_LAB_NOTICE") {
+                console.log(`[WhatsAppManager] 🧪 Diagnostic lab notification detected from ${patientPhone} (${classification.reason}). Stored in chat history. Suppressing AI auto-replies (0 tokens spent).`);
                 return;
               }
 
@@ -1234,6 +1339,28 @@ class WhatsAppManager {
             const isYes = /^(yes|y|yeah|yep|sure|absolutely|of course|great|good|ok|okay|thx|thanks|1|👍|😊|🌟|❤️)$/i.test(textLower) || 
               textLower === "yes" || textLower === "yeah" || textLower === "sure" || textLower === "ok" || textLower === "okay";
             const isNo = /^(no|n|nope|nah|never|bad|2)$/i.test(textLower) || textLower === "no" || textLower === "bad" || textLower === "poor";
+
+            // 🛡️ SMART INTENT-AWARE HUMAN TAKEOVER (Auto-Mute with Booking Wake-Up)
+            // If clinic staff or doctor was recently chatting manually with this patient (within 30 mins):
+            const isMemoryTakeover = this.isUnderHumanTakeover(doctorId, patientPhone);
+            const isDbTakeover = Boolean(
+              lastOutgoingMsg &&
+              !isLastMsgFromAI &&
+              (messageDate.getTime() - new Date(lastOutgoingMsg.createdAt).getTime() < 30 * 60 * 1000)
+            );
+            const isHumanTakeoverActive = (isMemoryTakeover || isDbTakeover) && !isStaff && !isSurveyContext && !isConfirmationContext;
+
+            if (isHumanTakeoverActive) {
+              const explicitBookingIntent = /(?:appointment|book|schedule|visit|slot|timing|time\s*slot|available|milan|dikhana|dikha sakte|checkup|aana chahta|fees?|charges?|consultation)/i.test(textMessage);
+
+              if (explicitBookingIntent) {
+                console.log(`[WhatsAppManager] ⚡ Patient ${patientPhone} expressed explicit booking intent during human takeover window. Auto-unmuting AI Receptionist immediately.`);
+                this.clearHumanTakeover(doctorId, patientPhone);
+              } else {
+                console.log(`[WhatsAppManager] 🤝 Conversation with ${patientPhone} is in Human Takeover window (staff active within last 30m). AI Receptionist muted (0 tokens spent).`);
+                return;
+              }
+            }
 
             // ── DECOUPLED SURVEY RESPONSE HANDLING ──────────────────────────
             // Google Policy Compliance: Survey result NEVER gates Google review invitation.
@@ -3676,6 +3803,11 @@ class WhatsAppManager {
       throw err;
     }
 
+    // Activate Human Takeover window if a doctor or staff member sent this message manually
+    if (senderName !== "AI Assistant" && senderName !== "Clinic AI") {
+      this.recordHumanTakeover(doctorId, cleanPhone, 30);
+    }
+
     // Ensure Conversation & ChatMessage are recorded in WhatsApp CRM
     let createdMessage: any = null;
     try {
@@ -3765,6 +3897,7 @@ class WhatsAppManager {
       if (ts > 0) sentDate = new Date(ts * 1000);
     }
 
+    this.recordHumanTakeover(doctorId, cleanPhone, 30);
     return { cleanPhone, sentDate };
   }
 
@@ -3785,6 +3918,7 @@ class WhatsAppManager {
       if (ts > 0) sentDate = new Date(ts * 1000);
     }
 
+    this.recordHumanTakeover(doctorId, cleanPhone, 30);
     return { cleanPhone, sentDate };
   }
 

@@ -16,6 +16,7 @@ export type WhatsAppIntentCategory =
   | "CME_ACADEMIC_WEBINAR"
   | "PHARMA_MEDICAL_REP"
   | "PERSONAL_PEER"
+  | "DIAGNOSTIC_LAB_NOTICE"
   | "PATIENT_CARE";
 
 export interface IntentClassificationResult {
@@ -138,7 +139,23 @@ export function classifyWhatsAppMessage(
     };
   }
 
-  // 6. DEFAULT: LEGITIMATE PATIENT CARE & CLINICAL ENQUIRIES
+  // 6. DIAGNOSTIC LAB / PATHOLOGY NOTICES (e.g. Lal PathLabs, Thyrocare, SRL, Metropolis, test report alerts)
+  const isDiagnosticLabNotice = (
+    /\b(thyrocare|lal pathlabs?|dr lal|metropolis|srl diagnostics?|pathkind|agilus|suburban diagnostics|apollo diagnostics|redcliffe|diagnostic center)\b/i.test(textLower) ||
+    (/\b(diagnostic|pathology|radiology|lab report|test report|sample id|barcode)\b/i.test(textLower) && /\b(ready|collected|download|view report|attached|results?|released)\b/i.test(textLower)) ||
+    /\b(report for patient|patient report is ready|sample has been collected|test results? are available at)\b/i.test(textLower)
+  );
+
+  if (isDiagnosticLabNotice) {
+    return {
+      category: "DIAGNOSTIC_LAB_NOTICE",
+      confidence: 0.95,
+      reason: "Automated diagnostic pathology or radiology lab notice",
+      senderResponsePolicy: "SILENT_DROP"
+    };
+  }
+
+  // 7. DEFAULT: LEGITIMATE PATIENT CARE & CLINICAL ENQUIRIES
   return {
     category: "PATIENT_CARE",
     confidence: 1.0,

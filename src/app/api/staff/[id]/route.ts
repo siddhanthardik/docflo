@@ -89,7 +89,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (name !== undefined) dataToUpdate.name = name.trim()
     if (role !== undefined) dataToUpdate.role = role
     if (isActive !== undefined) dataToUpdate.isActive = isActive
-    if (phone !== undefined) dataToUpdate.phone = phone
+    if (phone !== undefined) {
+      dataToUpdate.phone = phone ? phone.trim().replace(/[^\d+]/g, '') : null
+    }
 
     // Only update password if a new one was provided
     if (password && password.trim() !== "") {

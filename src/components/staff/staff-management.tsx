@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, ShieldAlert, User, Shield, AlertTriangle, Pen, Trash2, ShieldOff, ShieldCheck } from "lucide-react"
+import { MoreHorizontal, Plus, ShieldAlert, User, Shield, AlertTriangle, Pen, Trash2, ShieldOff, ShieldCheck, Phone } from "lucide-react"
 
 export function StaffManagement({ 
   initialStaff,
@@ -35,8 +35,8 @@ export function StaffManagement({
   const [selectedStaff, setSelectedStaff] = useState<any>(null)
   
   // Form state
-  const [form, setForm] = useState({ email: "", password: "", name: "", role: "RECEPTIONIST" })
-  const [editForm, setEditForm] = useState({ name: "", role: "", password: "" })
+  const [form, setForm] = useState({ email: "", password: "", name: "", role: "RECEPTIONIST", phone: "" })
+  const [editForm, setEditForm] = useState({ name: "", role: "", password: "", phone: "" })
 
   const fetchStaff = async () => {
     try {
@@ -62,7 +62,7 @@ export function StaffManagement({
       if (res.ok) {
         const newMember = await res.json()
         setStaff([...staff, newMember])
-        setForm({ email: "", password: "", name: "", role: "RECEPTIONIST" })
+        setForm({ email: "", password: "", name: "", role: "RECEPTIONIST", phone: "" })
         setIsAddOpen(false)
         toast({ title: "Staff member added successfully" })
       } else {
@@ -87,6 +87,7 @@ export function StaffManagement({
         body: JSON.stringify({
             name: editForm.name,
             role: editForm.role,
+            phone: editForm.phone,
             ...(editForm.password ? { password: editForm.password } : {}) // Only send password if changed
         }),
       })
@@ -164,7 +165,7 @@ export function StaffManagement({
 
   const openEdit = (staffMember: any) => {
     setSelectedStaff(staffMember)
-    setEditForm({ name: staffMember.name, role: staffMember.role, password: "" })
+    setEditForm({ name: staffMember.name, role: staffMember.role, password: "", phone: staffMember.phone || "" })
     setIsEditOpen(true)
   }
 
@@ -205,6 +206,7 @@ export function StaffManagement({
                 <TableRow>
                   <TableHead>Staff Member</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Mobile / WhatsApp</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -212,7 +214,7 @@ export function StaffManagement({
               <TableBody>
                 {staff.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-gray-500">
+                    <TableCell colSpan={5} className="h-24 text-center text-gray-500">
                       No staff members found. Add one to get started.
                     </TableCell>
                   </TableRow>
@@ -232,6 +234,16 @@ export function StaffManagement({
                       </TableCell>
                       <TableCell>
                         <RoleBadge role={s.role} />
+                      </TableCell>
+                      <TableCell>
+                        {s.phone ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                            <Phone className="h-3 w-3 text-emerald-600" />
+                            {s.phone}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No number</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {s.isActive ? (
@@ -308,6 +320,19 @@ export function StaffManagement({
                 <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white" />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Mobile / WhatsApp Number</Label>
+                <Input 
+                  type="tel"
+                  value={form.phone} 
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })} 
+                  placeholder="e.g. +91 98765 43210 or 9876543210" 
+                  className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white" 
+                />
+                <p className="text-[11px] text-slate-500">
+                  Used by Gyrex to identify this staff member on WhatsApp so their messages and reports do not trigger patient AI receptionist auto-replies.
+                </p>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs font-semibold text-slate-700">Role & Access Level</Label>
                 <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                   <SelectTrigger className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white">
@@ -374,7 +399,20 @@ export function StaffManagement({
                   </Select>
                 )}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold text-slate-700">Mobile / WhatsApp Number</Label>
+                <Input 
+                  type="tel"
+                  value={editForm.phone} 
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} 
+                  placeholder="e.g. +91 98765 43210 or 9876543210" 
+                  className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white" 
+                />
+                <p className="text-[11px] text-slate-500">
+                  Used by Gyrex to identify this staff member on WhatsApp so their messages and reports do not trigger patient AI receptionist auto-replies.
+                </p>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs font-semibold text-slate-700">Reset Password (Optional)</Label>
                 <Input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="Leave blank to keep current" className="h-11 text-sm rounded-xl border-slate-200 focus:border-indigo-500 bg-white" />
               </div>

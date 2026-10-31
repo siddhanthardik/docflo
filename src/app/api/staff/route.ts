@@ -44,8 +44,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden: Access restricted to clinic managers and doctors" }, { status: 403 })
   }
 
-  const { email, password, name, role } = await req.json()
+  const { email, password, name, role, phone } = await req.json()
   const cleanEmail = email.trim().toLowerCase()
+  const cleanPhone = phone ? phone.trim().replace(/[^\d+]/g, '') : null
 
   // Strict Privilege Escalation Protection:
   // 1. Managers can only create subordinate staff (RECEPTIONIST, STAFF, NURSE).
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
           password: hashed,
           name: name.trim(),
           role,
+          phone: cleanPhone || null,
         },
       })
     })
