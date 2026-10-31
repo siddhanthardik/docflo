@@ -1061,8 +1061,24 @@ class WhatsAppManager {
               /lab|pathology|diagnostic|radiology|scan|imaging|sample/i.test(matchedStaff.name)
             );
 
-            if (isStaff) {
-              console.log(`[WhatsAppManager] 🩺 Recognized DOCTOR/STAFF: "${staffName}" (${patientPhone})${isDiagnosticStaff ? ' [Diagnostic Partner]' : ''}. Routing to Staff Assistant AI.`);
+            // Check Whitelist Diagnostic Partners configured by Doctor in WhatsApp Settings
+            const appointmentAgentConfig = await prisma.aIAgentConfig.findUnique({
+              where: { doctorId_agentType: { doctorId, agentType: "APPOINTMENT" } },
+              select: { config: true }
+            });
+            const rawAgentCfg = (appointmentAgentConfig?.config as any) || {};
+            const whitelistPartners = (rawAgentCfg.diagnosticPartners || []) as Array<{ name: string; phone: string }>;
+            const silentPartnerPhones = (rawAgentCfg.silentPartnerNumbers || []) as string[];
+
+            const matchedWhitelistPartner = whitelistPartners.find(p => p.phone && this.isPhoneMatch(p.phone, patientPhone));
+            const isSilentPartnerPhone = silentPartnerPhones.some(p => this.isPhoneMatch(p, patientPhone));
+            const isDiagnosticPartner = isDiagnosticStaff || Boolean(matchedWhitelistPartner) || isSilentPartnerPhone;
+            const diagnosticPartnerName = matchedWhitelistPartner?.name || (isDiagnosticStaff ? staffName : "Diagnostic Partner");
+
+            if (isDiagnosticPartner) {
+              console.log(`[WhatsAppManager] 🧪 Recognized DIAGNOSTIC PARTNER: "${diagnosticPartnerName}" (${patientPhone}). Bypassing AI receptionist (0 tokens).`);
+            } else if (isStaff) {
+              console.log(`[WhatsAppManager] 🩺 Recognized DOCTOR/STAFF: "${staffName}" (${patientPhone}). Routing to Staff Assistant AI.`);
             } else {
               console.log(`[WhatsAppManager] 👤 Recognized PATIENT: ${patientPhone}. Routing to Patient Receptionist AI.`);
             }
@@ -1128,12 +1144,14 @@ class WhatsAppManager {
 
             const formattedPhoneName = patientPhone.startsWith("+") ? patientPhone : `+${patientPhone}`;
 
-            const rawPatientName = isStaff
-              ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor")
-              : (patient
-                  ? `${patient.firstName} ${patient.lastName}`.trim()
-                  : formattedPhoneName);
-            const patientName = isStaff || patient ? (sanitizePersonName(rawPatientName) || "Patient") : formattedPhoneName;
+            const rawPatientName = isDiagnosticPartner
+              ? `${diagnosticPartnerName} (Diagnostic Partner)`
+              : (isStaff
+                  ? (staffName ? `${staffName} (Doctor/Staff)` : "Clinic Staff/Doctor")
+                  : (patient
+                      ? `${patient.firstName} ${patient.lastName}`.trim()
+                      : formattedPhoneName));
+            const patientName = isDiagnosticPartner || isStaff || patient ? (sanitizePersonName(rawPatientName) || "Patient") : formattedPhoneName;
 
             // Find or create Conversation (deduplicate by 10-digit suffix)
             const last10Incoming = patientPhone.slice(-10);
@@ -1210,8 +1228,8 @@ class WhatsAppManager {
             // 🛡️ 1b. DIAGNOSTIC LAB / PARTNER SILENT FILTER
             // When messages or reports arrive from a registered diagnostic lab, pathology center, or scan partner:
             // silently ingest into conversation without triggering AI Receptionist or consuming tokens.
-            if (isDiagnosticStaff) {
-              console.log(`[WhatsAppManager] 🧪 Recognized DIAGNOSTIC PARTNER / LAB: "${staffName}" (${patientPhone}). Stored in chat history. Suppressing AI auto-replies (0 tokens spent).`);
+            if (isDiagnosticPartner) {
+              console.log(`[WhatsAppManager] 🧪 Recognized DIAGNOSTIC PARTNER / LAB: "${diagnosticPartnerName}" (${patientPhone}). Stored in chat history. Suppressing AI auto-replies (0 tokens spent).`);
               return;
             }
 
