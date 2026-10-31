@@ -18,6 +18,7 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            email: true,
             clinicName: true,
             phone: true,
             address: true,
@@ -52,10 +53,17 @@ export async function GET() {
         id: staffMember.id,
         name: staffMember.name,
         email: staffMember.email,
-        phone: staffMember.phone || "",
+        phone: clinic?.phone || staffMember.phone || "",
+        staffPhone: staffMember.phone || "",
+        staffEmail: staffMember.email,
         role: staffMember.role,
         clinicName: clinic?.clinicName || "",
         doctorName: clinic?.name || "",
+        clinicEmail: clinic?.email || "",
+        clinicPhone: clinic?.phone || "",
+        clinicLogo: clinic?.image || "",
+        clinicTimezone: clinic?.timezone || "Asia/Kolkata",
+        clinicAddress: clinic?.address || "",
         // Clinic metadata fields to support clinic settings tabs for managers/staff
         address: clinic?.address || "",
         city: clinic?.city || "",
@@ -122,6 +130,10 @@ export async function GET() {
     const response = {
       isStaff: false,
       ...doctor,
+      clinicEmail: doctor.email,
+      clinicPhone: doctor.phone,
+      clinicLogo: doctor.image,
+      clinicTimezone: doctor.timezone || "Asia/Kolkata",
       subscriptionPlan: doctor.package?.name || "FREE",
     };
 
@@ -170,6 +182,8 @@ export async function PUT(req: Request) {
       const {
         name,
         phone,
+        clinicPhone,
+        staffPhone,
         currentPassword,
         newPassword,
         clinicName,
@@ -215,12 +229,16 @@ export async function PUT(req: Request) {
         });
       }
 
+      const canManageClinic = staffMember.role === "MANAGER" || staffMember.role === "ADMIN";
+
       // Handle staff individual profile update
       const staffUpdateData: any = {};
       if (typeof name === "string" && name.trim()) {
         staffUpdateData.name = name.trim();
       }
-      if (typeof phone === "string") {
+      if (typeof staffPhone === "string") {
+        staffUpdateData.phone = staffPhone.trim();
+      } else if (typeof phone === "string" && !canManageClinic) {
         staffUpdateData.phone = phone.trim();
       }
 
@@ -242,10 +260,11 @@ export async function PUT(req: Request) {
       }
 
       // If MANAGER or ADMIN is updating clinic workspace details
-      const canManageClinic = staffMember.role === "MANAGER" || staffMember.role === "ADMIN";
-      if (canManageClinic && (clinicName || address || city || state || pincode || timezone || workingHoursStart || daysOff || invoicePrefix)) {
+      if (canManageClinic && (clinicName || address || city || state || pincode || timezone || workingHoursStart || daysOff || invoicePrefix || clinicPhone || (phone && canManageClinic))) {
         const clinicUpdateData: any = {};
         if (clinicName) clinicUpdateData.clinicName = clinicName;
+        if (clinicPhone !== undefined) clinicUpdateData.phone = clinicPhone;
+        else if (phone !== undefined && canManageClinic) clinicUpdateData.phone = phone;
         if (address !== undefined) clinicUpdateData.address = address;
         if (city !== undefined) clinicUpdateData.city = city;
         if (state !== undefined) clinicUpdateData.state = state;

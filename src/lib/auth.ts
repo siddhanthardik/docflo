@@ -13,6 +13,10 @@ declare module "next-auth" {
     doctorId?: string;
     clinicName?: string | null;
     doctorName?: string | null;
+    clinicEmail?: string | null;
+    clinicPhone?: string | null;
+    clinicLogo?: string | null;
+    clinicTimezone?: string | null;
     createdAt?: Date;
     emailVerified?: Date | null;
     rememberMe?: boolean;
@@ -27,6 +31,10 @@ declare module "next-auth" {
       doctorId?: string;
       clinicName?: string | null;
       doctorName?: string | null;
+      clinicEmail?: string | null;
+      clinicPhone?: string | null;
+      clinicLogo?: string | null;
+      clinicTimezone?: string | null;
       createdAt?: string;
       emailVerified?: string | null;
     };
@@ -170,6 +178,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: true,
             name: true,
             clinicName: true,
+            phone: true,
+            image: true,
+            timezone: true,
             password: true,
             role: true,
             createdAt: true,
@@ -200,6 +211,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 doctorId: doctor.id,
                 clinicName: doctor.clinicName || null,
                 doctorName: doctor.name,
+                clinicEmail: doctor.email || null,
+                clinicPhone: doctor.phone || null,
+                clinicLogo: doctor.image || null,
+                clinicTimezone: doctor.timezone || "Asia/Kolkata",
                 createdAt: doctor.createdAt,
                 emailVerified: doctor.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
@@ -227,6 +242,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               select: {
                 name: true,
                 clinicName: true,
+                email: true,
+                phone: true,
+                image: true,
+                timezone: true,
               }
             }
           },
@@ -253,6 +272,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 doctorId: staff.doctorId,
                 clinicName: staff.doctor?.clinicName || null,
                 doctorName: staff.doctor?.name || null,
+                clinicEmail: staff.doctor?.email || null,
+                clinicPhone: staff.doctor?.phone || null,
+                clinicLogo: staff.doctor?.image || null,
+                clinicTimezone: staff.doctor?.timezone || "Asia/Kolkata",
                 createdAt: staff.createdAt,
                 emailVerified: staff.emailVerified,
                 rememberMe: credentials.rememberMe === "true"
@@ -287,6 +310,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.doctorId = user.doctorId;
         token.clinicName = user.clinicName;
         token.doctorName = user.doctorName;
+        token.clinicEmail = (user as any).clinicEmail;
+        token.clinicPhone = (user as any).clinicPhone;
+        token.clinicLogo = (user as any).clinicLogo;
+        token.clinicTimezone = (user as any).clinicTimezone;
         token.createdAt = user.createdAt?.toISOString();
         token.emailVerified = user.emailVerified?.toISOString() || null;
         
@@ -309,6 +336,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.doctorId = token.doctorId as string | undefined;
       (session.user as any).clinicName = token.clinicName as string | null | undefined;
       (session.user as any).doctorName = token.doctorName as string | null | undefined;
+      (session.user as any).clinicEmail = token.clinicEmail as string | null | undefined;
+      (session.user as any).clinicPhone = token.clinicPhone as string | null | undefined;
+      (session.user as any).clinicLogo = token.clinicLogo as string | null | undefined;
+      (session.user as any).clinicTimezone = token.clinicTimezone as string | null | undefined;
       (session.user as any).createdAt = token.createdAt as string;
       (session.user as any).emailVerified = token.emailVerified as string | null;
 

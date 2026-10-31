@@ -20,6 +20,7 @@ export default function SettingsClinicPage() {
 
   const [clinic, setClinic] = useState({
     clinicName: "",
+    email: "",
     address: "",
     city: "",
     state: "",
@@ -142,13 +143,14 @@ export default function SettingsClinicPage() {
         setClinic((prev) => ({ 
           ...prev, 
           clinicName: data.clinicName || "",
+          email: data.clinicEmail || data.email || "",
           address: data.address || "",
           city: initialCity,
           state: initialState,
           country: initialCountry,
           pincode: initialPincode,
-          phone: data.phone || "",
-          image: data.image || "",
+          phone: data.clinicPhone || data.phone || "",
+          image: data.clinicLogo || data.image || "",
           currency: data.currency || "INR",
           invoicePrefix: data.invoicePrefix || "INV-",
           taxGstNumber: data.taxGstNumber || "",
@@ -156,7 +158,7 @@ export default function SettingsClinicPage() {
           language: data.language || "en",
           dateFormat: data.dateFormat || "DD/MM/YYYY",
           firstDayOfWeek: data.firstDayOfWeek || "Monday",
-          timezone: data.timezone || "Asia/Kolkata",
+          timezone: data.timezone || data.clinicTimezone || "Asia/Kolkata",
           workingHoursStart: data.workingHoursStart || "09:00",
           workingHoursEnd: data.workingHoursEnd || "17:00",
           daysOff: Array.isArray(data.daysOff) ? data.daysOff : [],
@@ -506,8 +508,24 @@ export default function SettingsClinicPage() {
                   </Select>
                 </div>
 
+                {/* Official Clinic Email */}
+                <div>
+                  <label htmlFor="clinicEmail" className={labelClass}>Official Clinic Registered Email</label>
+                  <div className="relative">
+                    <input
+                      id="clinicEmail"
+                      className={`${inputClass} bg-slate-50 text-slate-500 cursor-not-allowed pr-8`}
+                      value={clinic.email}
+                      disabled
+                      placeholder="clinic@example.com"
+                    />
+                    <Lock className="h-3.5 w-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">Primary registered email on file for clinic statements and official notifications.</p>
+                </div>
+
                 {/* Clinic Phone */}
-                <div className="sm:col-span-2">
+                <div>
                   <label htmlFor="clinicPhone" className={labelClass}>Clinic Reception / Front Desk Phone</label>
                   <input
                     id="clinicPhone"
@@ -517,7 +535,7 @@ export default function SettingsClinicPage() {
                     onChange={(e) => setClinic({ ...clinic, phone: e.target.value })}
                     placeholder="e.g. +91 9876543210"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Official clinic reception number printed on patient invoices, receipts, and appointment confirmations.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Official clinic reception number printed on patient invoices and receipts.</p>
                 </div>
 
                 {/* Street Address */}

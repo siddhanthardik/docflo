@@ -10,31 +10,49 @@ export async function GET() {
     }
 
     // Determine the effective doctor ID (staff members operate under their linked doctor)
-    let doctorId = session.user.id;
+    let doctorId = (session.user as any).doctorId || session.user.id;
     const role = (session.user as any).role;
 
-    if (role === "RECEPTIONIST" || role === "STAFF") {
+    if (!(session.user as any).doctorId && ["RECEPTIONIST", "STAFF", "MANAGER", "NURSE"].includes(role)) {
       const staff = await prisma.staffMember.findUnique({
         where: { id: session.user.id },
         select: { doctorId: true },
       });
-      if (!staff) {
-        return NextResponse.json({ error: "Staff record not found" }, { status: 400 });
+      if (staff?.doctorId) {
+        doctorId = staff.doctorId;
       }
-      doctorId = staff.doctorId;
     }
 
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
       select: {
+        id: true,
+        name: true,
+        clinicName: true,
+        email: true,
+        phone: true,
+        image: true,
         timezone: true,
         workingHoursStart: true,
         workingHoursEnd: true,
         daysOff: true,
+        address: true,
+        city: true,
+        state: true,
+        pincode: true,
       },
     });
 
-    return NextResponse.json(doctor || {});
+    if (!doctor) {
+      return NextResponse.json({ error: "Clinic record not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ...doctor,
+      clinicEmail: doctor.email,
+      clinicPhone: doctor.phone,
+      clinicLogo: doctor.image,
+    });
   } catch (error) {
     console.error("Error fetching clinic settings:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

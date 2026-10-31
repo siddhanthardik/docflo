@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Key, Laptop, LogOut, ShieldAlert, UserCheck, Lock, Building2 } from "lucide-react";
+import { Loader2, Key, Laptop, LogOut, ShieldAlert, UserCheck, Lock, Building2, Mail, Phone, Clock, MapPin } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
@@ -31,6 +31,13 @@ export default function AccountAndSecurityPage() {
     role: "",
     clinicName: "",
     doctorName: "",
+    clinicEmail: "",
+    clinicPhone: "",
+    clinicLogo: "",
+    clinicTimezone: "",
+    clinicAddress: "",
+    clinicCity: "",
+    clinicState: "",
   });
 
   // Password state
@@ -54,10 +61,17 @@ export default function AccountAndSecurityPage() {
           isStaff: Boolean(data.isStaff),
           name: data.name || "",
           email: data.email || "",
-          phone: data.phone || "",
+          phone: data.staffPhone || data.phone || "",
           role: data.role || "DOCTOR",
           clinicName: data.clinicName || "",
           doctorName: data.doctorName || "",
+          clinicEmail: data.clinicEmail || "",
+          clinicPhone: data.clinicPhone || "",
+          clinicLogo: data.clinicLogo || data.image || "",
+          clinicTimezone: data.clinicTimezone || data.timezone || "Asia/Kolkata",
+          clinicAddress: data.clinicAddress || data.address || "",
+          clinicCity: data.clinicCity || data.city || "",
+          clinicState: data.clinicState || data.state || "",
         });
       }
     } catch (error) {
@@ -186,27 +200,90 @@ export default function AccountAndSecurityPage() {
               </div>
             ) : (
               <form onSubmit={handleProfileUpdate} className="space-y-6">
-                {/* Clinic Workspace Banner */}
-                {profile.clinicName && (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                        <Building2 className="h-4.5 w-4.5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">
-                          {profile.clinicName}
-                        </p>
-                        {profile.doctorName && (
-                          <p className="text-[11px] text-slate-500">
-                            Clinic Lead: {profile.doctorName}
-                          </p>
+                {/* Official Clinic Workspace Card with Logo, Email, Phone, Timezone & Location */}
+                {(profile.clinicName || profile.doctorName) && (
+                  <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-200/90 rounded-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70">
+                      <div className="flex items-center gap-3.5">
+                        {profile.clinicLogo ? (
+                          <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/90 p-1 shadow-2xs shrink-0 flex items-center justify-center overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={profile.clinicLogo}
+                              alt={profile.clinicName || "Clinic Logo"}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                            <Building2 className="h-6 w-6 text-indigo-600" />
+                          </div>
                         )}
+                        <div>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                            {profile.clinicName || "Assigned Clinic Workspace"}
+                          </h4>
+                          {profile.doctorName && (
+                            <p className="text-xs text-slate-500 font-medium">
+                              Clinic Lead: <span className="text-slate-700 font-semibold">{profile.doctorName}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="self-start sm:self-auto text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-3 py-1 rounded-full uppercase tracking-wider">
+                        Assigned Workspace
+                      </span>
+                    </div>
+
+                    {/* Prefilled Saved Clinic Metadata Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-semibold mb-1">
+                          <Mail className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                          Official Clinic Email
+                        </div>
+                        <p className="text-xs font-bold text-slate-900 truncate" title={profile.clinicEmail || "Not specified"}>
+                          {profile.clinicEmail || "Not specified"}
+                        </p>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-semibold mb-1">
+                          <Phone className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          Clinic Contact No.
+                        </div>
+                        <p className="text-xs font-bold text-slate-900 truncate" title={profile.clinicPhone || "Not specified"}>
+                          {profile.clinicPhone || "Not specified"}
+                        </p>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-semibold mb-1">
+                          <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          Operating Time Zone
+                        </div>
+                        <p className="text-xs font-bold text-slate-900 truncate" title={profile.clinicTimezone || "Asia/Kolkata"}>
+                          {profile.clinicTimezone || "Asia/Kolkata"}
+                        </p>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-semibold mb-1">
+                          <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                          Clinic Location
+                        </div>
+                        <p
+                          className="text-xs font-bold text-slate-900 truncate"
+                          title={
+                            [profile.clinicAddress, profile.clinicCity, profile.clinicState].filter(Boolean).join(", ") ||
+                            "Address on file"
+                          }
+                        >
+                          {[profile.clinicAddress, profile.clinicCity, profile.clinicState].filter(Boolean).join(", ") ||
+                            "Address on file"}
+                        </p>
                       </div>
                     </div>
-                    <span className="self-start sm:self-auto text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
-                      Assigned Workspace
-                    </span>
                   </div>
                 )}
 
