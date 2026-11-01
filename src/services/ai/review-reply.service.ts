@@ -159,7 +159,7 @@ REVIEW DETAILS:
 - Star Rating: ${rating} out of 5 Stars
 - Review Content: "${hasReviewText ? reviewText : "[The patient gave a star rating with no written review text]"}"
 
-${allKeywords.length > 0 ? `RELEVANT PRACTICE SEARCH CONCEPTS (Optional, only if natural): ${allKeywords.slice(0, 3).join(", ")}` : ""}
+${allKeywords.length > 0 ? `TARGET LOCAL SEARCH TERM / SEO FOCUS: "${allKeywords[0]}"${allKeywords.length > 1 ? ` (Secondary concepts: ${allKeywords.slice(1, 3).join(", ")})` : ""}` : ""}
 ${instructions ? `DOCTOR'S CUSTOM INSTRUCTIONS: ${instructions}` : ""}
 
 CRITICAL RULES FOR WRITING LIKE A REAL HUMAN CLINIC STAFF MEMBER:
@@ -188,9 +188,13 @@ CRITICAL RULES FOR WRITING LIKE A REAL HUMAN CLINIC STAFF MEMBER:
 3. CONTEXTUAL LOGIC BASED ON REVIEW TYPE:
 ${reviewTypeInstructions}
 
-4. KEYWORD POLICY:
-   - If a target search concept is provided, you may incorporate AT MOST ONE naturally if it flows effortlessly in conversation.
-   - If it feels awkward, forced, or sales-like, DO NOT use it. Patient warmth and natural human phrasing ALWAYS take priority.
+4. LOCAL SEO & TARGET KEYWORD INTEGRATION:
+   ${
+     allKeywords.length > 0
+       ? `- Seamlessly and naturally weave the target search term ("${allKeywords[0]}") or its core medical specialty and city into the reply (e.g. acknowledging the patient's trust in our care as a dedicated nephrologist in Patna, or striving to provide the best nephrology and kidney care in Patna).
+   - Ensure it reads smoothly, warmly, and authentically as part of your genuine message to the patient without sounding robotic or repetitive.`
+       : `- Keep the response warm, natural, and patient-focused.`
+   }
 
 5. OUTPUT FORMAT:
    - Respond ONLY with the text of the reply.
