@@ -163,27 +163,17 @@ ${allKeywords.length > 0 ? `TARGET LOCAL SEARCH TERM / SEO FOCUS: "${allKeywords
 ${instructions ? `DOCTOR'S CUSTOM INSTRUCTIONS: ${instructions}` : ""}
 
 CRITICAL RULES FOR WRITING LIKE A REAL HUMAN CLINIC STAFF MEMBER:
-1. STRICT ANTI-ROBOTIC WORD BAN:
-   NEVER use generic corporate AI buzzwords. Specifically, DO NOT USE ANY OF THESE WORDS:
-   - "thrilled"
-   - "delighted"
-   - "excited"
-   - "overjoyed"
-   - "testament"
-   - "beacon"
-   - "unwavering commitment"
-   - "strive for excellence"
-   - "utmost priority"
-   - "exceptional healthcare journey"
-   - "game-changer"
-   - "rest assured"
-   - "kudos"
-   - "in conclusion"
+1. STRICT ANTI-ROBOTIC & ANTI-MARKETING BANNED PHRASES:
+   NEVER use corporate AI clichés, commercial sales words, or melodramatic filler. Specifically, DO NOT USE ANY OF THESE:
+   - Commercial / Spam words: "great deal", "best deal", "deal", "five-star experience", "top-rated", "top-notch", "value for money"
+   - Melodramatic / AI filler: "means a great deal", "means the world", "words cannot express", "words like yours truly encourage", "words like yours encourage", "deeply touched", "truly humbled", "truly honored", "heartwarming"
+   - Corporate medical buzzwords: "unwavering commitment", "strive for excellence", "utmost priority", "exceptional healthcare journey", "healthcare journey", "beacon of hope", "testament", "game-changer", "rest assured", "kudos", "thrilled", "delighted", "overjoyed", "excited", "in conclusion"
 
-2. NATURAL CONVERSATIONAL TONE:
-   - Sound like a real, caring person on the clinic desk writing a quick, sincere message.
+2. HUMBLE & NATURAL CLINIC VOICE (NO SELF-BOASTING):
+   - Sound like a real, polite healthcare receptionist or practice manager writing a warm, 2-to-3 sentence note.
    - Address the patient warmly ${greetingExample}.
-   - Vary your opening sentence naturally. Do not use the exact same cookie-cutter intro.
+   - NEVER boast or self-proclaim (e.g. NEVER write "care expected from the best nephrologist in Patna" or "proves why we are the best").
+   - Instead, express sincere, humble dedication: e.g. "Dr. Chandra and our team are very glad that your consultation went well. We remain dedicated to providing accessible, trusted kidney care for patients in Patna."
 
 3. CONTEXTUAL LOGIC BASED ON REVIEW TYPE:
 ${reviewTypeInstructions}
@@ -191,15 +181,15 @@ ${reviewTypeInstructions}
 4. LOCAL SEO & TARGET KEYWORD INTEGRATION:
    ${
      allKeywords.length > 0
-       ? `- Seamlessly and naturally weave the target search term ("${allKeywords[0]}") or its core medical specialty and city into the reply (e.g. acknowledging the patient's trust in our care as a dedicated nephrologist in Patna, or striving to provide the best nephrology and kidney care in Patna).
-   - Ensure it reads smoothly, warmly, and authentically as part of your genuine message to the patient without sounding robotic or repetitive.`
+       ? `- If a search term is specified ("${allKeywords[0]}"), humbly and naturally mention the core specialty and city (e.g., "dedicated to providing trusted nephrology and kidney care in Patna").
+   - Blend it organically into the sentence without forced phrasing, self-boasting, or marketing hype.`
        : `- Keep the response warm, natural, and patient-focused.`
    }
 
-5. OUTPUT FORMAT:
+5. OUTPUT FORMAT & LENGTH:
+   - Keep total length to 2 to 3 concise, genuine sentences plus a warm sign-off.
    - Respond ONLY with the text of the reply.
-   - STRICTLY PLAIN TEXT: No quotes, no markdown bolding (**), no asterisks, no code blocks.
-   - Provide a complete response with a proper closing sign-off.`;
+   - STRICTLY PLAIN TEXT: No quotes, no markdown bolding (**), no asterisks, no code blocks.`;
 
     // 3. Execute AI Generation with Fallback
     const result = await AIService.generate(
@@ -209,7 +199,7 @@ ${reviewTypeInstructions}
       { temperature: 0.75, maxTokens: 1024 }
     );
 
-    // 4. Sanitize and Polish Output
+    // 4. Sanitize and Polish Output (Tier 2 Code-Level Guardrail)
     let cleanReply = (result.content || "").trim();
     cleanReply = cleanReply
       .replace(/^```[a-zA-Z]*\n?/g, "")
@@ -218,8 +208,21 @@ ${reviewTypeInstructions}
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
       .replace(/__(.*?)__/g, "$1")
-      .replace(/_(.*?)_/g, "$1")
-      .replace(/[ \t]+/g, " ")
+      .replace(/_(.*?)_/g, "$1");
+
+    // Tier 2 Filter: Strip AI emotional clichés & commercial marketing phrases
+    cleanReply = cleanReply
+      .replace(/\b(?:it\s+)?means\s+a\s+great\s+deal\s+(?:to\s+(?:us|our\s+team|hear|know)\s+)?(?:that\s+)?/gi, "we are very glad that ")
+      .replace(/\b(?:it\s+)?means\s+the\s+world\s+(?:to\s+(?:us|our\s+team|hear|know)\s+)?(?:that\s+)?/gi, "we are glad that ")
+      .replace(/\bwords\s+like\s+yours\s+(?:truly\s+)?encourage\s+our\s+team\s*(?:as|and)?\s*/gi, "")
+      .replace(/\b(?:the\s+)?care\s+expected\s+from\s+(?:the\s+)?best\s+(\w+)\s+in\s+([a-zA-Z\s]+)/gi, "trusted $1 care in $2")
+      .replace(/\ba\s+great\s+deal\b/gi, "so much")
+      .replace(/\bexceptional\s+healthcare\s+journey\b/gi, "care")
+      .replace(/\bhealthcare\s+journey\b/gi, "treatment")
+      .replace(/\bunwavering\s+commitment\b/gi, "dedication")
+      .replace(/\b\s{2,}\b/g, " ")
+      .replace(/\s+\./g, ".")
+      .replace(/\.{2,}/g, ".")
       .trim();
 
     return {

@@ -2534,15 +2534,26 @@ Write your professional, direct, concise administrative response directly to Doc
         ${targetKeywords ? `Target Concepts to Weave In Naturally (if relevant): ${targetKeywords}` : ""}
         
         CRITICAL RULES:
-        1. Write in a natural, genuine human tone like a caring clinic staff member.
-        2. STRICTLY FORBIDDEN WORDS: Do NOT use "thrilled", "delighted", "excited", "overjoyed", "testament", "beacon", "unwavering commitment".
-        3. If star-only without review text, keep it to 1-2 sentences thanking them for the rating and wishing them good health.
-        4. If 4-5 stars with text, keep it warm and concise (2-3 sentences).
-        5. If 1-3 stars, be humble, empathetic, and invite them to speak with our clinic desk directly.
-        6. Respond ONLY with the exact text of the reply. Plain text only. No quotes or markdown.
+        1. Write in a natural, dignified human tone like a caring clinic coordinator. Keep it to 2-3 concise sentences.
+        2. STRICTLY FORBIDDEN WORDS & CLICHÉS:
+           - NEVER use: "great deal", "best deal", "means a great deal", "means the world", "words like yours truly encourage", "words cannot express", "five-star experience", "top-rated", "top-notch"
+           - NEVER use: "thrilled", "delighted", "excited", "overjoyed", "testament", "beacon", "unwavering commitment", "healthcare journey", "strive for excellence", "utmost priority", "game-changer", "rest assured"
+        3. NO SELF-BOASTING: Never say "care expected from the best [specialist] in [city]". Instead say "dedicated to providing trusted care in [city]".
+        4. If star-only without review text, keep it to 1-2 sentences thanking them for the rating and wishing them good health.
+        5. If 4-5 stars with text, keep it warm, humble, and concise (2-3 sentences).
+        6. If 1-3 stars, be humble, empathetic, and invite them to speak with our clinic desk directly.
+        7. Respond ONLY with the exact text of the reply. Plain text only. No quotes or markdown.
       `;
 
-      return await generateWithFallback(prompt, undefined, doctorId, "REVIEW_REPLY");
+      let reply = await generateWithFallback(prompt, undefined, doctorId, "REVIEW_REPLY");
+      reply = reply
+        .replace(/\b(?:it\s+)?means\s+a\s+great\s+deal\s+(?:to\s+(?:us|our\s+team|hear|know)\s+)?(?:that\s+)?/gi, "we are very glad that ")
+        .replace(/\bwords\s+like\s+yours\s+(?:truly\s+)?encourage\s+our\s+team\s*(?:as|and)?\s*/gi, "")
+        .replace(/\b(?:the\s+)?care\s+expected\s+from\s+(?:the\s+)?best\s+(\w+)\s+in\s+([a-zA-Z\s]+)/gi, "trusted $1 care in $2")
+        .replace(/\ba\s+great\s+deal\b/gi, "so much")
+        .replace(/\bhealthcare\s+journey\b/gi, "care")
+        .trim();
+      return reply;
     } catch (error) {
       console.error("Error in Review Agent:", error);
       return "Thank you for sharing your feedback with our clinic team. Wishing you the best of health.";
