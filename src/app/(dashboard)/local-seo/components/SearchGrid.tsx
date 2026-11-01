@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, Info, TrendingUp, Search, Crown, Network } from "lucide-react";
+import { MapPin, RefreshCw, Clock, Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
@@ -100,7 +100,7 @@ export function SearchGrid() {
   if (isLoading && !gridData) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-44 w-full rounded-2xl" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
         <Skeleton className="h-96 w-full rounded-2xl" />
       </div>
     );
@@ -113,18 +113,12 @@ export function SearchGrid() {
   const cacheAge = gridData?.cacheAge || 0;
   const requiresRefresh = !gridData || gridData.requiresRefresh;
 
-  // Stats & Share of Local Voice (SoLV)
-  const found = grid.filter(c => c.found && c.rank > 0);
-  const avgRank = found.length > 0 ? Math.round(found.reduce((s, c) => s + c.rank, 0) / found.length) : 0;
-  const top3Count = found.filter(c => c.rank <= 3).length;
-  const solvPercentage = Math.round((top3Count / 25) * 100);
-
   const activeDisplayQuery = gridData?.keyword || activeKeyword || overviewData?.primaryCategory || "Pediatrician";
 
   return (
     <div className="space-y-6">
-      {/* ── CARD 1: LOCAL RANK TRACKER & 4 KPI CARDS ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-6">
+      {/* ── CARD 1: LOCAL RANK TRACKER HEADER & CONTROLS ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
         {/* Header & Controls Row */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -190,61 +184,6 @@ export function SearchGrid() {
                 <><RefreshCw className="w-3.5 h-3.5 mr-1" />Refresh Grid</>
               )}
             </Button>
-          </div>
-        </div>
-
-        {/* 4 KPI Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* KPI 1: Top 3 Map Pack */}
-          <div className="bg-white rounded-xl border border-gray-100/90 p-4 flex items-center gap-3.5 hover:border-gray-200 transition-colors shadow-2xs">
-            <div className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0" aria-hidden="true">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Top 3 Map Pack</div>
-              <div className="text-lg font-bold text-gray-900 leading-tight">
-                {solvPercentage}% <span className="text-xs font-normal text-gray-400">({top3Count}/25 areas)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 2: Average Rank */}
-          <div className="bg-white rounded-xl border border-gray-100/90 p-4 flex items-center gap-3.5 hover:border-gray-200 transition-colors shadow-2xs">
-            <div className="w-11 h-11 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0" aria-hidden="true">
-              <Crown className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Average Rank</div>
-              <div className="text-lg font-bold text-gray-900 leading-tight">
-                {avgRank ? `#${avgRank}` : '—'} <span className="text-xs font-normal text-gray-400">overall</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 3: Coverage Radius */}
-          <div className="bg-white rounded-xl border border-gray-100/90 p-4 flex items-center gap-3.5 hover:border-gray-200 transition-colors shadow-2xs">
-            <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0" aria-hidden="true">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Coverage Radius</div>
-              <div className="text-lg font-bold text-gray-900 leading-tight">
-                {(gridRadiusStep * 2) / 1000} km <span className="text-xs font-normal text-gray-400">({(gridRadiusStep * 4) / 1000} km span)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 4: Indexed Nodes */}
-          <div className="bg-white rounded-xl border border-gray-100/90 p-4 flex items-center gap-3.5 hover:border-gray-200 transition-colors shadow-2xs">
-            <div className="w-11 h-11 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0" aria-hidden="true">
-              <Network className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Indexed Nodes</div>
-              <div className="text-lg font-bold text-gray-900 leading-tight">
-                {found.length} / 25 <span className="text-xs font-normal text-gray-400">points</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
