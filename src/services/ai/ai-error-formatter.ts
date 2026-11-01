@@ -47,12 +47,21 @@ export function toHumanFriendlyAIError(error: any): string {
   }
 
   if (
-    message.includes("outstanding balance") ||
-    message.includes("billing account") ||
-    message.includes("credit_balance_exhausted") ||
-    message.includes("no credits remaining")
+    message.includes("SAFETY") ||
+    message.includes("HARM_CATEGORY") ||
+    message.includes("blocked")
   ) {
-    return "AI provider billing balance exhausted. Please update your Google AI Studio or OpenAI billing to resume AI replies.";
+    return "The request was flagged by content safety policies. Please adjust the topic or keywords and try again.";
+  }
+
+  if (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    message.includes("ECONNRESET") ||
+    message.includes("ETIMEDOUT") ||
+    message.includes("Timeout of")
+  ) {
+    return "Connection to the AI service timed out. Please try again in a moment.";
   }
 
   return "Unable to generate AI response right now. Please try again in a few moments.";

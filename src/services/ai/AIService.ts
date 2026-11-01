@@ -30,11 +30,11 @@ export class AIService {
     options?: AIGenerationOptions
   ): Promise<{ content: string; creditsUsed: number; remainingCredits: number }> {
     // 1. Verify doctor has appropriate module access
-    if (feature === AIFeature.REVIEW_REPLY) {
+    if (feature === AIFeature.REVIEW_REPLY || feature === AIFeature.GBP_POST || feature === AIFeature.SEO_OPTIMIZATION) {
       const hasAssistant = await EntitlementService.hasModule(doctorId, 'AI_ASSISTANT');
       const hasGrowth = await EntitlementService.hasModule(doctorId, 'GROWTH_SEO');
       if (!hasAssistant && !hasGrowth) {
-        await EntitlementService.requireModule(doctorId, 'GROWTH_SEO', { route: 'AIService.generate.REVIEW_REPLY' });
+        await EntitlementService.requireModule(doctorId, 'GROWTH_SEO', { route: `AIService.generate.${feature}` });
       }
     } else {
       await EntitlementService.requireModule(doctorId, 'AI_ASSISTANT', { route: 'AIService.generate' });
