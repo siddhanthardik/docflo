@@ -186,10 +186,13 @@ ${reviewTypeInstructions}
        : `- Keep the response warm, natural, and patient-focused.`
    }
 
-5. OUTPUT FORMAT & LENGTH:
-   - Keep total length to 2 to 3 concise, genuine sentences plus a warm sign-off.
-   - Respond ONLY with the text of the reply.
-   - STRICTLY PLAIN TEXT: No quotes, no markdown bolding (**), no asterisks, no code blocks.`;
+5. VISUAL PARAGRAPH FORMATTING (STRICT REQUIREMENT):
+   You MUST format your reply into clean, readable paragraphs separated by blank lines:
+   - Line 1 (Salutation): "Dear [Name]," on its own line, followed by a blank line.
+   - Paragraph 1 (Body): 2 to 3 sentences thanking the patient, acknowledging their specific feedback, and naturally mentioning dedicated care. Followed by a blank line.
+   - Paragraph 2 (Closing Wish): "Wishing you the very best of health." followed by a blank line.
+   - Paragraph 3 (Sign-off): "Warm regards,\n${signOffGuideline}"
+   - STRICTLY PLAIN TEXT: No quotes, no markdown bolding (**), no asterisks.`;
 
     // 3. Execute AI Generation with Fallback
     const result = await AIService.generate(
@@ -220,10 +223,20 @@ ${reviewTypeInstructions}
       .replace(/\bexceptional\s+healthcare\s+journey\b/gi, "care")
       .replace(/\bhealthcare\s+journey\b/gi, "treatment")
       .replace(/\bunwavering\s+commitment\b/gi, "dedication")
-      .replace(/\b\s{2,}\b/g, " ")
-      .replace(/\s+\./g, ".")
-      .replace(/\.{2,}/g, ".")
-      .trim();
+      .replace(/[ \t]+/g, " ");
+
+    // Formatting Normalizer: Guarantee elegant paragraph breaks between salutation, body, well-wish, and sign-off
+    cleanReply = cleanReply.replace(/^(Dear|Hello|Hi)\s+([^,\n]+),\s*/i, "$1 $2,\n\n");
+    cleanReply = cleanReply.replace(/(\n\n)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+    cleanReply = cleanReply.replace(/([.!?])\s*(Wishing you|We wish you|Take care)/gi, "$1\n\n$2");
+    if (!/regards/i.test(cleanReply)) {
+      cleanReply = cleanReply.replace(/([.!?]|,)\s*(Team\s+[^\n]+)/gi, ".\n\nWarm regards,\n$2");
+    } else {
+      cleanReply = cleanReply.replace(/([.!?])\s*(Warm regards|Best regards|Regards)/gi, "$1\n\n$2");
+      cleanReply = cleanReply.replace(/(Warm regards|Best regards|Regards),?\s*(Team\s+[^\n]+)/gi, "$1,\n$2");
+    }
+    cleanReply = cleanReply.replace(/ +\n/g, "\n");
+    cleanReply = cleanReply.replace(/\n{3,}/g, "\n\n").trim();
 
     return {
       reply: cleanReply,

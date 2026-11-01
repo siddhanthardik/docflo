@@ -2542,7 +2542,13 @@ Write your professional, direct, concise administrative response directly to Doc
         4. If star-only without review text, keep it to 1-2 sentences thanking them for the rating and wishing them good health.
         5. If 4-5 stars with text, keep it warm, humble, and concise (2-3 sentences).
         6. If 1-3 stars, be humble, empathetic, and invite them to speak with our clinic desk directly.
-        7. Respond ONLY with the exact text of the reply. Plain text only. No quotes or markdown.
+        7. VISUAL PARAGRAPH FORMATTING (STRICT REQUIREMENT):
+           Separate sections with blank lines:
+           - Salutation: "Dear [Name]," on its own line followed by a blank line.
+           - Body: 2-3 sentences acknowledging care and feedback. Followed by a blank line.
+           - Closing wish: "Wishing you the very best of health." followed by a blank line.
+           - Sign-off: "Warm regards,\nTeam [Clinic Name]"
+           - Plain text only. No quotes or markdown.
       `;
 
       let reply = await generateWithFallback(prompt, undefined, doctorId, "REVIEW_REPLY");
@@ -2552,7 +2558,20 @@ Write your professional, direct, concise administrative response directly to Doc
         .replace(/\b(?:the\s+)?care\s+expected\s+from\s+(?:the\s+)?best\s+(\w+)\s+in\s+([a-zA-Z\s]+)/gi, "trusted $1 care in $2")
         .replace(/\ba\s+great\s+deal\b/gi, "so much")
         .replace(/\bhealthcare\s+journey\b/gi, "care")
-        .trim();
+        .replace(/[ \t]+/g, " ");
+
+      // Formatting Normalizer
+      reply = reply.replace(/^(Dear|Hello|Hi)\s+([^,\n]+),\s*/i, "$1 $2,\n\n");
+      reply = reply.replace(/(\n\n)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+      reply = reply.replace(/([.!?])\s*(Wishing you|We wish you|Take care)/gi, "$1\n\n$2");
+      if (!/regards/i.test(reply)) {
+        reply = reply.replace(/([.!?]|,)\s*(Team\s+[^\n]+)/gi, ".\n\nWarm regards,\n$2");
+      } else {
+        reply = reply.replace(/([.!?])\s*(Warm regards|Best regards|Regards)/gi, "$1\n\n$2");
+        reply = reply.replace(/(Warm regards|Best regards|Regards),?\s*(Team\s+[^\n]+)/gi, "$1,\n$2");
+      }
+      reply = reply.replace(/ +\n/g, "\n");
+      reply = reply.replace(/\n{3,}/g, "\n\n").trim();
       return reply;
     } catch (error) {
       console.error("Error in Review Agent:", error);
