@@ -46,5 +46,14 @@ export function toHumanFriendlyAIError(error: any): string {
     return "AI service key configuration issue. Please contact support.";
   }
 
+  if (
+    message.includes("outstanding balance") ||
+    message.includes("billing account") ||
+    message.includes("credit_balance_exhausted") ||
+    message.includes("no credits remaining")
+  ) {
+    return "AI provider billing balance exhausted. Please update your Google AI Studio or OpenAI billing to resume AI replies.";
+  }
+
   return "Unable to generate AI response right now. Please try again in a few moments.";
 }

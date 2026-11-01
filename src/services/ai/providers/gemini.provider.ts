@@ -214,25 +214,30 @@ export class GeminiProvider implements AIProvider {
     let lastError: any = null;
     for (const modelName of CANDIDATE_MODELS) {
       try {
+        const isGemini3x = modelName.includes('3.8') || modelName.includes('3.7') || modelName.includes('3.6') || modelName.includes('3.5');
         const generationConfig: any = {
-          temperature: baseConfig.temperature,
           maxOutputTokens: baseConfig.maxOutputTokens,
         };
 
-        // In Gemini 3.7, internal thinking/reasoning tokens are deducted from maxOutputTokens.
+        if (!isGemini3x) {
+          generationConfig.temperature = baseConfig.temperature;
+        }
+
         // For fast direct text generation (reviews, posts, audits), disable thinking budget
         // so thinking tokens do not deplete the token budget and cause truncated mid-sentence replies.
-        if (modelName.includes('3.7')) {
+        if (modelName.includes('3.8') || modelName.includes('3.7') || modelName.includes('3.6')) {
           generationConfig.thinkingConfig = {
             thinkingBudget: 0,
           };
         }
 
         const model = this.genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent({
+        const generatePromise = model.generateContent({
           contents: [{ role: 'user', parts }],
           generationConfig,
         });
+
+        const result = await withTimeout(generatePromise, 6000, modelName);
 
         const response = await result.response;
         const content = response.text() || '';
