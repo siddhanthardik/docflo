@@ -210,7 +210,9 @@ export async function GET(request: Request) {
         rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
         isYou: true,
         placeId: account.locationId || "",
-        distanceMeters: 0
+        distanceMeters: 0,
+        category: primaryCategory,
+        formattedAddress: fullAddress || "",
       },
       ...validCompetitors.map((comp: any, idx: number) => ({
         id: comp.placeId || `comp-${idx}`,
@@ -221,7 +223,10 @@ export async function GET(request: Request) {
         rank: comp.googlePosition ?? (idx + 1),
         isYou: false,
         placeId: comp.placeId || "",
-        distanceMeters: comp.distanceMeters ?? null
+        distanceMeters: comp.distanceMeters ?? null,
+        category: comp.category || comp.primaryType || primaryCategory,
+        formattedAddress: comp.formattedAddress || "",
+        primaryType: comp.primaryType || null,
       }))
     ].sort((a, b) => a.rank - b.rank);
 

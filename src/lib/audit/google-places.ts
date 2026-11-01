@@ -183,6 +183,11 @@ export interface CompetitorData {
   placeId: string;
   googlePosition: number;  // Real 1-based position in Google search results list
   distanceMeters?: number | null;
+  category?: string | null;
+  primaryType?: string | null;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface CompetitorSearchResult {
@@ -229,6 +234,114 @@ export async function searchCompetitors(
   return result.competitors;
 }
 
+/**
+ * Strict specialty relevance evaluator for competitor benchmarking.
+ * 1. STRICTLY EXCLUDES major multi-specialty healthcare institutions:
+ *    (Hospitals, Super Speciality Hospitals, Medical Centres, Colleges, Nursing Homes)
+ * 2. STRICTLY EXCLUDES non-healthcare noise (veterinary, pet, restaurants, hotels, optical, chemist)
+ * 3. STRICTLY EXCLUDES unrelated clinical specialties (e.g. gynae, dental, eye, derma when doctor is nephro)
+ * 4. STRICTLY REQUIRES positive evidence that the business operates within the doctor's specialty domain.
+ */
+export function isRelatedCompetitor(targetSpecialty: string, place: {
+  name: string;
+  primaryType?: string | null;
+  primaryTypeDisplayName?: string | null;
+  types?: string[];
+}): boolean {
+  const pName = (place.name || "").toLowerCase();
+  const pPrimary = (place.primaryType || "").toLowerCase();
+  const pPrimaryLabel = (place.primaryTypeDisplayName || "").toLowerCase();
+  const allTypes = (place.types || []).map(t => t.toLowerCase());
+  const combined = `${pName} ${pPrimary} ${pPrimaryLabel} ${allTypes.join(" ")}`.toLowerCase();
+
+  // 1. Non-healthcare noise
+  if (
+    combined.includes("veterinary") ||
+    combined.includes("pet clinic") ||
+    combined.includes("animal hospital") ||
+    combined.includes("restaurant") ||
+    combined.includes("hotel") ||
+    combined.includes("car service") ||
+    combined.includes("pharmacy") ||
+    combined.includes("chemist") ||
+    combined.includes("optical") ||
+    combined.includes("spectacle")
+  ) {
+    return false;
+  }
+
+  // 2. Identify target specialty matchers from CLINICAL_MEDICAL_RULES
+  const normTarget = (targetSpecialty || "").toLowerCase();
+  const targetRule = CLINICAL_MEDICAL_RULES.find(r => 
+    normTarget.includes(r.label.toLowerCase()) || 
+    r.matchers.some(m => normTarget.includes(m))
+  );
+
+  const targetMatchers = targetRule 
+    ? targetRule.matchers 
+    : [normTarget.replace(/clinic|specialist|doctor|surgeon/gi, "").trim()].filter(Boolean);
+
+  // 3. Multi-Specialty & Major Institution Exclusion:
+  // "do not include major multi-specialty healthcare institutions (Hospital, Super Speciality Hospital, Medical Centre)"
+  const isMajorInstitution = 
+    pPrimary === "general_hospital" ||
+    pPrimary === "hospital" ||
+    pPrimary === "university_hospital" ||
+    pPrimary === "government_hospital" ||
+    combined.includes("super speciality hospital") ||
+    combined.includes("superspeciality hospital") ||
+    combined.includes("multi speciality hospital") ||
+    combined.includes("multispeciality hospital") ||
+    combined.includes("medical college") ||
+    combined.includes("aiims") ||
+    combined.includes("igims") ||
+    combined.includes("pmch") ||
+    combined.includes("paras hospital") ||
+    combined.includes("ruban hospital") ||
+    combined.includes("apollo hospital") ||
+    combined.includes("max hospital") ||
+    combined.includes("fortis hospital") ||
+    combined.includes("medanta");
+
+  if (isMajorInstitution) {
+    return false;
+  }
+
+  // Broad generic facility without specialty indication in name
+  const isGenericFacilityWithoutSpecialty = 
+    (pName.includes("hospital") || pName.includes("medical centre") || pName.includes("medical center") || pName.includes("nursing home")) &&
+    !targetMatchers.some(m => pName.includes(m));
+
+  if (isGenericFacilityWithoutSpecialty) {
+    return false;
+  }
+
+  // 4. Unrelated Specialties Exclusion
+  for (const rule of CLINICAL_MEDICAL_RULES) {
+    if (targetRule && rule.label === targetRule.label) continue;
+    
+    // Check if place explicitly represents another medical specialty
+    const matchesOtherSpecialty = rule.matchers.some(m => 
+      pPrimary.includes(m) || pPrimaryLabel.includes(m) || pName.includes(m)
+    );
+
+    if (matchesOtherSpecialty) {
+      // Exclude unless it ALSO matches the target specialty
+      const alsoMatchesTarget = targetMatchers.some(m => combined.includes(m));
+      if (!alsoMatchesTarget) {
+        return false;
+      }
+    }
+  }
+
+  // 5. Positive Related Category Requirement
+  const hasSpecialtyInTitle = targetMatchers.some(m => pName.includes(m));
+  const hasSpecialtyInPrimary = targetMatchers.some(m => pPrimary.includes(m) || pPrimaryLabel.includes(m));
+  const hasSpecialtyInTypes = allTypes.some(t => targetMatchers.some(m => t.includes(m)));
+
+  return hasSpecialtyInTitle || hasSpecialtyInPrimary || hasSpecialtyInTypes;
+}
+
 export async function searchCompetitorsWithRank(
   query: string,
   targetPlaceId: string,
@@ -264,6 +377,8 @@ export async function searchCompetitorsWithRank(
       "places.userRatingCount",
       "places.primaryType",
       "places.primaryTypeDisplayName",
+      "places.types",
+      "places.formattedAddress",
       "places.location",
     ].join(",");
 
@@ -323,8 +438,6 @@ export async function searchCompetitorsWithRank(
             body: JSON.stringify({
               textQuery,
               maxResultCount: 20,
-              // Fallback to locationBias only if we couldn't find the user organically
-              // and we absolutely need to find where they sit in a tighter 3km radius.
               locationBias: {
                 circle: {
                   center: { latitude: location.lat, longitude: location.lng },
@@ -356,8 +469,6 @@ export async function searchCompetitorsWithRank(
         }
       }
 
-      // ── Step 3: Build competitor list from Google results ──
-      // Preserve Google's ordering exactly — DO NOT re-sort by review count.
       // ── Step 3: Build authentic competitor list from Google results ──
       const competitors: CompetitorData[] = [];
       let googlePos = 0;
@@ -370,19 +481,16 @@ export async function searchCompetitorsWithRank(
         const pNameLower = (p.displayName?.text || "").toLowerCase();
         if (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) continue;
 
-        const pLabel = p.primaryTypeDisplayName?.text || "";
+        const pLabel = p.primaryTypeDisplayName?.text || p.primaryType || "";
         const pName = p.displayName?.text || "";
-        const cStr = (pName + " " + pLabel).toLowerCase();
 
-        // Exclude obvious non-human-healthcare noise
-        if (
-          cStr.includes("veterinary") ||
-          cStr.includes("pet clinic") ||
-          cStr.includes("animal hospital") ||
-          cStr.includes("restaurant") ||
-          cStr.includes("hotel") ||
-          cStr.includes("car service")
-        ) {
+        // Strictly filter to related businesses only and exclude major generic hospitals
+        if (!isRelatedCompetitor(query, {
+          name: pName,
+          primaryType: p.primaryType,
+          primaryTypeDisplayName: p.primaryTypeDisplayName?.text,
+          types: p.types,
+        })) {
           continue;
         }
 
@@ -401,6 +509,11 @@ export async function searchCompetitorsWithRank(
           placeId: p.id || "",
           googlePosition: googlePos, // Real Google list position
           distanceMeters: distKm != null ? Math.round(distKm * 1000) : null,
+          category: p.primaryTypeDisplayName?.text || p.primaryType || query,
+          primaryType: p.primaryType || null,
+          formattedAddress: p.formattedAddress || null,
+          lat: p.location?.latitude || null,
+          lng: p.location?.longitude || null,
         });
 
         if (competitors.length >= 10) break; // Return top 10 authentic competitors
@@ -457,57 +570,19 @@ export async function searchCompetitorsWithRank(
       if (cleanTargetName.length > 2 && r.name?.toLowerCase().includes(cleanTargetName)) continue;
 
       const pName = r.name || "";
-      const pLabel = r.types?.join(" ") || ""; // Classic API returns types array
 
-      // --- Dynamic Strict Specialty Filter ---
-      const excludeKeywords = [
-        'surgeon', 'surgery', 'physician', 'gastro', 'neuro', 'derma', 'uro', 'onco', 
-        'psych', 'ent ', 'eye', 'ophthalm', 'cardio', 'ortho', 'dental', 'dentist', 
-        'gynec', 'gynaec', 'diabetes', 'ivf', 'fertility', 'pediatr', 'paediatr'
-      ];
-
-      let isUnrelated = false;
-      const qStr = query.toLowerCase();
-      const cStr = (pName + " " + pLabel).toLowerCase();
-
-      for (const kw of excludeKeywords) {
-        if (cStr.includes(kw)) {
-          if ((kw === 'gynec' || kw === 'gynaec' || kw === 'ivf' || kw === 'fertility') && 
-              (qStr.includes('gynec') || qStr.includes('gynaec') || qStr.includes('ivf') || qStr.includes('fertility'))) continue;
-          if ((kw === 'pediatr' || kw === 'paediatr') && (qStr.includes('pediatr') || qStr.includes('paediatr'))) continue;
-          if ((kw === 'dental' || kw === 'dentist') && (qStr.includes('dental') || qStr.includes('dentist'))) continue;
-          
-          if (!qStr.includes(kw)) {
-            isUnrelated = true;
-            break;
-          }
-        }
-      }
-
-      // --- Positive Relevance Filter (Like GrexaAI strictness) ---
-      if (!isUnrelated) {
-        const targetRule = CLINICAL_MEDICAL_RULES.find(rule => 
-          qStr.includes(rule.label.toLowerCase()) || 
-          rule.matchers.some(m => qStr.includes(m))
-        );
-        
-        if (targetRule) {
-          const hasPositiveMatch = targetRule.matchers.some(m => cStr.includes(m)) || cStr.includes(targetRule.label.toLowerCase());
-          if (!hasPositiveMatch) {
-            isUnrelated = true;
-          }
-        }
-      }
-
-      if (isUnrelated) {
-        console.log(`[Competitor Filter Classic] Excluded: "${pName}" (${pLabel}) — completely unrelated to ${query}`);
+      if (!isRelatedCompetitor(query, {
+        name: pName,
+        primaryType: r.types?.[0] || null,
+        types: r.types || [],
+      })) {
         continue;
       }
 
       let distKm = null;
       if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
         distKm = calculateDistanceKm(location.lat, location.lng, r.geometry.location.lat, r.geometry.location.lng);
-        if (distKm > 5) {
+        if (distKm > 10) {
           console.log(`[Competitor Filter Classic] Excluded: "${pName}" — too far away (${distKm}km)`);
           continue;
         }
@@ -520,6 +595,11 @@ export async function searchCompetitorsWithRank(
         placeId: r.place_id,
         googlePosition: classicPos,
         distanceMeters: distKm != null ? Math.round(distKm * 1000) : null,
+        category: r.types?.[0] || query,
+        primaryType: r.types?.[0] || null,
+        formattedAddress: r.formatted_address || r.vicinity || null,
+        lat: r.geometry?.location?.lat || null,
+        lng: r.geometry?.location?.lng || null,
       });
 
       if (competitors.length >= 10) break;

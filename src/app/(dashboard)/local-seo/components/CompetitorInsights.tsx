@@ -27,11 +27,13 @@ interface Competitor {
   distanceMeters: number | null;
   isOpenNow?: boolean;
   primaryType?: string;
+  category?: string;
+  formattedAddress?: string;
   isYou?: boolean;
   rank?: number;
 }
 
-function RankBadge({ rank }: { rank: number }) {
+function RankBadge({ rank = 1 }: { rank?: number }) {
   const isGood = rank <= 3;
   const isOk = rank <= 7;
   const color = isGood
@@ -77,39 +79,27 @@ function getCompetitorIntelligence(
   primaryCategory: string
 ): CompetitorAnalysis {
   const name = comp.name || "";
+  const cat = comp.category || primaryCategory || "Specialist Clinic";
 
-  // 1. Extract specific keywords & localities from the competitor's title
+  // 1. Extract medical practice keywords from competitor's name dynamically (No hardcoded specialties)
   const detectedKeywords: string[] = [];
-  
-  // Split by common title delimiters: |, -, –, ,, /
-  const rawSegments = name.split(/[|\-–,/·]/).map(s => s.trim()).filter(Boolean);
-  
+  const rawSegments = name.split(/[|\-–,/·:]/).map(s => s.trim()).filter(Boolean);
+
   for (const seg of rawSegments) {
     const l = seg.toLowerCase();
-    // Exclude basic doctor names unless combined with medical keyword
-    if ((l.startsWith("dr ") || l.startsWith("dr.") || l.startsWith("prof")) && !l.includes("gynec") && !l.includes("clinic")) {
+    // Exclude basic doctor name segments (e.g. "Dr. Vinod Kumar")
+    if (
+      (l.startsWith("dr ") || l.startsWith("dr.") || l.startsWith("prof")) &&
+      !l.includes("clinic") &&
+      !l.includes("care") &&
+      !l.includes("hospital") &&
+      !l.includes("centre") &&
+      !l.includes("center")
+    ) {
       continue;
     }
-    if (
-      l.includes("gynec") || 
-      l.includes("obste") || 
-      l.includes("clinic") || 
-      l.includes("hospital") || 
-      l.includes("centre") || 
-      l.includes("center") || 
-      l.includes("care") || 
-      l.includes("specialist") || 
-      l.includes("best") || 
-      l.includes("maternity") ||
-      l.includes("abortion") ||
-      l.includes("doctor in") ||
-      l.includes("market") ||
-      l.includes("park") ||
-      l.includes("delhi") ||
-      l.includes("gk") ||
-      l.includes("kalkaji") ||
-      l.includes("alaknanda")
-    ) {
+
+    if (seg.length > 2) {
       const cleaned = seg.replace(/^[-|–,.\s]+|[-|–,.\s]+$/g, "").trim();
       if (cleaned.length > 2 && !detectedKeywords.includes(cleaned)) {
         detectedKeywords.push(cleaned);
@@ -125,25 +115,20 @@ function getCompetitorIntelligence(
   }
 
   const reviewGap = Math.max(0, comp.reviewCount - doctorReviewCount);
-
-  // 2. Identify Primary Ranking Signal
   const hasKeywordInTitle = detectedKeywords.length > 0;
   const isHighVolumeLeader = comp.reviewCount >= 450;
-  const isHighRatingLeader = comp.rating >= 4.9 && comp.reviewCount >= 200;
+  const isHighRatingLeader = comp.rating >= 4.9 && comp.reviewCount >= 100;
 
-  if (hasKeywordInTitle && detectedKeywords.some(k => {
-    const l = k.toLowerCase();
-    return l.includes("best") || l.includes("market") || l.includes("delhi") || l.includes("near me") || l.includes("gk") || l.includes("kalkaji");
-  })) {
+  if (hasKeywordInTitle && comp.name.toLowerCase().includes(primaryCategory.toLowerCase())) {
     return {
       signalBadge: {
-        label: "Title Keyword & Location Dominance",
+        label: "Title Keyword & Speciality Match",
         color: "bg-purple-50 text-purple-700 border-purple-200",
       },
-      explanation: `This clinic directly includes high-intent patient search terms in its title (${detectedKeywords.slice(0, 3).join(", ")}), giving it a strong boost in local Map Pack queries.`,
+      explanation: `This clinic directly includes the specialty in its Google listing title (${detectedKeywords.slice(0, 2).join(", ")}), giving it algorithmic prominence in Map Pack results.`,
       detectedKeywords,
       primaryCounterKeyword,
-      counterActionNote: `Counter their title keyword reach by posting Google Updates targeting "${primaryCounterKeyword}" and requesting reviews mentioning this phrase.`,
+      counterActionNote: `Strengthen your search prominence by drafting Google Updates focused on "${primaryCounterKeyword}" and requesting reviews highlighting your clinical care.`,
       reviewGap
     };
   }
@@ -155,9 +140,9 @@ function getCompetitorIntelligence(
         color: "bg-amber-50 text-amber-700 border-amber-200",
       },
       explanation: `Ranks high due to an accumulated base of ${comp.reviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
-      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${primaryCategory} Clinic`, "Patient Care"],
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${cat}`, `${primaryCategory} Care`],
       primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
-      counterActionNote: `Close their review lead by sending automated WhatsApp review requests to your recent patients. Weekly reviews beat older static volumes.`,
+      counterActionNote: `Close their review lead by sending automated WhatsApp review requests to your recent patients. Consistent weekly reviews beat older static volumes.`,
       reviewGap
     };
   }
@@ -178,10 +163,10 @@ function getCompetitorIntelligence(
 
   return {
     signalBadge: {
-      label: "Local Specialty Competitor",
+      label: "Verified Specialty Competitor",
       color: "bg-blue-50 text-blue-700 border-blue-200",
     },
-    explanation: `Consistently visible for ${primaryCategory} in your local search radius (${formatDistance(comp.distanceMeters)} away).`,
+    explanation: `Verified provider of ${cat} within your local search radius (${formatDistance(comp.distanceMeters)} away).`,
     detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [primaryCategory, `${primaryCategory} near me`],
     primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
     counterActionNote: `Target nearby patient searches by publishing weekly updates highlighting your clinic's services and location.`,
@@ -189,12 +174,12 @@ function getCompetitorIntelligence(
   };
 }
 
-// Interactive Competitor Keyword Targeting Block
+// Interactive Competitor Keyword Targeting Block (Fully Dynamic)
 function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { competitors: Competitor[]; primaryCategory: string; keywordsData: any }) {
   const router = useRouter();
   const { toast } = useToast();
 
-  // 1. Extract keywords from top competitor business names
+  // 1. Extract keywords from top competitor business names dynamically (No hardcoded medical fields)
   const competitorTitleKeywords: string[] = [];
   competitors
     .filter(c => !c.isYou)
@@ -207,20 +192,9 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
           !lower.startsWith("dr ") &&
           !lower.startsWith("dr.") &&
           !lower.startsWith("prof") &&
-          (
-            lower.includes("gynec") ||
-            lower.includes("obste") ||
-            lower.includes("clinic") ||
-            lower.includes("hospital") ||
-            lower.includes("centre") ||
-            lower.includes("center") ||
-            lower.includes("care") ||
-            lower.includes("specialist") ||
-            lower.includes("best") ||
-            lower.includes("maternity")
-          )
+          part.length > 3
         ) {
-          competitorTitleKeywords.push(part.toLowerCase());
+          competitorTitleKeywords.push(part);
         }
       }
     });
@@ -230,8 +204,8 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
     .map((kw: any) => (typeof kw === "string" ? kw : kw.searchKeyword).toLowerCase())
     .slice(0, 4);
 
-  // 3. Extract competitor primary types
-  const competitorTypes = Array.from(new Set(competitors.map(c => c.primaryType).filter(Boolean)))
+  // 3. Extract competitor primary categories
+  const competitorTypes = Array.from(new Set(competitors.map(c => c.category || c.primaryType).filter(Boolean)))
     .map(type => type!.replace(/_/g, " ").toLowerCase())
     .slice(0, 3);
 
@@ -239,14 +213,14 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
   const baseCategory = primaryCategory.toLowerCase();
   
   let dynamicKeywords = [
-    ...competitorTitleKeywords.slice(0, 3),
+    ...competitorTitleKeywords.slice(0, 2),
     `${baseCategory} near me`,
     `best ${baseCategory}`,
     ...actualSearchTerms,
-    ...competitorTypes.map(t => `${t} clinic`),
+    ...competitorTypes.map(t => `${t}`),
   ];
 
-  dynamicKeywords = Array.from(new Set(dynamicKeywords)).filter(Boolean).slice(0, 8);
+  dynamicKeywords = Array.from(new Set(dynamicKeywords.map(k => k.trim()))).filter(Boolean).slice(0, 8);
 
   // Action Handlers
   const handleAddToGmbServices = async (kw: string) => {
@@ -391,13 +365,13 @@ export function CompetitorInsights() {
   const doctorName = overviewData?.name || overviewData?.businessName || youMatch?.name || "Your Clinic";
   const doctorRating = Number(overviewData?.rating || overviewData?.avgRating) || (youMatch?.rating ? Number(youMatch.rating) : 0);
   const doctorReviewCount = Number(overviewData?.user_ratings_total || overviewData?.reviewCount || overviewData?.totalReviews) || (youMatch?.reviewCount ? Number(youMatch.reviewCount) : 0);
-  const primaryCategory = overviewData?.primaryCategory || "Obstetrician-gynecologist";
+  const primaryCategory = overviewData?.primaryCategory || youMatch?.category || "Specialist Clinic";
   const userRank = youMatch?.rank || 2;
 
   // Build unified list sorted strictly by Map Rank (showing all results returned by API)
   const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou);
   
-  const allRows = [
+  const allRows: Competitor[] = [
     ...competitorRowsOnly.map((c, i) => ({
       placeId: c.placeId || `comp-${i}`,
       name: c.name,
@@ -406,7 +380,9 @@ export function CompetitorInsights() {
       distanceMeters: c.distanceMeters != null ? c.distanceMeters : null,
       rank: c.rank || i + 1,
       isYou: false,
-      primaryType: c.primaryType
+      primaryType: c.primaryType,
+      category: c.category || c.primaryType,
+      formattedAddress: c.formattedAddress || "",
     })),
 
     {
@@ -417,9 +393,11 @@ export function CompetitorInsights() {
       distanceMeters: 0,
       rank: userRank,
       isYou: true,
-      primaryType: primaryCategory
+      primaryType: primaryCategory,
+      category: primaryCategory,
+      formattedAddress: youMatch?.formattedAddress || overviewData?.address || "",
     }
-  ].sort((a, b) => a.rank - b.rank);
+  ].sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
   const displayList = showAll ? allRows : allRows.slice(0, 6);
 
@@ -523,9 +501,21 @@ export function CompetitorInsights() {
                       <Activity className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
-                        {comp.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                          {comp.name}
+                        </p>
+                        {comp.category && (
+                          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60 truncate max-w-[140px]">
+                            {comp.category}
+                          </span>
+                        )}
+                      </div>
+                      {comp.formattedAddress && (
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                          {comp.formattedAddress.replace(/, India$/i, "")}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -568,13 +558,18 @@ export function CompetitorInsights() {
 
                   return (
                     <div className="mt-2 mx-1 p-4 bg-white rounded-2xl border border-gray-200/90 shadow-xs space-y-3.5 animate-in fade-in duration-200">
-                      {/* Top Bar: Clinic Name + Google Maps Button */}
+                      {/* Top Bar: Clinic Name + Verified Details + Google Maps Button */}
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
+                            {comp.category && (
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                {comp.category}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2">
+                          <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2 flex-wrap">
                             <span>{comp.reviewCount} patient reviews</span>
                             <span>·</span>
                             <span>{comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"}</span>
@@ -584,10 +579,16 @@ export function CompetitorInsights() {
                                 <span>{formatDistance(comp.distanceMeters)} away</span>
                               </>
                             )}
+                            {comp.formattedAddress && (
+                              <>
+                                <span>·</span>
+                                <span className="text-gray-400">{comp.formattedAddress.replace(/, India$/i, "")}</span>
+                              </>
+                            )}
                           </p>
                         </div>
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`}
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}&query_place_id=${encodeURIComponent(comp.placeId)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
