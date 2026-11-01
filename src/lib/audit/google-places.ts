@@ -288,20 +288,24 @@ export function isRelatedCompetitor(targetSpecialty: string, place: {
     pPrimary === "hospital" ||
     pPrimary === "university_hospital" ||
     pPrimary === "government_hospital" ||
-    combined.includes("super speciality hospital") ||
-    combined.includes("superspeciality hospital") ||
-    combined.includes("multi speciality hospital") ||
-    combined.includes("multispeciality hospital") ||
+    combined.includes("super speciality") ||
+    combined.includes("superspeciality") ||
+    combined.includes("multi speciality") ||
+    combined.includes("multispeciality") ||
     combined.includes("medical college") ||
     combined.includes("aiims") ||
     combined.includes("igims") ||
     combined.includes("pmch") ||
     combined.includes("paras hospital") ||
+    combined.includes("paras hmri") ||
     combined.includes("ruban hospital") ||
     combined.includes("apollo hospital") ||
+    combined.includes("apollo spectra") ||
     combined.includes("max hospital") ||
     combined.includes("fortis hospital") ||
-    combined.includes("medanta");
+    combined.includes("medanta") ||
+    combined.includes("ford hospital") ||
+    combined.includes("satyadev");
 
   if (isMajorInstitution) {
     return false;
@@ -316,14 +320,15 @@ export function isRelatedCompetitor(targetSpecialty: string, place: {
     return false;
   }
 
-  // 4. Unrelated Specialties Exclusion
+  // 4. Unrelated Specialties Exclusion (e.g. dentist, dermatologist, eye clinic)
   for (const rule of CLINICAL_MEDICAL_RULES) {
     if (targetRule && rule.label === targetRule.label) continue;
     
-    // Check if place explicitly represents another medical specialty
-    const matchesOtherSpecialty = rule.matchers.some(m => 
-      pPrimary.includes(m) || pPrimaryLabel.includes(m) || pName.includes(m)
-    );
+    // Check if place explicitly represents another medical specialty (use length > 3 to avoid substring false positives)
+    const matchesOtherSpecialty = rule.matchers.some(m => {
+      if (m.length <= 3) return false;
+      return pPrimary.includes(m) || pPrimaryLabel.includes(m) || pName.includes(m);
+    });
 
     if (matchesOtherSpecialty) {
       // Exclude unless it ALSO matches the target specialty
@@ -334,12 +339,21 @@ export function isRelatedCompetitor(targetSpecialty: string, place: {
     }
   }
 
-  // 5. Positive Related Category Requirement
-  const hasSpecialtyInTitle = targetMatchers.some(m => pName.includes(m));
-  const hasSpecialtyInPrimary = targetMatchers.some(m => pPrimary.includes(m) || pPrimaryLabel.includes(m));
-  const hasSpecialtyInTypes = allTypes.some(t => targetMatchers.some(m => t.includes(m)));
+  // 5. Positive Healthcare / Doctor Validation:
+  // Since Google Places was queried for the specific specialty (e.g. "Best Nephrologist in Patna"),
+  // any doctor profile, medical clinic, or healthcare listing that passed the exclusion criteria is valid.
+  const isHealthcareProvider = 
+    pPrimary === "doctor" ||
+    pPrimary === "medical_clinic" ||
+    pPrimary === "health" ||
+    pPrimary === "physician" ||
+    allTypes.includes("doctor") ||
+    allTypes.includes("medical_clinic") ||
+    allTypes.includes("health") ||
+    allTypes.includes("physician") ||
+    targetMatchers.some(m => combined.includes(m));
 
-  return hasSpecialtyInTitle || hasSpecialtyInPrimary || hasSpecialtyInTypes;
+  return isHealthcareProvider;
 }
 
 export async function searchCompetitorsWithRank(
@@ -497,7 +511,7 @@ export async function searchCompetitorsWithRank(
         let distKm = null;
         if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
           distKm = calculateDistanceKm(location.lat, location.lng, p.location.latitude, p.location.longitude);
-          if (distKm > 10) {
+          if (distKm > 20) {
             continue;
           }
         }
@@ -582,7 +596,7 @@ export async function searchCompetitorsWithRank(
       let distKm = null;
       if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
         distKm = calculateDistanceKm(location.lat, location.lng, r.geometry.location.lat, r.geometry.location.lng);
-        if (distKm > 10) {
+        if (distKm > 20) {
           console.log(`[Competitor Filter Classic] Excluded: "${pName}" — too far away (${distKm}km)`);
           continue;
         }

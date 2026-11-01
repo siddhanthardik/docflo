@@ -399,7 +399,7 @@ export function CompetitorInsights() {
     }
   ].sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
-  const displayList = showAll ? allRows : allRows.slice(0, 6);
+  const displayList = showAll ? allRows : allRows.slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -420,6 +420,14 @@ export function CompetitorInsights() {
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </button>
+        </div>
+
+        {/* Direct Peer Practice Scope Notice */}
+        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50/60 border border-indigo-100/90 rounded-xl text-xs text-indigo-800">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+          <span>
+            Benchmarking against direct doctor & specialty clinic peers for <strong>{primaryCategory}</strong>. Multi-specialty hospitals (e.g. Paras, Apollo, Ford Hospital) are excluded so comparisons stay focused on direct practice competitors.
+          </span>
         </div>
 
         {/* Table column headers */}
@@ -684,7 +692,7 @@ export function CompetitorInsights() {
         </div>
 
         {/* "X more ahead" + show more toggle */}
-        {!showAll && allRows.length > 6 && (
+        {!showAll && allRows.length > 8 && (
           <button
             onClick={() => setShowAll(true)}
             className="w-full py-4 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer"
@@ -692,12 +700,12 @@ export function CompetitorInsights() {
             Show all {allRows.length} nearby clinics <ChevronDown className="w-3.5 h-3.5" />
           </button>
         )}
-        {showAll && allRows.length > 6 && (
+        {showAll && allRows.length > 8 && (
           <button
             onClick={() => setShowAll(false)}
             className="w-full py-4 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer"
           >
-            Show top 6 <ChevronUp className="w-3.5 h-3.5" />
+            Show top 8 <ChevronUp className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

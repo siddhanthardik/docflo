@@ -181,8 +181,8 @@ export async function GET(request: Request) {
     let locationContext = undefined;
 
     if (extracted) {
-      locationContext = extracted.searchPhrase;
-      console.log(`[Competitors] Using neighborhood for organic text search: ${locationContext}`);
+      locationContext = extracted.city || extracted.searchPhrase;
+      console.log(`[Competitors] Using city/neighborhood for organic text search: ${locationContext}`);
     }
 
     // ── Live Google Places API call ───────────────────────────────────────────
