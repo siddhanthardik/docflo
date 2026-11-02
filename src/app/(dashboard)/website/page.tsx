@@ -72,6 +72,8 @@ import {
   GripVertical,
   PanelLeftClose,
   PanelLeftOpen,
+  Bookmark,
+  LayoutGrid,
 } from "lucide-react";
 import { BlockTemplateModal } from "@/components/composer/BlockTemplateModal";
 import { Button } from "@/components/ui/button";
@@ -83,6 +85,9 @@ import { InsertSectionModal } from "@/components/composer/InsertSectionModal";
 import { QuickStartWizardModal } from "@/components/composer/QuickStartWizardModal";
 import { MedicalStockModal } from "@/components/composer/MedicalStockModal";
 import { HeroImageAdjustModal } from "@/components/composer/HeroImageAdjustModal";
+import { StudioDrawer } from "@/components/composer/StudioDrawer";
+import { StudioCanvas } from "@/components/composer/StudioCanvas";
+import { SavedBlockItem } from "@/types/builder-blocks";
 
 const THEME_OPTIONS = [
   { id: "apex-clinical", name: "Apex Clinical Pro", category: "Hospital & Polyclinic", primary: "#2563EB", secondary: "#0F172A", accent: "#10B981" },
@@ -184,6 +189,60 @@ export default function ElementorComposerPage() {
   const [blockTemplateModalOpen, setBlockTemplateModalOpen] = useState(false);
   const [heroAdjustModalOpen, setHeroAdjustModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [savedBlocks, setSavedBlocks] = useState<SavedBlockItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("gyrex_saved_blocks");
+      if (stored) setSavedBlocks(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const handleSaveSectionAsBlock = (section: PageSection) => {
+    const newSaved: SavedBlockItem = {
+      id: `saved_${Date.now()}`,
+      name: `${section.title || section.type.replace("_", " ")} Block`,
+      targetType: section.type,
+      createdAt: new Date().toLocaleDateString(),
+      section: JSON.parse(JSON.stringify(section)),
+    };
+    const updated = [newSaved, ...savedBlocks];
+    setSavedBlocks(updated);
+    try {
+      localStorage.setItem("gyrex_saved_blocks", JSON.stringify(updated));
+    } catch {}
+    toast({
+      title: "Block Saved to Library! 💾",
+      description: "You can reuse it anytime from the 'Saved Blocks' tab.",
+    });
+  };
+
+  const handleDeleteSavedBlock = (id: string) => {
+    const updated = savedBlocks.filter((b) => b.id !== id);
+    setSavedBlocks(updated);
+    try {
+      localStorage.setItem("gyrex_saved_blocks", JSON.stringify(updated));
+    } catch {}
+    toast({ title: "Block Removed from Library" });
+  };
+
+  const handleInsertSectionFromDrawer = (sectionPartial: Partial<PageSection>) => {
+    const newId = `sec_${Date.now()}`;
+    const newSection: PageSection = {
+      id: newId,
+      type: sectionPartial.type || "CUSTOM_TEXT",
+      ...sectionPartial,
+    };
+    const list = [...(siteData.sections || []), newSection];
+    const nextState = { ...siteData, sections: list };
+    setSiteData(nextState);
+    pushHistory(nextState);
+    handleSelectSection(newId);
+    toast({
+      title: `Added ${newSection.type.replace("_", " ")} Block! ✨`,
+      description: "Customized content inspector ready.",
+    });
+  };
 
   // Undo History Stack
   const [historyStack, setHistoryStack] = useState<ClinicWebsiteData[]>([]);
@@ -723,27 +782,26 @@ export default function ElementorComposerPage() {
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href="/dashboard"
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors shrink-0"
-            title="Back to Dashboard"
+            className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 flex items-center gap-1 text-xs font-bold transition-colors shrink-0"
+            title="Exit Studio to Dashboard"
           >
             <ChevronLeft className="w-4 h-4" />
+            <span className="hidden md:inline">Edit Page</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
-            title={isSidebarCollapsed ? "Expand Tools Panel" : "Collapse Tools Panel (Maximize Canvas)"}
-          >
-            {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-          </button>
-          <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5 shrink-0">
-            <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-              <Globe className="w-4 h-4" />
-            </span>
-            <span className="hidden sm:inline">Website Studio</span>
-          </span>
 
-          <div className="flex items-center gap-1.5 pl-2.5 border-l border-slate-200 min-w-0">
+          <Button
+            onClick={() => handleSaveWebsite("Draft")}
+            disabled={saving}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 rounded-xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 shrink-0"
+            title="Save website changes as draft"
+          >
+            <Save className="w-3.5 h-3.5 text-purple-600" />
+            <span className="hidden sm:inline">{saving ? "Saving..." : "Save Draft"}</span>
+          </Button>
+
+          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 min-w-0">
             <select
               value={siteData.themeId}
               onChange={(e) => {
@@ -941,78 +999,128 @@ export default function ElementorComposerPage() {
 
       {/* ── MAIN STUDIO BODY: LEFT PALETTE (390px) + CENTER LIVE VISUAL CANVAS ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* ── LEFT TOOLBAR / INSPECTOR DRAWER ── */}
-        {isSidebarCollapsed ? (
-          /* Slim 56px Icon Strip when collapsed */
-          <aside className="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-2 shrink-0 z-20 shadow-xs transition-all duration-200">
-            <button
-              type="button"
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center justify-center transition-colors cursor-pointer"
-              title="Expand Tools Panel"
-            >
-              <PanelLeftOpen className="w-4 h-4" />
-            </button>
-            <div className="w-8 h-px bg-slate-200 my-1" />
-            <button
-              type="button"
-              onClick={() => {
+        {/* ── 56px PRIMARY ICON RAIL (EXLY-STYLE DOCKED RAIL) ── */}
+        <aside className="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-2.5 shrink-0 z-30 select-none shadow-xs">
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSidebarCollapsed && sidebarTab === "elements" && !selectedSectionId) {
+                setIsSidebarCollapsed(true);
+              } else {
                 setIsSidebarCollapsed(false);
                 setSelectedSectionId(null);
                 setSidebarTab("elements");
-              }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                !selectedSection && sidebarTab === "elements" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
-              }`}
-              title="Elements Tray"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+              }
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              !selectedSectionId && sidebarTab === "elements" && !isSidebarCollapsed
+                ? "bg-purple-700 text-white shadow-md font-bold"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title="Blocks & Design Blocks (⊞)"
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSidebarCollapsed && sidebarTab === "structure" && !selectedSectionId) {
+                setIsSidebarCollapsed(true);
+              } else {
                 setIsSidebarCollapsed(false);
                 setSelectedSectionId(null);
                 setSidebarTab("structure");
-              }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                !selectedSection && sidebarTab === "structure" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
-              }`}
-              title="Page Structure"
-            >
-              <Layers className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+              }
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              !selectedSectionId && sidebarTab === "structure" && !isSidebarCollapsed
+                ? "bg-purple-700 text-white shadow-md font-bold"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title="Page Structure & Layers (🥞)"
+          >
+            <Layers className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSidebarCollapsed && sidebarTab === "style" && !selectedSectionId) {
+                setIsSidebarCollapsed(true);
+              } else {
                 setIsSidebarCollapsed(false);
                 setSelectedSectionId(null);
                 setSidebarTab("style");
-              }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                !selectedSection && sidebarTab === "style" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
-              }`}
-              title="Styling & Typography"
-            >
-              <Palette className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+              }
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              !selectedSectionId && sidebarTab === "style" && !isSidebarCollapsed
+                ? "bg-purple-700 text-white shadow-md font-bold"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title="Theme & Global Styling (🎨)"
+          >
+            <Palette className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSidebarCollapsed && sidebarTab === "navbar" && !selectedSectionId) {
+                setIsSidebarCollapsed(true);
+              } else {
+                setIsSidebarCollapsed(false);
+                setSelectedSectionId(null);
+                setSidebarTab("navbar");
+              }
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              !selectedSectionId && sidebarTab === "navbar" && !isSidebarCollapsed
+                ? "bg-purple-700 text-white shadow-md font-bold"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title="Clinic Navigation & Custom Links (🚩)"
+          >
+            <Navigation className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSidebarCollapsed && sidebarTab === "domain" && !selectedSectionId) {
+                setIsSidebarCollapsed(true);
+              } else {
                 setIsSidebarCollapsed(false);
                 setSelectedSectionId(null);
                 setSidebarTab("domain");
-              }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                !selectedSection && sidebarTab === "domain" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
-              }`}
-              title="Domain Settings"
-            >
-              <Globe className="w-4 h-4" />
-            </button>
-          </aside>
-        ) : (
-          <aside className="w-[320px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs transition-all duration-200">
+              }
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              !selectedSectionId && sidebarTab === "domain" && !isSidebarCollapsed
+                ? "bg-purple-700 text-white shadow-md font-bold"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title="Custom Domain & Subdomain (🌐)"
+          >
+            <Globe className="w-5 h-5" />
+          </button>
+
+          <div className="flex-1" />
+
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="w-10 h-10 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+            title={isSidebarCollapsed ? "Expand Drawer" : "Collapse Drawer"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
+        </aside>
+
+        {/* ── EXPANDABLE DRAWER / INSPECTOR (340px) ── */}
+        {!isSidebarCollapsed && (
+          <aside className="w-[340px] sm:w-[360px] bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-md transition-all">
             {selectedSection ? (
               <div className="flex-1 flex flex-col overflow-hidden animate-in slide-in-from-left-2 duration-150">
                 <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -1048,14 +1156,24 @@ export default function ElementorComposerPage() {
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSection(selectedSection.id)}
-                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50"
-                  title="Delete Section"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveSectionAsBlock(selectedSection)}
+                    className="text-slate-400 hover:text-purple-600 p-1.5 rounded-lg hover:bg-purple-50 transition-colors"
+                    title="Save Section to 'Saved Blocks' Library"
+                  >
+                    <Bookmark className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSection(selectedSection.id)}
+                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                    title="Delete Section"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* ── SUB-TAB 2: STYLE CONTROLS ── */}
@@ -2632,124 +2750,35 @@ export default function ElementorComposerPage() {
               )}
             </div>
           ) : (
-            /* Main Elementor Drawer Tabs */
+            /* Main Studio Drawer Panel */
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="grid grid-cols-5 p-1.5 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-600">
-                <button
-                  onClick={() => setSidebarTab("elements")}
-                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "elements" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
-                >
-                  <Plus className="w-3.5 h-3.5" /> <span>Elements</span>
-                </button>
-                <button
-                  onClick={() => setSidebarTab("structure")}
-                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "structure" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
-                >
-                  <Layers className="w-3.5 h-3.5" /> <span>Structure</span>
-                </button>
-                <button
-                  onClick={() => setSidebarTab("navbar")}
-                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "navbar" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
-                >
-                  <Navigation className="w-3.5 h-3.5" /> <span>Navbar</span>
-                </button>
-                <button
-                  onClick={() => setSidebarTab("style")}
-                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "style" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
-                >
-                  <Palette className="w-3.5 h-3.5" /> <span>Styling</span>
-                </button>
-                <button
-                  onClick={() => setSidebarTab("domain")}
-                  className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all ${sidebarTab === "domain" ? "bg-white text-blue-600 shadow-2xs font-black" : "hover:bg-slate-100"}`}
-                >
-                  <Globe className="w-3.5 h-3.5" /> <span>Domain</span>
-                </button>
-              </div>
-
-              {/* TAB 1: ADD & EDIT WIDGETS TRAY */}
-              {sidebarTab === "elements" && (
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {/* 5-Minute Magic QuickStart Callout */}
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white shadow-md flex items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 font-black text-xs">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-                        <span>5-Min Magic QuickStart</span>
-                      </div>
-                      <p className="text-[10px] text-blue-100">Auto-build complete site in 45s</p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setQuickStartModalOpen(true)}
-                      className="h-7 px-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-black text-[10px] shadow-xs cursor-pointer shrink-0"
-                    >
-                      Start
-                    </Button>
-                  </div>
-
-                  <div className="space-y-1 pt-1">
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Drag &amp; Drop Blocks</h3>
-                    <p className="text-[11px] text-slate-500">Drag any block onto the canvas or click to add / edit.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2.5 pt-1">
-                    {AVAILABLE_WIDGETS.map((widget) => {
-                      const Icon = widget.icon;
-                      const isPresentOnPage = (siteData.sections || []).some((s) => s.type === widget.type);
-
-                      return (
-                        <div
-                          key={widget.type}
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("application/x-gyrex-widget", widget.type);
-                          }}
-                          onClick={() => handleElementCardClick(widget.type)}
-                          className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 hover:shadow-md transition-all cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 bg-white group select-none"
-                          title="Drag onto Canvas or Click to Add / Edit"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors relative">
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 flex items-center gap-1.5">
-                                  <span>{widget.label}</span>
-                                </h4>
-                                {isPresentOnPage && (
-                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                                    Active
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-slate-500 leading-tight">{widget.description}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <div className="p-1 text-slate-300 group-hover:text-blue-500 transition-colors" title="Drag onto canvas">
-                              <GripVertical className="w-3.5 h-3.5" />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddNewSection(widget.type);
-                              }}
-                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-600 text-slate-500 hover:text-white transition-colors"
-                              title="Add as New Section"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+              {sidebarTab !== "elements" && (
+                <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    {sidebarTab === "structure" && <><Layers className="w-4 h-4 text-purple-600" /> Page Structure</>}
+                    {sidebarTab === "navbar" && <><Navigation className="w-4 h-4 text-purple-600" /> Clinic Navigation</>}
+                    {sidebarTab === "style" && <><Palette className="w-4 h-4 text-purple-600" /> Themes &amp; Styling</>}
+                    {sidebarTab === "domain" && <><Globe className="w-4 h-4 text-purple-600" /> Domain &amp; Free URL</>}
+                  </h3>
+                  <button
+                    onClick={() => setIsSidebarCollapsed(true)}
+                    className="w-6 h-6 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Close Panel"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+              )}
+
+              {/* TAB 1: BLOCKS, DESIGN BLOCKS & SAVED BLOCKS (EXLY-STYLE) */}
+              {sidebarTab === "elements" && (
+                <StudioDrawer
+                  isOpen={true}
+                  onClose={() => setIsSidebarCollapsed(true)}
+                  onInsertSection={handleInsertSectionFromDrawer}
+                  savedBlocks={savedBlocks}
+                  onDeleteSavedBlock={handleDeleteSavedBlock}
+                />
               )}
 
               {/* TAB 2: PAGE STRUCTURE NAVIGATOR */}
@@ -3212,35 +3241,22 @@ export default function ElementorComposerPage() {
         </aside>
       )}
 
-        {/* ── CENTER LIVE VISUAL CANVAS (WYSIWYG) ── */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 flex items-start justify-center bg-slate-100/80">
-          <div
-            className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 border border-slate-300/80 ${
-              viewport === "desktop"
-                ? "w-full max-w-7xl"
-                : viewport === "tablet"
-                ? "w-[768px]"
-                : "w-[390px]"
-            }`}
-          >
-            <ThemeRenderer
-              data={siteData}
-              previewMode={false}
-              composerMode={true}
-              selectedSectionId={selectedSectionId}
-              onSelectSection={handleSelectSection}
-              onMoveSection={handleMoveSection}
-              onDeleteSection={handleDeleteSection}
-              onDuplicateSection={handleDuplicateSection}
-              onDropNewSection={handleDropNewSection}
-              onReorderSection={handleReorderSection}
-              onOpenInsertModal={(idx) => {
-                setInsertTargetIndex(idx);
-                setInsertModalOpen(true);
-              }}
-            />
-          </div>
-        </main>
+        {/* ── CENTER LIVE VISUAL CANVAS WITH PANNING & ZOOMING (STUDIO CANVAS) ── */}
+        <StudioCanvas
+          siteData={siteData}
+          selectedSectionId={selectedSectionId}
+          viewport={viewport}
+          onSelectSection={handleSelectSection}
+          onMoveSection={handleMoveSection}
+          onDeleteSection={handleDeleteSection}
+          onDuplicateSection={handleDuplicateSection}
+          onDropNewSection={handleDropNewSection}
+          onReorderSection={handleReorderSection}
+          onOpenInsertModal={(idx) => {
+            setInsertTargetIndex(idx ?? null);
+            setInsertModalOpen(true);
+          }}
+        />
       </div>
 
       {/* ── PUBLISH CONFIRMATION DIALOG MODAL ── */}
