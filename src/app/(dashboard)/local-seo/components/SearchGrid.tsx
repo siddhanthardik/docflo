@@ -36,8 +36,8 @@ export function SearchGrid() {
     const list: string[] = [];
     const seen = new Set<string>();
 
-    const addWord = (w?: string) => {
-      if (!w) return;
+    const addWord = (w?: any) => {
+      if (!w || typeof w !== "string") return;
       const clean = w.trim();
       const lower = clean.toLowerCase();
       if (clean && !seen.has(lower)) {

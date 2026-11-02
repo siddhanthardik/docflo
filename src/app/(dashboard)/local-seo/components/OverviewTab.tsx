@@ -191,36 +191,45 @@ export function OverviewTab({
   ];
 
   // ── 4. Reviews & Reputation ────────────────────────────────────────────────
-  const { averageRating = 5.0, totalReviewCount = 90, reviews = [] } = reputationData || {};
-  const unanswered = reviews.filter((r: any) => !r.reviewReply).length;
+  const safeAvgRating = Number(reputationData?.averageRating ?? 5.0) || 5.0;
+  const safeTotalReviews = Number(reputationData?.totalReviewCount ?? 0) || 0;
+  const safeReviews = Array.isArray(reputationData?.reviews) ? reputationData.reviews : [];
+  const unanswered = safeReviews.filter((r: any) => r && !r.reviewReply).length;
 
   // ── 5. Google Posts Activity ───────────────────────────────────────────────
-  const rawPosts: any[] = postData?.localPosts || [];
+  const rawPosts: any[] = Array.isArray(postData?.localPosts) ? postData.localPosts : [];
   const posts = [...rawPosts].sort((a: any, b: any) => {
-    const timeA = new Date(a.createTime || a.updateTime || 0).getTime();
-    const timeB = new Date(b.createTime || b.updateTime || 0).getTime();
-    return timeB - timeA;
+    const timeA = new Date(a?.createTime || a?.updateTime || 0).getTime();
+    const timeB = new Date(b?.createTime || b?.updateTime || 0).getTime();
+    return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
   });
 
   const recentPost = posts[0];
-  const lastPostDate = recentPost
-    ? new Date(recentPost.createTime || recentPost.updateTime).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
+  const lastPostDate = recentPost && (recentPost.createTime || recentPost.updateTime)
+    ? (() => {
+        const d = new Date(recentPost.createTime || recentPost.updateTime);
+        return isNaN(d.getTime()) ? "23 Jul 2026" : d.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      })()
     : "23 Jul 2026";
 
   const now = new Date();
   const thisMonth = posts.filter((p: any) => {
-    const ts = p.createTime || p.updateTime;
+    const ts = p?.createTime || p?.updateTime;
     if (!ts) return false;
     const d = new Date(ts);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return !isNaN(d.getTime()) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
   // ── 6. Patient Search Keywords ─────────────────────────────────────────────
-  const rawKeywords = keywordData?.searchKeywordsCounts || [];
+  const rawKeywords = Array.isArray(keywordData?.searchKeywordsCounts)
+    ? keywordData.searchKeywordsCounts
+    : Array.isArray(keywordData)
+    ? keywordData
+    : [];
   const defaultKeywords = [
     { searchKeyword: "Pediatrician Near Me", isDiscovery: true },
     { searchKeyword: "Dr Vinay Kumar Rai", isDiscovery: false },
@@ -454,7 +463,7 @@ export function OverviewTab({
 
             {/* Total Views + Trend */}
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-3xl font-extrabold text-gray-900">{totalViews.toLocaleString()}</span>
+              <span className="text-3xl font-extrabold text-gray-900">{Number(totalViews || 0).toLocaleString()}</span>
               <span className="text-xs text-gray-500 font-medium">Profile views</span>
               <span className="ml-2 inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                 <ArrowUpRight className="w-3 h-3 text-emerald-600" /> 12%
@@ -473,7 +482,7 @@ export function OverviewTab({
                     </span>
                     Search views
                   </span>
-                  <span className="font-bold text-gray-900">{searchViews.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">{Number(searchViews || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-0.5">
@@ -483,7 +492,7 @@ export function OverviewTab({
                     </span>
                     Maps views
                   </span>
-                  <span className="font-bold text-gray-900">{mapsViews.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">{Number(mapsViews || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-0.5">
@@ -493,7 +502,7 @@ export function OverviewTab({
                     </span>
                     Website clicks
                   </span>
-                  <span className="font-bold text-gray-900">{finalWeb.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">{Number(finalWeb || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-0.5">
@@ -503,7 +512,7 @@ export function OverviewTab({
                     </span>
                     Calls
                   </span>
-                  <span className="font-bold text-gray-900">{finalCalls.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">{Number(finalCalls || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-0.5">
@@ -513,7 +522,7 @@ export function OverviewTab({
                     </span>
                     Appointment actions
                   </span>
-                  <span className="font-bold text-gray-900">{finalBookings.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">{Number(finalBookings || 0).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -606,13 +615,13 @@ export function OverviewTab({
             <div className="grid grid-cols-3 gap-3">
               {/* Average Rating */}
               <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
-                <div className="text-3xl font-extrabold text-gray-900 mb-1">{averageRating.toFixed(1)}</div>
+                <div className="text-3xl font-extrabold text-gray-900 mb-1">{safeAvgRating.toFixed(1)}</div>
                 <div className="flex text-amber-400 mb-1.5">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star
                       key={s}
                       className="h-3 w-3"
-                      fill={s <= Math.round(averageRating) ? "currentColor" : "none"}
+                      fill={s <= Math.round(safeAvgRating) ? "currentColor" : "none"}
                     />
                   ))}
                 </div>
@@ -621,7 +630,7 @@ export function OverviewTab({
 
               {/* Total Reviews */}
               <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
-                <div className="text-3xl font-extrabold text-gray-900 mb-2">{totalReviewCount.toLocaleString()}</div>
+                <div className="text-3xl font-extrabold text-gray-900 mb-2">{safeTotalReviews.toLocaleString()}</div>
                 <div className="text-[11px] font-medium text-gray-500 flex items-center gap-1">
                   <Star className="h-3 w-3 text-gray-400" /> Total Reviews
                 </div>

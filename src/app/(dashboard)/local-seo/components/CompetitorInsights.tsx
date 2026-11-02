@@ -118,12 +118,14 @@ function getCompetitorIntelligence(
     primaryCounterKeyword = subParts[0].trim();
   }
 
-  const reviewGap = Math.max(0, comp.reviewCount - doctorReviewCount);
+  const compReviewCount = Number(comp?.reviewCount) || 0;
+  const compRating = Number(comp?.rating) || 0;
+  const reviewGap = Math.max(0, compReviewCount - doctorReviewCount);
   const hasKeywordInTitle = detectedKeywords.length > 0;
-  const isHighVolumeLeader = comp.reviewCount >= 450;
-  const isHighRatingLeader = comp.rating >= 4.9 && comp.reviewCount >= 100;
+  const isHighVolumeLeader = compReviewCount >= 450;
+  const isHighRatingLeader = compRating >= 4.9 && compReviewCount >= 100;
 
-  if (hasKeywordInTitle && comp.name.toLowerCase().includes(primaryCategory.toLowerCase())) {
+  if (hasKeywordInTitle && name.toLowerCase().includes((primaryCategory || "").toLowerCase())) {
     return {
       signalBadge: {
         label: "Title Keyword & Speciality Match",
@@ -143,7 +145,7 @@ function getCompetitorIntelligence(
         label: "Review Volume Authority Leader",
         color: "bg-amber-50 text-amber-700 border-amber-200",
       },
-      explanation: `Ranks high due to an accumulated base of ${comp.reviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
+      explanation: `Ranks high due to an accumulated base of ${compReviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
       detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${cat}`, `${primaryCategory} Care`],
       primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
       counterActionNote: `Close their review lead by sending automated WhatsApp review requests to your recent patients. Consistent weekly reviews beat older static volumes.`,
@@ -157,7 +159,7 @@ function getCompetitorIntelligence(
         label: "High Sentiment & Quality Trust",
         color: "bg-emerald-50 text-emerald-700 border-emerald-200",
       },
-      explanation: `Maintains a strong ${comp.rating.toFixed(1)}★ rating across ${comp.reviewCount} reviews, earning high algorithmic trust for positive patient outcomes.`,
+      explanation: `Maintains a strong ${compRating > 0 ? compRating.toFixed(1) : "5.0"}★ rating across ${compReviewCount} reviews, earning high algorithmic trust for positive patient outcomes.`,
       detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${primaryCategory}`, "5 Star Care"],
       primaryCounterKeyword: detectedKeywords[0] || `Top ${primaryCategory}`,
       counterActionNote: `Showcase your patient success stories in Google Updates and keep collecting 5-star feedback to rival their sentiment score.`,
@@ -170,7 +172,7 @@ function getCompetitorIntelligence(
       label: "Verified Specialty Competitor",
       color: "bg-blue-50 text-blue-700 border-blue-200",
     },
-    explanation: `Verified provider of ${cat} within your local search radius (${formatDistance(comp.distanceMeters)} away).`,
+    explanation: `Verified provider of ${cat} within your local search radius (${formatDistance(comp?.distanceMeters ?? null)} away).`,
     detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [primaryCategory, `${primaryCategory} near me`],
     primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
     counterActionNote: `Target nearby patient searches by publishing weekly updates highlighting your clinic's services and location.`,
@@ -202,11 +204,11 @@ function CompetitorKeywords({
   const baseCategory = primaryCategory || "Specialist Clinic";
   const cityStr = city || "your city";
 
-  competitors
-    .filter(c => !c.isYou)
+  (Array.isArray(competitors) ? competitors : [])
+    .filter(c => c && !c.isYou)
     .slice(0, 10)
     .forEach(c => {
-      const parts = (c.name || "").split(/[,|–-]/).map((p: string) => p.trim());
+      const parts = (c?.name || "").split(/[,|–-]/).map((p: string) => p.trim());
       for (const part of parts) {
         const lower = part.toLowerCase();
         if (
@@ -252,8 +254,17 @@ function CompetitorKeywords({
     });
 
   // 2. High-Intent Patient Search Phrases for this specialty
-  const actualSearchTerms = (keywordsData?.searchKeywordsCounts || [])
-    .map((kw: any) => (typeof kw === "string" ? kw : kw.searchKeyword).toLowerCase().trim())
+  const rawKeywordsArray = Array.isArray(keywordsData?.searchKeywordsCounts)
+    ? keywordsData.searchKeywordsCounts
+    : Array.isArray(keywordsData)
+    ? keywordsData
+    : [];
+
+  const actualSearchTerms = rawKeywordsArray
+    .map((kw: any) => {
+      const term = typeof kw === "string" ? kw : (kw?.searchKeyword || kw?.keyword || "");
+      return typeof term === "string" ? term.toLowerCase().trim() : "";
+    })
     .filter((k: string) => k.length > 3 && !k.startsWith("dr ") && !k.includes("clinic") && !k.includes("hospital"));
 
   let dynamicKeywords = [
@@ -455,26 +466,29 @@ export function CompetitorInsights() {
     );
   }
 
-  const rawCompetitorList: any[] = competitors || [];
-  const youMatch = rawCompetitorList.find(c => c.isYou);
+  const rawCompetitorList: any[] = Array.isArray(competitors) ? competitors : [];
+  const youMatch = rawCompetitorList.find(c => c && c.isYou);
   const doctorName = overviewData?.name || overviewData?.businessName || youMatch?.name || "Your Clinic";
   const doctorRating = Number(overviewData?.rating || overviewData?.avgRating) || (youMatch?.rating ? Number(youMatch.rating) : 0);
   const doctorReviewCount = Number(overviewData?.user_ratings_total || overviewData?.reviewCount || overviewData?.totalReviews) || (youMatch?.reviewCount ? Number(youMatch.reviewCount) : 0);
   const primaryCategory = overviewData?.primaryCategory || youMatch?.category || "Specialist Clinic";
 
   // Build unified list without duplicates
-  const rawRows: Competitor[] = rawCompetitorList.map((c, i) => ({
-    placeId: c.placeId || `comp-${i}`,
-    name: c.name,
-    rating: Number(c.rating) || 0,
-    reviewCount: Number(c.reviewCount) || 0,
-    distanceMeters: c.isYou ? 0 : (c.distanceMeters != null ? c.distanceMeters : null),
-    rank: c.rank || i + 1,
-    isYou: Boolean(c.isYou),
-    primaryType: c.primaryType,
-    category: c.category || c.primaryType,
-    formattedAddress: c.formattedAddress || "",
-  })).sort((a, b) => (a.rank || 0) - (b.rank || 0));
+  const rawRows: Competitor[] = rawCompetitorList
+    .filter(Boolean)
+    .map((c, i) => ({
+      placeId: c.placeId || `comp-${i}`,
+      name: c.name || "Clinic",
+      rating: Number(c.rating) || 0,
+      reviewCount: Number(c.reviewCount) || 0,
+      distanceMeters: c.isYou ? 0 : (c.distanceMeters != null ? Number(c.distanceMeters) : null),
+      rank: Number(c.rank) || i + 1,
+      isYou: Boolean(c.isYou),
+      primaryType: c.primaryType || null,
+      category: c.category || c.primaryType || primaryCategory,
+      formattedAddress: typeof c.formattedAddress === "string" ? c.formattedAddress : "",
+    }))
+    .sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
   // Deduplicate: ensure strictly 1 row per unique clinic name or placeId, and strictly 1 isYou row
   const seenPlaceIds = new Set<string>();
@@ -483,8 +497,8 @@ export function CompetitorInsights() {
 
   const allRows: Competitor[] = [];
   for (const row of rawRows) {
-    const cleanName = (row.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const placeId = row.placeId || "";
+    const cleanName = String(row.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const placeId = String(row.placeId || "");
 
     if (row.isYou) {
       if (hasYou) continue;
@@ -705,7 +719,7 @@ export function CompetitorInsights() {
                     <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                      <span className="text-sm font-bold text-gray-900">{comp.rating ? comp.rating.toFixed(1) : "—"}</span>
+                      <span className="text-sm font-bold text-gray-900">{Number(comp.rating) > 0 ? Number(comp.rating).toFixed(1) : "—"}</span>
                     </div>
                   </div>
 
@@ -766,7 +780,7 @@ export function CompetitorInsights() {
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                       <span className="text-sm font-semibold text-gray-800">
-                        {comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
+                        {Number(comp.rating) > 0 ? Number(comp.rating).toFixed(1) : "—"}
                       </span>
                     </div>
                   </div>
@@ -805,7 +819,7 @@ export function CompetitorInsights() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
-                            {comp.category && !["doctor", "physician", "health"].includes(comp.category.toLowerCase()) && (
+                            {comp.category && !["doctor", "physician", "health"].includes(String(comp.category).toLowerCase()) && (
                               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                 {comp.category}
                               </span>
@@ -814,7 +828,7 @@ export function CompetitorInsights() {
                           <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2 flex-wrap">
                             <span>{comp.reviewCount} patient reviews</span>
                             <span>·</span>
-                            <span>{comp.rating > 0 ? `${comp.rating.toFixed(1)}★ rating` : "Unrated"}</span>
+                            <span>{Number(comp.rating) > 0 ? `${Number(comp.rating).toFixed(1)}★ rating` : "Unrated"}</span>
                             {comp.distanceMeters != null && (
                               <>
                                 <span>·</span>
@@ -896,19 +910,21 @@ export function CompetitorInsights() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                              const kw = intel.primaryCounterKeyword || primaryCategory || "Services";
+                              router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
                             }}
                             className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex-1 sm:flex-initial"
                           >
                             <Edit3 className="w-3.5 h-3.5 mr-1" />
-                            Draft Post ({intel.primaryCounterKeyword.slice(0, 16)}...)
+                            Draft Post ({String(intel.primaryCounterKeyword || primaryCategory || "Services").slice(0, 16)}...)
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/reviews?targetKeyword=${encodeURIComponent(intel.primaryCounterKeyword)}`);
+                              const kw = intel.primaryCounterKeyword || primaryCategory || "Services";
+                              router.push(`/reviews?targetKeyword=${encodeURIComponent(kw)}`);
                             }}
                             className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-xl flex-1 sm:flex-initial"
                           >

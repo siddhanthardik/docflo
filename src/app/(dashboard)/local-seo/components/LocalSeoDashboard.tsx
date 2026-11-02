@@ -18,6 +18,7 @@ import { CompetitorInsights } from "./CompetitorInsights";
 import { AiSearchReadiness } from "./AiSearchReadiness";
 import { SearchGrid } from "./SearchGrid";
 import { RecommendationsList } from "./RecommendationsList";
+import { LocalSeoErrorBoundary } from "./LocalSeoErrorBoundary";
 
 type Tab = "overview" | "rank-tracker" | "competitors" | "profile-health" | "recommendations";
 
@@ -196,62 +197,72 @@ export function LocalSeoDashboard() {
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === "overview" && (
-        <OverviewTab
-          overviewData={overviewData}
-          visibilityScoreData={visibilityScoreData}
-          profileHealthData={profileHealthData}
-          reputationData={reputationData}
-          performanceData={performanceData}
-          keywordData={keywordData}
-          postData={postData}
-          servicesData={servicesData}
-          onNavigateTab={(tab) => setActiveTab(tab)}
-        />
+        <LocalSeoErrorBoundary tabName="Overview">
+          <OverviewTab
+            overviewData={overviewData}
+            visibilityScoreData={visibilityScoreData}
+            profileHealthData={profileHealthData}
+            reputationData={reputationData}
+            performanceData={performanceData}
+            keywordData={keywordData}
+            postData={postData}
+            servicesData={servicesData}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        </LocalSeoErrorBoundary>
       )}
 
       {/* ── RANK TRACKER TAB ── */}
       {activeTab === "rank-tracker" && (
-        <div className="w-full">
-          <SearchGrid />
-        </div>
+        <LocalSeoErrorBoundary tabName="Rank Tracker">
+          <div className="w-full">
+            <SearchGrid />
+          </div>
+        </LocalSeoErrorBoundary>
       )}
 
       {/* ── COMPETITORS TAB ── */}
       {activeTab === "competitors" && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <Users className="h-5 w-5" />
+        <LocalSeoErrorBoundary tabName="Competitors">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">Local Competitor Analysis</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {overviewData?.primaryCategory || "Medical Clinic"} · Sorted by patient engagement
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Local Competitor Analysis</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {overviewData.primaryCategory || "Medical Clinic"} · Sorted by patient engagement
-                </p>
+              <div className="text-xs text-gray-400 bg-gray-50/80 rounded-xl px-3 py-1.5 border border-gray-100 font-medium">
+                From Google Places API
               </div>
             </div>
-            <div className="text-xs text-gray-400 bg-gray-50/80 rounded-xl px-3 py-1.5 border border-gray-100 font-medium">
-              From Google Places API
+            <div className="p-4 sm:p-6">
+              <CompetitorInsights />
             </div>
           </div>
-          <div className="p-4 sm:p-6">
-            <CompetitorInsights />
-          </div>
-        </div>
+        </LocalSeoErrorBoundary>
       )}
 
       {/* ── PROFILE HEALTH TAB ── */}
       {activeTab === "profile-health" && (
-        <div className="space-y-6">
-          <ProfileHealth />
-          <AiSearchReadiness />
-        </div>
+        <LocalSeoErrorBoundary tabName="Profile Health">
+          <div className="space-y-6">
+            <ProfileHealth />
+            <AiSearchReadiness />
+          </div>
+        </LocalSeoErrorBoundary>
       )}
 
       {/* ── RECOMMENDATIONS TAB ── */}
       {activeTab === "recommendations" && (
-        <RecommendationsList onNavigateTab={(tab) => setActiveTab(tab)} />
+        <LocalSeoErrorBoundary tabName="Recommendations">
+          <RecommendationsList onNavigateTab={(tab) => setActiveTab(tab)} />
+        </LocalSeoErrorBoundary>
       )}
     </div>
   );
