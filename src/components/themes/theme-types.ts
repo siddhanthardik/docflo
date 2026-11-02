@@ -58,6 +58,7 @@ export interface SectionDesignConfig {
   animationDelay?: number; // ms
   animationDuration?: number; // ms
   hoverEffect?: "none" | "lift" | "scale" | "glow";
+  bioStyle?: "CARD" | "SPLIT_EDITORIAL" | "MINIMAL" | "BENTO";
 }
 
 export interface PageSection {
@@ -91,6 +92,13 @@ export interface PageSection {
   showHighlights?: boolean;
   heroHighlights?: HeroHighlightItem[];
   bgColor?: string;
+  cardBg?: string;
+  bioStyle?: "CARD" | "SPLIT_EDITORIAL" | "MINIMAL" | "BENTO";
+  doctorName?: string;
+  doctorSpecialty?: string;
+  doctorDegrees?: string;
+  doctorDesignation?: string;
+  doctorImage?: string;
   showPrices?: boolean;
   isVisible?: boolean;
   design?: SectionDesignConfig;

@@ -1290,9 +1290,11 @@ export function ThemeRenderer({
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
-                    NABL Accredited Preventive Profiles
-                  </span>
+                  {isBadgeVisible(section.badgeText) && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                      {section.badgeText}
+                    </span>
+                  )}
                   <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
                     data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
                   }`}>
@@ -1413,6 +1415,11 @@ export function ThemeRenderer({
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
+                  {isBadgeVisible(section.badgeText) && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                      {section.badgeText}
+                    </span>
+                  )}
                   <h3 className={`text-3xl font-black tracking-tight ${
                     themeId === "executive-private" ? "text-amber-100" : "text-slate-900"
                   } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
@@ -1543,26 +1550,222 @@ export function ThemeRenderer({
           );
         }
 
-        // 4. DOCTOR BIO SECTION (100% Customizable Inner Card & Text)
+        // 4. DOCTOR BIO SECTION (Multi-Layout & 100% Fully Editable)
         if (section.type === "DOCTOR_BIO") {
-          const doctorName = data.doctor?.name || "Consultant Doctor";
-          const doctorSpecialty = data.doctor?.specialty || "Medical Specialist";
-          const doctorDegrees = data.doctor?.degrees || "";
+          const doctorName = section.doctorName || data.doctor?.name || "Consultant Doctor";
+          const doctorSpecialty = section.doctorSpecialty || data.doctor?.specialty || "Medical Specialist";
+          const doctorDegrees = section.doctorDegrees || data.doctor?.degrees || "";
+          const doctorImage = section.doctorImage || section.image || data.doctor?.image || "";
           const bioContent = section.content || data.customBio || `${doctorName} is dedicated to providing compassionate, evidence-based healthcare. Combining clinical expertise with modern medical standards, ${doctorName} ensures optimal patient outcomes.`;
+          const bioHeadline = section.title || `Meet ${doctorName}`;
+          const ctaBtnText = section.ctaText || "Consult Doctor Today";
+          const ctaBtnAction = section.ctaAction || "BOOKING_MODAL";
+          const bioStyle = section.bioStyle || d.bioStyle || "CARD";
 
-          // Inner Card Material Style from Design Config
-          const cardBgStyle = d.cardBg === "#FFFFFF"
-            ? "bg-white text-slate-900 border border-slate-200 shadow-xl"
-            : d.cardBg === "#FAF8F5"
-            ? "bg-[#FAF8F5] text-slate-900 border border-amber-200/80 shadow-xl"
-            : d.cardBg === "#F8FAFC"
-            ? "bg-slate-50 text-slate-900 border border-slate-200 shadow-xl"
-            : d.cardBg === "primary"
-            ? "text-white shadow-2xl"
-            : "bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white shadow-2xl";
+          // Card Background Color & Luminance Contrast Calculation
+          const cardBgColor = d.cardBg || section.cardBg || (themeId === "executive-private" ? "#0F172A" : "#FFFFFF");
+          
+          const isDarkCard = (() => {
+            if (cardBgColor === "primary") return true;
+            if (cardBgColor.startsWith("#")) {
+              const hex = cardBgColor.replace("#", "");
+              const r = parseInt(hex.substring(0, 2), 16) || 0;
+              const g = parseInt(hex.substring(2, 4), 16) || 0;
+              const b = parseInt(hex.substring(4, 6), 16) || 0;
+              const luminance = (r * 299 + g * 587 + b * 114) / 1000;
+              return luminance < 140;
+            }
+            return cardBgColor.includes("slate-9") || cardBgColor.includes("black") || cardBgColor.includes("slate-8");
+          })();
 
-          const isLightCard = d.cardBg === "#FFFFFF" || d.cardBg === "#FAF8F5" || d.cardBg === "#F8FAFC";
+          const cardComputedStyle: React.CSSProperties = cardBgColor === "primary"
+            ? { backgroundColor: primaryColor }
+            : cardBgColor.startsWith("#")
+            ? { backgroundColor: cardBgColor }
+            : {};
 
+          // ── Bio Style 2: SPLIT_EDITORIAL (Editorial Two-Column - Clean & Spacious) ──
+          if (bioStyle === "SPLIT_EDITORIAL") {
+            return renderSectionContainer(
+              section,
+              <section
+                id="about"
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    {/* Left Column: Large Portrait Frame */}
+                    <div className="lg:col-span-5 flex justify-center">
+                      <div className="relative w-full max-w-md aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white ring-1 ring-slate-200">
+                        {doctorImage ? (
+                          <img src={doctorImage} alt={doctorName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                            <User className="w-24 h-24 stroke-1" />
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 p-5 bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-transparent text-white">
+                          <p className="text-lg font-black">{doctorName}</p>
+                          <p className="text-xs text-slate-300 font-medium">{doctorSpecialty}</p>
+                          {doctorDegrees && <p className="text-[11px] text-blue-300 font-semibold mt-0.5">{doctorDegrees}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Narrative Story & Actions */}
+                    <div className="lg:col-span-7 space-y-6">
+                      {isBadgeVisible(section.badgeText) && (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
+                          {section.badgeText}
+                        </span>
+                      )}
+
+                      <div className="space-y-2">
+                        <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
+                          {bioHeadline}
+                        </h2>
+                        <p className="text-sm font-bold text-blue-600">
+                          {doctorSpecialty} {doctorDegrees ? `• ${doctorDegrees}` : ""}
+                        </p>
+                      </div>
+
+                      <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
+                        {bioContent}
+                      </p>
+
+                      <div className="pt-2">
+                        <button
+                          onClick={() => handleCtaClick(ctaBtnAction, section.ctaAction)}
+                          className={`font-bold text-sm h-12 px-8 ${buttonRadiusClass} text-white shadow-xl flex items-center gap-2 transition-transform hover:scale-105`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Calendar className="w-4 h-4" />
+                          <span>{ctaBtnText}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // ── Bio Style 3: MINIMAL (Centered Authority) ──
+          if (bioStyle === "MINIMAL") {
+            return renderSectionContainer(
+              section,
+              <section
+                id="about"
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-white" : ""} text-center`}
+              >
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                  <div className="w-36 h-36 rounded-full mx-auto overflow-hidden shadow-xl ring-4 ring-blue-500/10 border-4 border-white">
+                    {doctorImage ? (
+                      <img src={doctorImage} alt={doctorName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                        <User className="w-16 h-16 stroke-1" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {isBadgeVisible(section.badgeText) && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
+                        {section.badgeText}
+                      </span>
+                    )}
+                    <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{doctorName}</h2>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-500">{doctorSpecialty} {doctorDegrees ? `• ${doctorDegrees}` : ""}</p>
+                  </div>
+
+                  <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
+                    {bioContent}
+                  </p>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => handleCtaClick(ctaBtnAction, section.ctaAction)}
+                      className={`font-bold text-sm h-12 px-8 ${buttonRadiusClass} text-white shadow-xl inline-flex items-center gap-2 transition-transform hover:scale-105`}
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>{ctaBtnText}</span>
+                    </button>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // ── Bio Style 4: BENTO (3-Cell Profile Hub) ──
+          if (bioStyle === "BENTO") {
+            return renderSectionContainer(
+              section,
+              <section
+                id="about"
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`${paddingClass} border-b border-slate-100 ${!customBg ? "bg-slate-50/70" : ""}`}
+              >
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                    {/* Bento Cell 1: Doctor Photo & Core Tag */}
+                    <div className={`lg:col-span-4 bg-white ${cardRadiusClass} p-8 border border-slate-200/80 shadow-md flex flex-col items-center justify-center text-center space-y-4`}>
+                      <div className="w-40 h-40 rounded-2xl overflow-hidden shadow-lg border-2 border-slate-100">
+                        {doctorImage ? (
+                          <img src={doctorImage} alt={doctorName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                            <User className="w-20 h-20 stroke-1" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-900">{doctorName}</h3>
+                        <p className="text-xs text-slate-500 font-semibold">{doctorSpecialty}</p>
+                        {doctorDegrees && <p className="text-[11px] text-blue-600 font-bold mt-0.5">{doctorDegrees}</p>}
+                      </div>
+                    </div>
+
+                    {/* Bento Cell 2: Philosophy, Bio Story & Direct Booking */}
+                    <div className={`lg:col-span-8 bg-white ${cardRadiusClass} p-8 sm:p-10 border border-slate-200/80 shadow-md flex flex-col justify-between space-y-6`}>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{bioHeadline}</h2>
+                          {isBadgeVisible(section.badgeText) && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                              {section.badgeText}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                          {bioContent}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <button
+                          onClick={() => handleCtaClick(ctaBtnAction, section.ctaAction)}
+                          className={`font-bold text-xs h-11 px-7 ${buttonRadiusClass} text-white shadow-md flex items-center gap-2 transition-transform hover:scale-105`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{ctaBtnText}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // ── Bio Style 1: CARD (Default Elevated Card - 100% Fully Color-Customizable) ──
           return renderSectionContainer(
             section,
             <section
@@ -1572,43 +1775,54 @@ export function ThemeRenderer({
             >
               <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
-                  style={d.cardBg && d.cardBg !== "primary" && !d.cardBg.startsWith("#") ? undefined : d.cardBg === "primary" ? { backgroundColor: primaryColor } : undefined}
-                  className={`${cardBgStyle} ${cardRadiusClass} p-8 sm:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center`}
+                  style={cardComputedStyle}
+                  className={`${cardRadiusClass} ${
+                    isDarkCard
+                      ? "text-white shadow-2xl border border-slate-800"
+                      : "text-slate-900 shadow-xl border border-slate-200"
+                  } p-8 sm:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center transition-all`}
                 >
                   <div className="md:col-span-4 text-center">
-                    <div className={`w-32 h-32 rounded-2xl mx-auto overflow-hidden flex items-center justify-center shadow-lg ${
-                      isLightCard ? "bg-slate-100 border-2 border-slate-200" : "bg-slate-800 border-2 border-slate-700"
+                    <div className={`w-36 h-36 rounded-2xl mx-auto overflow-hidden flex items-center justify-center shadow-lg ${
+                      isDarkCard ? "bg-slate-800 border-2 border-slate-700" : "bg-slate-100 border-2 border-slate-200"
                     }`}>
-                      {data.doctor?.image ? (
-                        <img src={data.doctor.image} alt={doctorName} className="w-full h-full object-cover" />
+                      {doctorImage ? (
+                        <img src={doctorImage} alt={doctorName} className="w-full h-full object-cover" />
                       ) : (
-                        <span className={`text-4xl font-black ${isLightCard ? "text-slate-700" : "text-slate-300"}`}>{doctorName.charAt(0) || "D"}</span>
+                        <span className={`text-4xl font-black ${isDarkCard ? "text-slate-300" : "text-slate-700"}`}>{doctorName.charAt(0) || "D"}</span>
                       )}
                     </div>
-                    <h4 className={`text-lg font-bold mt-4 ${isLightCard ? "text-slate-900" : "text-white"}`}>{doctorName}</h4>
-                    <p className={`text-xs ${isLightCard ? "text-slate-500" : "text-slate-400"}`}>{doctorSpecialty}</p>
+                    <h4 className={`text-lg font-bold mt-4 ${isDarkCard ? "text-white" : "text-slate-900"}`}>{doctorName}</h4>
+                    <p className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}>{doctorSpecialty}</p>
                     {doctorDegrees && (
-                      <p className={`text-[11px] font-medium mt-0.5 ${isLightCard ? "text-blue-600" : "text-blue-400"}`}>{doctorDegrees}</p>
+                      <p className={`text-[11px] font-medium mt-0.5 ${isDarkCard ? "text-blue-400" : "text-blue-600"}`}>{doctorDegrees}</p>
                     )}
                   </div>
 
                   <div className="md:col-span-8 space-y-4">
-                    <h3 className={`text-2xl font-black tracking-tight ${isLightCard ? "text-slate-900" : "text-white"}`}>
-                      {section.title || "Clinical Philosophy & Background"}
+                    {isBadgeVisible(section.badgeText) && (
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${
+                        isDarkCard ? "bg-white/10 text-white border-white/20" : "bg-blue-50 text-blue-700 border-blue-200"
+                      }`}>
+                        {section.badgeText}
+                      </span>
+                    )}
+                    <h3 className={`text-2xl font-black tracking-tight ${isDarkCard ? "text-white" : "text-slate-900"}`}>
+                      {bioHeadline}
                     </h3>
-                    <p className={`text-sm leading-relaxed ${isLightCard ? "text-slate-600" : "text-slate-300"}`}>
+                    <p className={`text-sm leading-relaxed ${isDarkCard ? "text-slate-300" : "text-slate-600"} whitespace-pre-line`}>
                       {bioContent}
                     </p>
                     <div className="flex items-center gap-4 pt-2">
                       <button
-                        onClick={() => setOpenBookingModal(true)}
-                        className={`font-bold text-xs h-10 px-5 ${buttonRadiusClass} shadow-lg transition-transform hover:scale-105 ${
-                          isLightCard
-                            ? "bg-slate-900 text-white hover:bg-black"
-                            : "bg-white text-slate-900 hover:bg-slate-100"
+                        onClick={() => handleCtaClick(ctaBtnAction, section.ctaAction)}
+                        className={`font-bold text-xs h-10 px-6 ${buttonRadiusClass} shadow-lg transition-transform hover:scale-105 ${
+                          isDarkCard
+                            ? "bg-white text-slate-900 hover:bg-slate-100"
+                            : "bg-slate-900 text-white hover:bg-black"
                         }`}
                       >
-                        Consult Doctor Today
+                        {ctaBtnText}
                       </button>
                     </div>
                   </div>

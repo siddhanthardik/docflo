@@ -435,8 +435,11 @@ export function StudioInspector({
                           key={preset.value}
                           type="button"
                           onClick={() => {
-                            onUpdateSection({ bgColor: preset.value });
-                            onUpdateDesign({ bgColor: preset.value });
+                            const patch = selectedSection.type === "DOCTOR_BIO"
+                              ? { bgColor: preset.value, cardBg: preset.value }
+                              : { bgColor: preset.value };
+                            onUpdateSection(patch);
+                            onUpdateDesign(patch);
                           }}
                           className={`h-8 rounded-lg border flex items-center justify-center transition-all ${
                             (selectedSection.bgColor || d.bgColor) === preset.value
@@ -459,8 +462,12 @@ export function StudioInspector({
                     <Input
                       value={selectedSection.bgColor || d.bgColor || "#FFFFFF"}
                       onChange={(e) => {
-                        onUpdateSection({ bgColor: e.target.value });
-                        onUpdateDesign({ bgColor: e.target.value });
+                        const val = e.target.value;
+                        const patch = selectedSection.type === "DOCTOR_BIO"
+                          ? { bgColor: val, cardBg: val }
+                          : { bgColor: val };
+                        onUpdateSection(patch);
+                        onUpdateDesign(patch);
                       }}
                       placeholder="#FFFFFF"
                       className="h-8 text-xs font-mono rounded-lg"
@@ -633,6 +640,146 @@ export function StudioInspector({
                 Leave this blank to remove the pill badge completely from the canvas.
               </p>
             </div>
+
+            {/* ── DOCTOR BIO SPECIFIC PROPERTIES & DESIGNS ── */}
+            {selectedSection.type === "DOCTOR_BIO" && (
+              <div className="space-y-4">
+                {/* 1. Doctor Bio Layout Style Switcher */}
+                <div className="space-y-1.5 p-3 bg-purple-50/60 rounded-2xl border border-purple-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-purple-900">Bio Layout Design</label>
+                    <span className="text-[10px] font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200 uppercase">
+                      {selectedSection.bioStyle || d.bioStyle || "CARD"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    {[
+                      { id: "CARD", label: "Floating Card", desc: "Contained inner card" },
+                      { id: "SPLIT_EDITORIAL", label: "Editorial Split", desc: "No black box, 2-col" },
+                      { id: "MINIMAL", label: "Minimalist", desc: "Centered portrait" },
+                      { id: "BENTO", label: "Bento Hub", desc: "3-cell modern grid" },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => {
+                          onUpdateSection({ bioStyle: st.id as any });
+                          onUpdateDesign({ bioStyle: st.id as any });
+                        }}
+                        className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                          (selectedSection.bioStyle || d.bioStyle || "CARD") === st.id
+                            ? "bg-white border-purple-600 text-purple-950 shadow-xs ring-2 ring-purple-500/20"
+                            : "bg-white/80 border-slate-200 text-slate-700 hover:bg-white"
+                        }`}
+                      >
+                        <p className="text-xs font-bold leading-tight">{st.label}</p>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{st.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Card Background Color Control (Fixes the black color issue) */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
+                  <label className="text-xs font-bold text-slate-800">Card Background Color</label>
+                  <p className="text-[10px] text-slate-500">Choose the card color. Text automatically adjusts for high contrast.</p>
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    {[
+                      { label: "Pure White", value: "#FFFFFF", border: "#E2E8F0" },
+                      { label: "Clean Slate", value: "#F8FAFC", border: "#E2E8F0" },
+                      { label: "Medical Soft Blue", value: "#F0F9FF", border: "#BAE6FD" },
+                      { label: "Soft Cream", value: "#FDFBF7", border: "#E7E5E4" },
+                      { label: "Clinical Navy", value: "#0F172A", border: "#334155" },
+                      { label: "Pitch Black", value: "#09090B", border: "#27272A" },
+                      { label: "Emerald Hue", value: "#F0FDF4", border: "#BBF7D0" },
+                      { label: "Primary Theme", value: "primary", border: "#93C5FD" },
+                    ].map((col) => (
+                      <button
+                        key={col.value}
+                        type="button"
+                        onClick={() => {
+                          onUpdateSection({ cardBg: col.value });
+                          onUpdateDesign({ cardBg: col.value });
+                        }}
+                        className={`h-8 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                          (selectedSection.cardBg || d.cardBg || "#FFFFFF") === col.value
+                            ? "ring-2 ring-purple-600 ring-offset-1 scale-105"
+                            : "hover:scale-102"
+                        }`}
+                        style={{
+                          backgroundColor: col.value === "primary" ? siteData.primaryColor || "#2563EB" : col.value,
+                          borderColor: col.border,
+                        }}
+                        title={col.label}
+                      >
+                        {(selectedSection.cardBg || d.cardBg || "#FFFFFF") === col.value && (
+                          <Check className={`w-3.5 h-3.5 ${col.value === "#0F172A" || col.value === "#09090B" || col.value === "primary" ? "text-white" : "text-purple-700"}`} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Custom Hex Color</label>
+                    <Input
+                      value={selectedSection.cardBg || d.cardBg || "#FFFFFF"}
+                      onChange={(e) => {
+                        onUpdateSection({ cardBg: e.target.value });
+                        onUpdateDesign({ cardBg: e.target.value });
+                      }}
+                      placeholder="#FFFFFF"
+                      className="h-8 text-xs font-mono rounded-lg bg-white mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Doctor Profile Details */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+                  <label className="text-xs font-bold text-slate-800">Doctor Profile Credentials</label>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Doctor Full Name</label>
+                    <Input
+                      value={selectedSection.doctorName !== undefined ? selectedSection.doctorName : (siteData.doctor?.name || "")}
+                      onChange={(e) => onUpdateSection({ doctorName: e.target.value })}
+                      placeholder="e.g. Dr. Vinay Kumar Rai"
+                      className="h-8 text-xs bg-white rounded-lg font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Specialty / Title</label>
+                      <Input
+                        value={selectedSection.doctorSpecialty !== undefined ? selectedSection.doctorSpecialty : (siteData.doctor?.specialty || "")}
+                        onChange={(e) => onUpdateSection({ doctorSpecialty: e.target.value })}
+                        placeholder="e.g. Pediatrician & Neonatologist"
+                        className="h-8 text-xs bg-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Degrees</label>
+                      <Input
+                        value={selectedSection.doctorDegrees !== undefined ? selectedSection.doctorDegrees : (siteData.doctor?.degrees || "")}
+                        onChange={(e) => onUpdateSection({ doctorDegrees: e.target.value })}
+                        placeholder="e.g. MBBS, MD, DNB"
+                        className="h-8 text-xs bg-white rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Doctor Photo URL</label>
+                    <Input
+                      value={selectedSection.doctorImage !== undefined ? selectedSection.doctorImage : (siteData.doctor?.image || "")}
+                      onChange={(e) => onUpdateSection({ doctorImage: e.target.value })}
+                      placeholder="https://... or upload photo"
+                      className="h-8 text-xs bg-white rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Title & AI Copy Trigger */}
             <div className="space-y-1.5">

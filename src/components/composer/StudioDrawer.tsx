@@ -399,7 +399,7 @@ export function StudioDrawer({
           <div className="space-y-3">
             {/* Category Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-medium no-scrollbar">
-              {["All", "Features", "Hero Banners", "Clinical Services", "Checkup Packages", "Trust & Reviews", "Conversion CTA", "FAQ & Contact"].map((cat) => (
+              {["All", "About Specialist", "Features", "Hero Banners", "Clinical Services", "Checkup Packages", "Trust & Reviews", "Conversion CTA", "FAQ & Contact"].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedDesignCategory(cat)}
