@@ -677,13 +677,13 @@ export function CompetitorInsights() {
                           YOU
                         </span>
                       </p>
-                      {comp.rank > 20 ? (
+                      {(comp.rank ?? 0) > 20 ? (
                         <p className="text-[11px] text-amber-700 font-medium truncate mt-0.5 flex items-center gap-1">
-                          <span>📍 <strong>Outside Top 20 Map Pack</strong> on Google for this search{competitorAhead && reviewsNeededToOvertake > 0 ? ` (Target: +${reviewsNeededToOvertake} reviews to challenge #${competitorAhead.rank})` : ""}</span>
+                          <span>📍 <strong>Outside Top 20 Map Pack</strong> on Google for this search{competitorAhead && reviewsNeededToOvertake > 0 ? ` (Target: +${reviewsNeededToOvertake} reviews to challenge #${competitorAhead.rank ?? 1})` : ""}</span>
                         </p>
                       ) : competitorAhead && reviewsNeededToOvertake > 0 ? (
                         <p className="text-[11px] text-indigo-700 font-medium truncate mt-0.5 flex items-center gap-1">
-                          <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank} ({competitorAhead.name})</span>
+                          <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank ?? 1} ({competitorAhead.name})</span>
                         </p>
                       ) : (
                         <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5">
@@ -715,11 +715,11 @@ export function CompetitorInsights() {
                     <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
                     <div className="flex items-center gap-1.5">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-bold ${
-                        comp.rank > 20 
+                        (comp.rank ?? 0) > 20 
                           ? "bg-amber-50 border-amber-200 text-amber-700" 
                           : "bg-indigo-100/90 border-indigo-200 text-indigo-700"
                       }`}>
-                        {comp.rank > 20 ? "Outside Top 20" : `#${comp.rank}`}
+                        {(comp.rank ?? 0) > 20 ? "Outside Top 20" : `#${comp.rank ?? 1}`}
                       </span>
                     </div>
                   </div>
