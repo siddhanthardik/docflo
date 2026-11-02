@@ -35,9 +35,12 @@ interface Competitor {
 }
 
 function RankBadge({ rank = 1 }: { rank?: number }) {
+  const isOutsideTop20 = rank > 20;
   const isGood = rank <= 3;
   const isOk = rank <= 7;
-  const color = isGood
+  const color = isOutsideTop20
+    ? "bg-gray-100 text-gray-600 border-gray-200"
+    : isGood
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : isOk
     ? "bg-amber-50 text-amber-700 border-amber-200"
@@ -45,7 +48,7 @@ function RankBadge({ rank = 1 }: { rank?: number }) {
 
   return (
     <span className={`inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold ${color}`}>
-      #{rank}
+      {isOutsideTop20 ? ">20" : `#${rank}`}
     </span>
   );
 }
@@ -555,46 +558,40 @@ export function CompetitorInsights() {
             <button
               type="button"
               onClick={() => setScope("city")}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 scope === "city"
                   ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
                   : "text-gray-500 hover:text-gray-800 hover:bg-white/40"
               }`}
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
                 scope === "city" ? "bg-indigo-50 text-indigo-600" : "bg-gray-200/60 text-gray-500"
               }`}>
                 <Building2 className="w-3.5 h-3.5" />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="font-bold leading-tight">Entire City ({city || "Patna"})</span>
-                <span className="text-[10px] text-gray-400 font-normal">Municipal-wide map pack</span>
-              </div>
+              <span className="font-bold">Entire City ({city || "City"})</span>
               {scope === "city" && (
-                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-indigo-600 ring-4 ring-indigo-50" />
+                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-indigo-600 ring-2 ring-indigo-50" />
               )}
             </button>
 
             <button
               type="button"
               onClick={() => setScope("local")}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 scope === "local"
                   ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
                   : "text-gray-500 hover:text-gray-800 hover:bg-white/40"
               }`}
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
                 scope === "local" ? "bg-rose-50 text-rose-600" : "bg-gray-200/60 text-gray-500"
               }`}>
                 <MapPin className="w-3.5 h-3.5" />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="font-bold leading-tight">Near Clinic</span>
-                <span className="text-[10px] text-gray-400 font-normal">Within 5 km radius</span>
-              </div>
+              <span className="font-bold">Near Clinic (Within 5 km)</span>
               {scope === "local" && (
-                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-rose-600 ring-4 ring-rose-50" />
+                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-rose-600 ring-2 ring-rose-50" />
               )}
             </button>
           </div>
@@ -680,7 +677,11 @@ export function CompetitorInsights() {
                           YOU
                         </span>
                       </p>
-                      {competitorAhead && reviewsNeededToOvertake > 0 ? (
+                      {comp.rank > 20 ? (
+                        <p className="text-[11px] text-amber-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                          <span>📍 <strong>Outside Top 20 Map Pack</strong> on Google for this search{competitorAhead && reviewsNeededToOvertake > 0 ? ` (Target: +${reviewsNeededToOvertake} reviews to challenge #${competitorAhead.rank})` : ""}</span>
+                        </p>
+                      ) : competitorAhead && reviewsNeededToOvertake > 0 ? (
                         <p className="text-[11px] text-indigo-700 font-medium truncate mt-0.5 flex items-center gap-1">
                           <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank} ({competitorAhead.name})</span>
                         </p>
@@ -713,8 +714,12 @@ export function CompetitorInsights() {
                   <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
                     <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-100/90 border border-indigo-200 text-indigo-700 text-xs font-bold">
-                        #{comp.rank}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-bold ${
+                        comp.rank > 20 
+                          ? "bg-amber-50 border-amber-200 text-amber-700" 
+                          : "bg-indigo-100/90 border-indigo-200 text-indigo-700"
+                      }`}>
+                        {comp.rank > 20 ? "Outside Top 20" : `#${comp.rank}`}
                       </span>
                     </div>
                   </div>

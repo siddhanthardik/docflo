@@ -213,10 +213,22 @@ export async function GET(request: Request) {
     let rawQuery: string | undefined = undefined;
     if (customKeyword) {
       const city = extracted?.city;
-      const alreadyHasLocation = city && customKeyword.toLowerCase().includes(city.toLowerCase());
-      rawQuery = alreadyHasLocation 
-        ? customKeyword 
-        : (city ? `${customKeyword} in ${city}` : customKeyword);
+      const neighborhood = extracted?.neighborhood;
+
+      if (scope === "local" && neighborhood) {
+        // In local scope, localize to immediate clinic neighborhood (e.g. "Best Gynecologist near Greater Kailash")
+        let baseKw = customKeyword;
+        if (city) {
+          const cityRegex = new RegExp(`\\s+(?:in|near)?\\s*${city}\\b`, 'gi');
+          baseKw = baseKw.replace(cityRegex, '').trim();
+        }
+        rawQuery = `${baseKw} near ${neighborhood}`;
+      } else {
+        const alreadyHasLocation = city && customKeyword.toLowerCase().includes(city.toLowerCase());
+        rawQuery = alreadyHasLocation 
+          ? customKeyword 
+          : (city ? `${customKeyword} in ${city}` : customKeyword);
+      }
     }
 
     // ── Live Google Places API call ───────────────────────────────────────────
