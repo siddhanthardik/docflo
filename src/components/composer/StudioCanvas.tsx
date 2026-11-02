@@ -225,7 +225,7 @@ export function StudioCanvas({
 
       {/* ── DRAGGABLE & SCALABLE ARTBOARD CANVAS WRAPPER ── */}
       <div
-        className="w-full h-full overflow-auto flex items-start justify-center p-6 md:p-12 transition-transform duration-75"
+        className="w-full h-full overflow-auto flex items-start justify-center p-6 md:p-12 pb-28 md:pb-36 transition-transform duration-75"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: "center top",

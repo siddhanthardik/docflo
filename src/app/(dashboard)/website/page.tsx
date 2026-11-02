@@ -75,16 +75,13 @@ import {
   Bookmark,
   LayoutGrid,
 } from "lucide-react";
-import { BlockTemplateModal } from "@/components/composer/BlockTemplateModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SPECIALTIES } from "@/lib/specialties";
 import { useToast } from "@/components/ui/use-toast";
-import { InsertSectionModal } from "@/components/composer/InsertSectionModal";
 import { QuickStartWizardModal } from "@/components/composer/QuickStartWizardModal";
 import { MedicalStockModal } from "@/components/composer/MedicalStockModal";
-import { HeroImageAdjustModal } from "@/components/composer/HeroImageAdjustModal";
 import { StudioDrawer } from "@/components/composer/StudioDrawer";
 import { StudioCanvas } from "@/components/composer/StudioCanvas";
 import { SavedBlockItem } from "@/types/builder-blocks";
@@ -181,13 +178,10 @@ export default function ElementorComposerPage() {
   const [inspectorSubTab, setInspectorSubTab] = useState<"content" | "style">("content");
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const [insertModalOpen, setInsertModalOpen] = useState(false);
   const [insertTargetIndex, setInsertTargetIndex] = useState<number | null>(null);
   const [quickStartModalOpen, setQuickStartModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockTargetField, setStockTargetField] = useState<string | null>(null);
-  const [blockTemplateModalOpen, setBlockTemplateModalOpen] = useState(false);
-  const [heroAdjustModalOpen, setHeroAdjustModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [savedBlocks, setSavedBlocks] = useState<SavedBlockItem[]>([]);
 
@@ -233,7 +227,13 @@ export default function ElementorComposerPage() {
       type: sectionPartial.type || "CUSTOM_TEXT",
       ...sectionPartial,
     };
-    const list = [...(siteData.sections || []), newSection];
+    const list = [...(siteData.sections || [])];
+    if (insertTargetIndex !== null && insertTargetIndex >= 0 && insertTargetIndex <= list.length) {
+      list.splice(insertTargetIndex, 0, newSection);
+      setInsertTargetIndex(null);
+    } else {
+      list.push(newSection);
+    }
     const nextState = { ...siteData, sections: list };
     setSiteData(nextState);
     pushHistory(nextState);
@@ -459,15 +459,6 @@ export default function ElementorComposerPage() {
   };
 
   const handleElementCardClick = (type: SectionType) => {
-    if (type === "HERO") {
-      const existing = (siteData.sections || []).find((s) => s.type === "HERO");
-      if (existing) {
-        handleSelectSection(existing.id);
-      }
-      setBlockTemplateModalOpen(true);
-      return;
-    }
-
     const existing = (siteData.sections || []).find((s) => s.type === type);
     if (existing) {
       handleSelectSection(existing.id);
@@ -476,6 +467,7 @@ export default function ElementorComposerPage() {
       handleAddNewSection(type);
     }
   };
+
 
   const handleAddNewSection = (type: SectionType) => {
     const newId = `sec_${type.toLowerCase()}_${Date.now()}`;
@@ -776,224 +768,116 @@ export default function ElementorComposerPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-65px)] overflow-hidden font-sans bg-slate-100">
-      {/* ── TOP CLEAN WEBSITE STUDIO HEADER ── */}
-      <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        <div className="flex items-center gap-2 min-w-0">
+    <div className="fixed inset-0 z-50 flex flex-col w-screen h-screen overflow-hidden font-sans bg-slate-100">
+      {/* ── TOP WEBSITE STUDIO HEADER (EXLY-STYLE) ── */}
+      <header className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0 z-30 shadow-xs select-none">
+        {/* Left: Exit, Save Draft, Publish */}
+        <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
-            className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 flex items-center gap-1 text-xs font-bold transition-colors shrink-0"
+            className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer"
             title="Exit Studio to Dashboard"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden md:inline">Edit Page</span>
+            <span>Edit Page</span>
           </Link>
 
           <Button
             onClick={() => handleSaveWebsite("Draft")}
             disabled={saving}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-8 px-3 rounded-xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 shrink-0"
-            title="Save website changes as draft"
+            className="h-9 px-3 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
           >
-            <Save className="w-3.5 h-3.5 text-purple-600" />
-            <span className="hidden sm:inline">{saving ? "Saving..." : "Save Draft"}</span>
+            <Save className="w-3.5 h-3.5 mr-1 text-slate-500" />
+            <span>{saving ? "Saving..." : "Save draft"}</span>
           </Button>
 
-          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 min-w-0">
-            <select
-              value={siteData.themeId}
-              onChange={(e) => {
-                const targetThemeId = e.target.value;
-                const preset = getThemePreset(targetThemeId);
-                const found = THEME_OPTIONS.find((t) => t.id === targetThemeId);
-
-                // Build sections tailored for this theme
-                const nextSections = preset.sections.map((sec) => {
-                  if (sec.type === "HERO") {
-                    return { ...sec, badgeText: preset.badgeText, subtitle: preset.heroSubheading };
-                  }
-                  if (sec.type === "STATS_RIBBON") {
-                    return { ...sec, stats: preset.stats };
-                  }
-                  if (sec.type === "PACKAGES" && preset.packages) {
-                    return { ...sec, packages: preset.packages };
-                  }
-                  return sec;
-                });
-
-                const nextState: ClinicWebsiteData = {
-                  ...siteData,
-                  themeId: targetThemeId,
-                  primaryColor: preset.primaryColor,
-                  secondaryColor: preset.secondaryColor,
-                  accentColor: preset.accentColor,
-                  fontHeading: preset.fontHeading,
-                  fontBody: preset.fontBody,
-                  buttonRadius: preset.buttonRadius,
-                  heroHeading: preset.heroHeading,
-                  heroSubheading: preset.heroSubheading,
-                  tagline: preset.tagline,
-                  customServices: preset.services,
-                  customFaqs: preset.faqs,
-                  sections: nextSections as any,
-                  doctor: {
-                    ...(siteData.doctor || {}),
-                    name: siteData.doctor?.name || "Doctor",
-                    specialty: siteData.doctor?.specialty || preset.specialty,
-                    degrees: siteData.doctor?.degrees || preset.degrees,
-                    designation: siteData.doctor?.designation || preset.designation,
-                  },
-                };
-
-                setSiteData(nextState);
-                pushHistory(nextState);
-                toast({
-                  title: `Applied ${preset.name}! 🎨`,
-                  description: `Loaded ${preset.category} hero, services, trust metrics, and FAQs.`,
-                });
-              }}
-              className="h-8 max-w-[140px] sm:max-w-[200px] px-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 cursor-pointer truncate"
-              title="Select specialty theme preset"
-            >
-              {THEME_OPTIONS.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                const preset = getThemePreset(siteData.themeId);
-                const nextSections = preset.sections.map((sec) => {
-                  if (sec.type === "HERO") return { ...sec, badgeText: preset.badgeText, subtitle: preset.heroSubheading };
-                  if (sec.type === "STATS_RIBBON") return { ...sec, stats: preset.stats };
-                  if (sec.type === "PACKAGES" && preset.packages) return { ...sec, packages: preset.packages };
-                  return sec;
-                });
-                const nextState: ClinicWebsiteData = {
-                  ...siteData,
-                  primaryColor: preset.primaryColor,
-                  secondaryColor: preset.secondaryColor,
-                  accentColor: preset.accentColor,
-                  fontHeading: preset.fontHeading,
-                  fontBody: preset.fontBody,
-                  buttonRadius: preset.buttonRadius,
-                  heroHeading: preset.heroHeading,
-                  heroSubheading: preset.heroSubheading,
-                  tagline: preset.tagline,
-                  customServices: preset.services,
-                  customFaqs: preset.faqs,
-                  sections: nextSections as any,
-                  doctor: {
-                    ...(siteData.doctor || {}),
-                    name: siteData.doctor?.name || "Doctor",
-                    specialty: siteData.doctor?.specialty || preset.specialty,
-                    degrees: siteData.doctor?.degrees || preset.degrees,
-                    designation: siteData.doctor?.designation || preset.designation,
-                  },
-                };
-                setSiteData(nextState);
-                pushHistory(nextState);
-                toast({
-                  title: "Theme Presets Reloaded! 🔄",
-                  description: "Refreshed hero headlines, specialty procedures, trust badges, and FAQs.",
-                });
-              }}
-              title="Reset and reload default services, FAQs, trust badges, and hero for this specialty theme"
-              className="h-8 px-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 cursor-pointer shrink-0"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Reload</span>
-            </button>
-          </div>
+          <Button
+            onClick={() => setPublishModalOpen(true)}
+            size="sm"
+            className="h-9 px-4 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
+          >
+            <span>Publish</span>
+          </Button>
         </div>
 
-        {/* Center: Viewport & Undo/Rollback Toolbar */}
+        {/* Center: Device Viewport Switcher */}
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button
+            onClick={() => setViewport("desktop")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewport === "desktop"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            title="Desktop View"
+          >
+            <Monitor className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Desktop</span>
+          </button>
+          <button
+            onClick={() => setViewport("tablet")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewport === "tablet"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            title="Tablet View"
+          >
+            <Tablet className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Tablet</span>
+          </button>
+          <button
+            onClick={() => setViewport("mobile")}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewport === "mobile"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            title="Mobile View"
+          >
+            <Smartphone className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Mobile</span>
+          </button>
+        </div>
+
+        {/* Right: Actions */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleUndo}
             disabled={historyIndex <= 0}
-            className={`h-8 px-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
+            className={`h-9 w-9 rounded-xl border flex items-center justify-center transition-all ${
               historyIndex > 0
-                ? "bg-white text-slate-800 border-slate-300 hover:bg-slate-50 shadow-2xs cursor-pointer"
-                : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                ? "bg-white text-slate-800 border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
+                : "bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50"
             }`}
-            title="Rollback Changes to Previous Step (Undo)"
+            title="Undo Changes (Rollback)"
           >
-            <Undo2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Rollback</span>
+            <Undo2 className="w-4 h-4" />
           </button>
-
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
-            <button
-              onClick={() => setViewport("desktop")}
-              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "desktop" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-              title="Desktop View (100%)"
-            >
-              <Monitor className="w-3.5 h-3.5" /> <span className="hidden md:inline">Desktop</span>
-            </button>
-            <button
-              onClick={() => setViewport("tablet")}
-              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "tablet" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-              title="Tablet View (768px)"
-            >
-              <Tablet className="w-3.5 h-3.5" /> <span className="hidden md:inline">Tablet</span>
-            </button>
-            <button
-              onClick={() => setViewport("mobile")}
-              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${viewport === "mobile" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"}`}
-              title="Mobile View (390px)"
-            >
-              <Smartphone className="w-3.5 h-3.5" /> <span className="hidden md:inline">Mobile</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setQuickStartModalOpen(true)}
-            className="h-8 px-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer"
-            title="Auto-generate complete clinic website in 45 seconds"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-            <span className="hidden sm:inline">5-Min QuickStart</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={syncingGbp}
-            onClick={() => fetchWebsiteData(true)}
-            className="h-8 px-2.5 rounded-xl text-xs font-bold border-slate-200 text-slate-700 hidden sm:flex items-center gap-1.5"
-            title="Sync verified information from Google Business Profile"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${syncingGbp ? "animate-spin" : ""}`} />
-            <span>Sync GBP</span>
-          </Button>
 
           <a
             href={`https://${siteData.subdomain}.gyrex.in`}
             target="_blank"
             rel="noreferrer"
-            className="h-8 px-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hidden sm:flex items-center gap-1.5"
+            className="h-9 px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs"
+            title="View Live Website"
           >
-            <Eye className="w-3.5 h-3.5 text-blue-600" />
-            <span>View Live</span>
+            <Eye className="w-3.5 h-3.5 text-purple-600" />
+            <span className="hidden md:inline">View Live</span>
           </a>
 
-          <Button
-            onClick={() => setPublishModalOpen(true)}
-            size="sm"
-            className="h-8 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+          <button
+            type="button"
+            onClick={() => {
+              setIsSidebarCollapsed(false);
+              setSelectedSectionId(null);
+              setSidebarTab("domain");
+            }}
+            className="h-9 w-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
+            title="Domain & Clinic Settings"
           >
-            <Save className="w-3.5 h-3.5" />
-            <span>Publish Live</span>
-          </Button>
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -1337,52 +1221,40 @@ export default function ElementorComposerPage() {
                   {/* 1. HERO SECTION INSPECTOR */}
                   {selectedSection.type === "HERO" && (
                     <div className="space-y-4">
-                      {/* READYMADE HERO DESIGN DISPLAY & MODAL TRIGGER */}
-                      <div className="p-3.5 bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white rounded-2xl border border-indigo-200/80 shadow-2xs space-y-3">
+                      {/* Hero Layout Switcher (Direct Pills, Zero Modal) */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-                            <Layout className="w-3.5 h-3.5 text-indigo-600" /> Hero Layout Template
+                            <Layout className="w-3.5 h-3.5 text-purple-600" /> Hero Layout Style
                           </label>
-                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                            Active
+                          <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                            {selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT")}
                           </span>
                         </div>
-
-                        {/* Current Template Preview Card */}
-                        {(() => {
-                          const currentStyle = selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT");
-                          const templateInfoMap: Record<string, { label: string; desc: string; badge: string }> = {
-                            SPLIT: { label: "Split Half-Image Right", desc: "Headline on left (60%), doctor photo or clinic visual on right (40%)", badge: "Most Popular" },
-                            FULL_WIDTH: { label: "Full Screen Ambient Slider", desc: "100% full background photo slider with centered copy", badge: "Hospital Grade" },
-                            BENTO: { label: "Bento Medical Hub", desc: "Modern bento cards with instant OPD slot booking card", badge: "High Conversion" },
-                            MINIMAL: { label: "Minimalist Authority", desc: "Clean centered doctor headline & credentials bar", badge: "Clean Consultant" },
-                            REVERSED_SPLIT: { label: "Split Half-Image Left", desc: "Visual on left (40%) with clinic notice on right (60%)", badge: "Editorial" },
-                          };
-                          const info = templateInfoMap[currentStyle] || templateInfoMap["SPLIT"];
-
-                          return (
-                            <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-2xs flex items-center justify-between gap-3">
-                              <div className="min-w-0 space-y-0.5">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-slate-900 text-xs truncate">{info.label}</span>
-                                  <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md border border-indigo-100 shrink-0">
-                                    {info.badge}
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-slate-500 truncate">{info.desc}</p>
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        <Button
-                          type="button"
-                          onClick={() => setBlockTemplateModalOpen(true)}
-                          className="w-full h-8 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-                          <span>Browse All 5 Hero Templates</span>
-                        </Button>
+                        <div className="grid grid-cols-4 gap-1 p-1 bg-white rounded-xl border border-slate-200">
+                          {[
+                            { id: "SPLIT", label: "Split" },
+                            { id: "FULL_WIDTH", label: "Full Bg" },
+                            { id: "BENTO", label: "Bento" },
+                            { id: "MINIMAL", label: "Minimal" },
+                          ].map((sty) => (
+                            <button
+                              key={sty.id}
+                              type="button"
+                              onClick={() => {
+                                updateSelectedSection({ heroStyle: sty.id as any });
+                                pushHistory(siteData);
+                              }}
+                              className={`py-1 text-[10px] font-bold rounded-lg transition-all ${
+                                (selectedSection.heroStyle || (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision" ? "FULL_WIDTH" : "SPLIT")) === sty.id
+                                  ? "bg-purple-600 text-white shadow-2xs font-black"
+                                  : "text-slate-600 hover:text-slate-900"
+                              }`}
+                            >
+                              {sty.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
@@ -1392,66 +1264,10 @@ export default function ElementorComposerPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => generateAiCopy("hero")}
-                          className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1"
+                          className="h-7 text-[11px] font-bold text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 rounded-lg flex items-center gap-1 cursor-pointer"
                         >
                           <Wand2 className="w-3 h-3 text-purple-600" /> ✨ AI Magic Copy
                         </Button>
-                      </div>
-
-                      {/* Logo & Clinic Name */}
-                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <label className="font-bold text-slate-700">Clinic Logo Image</label>
-                          {siteData.logoUrl && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextState = { ...siteData, logoUrl: null };
-                                setSiteData(nextState);
-                                pushHistory(nextState);
-                              }}
-                              className="text-[10px] text-rose-600 font-bold hover:underline"
-                            >
-                              Remove Logo
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {siteData.logoUrl ? (
-                            <div className="h-10 px-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center">
-                              <img src={siteData.logoUrl} alt="Logo" className="h-7 object-contain" />
-                            </div>
-                          ) : (
-                            <div className="h-10 px-3 bg-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-600 font-bold">
-                              Using Name (No Logo)
-                            </div>
-                          )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => logoUploadRef.current?.click()}
-                            className="h-8 text-xs font-bold rounded-xl"
-                          >
-                            <Upload className="w-3 h-3 mr-1 text-blue-600" /> Upload Logo (WebP)
-                          </Button>
-                          <input
-                            ref={logoUploadRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleLogoUpload}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Clinic Name (Shown if no logo)</label>
-                        <Input
-                          value={siteData.siteTitle}
-                          onChange={(e) => setSiteData({ ...siteData, siteTitle: e.target.value })}
-                          className="h-10 text-xs rounded-xl font-bold"
-                        />
                       </div>
 
                       <div className="space-y-1.5">
@@ -1554,66 +1370,17 @@ export default function ElementorComposerPage() {
 
                             {isBadgesVisible && (
                               <div className="space-y-3 pt-2 border-t border-slate-200/80">
-                                {/* Specialty Preset Quick Buttons */}
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quick Presets</span>
-                                    {currentHighlights.length > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => updateHeroBadges([])}
-                                        className="text-[10px] text-rose-600 hover:underline font-bold"
-                                      >
-                                        Remove All
-                                      </button>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Clinic Highlights</span>
+                                  {currentHighlights.length > 0 && (
                                     <button
                                       type="button"
-                                      onClick={() => updateHeroBadges([
-                                        { icon: "🧸", text: "Stress-Free Play Zone" },
-                                        { icon: "💉", text: "Pain-Free Vaccines" },
-                                        { icon: "🌡️", text: "24/7 Fever Support" },
-                                      ])}
-                                      className="px-2 py-1 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
+                                      onClick={() => updateHeroBadges([])}
+                                      className="text-[10px] text-rose-600 hover:underline font-bold"
                                     >
-                                      🧸 Pediatrics
+                                      Clear All
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateHeroBadges([
-                                        { icon: "✨", text: "Pain-Free Dentistry" },
-                                        { icon: "🔬", text: "Digital 3D Scans" },
-                                        { icon: "⚡", text: "Same-Day Relief" },
-                                      ])}
-                                      className="px-2 py-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
-                                    >
-                                      🦷 Dental
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateHeroBadges([
-                                        { icon: "👨‍⚕️", text: "Senior Specialists" },
-                                        { icon: "🧪", text: "NABL Certified Lab" },
-                                        { icon: "🕒", text: "Zero Waiting Time" },
-                                      ])}
-                                      className="px-2 py-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
-                                    >
-                                      🩺 General Clinic
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateHeroBadges([
-                                        { icon: "💎", text: "US FDA Approved" },
-                                        { icon: "🌿", text: "Personalized Care" },
-                                        { icon: "🎯", text: "Advanced Laser Tech" },
-                                      ])}
-                                      className="px-2 py-1 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-lg text-[10px] font-bold text-slate-700 transition-colors"
-                                    >
-                                      💆 Skin / Derma
-                                    </button>
-                                  </div>
+                                  )}
                                 </div>
 
                                 {/* List of badges */}
@@ -1800,29 +1567,81 @@ export default function ElementorComposerPage() {
                         )}
                       </div>
 
-                      {/* Hero Image & Layout Adjustments Trigger Card */}
-                      <div className="p-3.5 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border border-slate-200 space-y-2.5">
+                      {/* Hero Image & Layout Adjustments (Direct Inline Controls, Zero Modals) */}
+                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" /> Hero Image Adjustments
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-purple-600" /> Image &amp; Overlay Styling
                           </label>
-                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                          <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
                             {selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}% Opacity
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                          Fine-tune image brightness, focal point alignment, dark overlay gradient, and section height with real-time visual preview.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setHeroAdjustModalOpen(true)}
-                          className="w-full h-8 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 border-blue-200 rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Open Image Adjustments & Preview</span>
-                        </Button>
+
+                        {/* Image Opacity Slider */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px] text-slate-600 font-bold">
+                            <span>Background Brightness / Opacity</span>
+                            <span className="font-mono text-purple-700">{selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="20"
+                            max="100"
+                            value={selectedSection.design?.imageOpacity !== undefined ? selectedSection.design.imageOpacity : 85}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              updateSelectedSectionDesign({ imageOpacity: val });
+                              pushHistory(siteData);
+                            }}
+                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                          />
+                        </div>
+
+                        {/* Dark Gradient Overlay Toggle */}
+                        <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200">
+                          <div>
+                            <p className="font-bold text-slate-800 text-[11px]">Dark Contrast Gradient</p>
+                            <p className="text-[10px] text-slate-500">Improves headline readability over busy photos</p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={selectedSection.design?.overlayDarkness !== "none"}
+                            onChange={(e) => {
+                              updateSelectedSectionDesign({ overlayDarkness: e.target.checked ? "medium" : "none" });
+                              pushHistory(siteData);
+                            }}
+                            className="w-4 h-4 rounded text-purple-600 cursor-pointer accent-purple-600"
+                          />
+                        </div>
+
+                        {/* Section Height */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Hero Section Height</label>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { id: "compact", label: "Compact" },
+                              { id: "normal", label: "Normal" },
+                              { id: "fullscreen", label: "Full Viewport" },
+                            ].map((h) => (
+                              <button
+                                key={h.id}
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedSectionDesign({ heroHeight: h.id as any });
+                                  pushHistory(siteData);
+                                }}
+                                className={`py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                                  (selectedSection.design?.heroHeight || "normal") === h.id
+                                    ? "bg-purple-600 text-white border-purple-600 shadow-2xs font-black"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                }`}
+                              >
+                                {h.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Multi-Photo Carousel Slider Manager */}
@@ -2736,6 +2555,69 @@ export default function ElementorComposerPage() {
                     </div>
                   )}
 
+                  {/* 10. UNIVERSAL / CUSTOM BLOCK INSPECTOR (Fallback for any custom block, primitive or design block) */}
+                  {!["HERO", "STATS_RIBBON", "PACKAGES", "SERVICES", "DOCTOR_BIO", "GALLERY", "MAP_HOURS", "FAQ", "CTA_BANNER", "CUSTOM_TEXT", "REVIEWS"].includes(selectedSection.type) && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-purple-900 text-xs capitalize">{selectedSection.type.replace("PRIMITIVE_", "").replace("_", " ")} Block</span>
+                          <span className="text-[10px] font-bold text-purple-700 bg-white px-2 py-0.5 rounded-full border border-purple-200">Block Content</span>
+                        </div>
+                        <p className="text-[11px] text-purple-700">Customize headline, description, body text, and button link.</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Block Title / Headline</label>
+                        <Input
+                          value={selectedSection.title || ""}
+                          onChange={(e) => updateSelectedSection({ title: e.target.value })}
+                          placeholder="e.g. Featured Medical Highlights"
+                          className="h-10 text-xs rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Subtitle / Tagline</label>
+                        <Input
+                          value={selectedSection.subtitle || ""}
+                          onChange={(e) => updateSelectedSection({ subtitle: e.target.value })}
+                          placeholder="e.g. Proven clinical care with cutting-edge technology."
+                          className="h-9 text-xs rounded-xl"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Content / Story Body</label>
+                        <Textarea
+                          value={selectedSection.content || ""}
+                          onChange={(e) => updateSelectedSection({ content: e.target.value })}
+                          rows={5}
+                          placeholder="Write paragraph content, bullet points, clinical details, or notices..."
+                          className="text-xs rounded-xl leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Optional Button for custom block */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                        <label className="font-bold text-slate-700 text-xs">Action Button (Optional)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={selectedSection.ctaText || ""}
+                            onChange={(e) => updateSelectedSection({ ctaText: e.target.value })}
+                            placeholder="Button Label (e.g. Learn More)"
+                            className="h-8 text-xs bg-white rounded-lg"
+                          />
+                          <Input
+                            value={selectedSection.ctaAction || ""}
+                            onChange={(e) => updateSelectedSection({ ctaAction: e.target.value })}
+                            placeholder="URL / #section"
+                            className="h-8 text-xs bg-white rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-6 border-t border-slate-100">
                     <Button
                       onClick={() => handleSaveWebsite(selectedSection.type.replace("_", " "))}
@@ -3254,7 +3136,9 @@ export default function ElementorComposerPage() {
           onReorderSection={handleReorderSection}
           onOpenInsertModal={(idx) => {
             setInsertTargetIndex(idx ?? null);
-            setInsertModalOpen(true);
+            setIsSidebarCollapsed(false);
+            setSelectedSectionId(null);
+            setSidebarTab("elements");
           }}
         />
       </div>
@@ -3299,16 +3183,7 @@ export default function ElementorComposerPage() {
         </div>
       )}
 
-      {/* ── INSERT SECTION MODAL ── */}
-      <InsertSectionModal
-        isOpen={insertModalOpen}
-        targetIndex={insertTargetIndex}
-        onClose={() => {
-          setInsertModalOpen(false);
-          setInsertTargetIndex(null);
-        }}
-        onSelectWidget={(type, targetIndex) => handleDropNewSection(type, targetIndex)}
-      />
+
 
       {/* ── 5-MINUTE MAGIC QUICKSTART WIZARD MODAL ── */}
       <QuickStartWizardModal
@@ -3375,74 +3250,7 @@ export default function ElementorComposerPage() {
         title="Choose from Verified Medical Stock Photography"
       />
 
-      {/* ── READYMADE HERO TEMPLATES MODAL ── */}
-      <BlockTemplateModal
-        isOpen={blockTemplateModalOpen}
-        onClose={() => setBlockTemplateModalOpen(false)}
-        activeHeroStyle={
-          (selectedSection?.heroStyle ||
-            (siteData.themeId === "apex-clinical" || siteData.themeId === "executive-private" || siteData.themeId === "ophthalmology-vision"
-              ? "FULL_WIDTH"
-              : "SPLIT")) as any
-        }
-        onSelectHeroTemplate={(tmplId) => {
-          // If hero is selected, update it directly
-          const currentSections = siteData.sections || [];
-          const heroSec = currentSections.find((s) => s.type === "HERO");
-          if (heroSec) {
-            const nextSections = currentSections.map((s) =>
-              s.id === heroSec.id ? { ...s, heroStyle: tmplId as any } : s
-            );
-            const nextState = { ...siteData, sections: nextSections };
-            setSiteData(nextState);
-            pushHistory(nextState);
-            setSelectedSectionId(heroSec.id);
-            setInspectorSubTab("content");
-          } else {
-            // Otherwise create new hero with this template
-            const newHeroId = `sec_hero_${Date.now()}`;
-            const newSections: PageSection[] = [
-              {
-                id: newHeroId,
-                type: "HERO",
-                heroStyle: tmplId as any,
-                badgeText: "Clinical Excellence",
-                subtitle: siteData.heroSubheading || "Comprehensive, compassionate healthcare tailored to you.",
-              },
-              ...currentSections,
-            ];
-            const nextState = { ...siteData, sections: newSections };
-            setSiteData(nextState);
-            pushHistory(nextState);
-            setSelectedSectionId(newHeroId);
-          }
-          toast({
-            title: "Hero Design Applied! 🎨",
-            description: `Switched hero layout to ${tmplId.replace("_", " ")}.`,
-          });
-        }}
-      />
 
-      {/* ── HERO IMAGE & DISPLAY ADJUSTMENT POPUP MODAL ── */}
-      <HeroImageAdjustModal
-        isOpen={heroAdjustModalOpen}
-        onClose={() => setHeroAdjustModalOpen(false)}
-        design={selectedSection?.design || {}}
-        heroHeadline={selectedSection?.title || siteData.heroHeading || "Clinical Excellence"}
-        sampleImageUrl={
-          siteData.heroSliderImages && siteData.heroSliderImages.length > 0
-            ? siteData.heroSliderImages[0]
-            : siteData.heroImage || siteData.doctor?.image || null
-        }
-        onSaveDesign={(patch) => {
-          updateSelectedSectionDesign(patch);
-          pushHistory(siteData);
-          toast({
-            title: "Hero Adjustments Saved ✨",
-            description: "Updated image opacity, alignment, and display settings.",
-          });
-        }}
-      />
     </div>
   );
 }
