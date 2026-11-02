@@ -175,7 +175,19 @@ function getCompetitorIntelligence(
 }
 
 // Interactive Competitor Keyword Targeting Block (Fully Dynamic)
-function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { competitors: Competitor[]; primaryCategory: string; keywordsData: any }) {
+function CompetitorKeywords({ 
+  competitors, 
+  primaryCategory, 
+  keywordsData,
+  activeKeyword,
+  onSelectKeyword,
+}: { 
+  competitors: Competitor[]; 
+  primaryCategory: string; 
+  keywordsData: any;
+  activeKeyword?: string | null;
+  onSelectKeyword?: (kw: string) => void;
+}) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -270,52 +282,81 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
             High-Intent Patient Searches
           </span>
         </div>
-        <span className="text-xs text-gray-400 font-medium">Click any term to counter-target & outrank</span>
+        <span className="text-xs text-gray-400 font-medium">Click any term to check rankings or counter-target</span>
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed">
-        Search terms and specialty phrases used by top-ranking clinics in your area. Click any keyword to target it in a Google Post, weave it into your AI Review Replies, or add it to your clinic services.
+        Search terms and specialty phrases used by top-ranking clinics in your area. Click any keyword to view who ranks for that query on Google Maps, target it in a Google Post, or weave it into your AI Review Replies.
       </p>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        {dynamicKeywords.map((kw, idx) => (
-          <DropdownMenu key={idx}>
-            <DropdownMenuTrigger asChild>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50/60 border border-indigo-100/80 text-indigo-900 rounded-full text-xs font-medium hover:bg-indigo-100/70 hover:border-indigo-200 transition-all shadow-2xs">
-                <span className="text-indigo-400 font-semibold">#</span>
-                <span>{kw}</span>
-                <ChevronDown className="w-3 h-3 text-indigo-400 ml-0.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60 bg-white border border-gray-100 shadow-lg rounded-xl p-1.5">
-              <DropdownMenuLabel className="text-xs text-gray-500 font-medium px-2 py-1">
-                Target Action for &ldquo;{kw}&rdquo;
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-gray-100 my-1" />
-              <DropdownMenuItem 
-                onClick={() => handleDraftPost(kw)}
-                className="text-xs rounded-lg cursor-pointer hover:bg-amber-50 focus:bg-amber-50 text-gray-800"
-              >
-                <Edit3 className="w-4 h-4 mr-2 text-amber-600" />
-                Draft Google Update
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleUseInReviewReplies(kw)}
-                className="text-xs rounded-lg cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50 text-gray-800"
-              >
-                <MessageSquare className="w-4 h-4 mr-2 text-emerald-600" />
-                Target in Google Review Replies
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleAddToGmbServices(kw)}
-                className="text-xs rounded-lg cursor-pointer hover:bg-indigo-50 focus:bg-indigo-50 text-gray-800"
-              >
-                <Plus className="w-4 h-4 mr-2 text-indigo-600" />
-                Add to Clinic GMB Services
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ))}
+        {dynamicKeywords.map((kw, idx) => {
+          const isActive = activeKeyword?.toLowerCase() === kw.toLowerCase();
+
+          return (
+            <div key={idx} className="inline-flex items-center">
+              <DropdownMenu>
+                <div className={`inline-flex items-center rounded-full border text-xs font-medium transition-all shadow-2xs overflow-hidden ${
+                  isActive 
+                    ? "bg-indigo-600 text-white border-indigo-700 shadow-xs" 
+                    : "bg-indigo-50/60 border-indigo-100/80 text-indigo-900 hover:bg-indigo-100/70 hover:border-indigo-200"
+                }`}>
+                  <button
+                    onClick={() => onSelectKeyword?.(kw)}
+                    className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 cursor-pointer hover:opacity-90"
+                    title={`Click to view competitor rankings for "${kw}"`}
+                  >
+                    <span className={isActive ? "text-indigo-200 font-bold" : "text-indigo-400 font-semibold"}>#</span>
+                    <span>{kw}</span>
+                  </button>
+
+                  <DropdownMenuTrigger asChild>
+                    <button className={`pr-2.5 pl-1 py-1.5 cursor-pointer transition-colors ${
+                      isActive ? "hover:bg-indigo-700 text-indigo-200" : "hover:bg-indigo-100 text-indigo-400"
+                    }`}>
+                      <ChevronDown className="w-3 h-3 ml-0.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                </div>
+
+                <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-100 shadow-lg rounded-xl p-1.5">
+                  <DropdownMenuLabel className="text-xs text-gray-500 font-medium px-2 py-1">
+                    Target Action for &ldquo;{kw}&rdquo;
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                  <DropdownMenuItem 
+                    onClick={() => onSelectKeyword?.(kw)}
+                    className="text-xs rounded-lg cursor-pointer hover:bg-indigo-50 focus:bg-indigo-50 text-indigo-900 font-semibold"
+                  >
+                    <Search className="w-4 h-4 mr-2 text-indigo-600" />
+                    View Rankings for &ldquo;{kw}&rdquo;
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleDraftPost(kw)}
+                    className="text-xs rounded-lg cursor-pointer hover:bg-amber-50 focus:bg-amber-50 text-gray-800"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2 text-amber-600" />
+                    Draft Google Update
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleUseInReviewReplies(kw)}
+                    className="text-xs rounded-lg cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50 text-gray-800"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2 text-emerald-600" />
+                    Target in Google Review Replies
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleAddToGmbServices(kw)}
+                    className="text-xs rounded-lg cursor-pointer hover:bg-indigo-50 focus:bg-indigo-50 text-gray-800"
+                  >
+                    <Plus className="w-4 h-4 mr-2 text-indigo-600" />
+                    Add to Clinic GMB Services
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -323,9 +364,25 @@ function CompetitorKeywords({ competitors, primaryCategory, keywordsData }: { co
 
 export function CompetitorInsights() {
   const router = useRouter();
+  const [scope, setScope] = useState<"city" | "local">("city");
+  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
+
+  const competitorParams: Record<string, string> = { scope };
+  if (selectedKeyword) {
+    competitorParams.keyword = selectedKeyword;
+  }
+
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
-  const { data: competitors, isLoading, refetch } = useLocalSeoModule<any[]>('competitors');
+  const { 
+    data: competitors, 
+    isLoading, 
+    refetch,
+    queryUsed,
+    city,
+    neighborhood,
+  } = useLocalSeoModule<any[]>('competitors', competitorParams);
+
   const [showAll, setShowAll] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
@@ -366,60 +423,140 @@ export function CompetitorInsights() {
   const doctorRating = Number(overviewData?.rating || overviewData?.avgRating) || (youMatch?.rating ? Number(youMatch.rating) : 0);
   const doctorReviewCount = Number(overviewData?.user_ratings_total || overviewData?.reviewCount || overviewData?.totalReviews) || (youMatch?.reviewCount ? Number(youMatch.reviewCount) : 0);
   const primaryCategory = overviewData?.primaryCategory || youMatch?.category || "Specialist Clinic";
-  const userRank = youMatch?.rank || 2;
 
-  // Build unified list sorted strictly by Map Rank (showing all results returned by API)
-  const competitorRowsOnly = rawCompetitorList.filter(c => !c.isYou);
-  
-  const allRows: Competitor[] = [
-    ...competitorRowsOnly.map((c, i) => ({
-      placeId: c.placeId || `comp-${i}`,
-      name: c.name,
-      rating: Number(c.rating) || 0,
-      reviewCount: Number(c.reviewCount) || 0,
-      distanceMeters: c.distanceMeters != null ? c.distanceMeters : null,
-      rank: c.rank || i + 1,
-      isYou: false,
-      primaryType: c.primaryType,
-      category: c.category || c.primaryType,
-      formattedAddress: c.formattedAddress || "",
-    })),
+  // Build unified list without duplicates
+  const allRows: Competitor[] = rawCompetitorList.map((c, i) => ({
+    placeId: c.placeId || `comp-${i}`,
+    name: c.name,
+    rating: Number(c.rating) || 0,
+    reviewCount: Number(c.reviewCount) || 0,
+    distanceMeters: c.isYou ? 0 : (c.distanceMeters != null ? c.distanceMeters : null),
+    rank: c.rank || i + 1,
+    isYou: Boolean(c.isYou),
+    primaryType: c.primaryType,
+    category: c.category || c.primaryType,
+    formattedAddress: c.formattedAddress || "",
+  })).sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
-    {
-      placeId: "you-row",
-      name: doctorName,
-      rating: doctorRating,
-      reviewCount: doctorReviewCount,
-      distanceMeters: 0,
-      rank: userRank,
-      isYou: true,
-      primaryType: primaryCategory,
-      category: primaryCategory,
-      formattedAddress: youMatch?.formattedAddress || overviewData?.address || "",
-    }
-  ].sort((a, b) => (a.rank || 0) - (b.rank || 0));
+  // Determine user's clinic and competitor immediately ahead
+  const youIndex = allRows.findIndex(r => r.isYou);
+  const youRow = youIndex !== -1 ? allRows[youIndex] : null;
+  const competitorAhead = youIndex > 0 ? allRows[youIndex - 1] : null;
+  const reviewsNeededToOvertake = competitorAhead && youRow
+    ? Math.max(0, (competitorAhead.reviewCount || 0) - (youRow.reviewCount || 0))
+    : 0;
+
+  const displayQuery = queryUsed || (
+    scope === "local" 
+      ? `${primaryCategory} near ${neighborhood || city || "your location"}`
+      : `Best ${primaryCategory} in ${city || "your city"}`
+  );
+  const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`;
 
   const displayList = showAll ? allRows : allRows.slice(0, 8);
 
   return (
     <div className="space-y-6">
+      {/* ── Search Query & Geo-Scope Verification Card ── */}
+      <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <Search className="w-3 h-3 text-indigo-500" />
+                Live Google Maps Search
+              </span>
+              <span className="text-[11px] text-gray-400 font-medium hidden sm:inline">
+                Verified via Places API
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
+              Ranking for: <span className="text-indigo-600">&ldquo;{displayQuery}&rdquo;</span>
+            </h3>
+            <p className="text-xs text-gray-500">
+              Showing direct doctor peers in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : `${city} (Within 5 km)`) : `${city} (City-Wide)`}.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start lg:self-center shrink-0">
+            <a
+              href={googleMapsVerifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50/60 border border-gray-200/80 transition-all shadow-2xs"
+            >
+              <span>Verify on Google Maps</span>
+              <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+            </a>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100/70 border border-indigo-100 transition-all shadow-2xs cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Scope Switcher Controls ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 rounded-xl border border-gray-200/60 w-fit">
+            <button
+              onClick={() => { setScope("city"); setSelectedKeyword(null); }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                scope === "city" && !selectedKeyword
+                  ? "bg-white text-indigo-700 shadow-2xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <span>🏙️ Entire City ({city || "City"})</span>
+            </button>
+            <button
+              onClick={() => { setScope("local"); setSelectedKeyword(null); }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                scope === "local" && !selectedKeyword
+                  ? "bg-white text-indigo-700 shadow-2xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <span>📍 Near Clinic (Within 5 km)</span>
+            </button>
+          </div>
+
+          {selectedKeyword && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-500">Filtered by keyword:</span>
+              <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                &ldquo;{selectedKeyword}&rdquo;
+              </span>
+              <button
+                onClick={() => setSelectedKeyword(null)}
+                className="text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
+              >
+                Reset to default
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Competitor Search Term Intercept (Directly below Local Competitor Analysis header) */}
-      <CompetitorKeywords competitors={allRows} primaryCategory={primaryCategory} keywordsData={keywordsData} />
+      <CompetitorKeywords 
+        competitors={allRows} 
+        primaryCategory={primaryCategory} 
+        keywordsData={keywordsData} 
+        activeKeyword={selectedKeyword}
+        onSelectKeyword={(kw) => setSelectedKeyword(prev => prev === kw ? null : kw)}
+      />
 
       {/* Top Competitors Header & Refresh */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className="text-xs sm:text-sm text-gray-600 font-medium">
-            Top Competitors for <strong className="text-gray-900 font-bold">{primaryCategory}</strong> near your location (click to inspect)
+            Top Competitors for <strong className="text-gray-900 font-bold">{primaryCategory}</strong> in {scope === "local" ? "your immediate neighborhood" : (city || "your city")} (click to inspect)
           </p>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
         </div>
 
         {/* Direct Peer Practice Scope Notice */}
@@ -445,21 +582,29 @@ export function CompetitorInsights() {
             if (comp.isYou) {
               return (
                 <div
-                  key="you-row"
-                  className="flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3 items-center bg-indigo-50/50 hover:bg-indigo-50/70 rounded-xl border border-indigo-100/90 transition-colors my-1"
+                  key={comp.placeId || "you-row"}
+                  className="flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3.5 items-center bg-gradient-to-r from-indigo-50/90 via-emerald-50/40 to-indigo-50/70 rounded-xl border border-indigo-200/90 shadow-2xs my-1.5"
                 >
                   <div className="min-w-0 w-full flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                       <Activity className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-900 flex items-center gap-2 truncate">
                         {comp.name}
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
-                          You
+                        <span className="text-[10px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded-full shadow-2xs">
+                          YOU
                         </span>
                       </p>
-                      <p className="text-xs text-indigo-600/80 truncate">Your official Google Business Profile</p>
+                      {competitorAhead && reviewsNeededToOvertake > 0 ? (
+                        <p className="text-[11px] text-indigo-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                          <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank} ({competitorAhead.name})</span>
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5">
+                          Your official Google Business Profile
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -467,7 +612,7 @@ export function CompetitorInsights() {
                     <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                      <span className="text-sm font-bold text-gray-900">{comp.rating.toFixed(1)}</span>
+                      <span className="text-sm font-bold text-gray-900">{comp.rating ? comp.rating.toFixed(1) : "—"}</span>
                     </div>
                   </div>
 
@@ -484,11 +629,8 @@ export function CompetitorInsights() {
                   <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
                     <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center px-3 py-0.5 rounded-full bg-indigo-100/70 border border-indigo-200 text-indigo-700 text-xs font-medium">
-                        Your Clinic
-                      </span>
-                      <span className="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200">
-                        #{userRank}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-100/90 border border-indigo-200 text-indigo-700 text-xs font-bold">
+                        #{comp.rank}
                       </span>
                     </div>
                   </div>

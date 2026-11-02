@@ -6,6 +6,10 @@ interface LocalSeoResponse<T> {
   data: T;
   source: string;
   lastUpdated: string | null;
+  queryUsed?: string;
+  city?: string;
+  neighborhood?: string;
+  scope?: string;
   error?: string;
 }
 
@@ -34,6 +38,10 @@ export function useLocalSeoModule<T>(moduleName: string, params?: Record<string,
     data: data?.data,
     source: data?.source,
     lastUpdated: data?.lastUpdated,
+    queryUsed: data?.queryUsed,
+    city: data?.city,
+    neighborhood: data?.neighborhood,
+    scope: data?.scope,
     isLoading,
     error: error as Error | null,
     refetch,

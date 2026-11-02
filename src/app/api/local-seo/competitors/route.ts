@@ -70,6 +70,10 @@ export async function GET(request: Request) {
     const session = await getSessionData();
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
+    const { searchParams } = new URL(request.url);
+    const scope = (searchParams.get("scope") || "city").toLowerCase() as "city" | "local";
+    const customKeyword = searchParams.get("keyword")?.trim() || undefined;
+
     const authResult = await getValidGbpAccessToken(session.doctorId);
     if (!authResult) {
       return NextResponse.json({ error: "No GBP Account connected" }, { status: 400 });
@@ -165,24 +169,30 @@ export async function GET(request: Request) {
         lng = geocoded.lng;
         console.log(`[Competitors] GPS geocoded from address: ${lat},${lng}`);
       } else {
-        // Hard fallback — flag it so we can debug
         lat = 28.5631;
         lng = 77.1997;
         console.warn(`[Competitors] WARNING: Using hardcoded fallback GPS. Address was: "${fullAddress}"`);
       }
     }
 
-    // Build hyper-local search query: "Pediatrician near Safdarjung Enclave, New Delhi"
-    // NOT pincode-based
-    const localQuery = buildLocalSearchQuery(primaryCategory, fullAddress);
-    console.log(`[Competitors] Search query: "${localQuery}"`);
-
     const extracted = await extractNeighborhood(fullAddress, apiKey);
     let locationContext = undefined;
 
     if (extracted) {
-      locationContext = extracted.city || extracted.searchPhrase;
-      console.log(`[Competitors] Using city/neighborhood for organic text search: ${locationContext}`);
+      locationContext = scope === "local"
+        ? (extracted.neighborhood || extracted.city || extracted.searchPhrase)
+        : (extracted.city || extracted.searchPhrase);
+      console.log(`[Competitors] Using ${scope} context for organic search: ${locationContext}`);
+    }
+
+    // Optional raw query construction if custom keyword is chosen
+    let rawQuery: string | undefined = undefined;
+    if (customKeyword) {
+      const city = extracted?.city;
+      const alreadyHasLocation = city && customKeyword.toLowerCase().includes(city.toLowerCase());
+      rawQuery = alreadyHasLocation 
+        ? customKeyword 
+        : (city ? `${customKeyword} in ${city}` : customKeyword);
     }
 
     // ── Live Google Places API call ───────────────────────────────────────────
@@ -190,19 +200,40 @@ export async function GET(request: Request) {
       primaryCategory,
       account.locationId || "",
       bName,
-      { lat, lng }, // Pass clinic's exact GPS so UI calculates distances correctly
-      locationContext
+      { lat, lng },
+      locationContext,
+      {
+        scope,
+        maxDistanceKm: scope === "local" ? 5 : 20,
+        rawQuery,
+        clinicName: doctor?.clinicName || bName,
+      }
     );
 
     const userRating = Number(insights.rating) || 4.9;
     const userReviews = Number(insights.user_ratings_total) || 78;
 
     const validCompetitors = searchRes.competitors || [];
+    const hasUserInCompetitors = validCompetitors.some((c: any) => c.isYou);
 
-    // Structure normalized items for dashboard rendering.
-    // Rank = real Google text-search position (googlePosition).
-    const updatedNormalized = [
-      {
+    // Structure normalized items for dashboard rendering without duplicate "YOU" entries
+    const updatedNormalized: any[] = validCompetitors.map((comp: any, idx: number) => ({
+      id: comp.placeId || `comp-${idx}`,
+      name: comp.name,
+      rating: comp.rating,
+      reviewCount: comp.reviewCount,
+      rank: comp.googlePosition ?? (idx + 1),
+      isYou: Boolean(comp.isYou),
+      placeId: comp.placeId || "",
+      distanceMeters: comp.isYou ? 0 : (comp.distanceMeters ?? null),
+      category: comp.category || comp.primaryType || primaryCategory,
+      formattedAddress: comp.formattedAddress || "",
+      primaryType: comp.primaryType || null,
+    }));
+
+    // If Google didn't return the clinic in the results, append it once at userRank
+    if (!hasUserInCompetitors) {
+      updatedNormalized.push({
         id: "you",
         name: bName,
         rating: userRating,
@@ -213,24 +244,13 @@ export async function GET(request: Request) {
         distanceMeters: 0,
         category: primaryCategory,
         formattedAddress: fullAddress || "",
-      },
-      ...validCompetitors.map((comp: any, idx: number) => ({
-        id: comp.placeId || `comp-${idx}`,
-        name: comp.name,
-        rating: comp.rating,
-        reviewCount: comp.reviewCount,
-        // Real Google search position — not fake index arithmetic
-        rank: comp.googlePosition ?? (idx + 1),
-        isYou: false,
-        placeId: comp.placeId || "",
-        distanceMeters: comp.distanceMeters ?? null,
-        category: comp.category || comp.primaryType || primaryCategory,
-        formattedAddress: comp.formattedAddress || "",
-        primaryType: comp.primaryType || null,
-      }))
-    ].sort((a, b) => a.rank - b.rank);
+        primaryType: "doctor",
+      });
+    }
 
-    // Cache the fresh 100% accurate result in database
+    updatedNormalized.sort((a, b) => a.rank - b.rank);
+
+    // Cache result in database
     await prisma.competitorSnapshot.create({
       data: {
         gbpAccountId: account.id,
@@ -240,9 +260,19 @@ export async function GET(request: Request) {
       }
     });
 
+    const finalQueryUsed = searchRes.textQueryUsed || (
+      scope === "local"
+        ? `${primaryCategory} near ${locationContext || "your location"}`
+        : `Best ${primaryCategory} in ${locationContext || "your city"}`
+    );
+
     return NextResponse.json({
       data: updatedNormalized,
       source: "Google Places API (Live Parity)",
+      queryUsed: finalQueryUsed,
+      scope: searchRes.scope || scope,
+      city: extracted?.city || "Patna",
+      neighborhood: extracted?.neighborhood || null,
       lastUpdated: new Date().toISOString()
     });
 

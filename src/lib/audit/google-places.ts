@@ -188,12 +188,15 @@ export interface CompetitorData {
   formattedAddress?: string | null;
   lat?: number | null;
   lng?: number | null;
+  isYou?: boolean;
 }
 
 export interface CompetitorSearchResult {
   competitors: CompetitorData[];
   userRank: number;
   userIndexInResults: number;
+  textQueryUsed?: string;
+  scope?: "city" | "local";
 }
 
 /**
@@ -361,7 +364,13 @@ export async function searchCompetitorsWithRank(
   targetPlaceId: string,
   targetName: string,
   location?: { lat: number; lng: number },
-  locationContext?: string // e.g. "Safdarjung Enclave, New Delhi" — used to build accurate local query
+  locationContext?: string, // e.g. "Patna" or "Bailey Road, Patna"
+  options?: {
+    scope?: "city" | "local";
+    maxDistanceKm?: number;
+    rawQuery?: string;
+    clinicName?: string;
+  }
 ): Promise<CompetitorSearchResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -369,18 +378,30 @@ export async function searchCompetitorsWithRank(
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
   }
 
-  // Build hyper-local text query: "Best Pediatrician in Safdarjung Enclave, New Delhi"
-  // This triggers Google's Prominence algorithm for authentic SEO audits.
-  const textQuery = locationContext
-    ? `Best ${query} in ${locationContext}`
-    : `Best ${query}`;
+  const scope = options?.scope || "city";
+  const maxDistance = options?.maxDistanceKm || (scope === "local" ? 5 : 20);
 
-  console.log(`[Competitor Search v1] query: "${textQuery}"`);
+  let textQuery = options?.rawQuery;
+  if (!textQuery) {
+    if (scope === "local") {
+      textQuery = locationContext
+        ? `${query} near ${locationContext}`
+        : `${query} near me`;
+    } else {
+      textQuery = locationContext
+        ? `Best ${query} in ${locationContext}`
+        : `Best ${query}`;
+    }
+  }
 
-  // Clean target name for fuzzy matching (remove Dr., Clinic, Hospital)
+  console.log(`[Competitor Search v1] query: "${textQuery}" (scope: ${scope}, maxDistance: ${maxDistance}km)`);
+
+  // Clean target name and clinic name for fuzzy matching (remove Dr., Clinic, Hospital)
   const cleanTargetName = targetName
     ? targetName.toLowerCase().replace(/dr\.?\s*/gi, "").replace(/clinic|hospital|centre|center/gi, "").trim()
     : "";
+  const cleanClinicName = (options?.clinicName || "")
+    .toLowerCase().replace(/dr\.?\s*/gi, "").replace(/clinic|hospital|centre|center/gi, "").trim();
 
   try {
     const v1Url = "https://places.googleapis.com/v1/places:searchText";
@@ -401,13 +422,12 @@ export async function searchCompetitorsWithRank(
       maxResultCount: 20,
     };
 
-    // Use a broad locationBias to ground the search to the correct city/area
-    // without overriding the "Best" Prominence algorithm.
+    // Use a locationBias to ground the search to the correct city/area
     if (location?.lat && location?.lng) {
       requestBody.locationBias = {
         circle: {
           center: { latitude: location.lat, longitude: location.lng },
-          radius: 5000,
+          radius: scope === "local" ? 5000 : 15000,
         },
       };
     }
@@ -436,11 +456,16 @@ export async function searchCompetitorsWithRank(
           p.displayName?.text?.toLowerCase().includes(cleanTargetName)
         );
       }
+      if (userIndex === -1 && cleanClinicName.length > 2) {
+        userIndex = rawPlaces.findIndex((p: any) =>
+          p.displayName?.text?.toLowerCase().includes(cleanClinicName)
+        );
+      }
 
       // ── Step 2: If not in top 20, try tighter 3km local search ──
       let finalUserRank = userIndex !== -1 ? userIndex + 1 : 21;
 
-      if (userIndex === -1 && cleanTargetName && location?.lat && location?.lng) {
+      if (userIndex === -1 && (cleanTargetName || cleanClinicName) && location?.lat && location?.lng) {
         try {
           const secondaryRes = await fetch(v1Url, {
             method: "POST",
@@ -473,6 +498,11 @@ export async function searchCompetitorsWithRank(
                 p.displayName?.text?.toLowerCase().includes(cleanTargetName)
               );
             }
+            if (secIdx === -1 && cleanClinicName.length > 2) {
+              secIdx = secPlaces.findIndex((p: any) =>
+                p.displayName?.text?.toLowerCase().includes(cleanClinicName)
+              );
+            }
             if (secIdx !== -1) {
               finalUserRank = secIdx + 1;
               console.log(`[Competitor Search v1] Target found in tight 3km search at position #${finalUserRank}`);
@@ -490,13 +520,33 @@ export async function searchCompetitorsWithRank(
       for (const p of rawPlaces) {
         googlePos++;
 
-        // Skip the target clinic
-        if (targetPlaceId && p.id === targetPlaceId) continue;
-        const pNameLower = (p.displayName?.text || "").toLowerCase();
-        if (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) continue;
-
-        const pLabel = p.primaryTypeDisplayName?.text || p.primaryType || "";
         const pName = p.displayName?.text || "";
+        const pNameLower = pName.toLowerCase();
+
+        // Check if this place is the doctor's own clinic
+        const isTargetClinic = Boolean(
+          (targetPlaceId && p.id === targetPlaceId) ||
+          (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) ||
+          (cleanClinicName.length > 2 && pNameLower.includes(cleanClinicName))
+        );
+
+        if (isTargetClinic) {
+          competitors.push({
+            name: pName,
+            rating: p.rating ?? null,
+            reviewCount: p.userRatingCount ?? null,
+            placeId: p.id || targetPlaceId,
+            googlePosition: googlePos,
+            distanceMeters: 0,
+            category: p.primaryTypeDisplayName?.text || p.primaryType || query,
+            primaryType: p.primaryType || null,
+            formattedAddress: p.formattedAddress || null,
+            lat: p.location?.latitude || null,
+            lng: p.location?.longitude || null,
+            isYou: true,
+          });
+          continue;
+        }
 
         // Strictly filter to related businesses only and exclude major generic hospitals
         if (!isRelatedCompetitor(query, {
@@ -511,7 +561,7 @@ export async function searchCompetitorsWithRank(
         let distKm = null;
         if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
           distKm = calculateDistanceKm(location.lat, location.lng, p.location.latitude, p.location.longitude);
-          if (distKm > 20) {
+          if (distKm > maxDistance) {
             continue;
           }
         }
@@ -528,24 +578,31 @@ export async function searchCompetitorsWithRank(
           formattedAddress: p.formattedAddress || null,
           lat: p.location?.latitude || null,
           lng: p.location?.longitude || null,
+          isYou: false,
         });
 
-        if (competitors.length >= 10) break; // Return top 10 authentic competitors
+        if (competitors.length >= 15) break; // Return top authentic competitors
       }
 
       console.log(`[Competitor Search v1] "${textQuery}" → ${competitors.length} competitors found. User at Google position #${finalUserRank}.`);
-      return { competitors, userRank: finalUserRank, userIndexInResults: userIndex };
+      return { 
+        competitors, 
+        userRank: finalUserRank, 
+        userIndexInResults: userIndex,
+        textQueryUsed: textQuery,
+        scope,
+      };
     }
   } catch (err) {
     console.warn("[Competitor Search v1] Error, falling back to Classic API:", err);
   }
 
-  // ── Fallback: Classic Text Search (uses textQuery with neighborhood context) ──
+  // ── Fallback: Classic Text Search ──
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", textQuery);
   if (location?.lat && location?.lng) {
     url.searchParams.set("location", `${location.lat},${location.lng}`);
-    url.searchParams.set("radius", "5000");
+    url.searchParams.set("radius", scope === "local" ? "5000" : "15000");
   }
   url.searchParams.set("key", apiKey);
 
@@ -573,6 +630,11 @@ export async function searchCompetitorsWithRank(
         r.name?.toLowerCase().includes(cleanTargetName)
       );
     }
+    if (userIndex === -1 && cleanClinicName.length > 2) {
+      userIndex = rawResults.findIndex((r: any) =>
+        r.name?.toLowerCase().includes(cleanClinicName)
+      );
+    }
 
     const userRank = userIndex !== -1 ? userIndex + 1 : 21;
 
@@ -580,10 +642,33 @@ export async function searchCompetitorsWithRank(
     let classicPos = 0;
     for (const r of rawResults) {
       classicPos++;
-      if (targetPlaceId && r.place_id === targetPlaceId) continue;
-      if (cleanTargetName.length > 2 && r.name?.toLowerCase().includes(cleanTargetName)) continue;
 
       const pName = r.name || "";
+      const pNameLower = pName.toLowerCase();
+
+      const isTargetClinic = Boolean(
+        (targetPlaceId && r.place_id === targetPlaceId) ||
+        (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) ||
+        (cleanClinicName.length > 2 && pNameLower.includes(cleanClinicName))
+      );
+
+      if (isTargetClinic) {
+        competitors.push({
+          name: pName,
+          rating: r.rating ?? null,
+          reviewCount: r.user_ratings_total ?? null,
+          placeId: r.place_id || targetPlaceId,
+          googlePosition: classicPos,
+          distanceMeters: 0,
+          category: r.types?.[0] || query,
+          primaryType: r.types?.[0] || null,
+          formattedAddress: r.formatted_address || r.vicinity || null,
+          lat: r.geometry?.location?.lat || null,
+          lng: r.geometry?.location?.lng || null,
+          isYou: true,
+        });
+        continue;
+      }
 
       if (!isRelatedCompetitor(query, {
         name: pName,
@@ -596,7 +681,7 @@ export async function searchCompetitorsWithRank(
       let distKm = null;
       if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
         distKm = calculateDistanceKm(location.lat, location.lng, r.geometry.location.lat, r.geometry.location.lng);
-        if (distKm > 20) {
+        if (distKm > maxDistance) {
           console.log(`[Competitor Filter Classic] Excluded: "${pName}" — too far away (${distKm}km)`);
           continue;
         }
@@ -614,12 +699,19 @@ export async function searchCompetitorsWithRank(
         formattedAddress: r.formatted_address || r.vicinity || null,
         lat: r.geometry?.location?.lat || null,
         lng: r.geometry?.location?.lng || null,
+        isYou: false,
       });
 
-      if (competitors.length >= 10) break;
+      if (competitors.length >= 15) break;
     }
 
-    return { competitors, userRank, userIndexInResults: userIndex };
+    return { 
+      competitors, 
+      userRank, 
+      userIndexInResults: userIndex,
+      textQueryUsed: textQuery,
+      scope,
+    };
   } catch (error) {
     console.error("[Google Places] Error searching competitors:", error);
     return { competitors: [], userRank: 5, userIndexInResults: -1 };
