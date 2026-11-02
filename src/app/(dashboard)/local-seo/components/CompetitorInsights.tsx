@@ -194,8 +194,11 @@ function CompetitorKeywords({
   const router = useRouter();
   const { toast } = useToast();
 
-  // 1. Extract genuine medical search phrases from competitor titles (EXCLUDE brand names like Saroj Madan, Chandra, etc.)
+  // 1. Extract genuine medical search phrases from competitor titles (EXCLUDE hospital and doctor brand names)
   const competitorTitleKeywords: string[] = [];
+  const baseCategory = primaryCategory || "Specialist Clinic";
+  const cityStr = city || "your city";
+
   competitors
     .filter(c => !c.isYou)
     .slice(0, 10)
@@ -212,6 +215,12 @@ function CompetitorKeywords({
           lower.includes("centre") ||
           lower.includes("center") ||
           lower.includes("nursing") ||
+          lower.includes("cloud nine") ||
+          lower.includes("cloudnine") ||
+          lower.includes("apollo") ||
+          lower.includes("max ") ||
+          lower.includes("fortis") ||
+          lower.includes("paras") ||
           lower.includes("saroj") ||
           lower.includes("madan") ||
           lower.includes("chandra") ||
@@ -220,16 +229,19 @@ function CompetitorKeywords({
           continue;
         }
 
-        // Must represent clinical intent
+        // Must represent clinical intent matching this doctor's specialty
         if (
           lower.includes("specialist") ||
           lower.includes("doctor") ||
           lower.includes("physician") ||
           lower.includes("care") ||
-          lower.includes("transplant") ||
-          lower.includes("dialysis") ||
+          lower.includes("surgeon") ||
+          lower.includes("gynae") ||
+          lower.includes("gynec") ||
+          lower.includes("obstet") ||
           lower.includes("nephro") ||
-          lower.includes("kidney")
+          lower.includes("kidney") ||
+          lower.includes(baseCategory.toLowerCase())
         ) {
           competitorTitleKeywords.push(part);
         }
@@ -237,19 +249,16 @@ function CompetitorKeywords({
     });
 
   // 2. High-Intent Patient Search Phrases for this specialty
-  const baseCategory = primaryCategory || "Specialist Clinic";
-  const cityStr = city || "Patna";
-
   const actualSearchTerms = (keywordsData?.searchKeywordsCounts || [])
     .map((kw: any) => (typeof kw === "string" ? kw : kw.searchKeyword).toLowerCase().trim())
-    .filter((k: string) => k.length > 3 && !k.startsWith("dr ") && !k.includes("clinic"));
+    .filter((k: string) => k.length > 3 && !k.startsWith("dr ") && !k.includes("clinic") && !k.includes("hospital"));
 
   let dynamicKeywords = [
     `Best ${baseCategory} in ${cityStr}`,
     `${baseCategory} in ${cityStr}`,
     `${baseCategory} near me`,
-    `Kidney Specialist in ${cityStr}`,
-    `Best Kidney Doctor in ${cityStr}`,
+    `Best ${baseCategory} Doctor in ${cityStr}`,
+    `Top ${baseCategory} in ${cityStr}`,
     ...competitorTitleKeywords.slice(0, 2),
     ...actualSearchTerms,
   ];
@@ -300,16 +309,9 @@ function CompetitorKeywords({
             <Search className="w-4 h-4" />
           </div>
           <h3 className="font-bold text-gray-900 text-sm">Competitor Search Term Intercept</h3>
-          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100/80">
-            High-Intent Patient Searches
-          </span>
         </div>
         <span className="text-xs text-gray-400 font-medium">Click any term to check rankings or counter-target</span>
       </div>
-
-      <p className="text-xs text-gray-500 leading-relaxed">
-        Search terms and specialty phrases used by top-ranking clinics in your area. Click any keyword to view who ranks for that query on Google Maps, target it in a Google Post, or weave it into your AI Review Replies.
-      </p>
 
       <div className="flex flex-wrap gap-2 pt-1">
         {dynamicKeywords.map((kw, idx) => {
@@ -517,15 +519,6 @@ export function CompetitorInsights() {
       <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                <Search className="w-3 h-3 text-indigo-500" />
-                Live Google Maps Search
-              </span>
-              <span className="text-[11px] text-gray-400 font-medium hidden sm:inline">
-                Verified via Places API
-              </span>
-            </div>
             <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
               Ranking for: <span className="text-indigo-600">&ldquo;{displayQuery}&rdquo;</span>
             </h3>
@@ -656,13 +649,7 @@ export function CompetitorInsights() {
           </div>
         </div>
 
-        {/* Direct Peer Practice Scope Notice */}
-        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50/60 border border-indigo-100/90 rounded-xl text-xs text-indigo-800">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-          <span>
-            Benchmarking against direct doctor & specialty clinic peers for <strong>{selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}</strong>. Multi-specialty hospitals (e.g. Paras, Apollo, Ford Hospital) are excluded so comparisons stay focused on direct practice competitors.
-          </span>
-        </div>
+
 
         {/* Table column headers */}
         <div className="hidden md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
@@ -752,11 +739,6 @@ export function CompetitorInsights() {
                         <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
                           {comp.name}
                         </p>
-                        {comp.category && (
-                          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60 truncate max-w-[140px]">
-                            {comp.category}
-                          </span>
-                        )}
                       </div>
                       {comp.formattedAddress && (
                         <p className="text-[11px] text-gray-400 truncate mt-0.5">
@@ -810,7 +792,7 @@ export function CompetitorInsights() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
-                            {comp.category && (
+                            {comp.category && !["doctor", "physician", "health"].includes(comp.category.toLowerCase()) && (
                               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                 {comp.category}
                               </span>
