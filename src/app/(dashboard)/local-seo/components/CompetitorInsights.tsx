@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus, 
-  MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search 
+  MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search,
+  Building2, X, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -180,56 +181,77 @@ function CompetitorKeywords({
   primaryCategory, 
   keywordsData,
   activeKeyword,
+  city = "Patna",
   onSelectKeyword,
 }: { 
   competitors: Competitor[]; 
   primaryCategory: string; 
   keywordsData: any;
   activeKeyword?: string | null;
+  city?: string;
   onSelectKeyword?: (kw: string) => void;
 }) {
   const router = useRouter();
   const { toast } = useToast();
 
-  // 1. Extract keywords from top competitor business names dynamically (No hardcoded medical fields)
+  // 1. Extract genuine medical search phrases from competitor titles (EXCLUDE brand names like Saroj Madan, Chandra, etc.)
   const competitorTitleKeywords: string[] = [];
   competitors
     .filter(c => !c.isYou)
-    .slice(0, 8)
+    .slice(0, 10)
     .forEach(c => {
       const parts = (c.name || "").split(/[,|–-]/).map((p: string) => p.trim());
       for (const part of parts) {
         const lower = part.toLowerCase();
         if (
-          !lower.startsWith("dr ") &&
-          !lower.startsWith("dr.") &&
-          !lower.startsWith("prof") &&
-          part.length > 3
+          lower.startsWith("dr ") ||
+          lower.startsWith("dr.") ||
+          lower.startsWith("prof") ||
+          lower.includes("clinic") ||
+          lower.includes("hospital") ||
+          lower.includes("centre") ||
+          lower.includes("center") ||
+          lower.includes("nursing") ||
+          lower.includes("saroj") ||
+          lower.includes("madan") ||
+          lower.includes("chandra") ||
+          part.length <= 3
+        ) {
+          continue;
+        }
+
+        // Must represent clinical intent
+        if (
+          lower.includes("specialist") ||
+          lower.includes("doctor") ||
+          lower.includes("physician") ||
+          lower.includes("care") ||
+          lower.includes("transplant") ||
+          lower.includes("dialysis") ||
+          lower.includes("nephro") ||
+          lower.includes("kidney")
         ) {
           competitorTitleKeywords.push(part);
         }
       }
     });
 
-  // 2. Get actual search terms from the doctor's profile
+  // 2. High-Intent Patient Search Phrases for this specialty
+  const baseCategory = primaryCategory || "Specialist Clinic";
+  const cityStr = city || "Patna";
+
   const actualSearchTerms = (keywordsData?.searchKeywordsCounts || [])
-    .map((kw: any) => (typeof kw === "string" ? kw : kw.searchKeyword).toLowerCase())
-    .slice(0, 4);
+    .map((kw: any) => (typeof kw === "string" ? kw : kw.searchKeyword).toLowerCase().trim())
+    .filter((k: string) => k.length > 3 && !k.startsWith("dr ") && !k.includes("clinic"));
 
-  // 3. Extract competitor primary categories
-  const competitorTypes = Array.from(new Set(competitors.map(c => c.category || c.primaryType).filter(Boolean)))
-    .map(type => type!.replace(/_/g, " ").toLowerCase())
-    .slice(0, 3);
-
-  // 4. Synthesize Organic Dynamic Keywords
-  const baseCategory = primaryCategory.toLowerCase();
-  
   let dynamicKeywords = [
-    ...competitorTitleKeywords.slice(0, 2),
+    `Best ${baseCategory} in ${cityStr}`,
+    `${baseCategory} in ${cityStr}`,
     `${baseCategory} near me`,
-    `best ${baseCategory}`,
+    `Kidney Specialist in ${cityStr}`,
+    `Best Kidney Doctor in ${cityStr}`,
+    ...competitorTitleKeywords.slice(0, 2),
     ...actualSearchTerms,
-    ...competitorTypes.map(t => `${t}`),
   ];
 
   dynamicKeywords = Array.from(new Set(dynamicKeywords.map(k => k.trim()))).filter(Boolean).slice(0, 8);
@@ -302,18 +324,25 @@ function CompetitorKeywords({
                     : "bg-indigo-50/60 border-indigo-100/80 text-indigo-900 hover:bg-indigo-100/70 hover:border-indigo-200"
                 }`}>
                   <button
+                    type="button"
                     onClick={() => onSelectKeyword?.(kw)}
                     className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 cursor-pointer hover:opacity-90"
-                    title={`Click to view competitor rankings for "${kw}"`}
+                    title={isActive ? "Click to clear filter and reset" : `Click to view competitor rankings for "${kw}"`}
                   >
                     <span className={isActive ? "text-indigo-200 font-bold" : "text-indigo-400 font-semibold"}>#</span>
                     <span>{kw}</span>
+                    {isActive && (
+                      <X className="w-3 h-3 ml-1 text-indigo-200 hover:text-white" />
+                    )}
                   </button>
 
                   <DropdownMenuTrigger asChild>
-                    <button className={`pr-2.5 pl-1 py-1.5 cursor-pointer transition-colors ${
-                      isActive ? "hover:bg-indigo-700 text-indigo-200" : "hover:bg-indigo-100 text-indigo-400"
-                    }`}>
+                    <button 
+                      type="button"
+                      className={`pr-2.5 pl-1 py-1.5 cursor-pointer transition-colors ${
+                        isActive ? "hover:bg-indigo-700 text-indigo-200" : "hover:bg-indigo-100 text-indigo-400"
+                      }`}
+                    >
                       <ChevronDown className="w-3 h-3 ml-0.5" />
                     </button>
                   </DropdownMenuTrigger>
@@ -367,16 +396,20 @@ export function CompetitorInsights() {
   const [scope, setScope] = useState<"city" | "local">("city");
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
 
-  const competitorParams: Record<string, string> = { scope };
-  if (selectedKeyword) {
-    competitorParams.keyword = selectedKeyword;
-  }
+  const competitorParams = useMemo(() => {
+    const params: Record<string, string> = { scope };
+    if (selectedKeyword) {
+      params.keyword = selectedKeyword;
+    }
+    return params;
+  }, [scope, selectedKeyword]);
 
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
   const { 
     data: competitors, 
     isLoading, 
+    isFetching,
     refetch,
     queryUsed,
     city,
@@ -523,42 +556,70 @@ export function CompetitorInsights() {
           </div>
         </div>
 
-        {/* ── Scope Switcher Controls ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 rounded-xl border border-gray-200/60 w-fit">
+        {/* ── Modern Scope Switcher Controls ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3.5 border-t border-gray-100">
+          <div className="inline-flex p-1 bg-gray-100/90 rounded-2xl border border-gray-200/80 shadow-xs">
             <button
-              onClick={() => { setScope("city"); setSelectedKeyword(null); }}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                scope === "city" && !selectedKeyword
-                  ? "bg-white text-indigo-700 shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900"
+              type="button"
+              onClick={() => setScope("city")}
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                scope === "city"
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-white/40"
               }`}
             >
-              <span>🏙️ Entire City ({city || "City"})</span>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+                scope === "city" ? "bg-indigo-50 text-indigo-600" : "bg-gray-200/60 text-gray-500"
+              }`}>
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="font-bold leading-tight">Entire City ({city || "Patna"})</span>
+                <span className="text-[10px] text-gray-400 font-normal">Municipal-wide map pack</span>
+              </div>
+              {scope === "city" && (
+                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-indigo-600 ring-4 ring-indigo-50" />
+              )}
             </button>
+
             <button
-              onClick={() => { setScope("local"); setSelectedKeyword(null); }}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                scope === "local" && !selectedKeyword
-                  ? "bg-white text-indigo-700 shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900"
+              type="button"
+              onClick={() => setScope("local")}
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                scope === "local"
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-white/40"
               }`}
             >
-              <span>📍 Near Clinic (Within 5 km)</span>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+                scope === "local" ? "bg-rose-50 text-rose-600" : "bg-gray-200/60 text-gray-500"
+              }`}>
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="font-bold leading-tight">Near Clinic</span>
+                <span className="text-[10px] text-gray-400 font-normal">Within 5 km radius</span>
+              </div>
+              {scope === "local" && (
+                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-rose-600 ring-4 ring-rose-50" />
+              )}
             </button>
           </div>
 
           {selectedKeyword && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500">Filtered by keyword:</span>
-              <span className="font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs">
+              <span className="text-gray-500 font-medium">Filtered by:</span>
+              <span className="font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md shadow-2xs border border-indigo-200/70">
                 &ldquo;{selectedKeyword}&rdquo;
               </span>
               <button
+                type="button"
                 onClick={() => setSelectedKeyword(null)}
-                className="text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
+                className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 hover:underline cursor-pointer flex items-center gap-1"
+                title="Reset back to default specialty ranking"
               >
-                Reset to default
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
               </button>
             </div>
           )}
@@ -571,22 +632,35 @@ export function CompetitorInsights() {
         primaryCategory={primaryCategory} 
         keywordsData={keywordsData} 
         activeKeyword={selectedKeyword}
-        onSelectKeyword={(kw) => setSelectedKeyword(prev => prev === kw ? null : kw)}
+        city={city || "Patna"}
+        onSelectKeyword={(kw) => setSelectedKeyword(prev => prev?.toLowerCase() === kw.toLowerCase() ? null : kw)}
       />
 
-      {/* Top Competitors Header & Refresh */}
+      {/* Top Competitors Header & Live Update Status */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <p className="text-xs sm:text-sm text-gray-600 font-medium">
-            Top Competitors for <strong className="text-gray-900 font-bold">{primaryCategory}</strong> in {scope === "local" ? "your immediate neighborhood" : (city || "your city")} (click to inspect)
-          </p>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <p className="text-xs sm:text-sm text-gray-600 font-medium">
+              Top Competitors for{" "}
+              <strong className="text-gray-900 font-bold">
+                {selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}
+              </strong>{" "}
+              in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : "your immediate neighborhood (within 5 km)") : (city || "your city")} (click to inspect)
+            </p>
+            {isFetching && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/70 animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
+                <span>Fetching live rankings...</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Direct Peer Practice Scope Notice */}
         <div className="flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50/60 border border-indigo-100/90 rounded-xl text-xs text-indigo-800">
           <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
           <span>
-            Benchmarking against direct doctor & specialty clinic peers for <strong>{primaryCategory}</strong>. Multi-specialty hospitals (e.g. Paras, Apollo, Ford Hospital) are excluded so comparisons stay focused on direct practice competitors.
+            Benchmarking against direct doctor & specialty clinic peers for <strong>{selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}</strong>. Multi-specialty hospitals (e.g. Paras, Apollo, Ford Hospital) are excluded so comparisons stay focused on direct practice competitors.
           </span>
         </div>
 
@@ -600,7 +674,7 @@ export function CompetitorInsights() {
         </div>
 
         {/* Unified Competitor Rows */}
-        <div className="space-y-1.5">
+        <div className={`space-y-1.5 transition-opacity duration-200 ${isFetching ? "opacity-60" : "opacity-100"}`}>
           {displayList.map((comp, idx) => {
             if (comp.isYou) {
               return (
