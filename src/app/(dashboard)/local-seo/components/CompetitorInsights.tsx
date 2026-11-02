@@ -425,7 +425,7 @@ export function CompetitorInsights() {
   const primaryCategory = overviewData?.primaryCategory || youMatch?.category || "Specialist Clinic";
 
   // Build unified list without duplicates
-  const allRows: Competitor[] = rawCompetitorList.map((c, i) => ({
+  const rawRows: Competitor[] = rawCompetitorList.map((c, i) => ({
     placeId: c.placeId || `comp-${i}`,
     name: c.name,
     rating: Number(c.rating) || 0,
@@ -437,6 +437,29 @@ export function CompetitorInsights() {
     category: c.category || c.primaryType,
     formattedAddress: c.formattedAddress || "",
   })).sort((a, b) => (a.rank || 0) - (b.rank || 0));
+
+  // Deduplicate: ensure strictly 1 row per unique clinic name or placeId, and strictly 1 isYou row
+  const seenPlaceIds = new Set<string>();
+  const seenNames = new Set<string>();
+  let hasYou = false;
+
+  const allRows: Competitor[] = [];
+  for (const row of rawRows) {
+    const cleanName = (row.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const placeId = row.placeId || "";
+
+    if (row.isYou) {
+      if (hasYou) continue;
+      hasYou = true;
+    }
+
+    if (placeId && placeId !== "you" && seenPlaceIds.has(placeId)) continue;
+    if (cleanName && seenNames.has(cleanName)) continue;
+
+    if (placeId && placeId !== "you") seenPlaceIds.add(placeId);
+    if (cleanName) seenNames.add(cleanName);
+    allRows.push(row);
+  }
 
   // Determine user's clinic and competitor immediately ahead
   const youIndex = allRows.findIndex(r => r.isYou);

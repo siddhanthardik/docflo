@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
-import { GoogleNormalizer } from "@/services/normalization/GoogleNormalizer";
 import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood, fetchPlaceDetails } from "@/lib/audit/google-places";
+import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood, fetchPlaceDetails, resolveDoctorPlace } from "@/lib/audit/google-places";
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -108,7 +107,7 @@ export async function GET(request: Request) {
     const insights = (account.insightsData as any) || {};
     const doctor = await prisma.doctor.findUnique({ where: { id: session.doctorId }, select: { specialty: true, clinicName: true, name: true } });
 
-    const bName = insights.name || profileData?.name || doctor?.clinicName || doctor?.name || account.locationName || "";
+    const bName = doctor?.clinicName || insights.name || profileData?.name || doctor?.name || account.locationName || "";
     const rawCategories = insights.categories || profileData?.categories || [];
     const categoryNames: string[] = Array.isArray(rawCategories) 
       ? rawCategories.map((c: any) => typeof c === 'string' ? c : (c?.displayName || c?.name || ''))
@@ -118,8 +117,9 @@ export async function GET(request: Request) {
     
     // Fetch live Google Places data for exact category matching, same as Audit Report
     let placeData = null;
-    if (account.locationId) {
-      placeData = await fetchPlaceDetails(account.locationId);
+    let verifiedPlaceId = (account.locationId && !account.locationId.includes("/")) ? account.locationId : "";
+    if (verifiedPlaceId) {
+      placeData = await fetchPlaceDetails(verifiedPlaceId);
     }
     
     const actualName = placeData?.name || bName;
@@ -145,21 +145,42 @@ export async function GET(request: Request) {
       primaryCategory = gbpDisplayName;
     }
 
-    // Extract GPS coordinates — priority: profileSnapshot lat/lng → insightsData location → geocode
+    // Extract GPS coordinates — priority: live placeData GPS → insightsData location → profileSnapshot
     const fullAddress = locationStr || insights.formattedAddress || profileData?.address || "";
-    const insightLocation = (insights.location as any);
-    if (typeof insightLocation?.latitude === "number" && typeof insightLocation?.longitude === "number") {
-      lat = insightLocation.latitude;
-      lng = insightLocation.longitude;
-      console.log(`[Competitors] Using GPS from insightsData.location: ${lat},${lng}`);
-    } else if (typeof profileData?.lat === "number" && typeof profileData?.lng === "number") {
-      lat = profileData.lat;
-      lng = profileData.lng;
-      console.log(`[Competitors] Using GPS from profileSnapshot: ${lat},${lng}`);
-    } else if (typeof profileData?.location?.latitude === "number") {
-      lat = profileData.location.latitude;
-      lng = profileData.location.longitude;
-      console.log(`[Competitors] Using GPS from profileSnapshot.location: ${lat},${lng}`);
+    if (typeof placeData?.lat === "number" && typeof placeData?.lng === "number") {
+      lat = placeData.lat;
+      lng = placeData.lng;
+      console.log(`[Competitors] Using GPS from placeData: ${lat},${lng}`);
+    } else {
+      const insightLocation = (insights.location as any);
+      if (typeof insightLocation?.latitude === "number" && typeof insightLocation?.longitude === "number") {
+        lat = insightLocation.latitude;
+        lng = insightLocation.longitude;
+        console.log(`[Competitors] Using GPS from insightsData.location: ${lat},${lng}`);
+      } else if (typeof profileData?.lat === "number" && typeof profileData?.lng === "number") {
+        lat = profileData.lat;
+        lng = profileData.lng;
+        console.log(`[Competitors] Using GPS from profileSnapshot: ${lat},${lng}`);
+      } else if (typeof profileData?.location?.latitude === "number") {
+        lat = profileData.location.latitude;
+        lng = profileData.location.longitude;
+        console.log(`[Competitors] Using GPS from profileSnapshot.location: ${lat},${lng}`);
+      }
+    }
+
+    // Resolve doctor's actual Google Maps Place ID and verified ground-truth GPS
+    if (apiKey && (!verifiedPlaceId || !lat || !lng)) {
+      const candidateName = doctor?.clinicName || actualName || bName || doctor?.name || "";
+      const candidateAddress = fullAddress || bAddr || "";
+      const resolved = await resolveDoctorPlace(candidateName, candidateAddress);
+      if (resolved) {
+        verifiedPlaceId = resolved.placeId;
+        if (typeof resolved.lat === "number" && typeof resolved.lng === "number") {
+          lat = resolved.lat;
+          lng = resolved.lng;
+          console.log(`[Competitors] Ground-truth GPS resolved from doctor place: ${lat},${lng} (${resolved.name})`);
+        }
+      }
     }
 
     if (!lat || !lng) {
@@ -198,15 +219,15 @@ export async function GET(request: Request) {
     // ── Live Google Places API call ───────────────────────────────────────────
     const searchRes = await searchCompetitorsWithRank(
       primaryCategory,
-      account.locationId || "",
-      bName,
+      verifiedPlaceId || account.locationId || "",
+      actualName,
       { lat, lng },
       locationContext,
       {
         scope,
         maxDistanceKm: scope === "local" ? 5 : 20,
         rawQuery,
-        clinicName: doctor?.clinicName || bName,
+        clinicName: doctor?.clinicName || actualName,
       }
     );
 
@@ -231,16 +252,16 @@ export async function GET(request: Request) {
       primaryType: comp.primaryType || null,
     }));
 
-    // If Google didn't return the clinic in the results, append it once at userRank
+    // If Google didn't return the clinic in the top results, append it once at userRank
     if (!hasUserInCompetitors) {
       updatedNormalized.push({
         id: "you",
-        name: bName,
+        name: actualName || bName,
         rating: userRating,
         reviewCount: userReviews,
         rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
         isYou: true,
-        placeId: account.locationId || "",
+        placeId: verifiedPlaceId || account.locationId || "",
         distanceMeters: 0,
         category: primaryCategory,
         formattedAddress: fullAddress || "",
@@ -248,7 +269,31 @@ export async function GET(request: Request) {
       });
     }
 
+    // Sort by rank first
     updatedNormalized.sort((a, b) => a.rank - b.rank);
+
+    // Strict deduplication: ensure only 1 row per unique name or placeId, and strictly 1 isYou row
+    const seenPlaceIds = new Set<string>();
+    const seenNames = new Set<string>();
+    let seenYou = false;
+
+    const deduplicatedNormalized: any[] = [];
+    for (const item of updatedNormalized) {
+      const cleanKey = (item.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const placeIdKey = item.placeId && item.placeId !== "you" ? item.placeId : "";
+
+      if (item.isYou) {
+        if (seenYou) continue;
+        seenYou = true;
+      }
+
+      if (placeIdKey && seenPlaceIds.has(placeIdKey)) continue;
+      if (cleanKey && seenNames.has(cleanKey)) continue;
+
+      if (placeIdKey) seenPlaceIds.add(placeIdKey);
+      if (cleanKey) seenNames.add(cleanKey);
+      deduplicatedNormalized.push(item);
+    }
 
     // Cache result in database
     await prisma.competitorSnapshot.create({
@@ -256,7 +301,7 @@ export async function GET(request: Request) {
         gbpAccountId: account.id,
         locationId: account.locationId || "",
         date: new Date(),
-        json: JSON.parse(JSON.stringify(updatedNormalized))
+        json: JSON.parse(JSON.stringify(deduplicatedNormalized))
       }
     });
 
@@ -267,7 +312,7 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({
-      data: updatedNormalized,
+      data: deduplicatedNormalized,
       source: "Google Places API (Live Parity)",
       queryUsed: finalQueryUsed,
       scope: searchRes.scope || scope,

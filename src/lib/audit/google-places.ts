@@ -359,6 +359,106 @@ export function isRelatedCompetitor(targetSpecialty: string, place: {
   return isHealthcareProvider;
 }
 
+export function cleanDoctorOrPracticeName(str: string): string {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .replace(/\b(dr|doctor|prof|professor)\b\.?\s*/gi, "")
+    .replace(/\b(clinic|hospital|centre|center|nursing home|care)\b/gi, "")
+    .trim();
+}
+
+/**
+ * Resolves the Google Maps Place ID and exact GPS coordinates for a clinic / doctor practice
+ * using Places API (New) searchText.
+ */
+export async function resolveDoctorPlace(
+  businessName: string,
+  addressOrCity?: string
+): Promise<{ placeId: string; lat: number; lng: number; name: string; formattedAddress: string } | null> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+  if (!apiKey || !businessName) return null;
+
+  try {
+    const textQuery = addressOrCity 
+      ? `${businessName} ${addressOrCity}`
+      : businessName;
+
+    const v1Url = "https://places.googleapis.com/v1/places:searchText";
+    const res = await fetch(v1Url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
+      },
+      body: JSON.stringify({
+        textQuery,
+        maxResultCount: 1,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const firstPlace = data.places?.[0];
+      if (firstPlace && firstPlace.id) {
+        return {
+          placeId: firstPlace.id,
+          lat: firstPlace.location?.latitude,
+          lng: firstPlace.location?.longitude,
+          name: firstPlace.displayName?.text || "",
+          formattedAddress: firstPlace.formattedAddress || "",
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[resolveDoctorPlace] Error resolving place:", err);
+  }
+  return null;
+}
+
+export function isMatchingUserClinic(
+  place: { id?: string; displayName?: { text?: string }; name?: string },
+  targetPlaceId?: string,
+  targetName?: string,
+  clinicName?: string
+): boolean {
+  const pId = place.id || (place as any).place_id || "";
+  if (targetPlaceId && pId && targetPlaceId === pId) {
+    return true;
+  }
+
+  const pName = (place.displayName?.text || place.name || "").toLowerCase();
+  if (!pName) return false;
+
+  const cleanTarget = cleanDoctorOrPracticeName(targetName || "");
+  const cleanClinic = cleanDoctorOrPracticeName(clinicName || "");
+
+  if (cleanTarget.length >= 3 && pName.includes(cleanTarget)) return true;
+  if (cleanClinic.length >= 3 && pName.includes(cleanClinic)) return true;
+
+  // Distinctive token matching: check key tokens (e.g. "chandra")
+  const extractTokens = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(t => t.length >= 4 && !["doctor", "clinic", "hospital", "center", "centre", "care"].includes(t));
+
+  const targetTokens = Array.from(new Set([...extractTokens(targetName || ""), ...extractTokens(clinicName || "")]));
+  for (const token of targetTokens) {
+    if (pName.includes(token)) {
+      if (
+        pName.includes("kidney") || 
+        pName.includes("clinic") || 
+        pName.includes("care") || 
+        pName.includes("dr") || 
+        pName.includes("doctor")
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function searchCompetitorsWithRank(
   query: string,
   targetPlaceId: string,
@@ -395,13 +495,6 @@ export async function searchCompetitorsWithRank(
   }
 
   console.log(`[Competitor Search v1] query: "${textQuery}" (scope: ${scope}, maxDistance: ${maxDistance}km)`);
-
-  // Clean target name and clinic name for fuzzy matching (remove Dr., Clinic, Hospital)
-  const cleanTargetName = targetName
-    ? targetName.toLowerCase().replace(/dr\.?\s*/gi, "").replace(/clinic|hospital|centre|center/gi, "").trim()
-    : "";
-  const cleanClinicName = (options?.clinicName || "")
-    .toLowerCase().replace(/dr\.?\s*/gi, "").replace(/clinic|hospital|centre|center/gi, "").trim();
 
   try {
     const v1Url = "https://places.googleapis.com/v1/places:searchText";
@@ -446,26 +539,27 @@ export async function searchCompetitorsWithRank(
       const data = await res.json();
       const rawPlaces: any[] = data.places || [];
 
-      // ── Step 1: Find user's real position in Google results ──
+      // ── Step 1: Detect user's own clinic in Google results to establish ground-truth origin & rank ──
+      let userClinicInResults: any = null;
       let userIndex = -1;
-      if (targetPlaceId) {
-        userIndex = rawPlaces.findIndex((p: any) => p.id === targetPlaceId);
+
+      for (let i = 0; i < rawPlaces.length; i++) {
+        const p = rawPlaces[i];
+        if (isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName)) {
+          userClinicInResults = p;
+          userIndex = i;
+          break;
+        }
       }
-      if (userIndex === -1 && cleanTargetName.length > 2) {
-        userIndex = rawPlaces.findIndex((p: any) =>
-          p.displayName?.text?.toLowerCase().includes(cleanTargetName)
-        );
-      }
-      if (userIndex === -1 && cleanClinicName.length > 2) {
-        userIndex = rawPlaces.findIndex((p: any) =>
-          p.displayName?.text?.toLowerCase().includes(cleanClinicName)
-        );
-      }
+
+      // Ground-truth origin: if user's clinic is returned by Google, use ITS exact GPS coordinates!
+      const originLat = userClinicInResults?.location?.latitude || location?.lat;
+      const originLng = userClinicInResults?.location?.longitude || location?.lng;
 
       // ── Step 2: If not in top 20, try tighter 3km local search ──
       let finalUserRank = userIndex !== -1 ? userIndex + 1 : 21;
 
-      if (userIndex === -1 && (cleanTargetName || cleanClinicName) && location?.lat && location?.lng) {
+      if (userIndex === -1 && (targetName || options?.clinicName) && originLat && originLng) {
         try {
           const secondaryRes = await fetch(v1Url, {
             method: "POST",
@@ -479,7 +573,7 @@ export async function searchCompetitorsWithRank(
               maxResultCount: 20,
               locationBias: {
                 circle: {
-                  center: { latitude: location.lat, longitude: location.lng },
+                  center: { latitude: originLat, longitude: originLng },
                   radius: 3000,
                 },
               },
@@ -489,20 +583,9 @@ export async function searchCompetitorsWithRank(
           if (secondaryRes.ok) {
             const secData = await secondaryRes.json();
             const secPlaces: any[] = secData.places || [];
-            let secIdx = -1;
-            if (targetPlaceId) {
-              secIdx = secPlaces.findIndex((p: any) => p.id === targetPlaceId);
-            }
-            if (secIdx === -1 && cleanTargetName.length > 2) {
-              secIdx = secPlaces.findIndex((p: any) =>
-                p.displayName?.text?.toLowerCase().includes(cleanTargetName)
-              );
-            }
-            if (secIdx === -1 && cleanClinicName.length > 2) {
-              secIdx = secPlaces.findIndex((p: any) =>
-                p.displayName?.text?.toLowerCase().includes(cleanClinicName)
-              );
-            }
+            const secIdx = secPlaces.findIndex((p: any) =>
+              isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName)
+            );
             if (secIdx !== -1) {
               finalUserRank = secIdx + 1;
               console.log(`[Competitor Search v1] Target found in tight 3km search at position #${finalUserRank}`);
@@ -521,14 +604,9 @@ export async function searchCompetitorsWithRank(
         googlePos++;
 
         const pName = p.displayName?.text || "";
-        const pNameLower = pName.toLowerCase();
 
         // Check if this place is the doctor's own clinic
-        const isTargetClinic = Boolean(
-          (targetPlaceId && p.id === targetPlaceId) ||
-          (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) ||
-          (cleanClinicName.length > 2 && pNameLower.includes(cleanClinicName))
-        );
+        const isTargetClinic = isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName);
 
         if (isTargetClinic) {
           competitors.push({
@@ -559,8 +637,8 @@ export async function searchCompetitorsWithRank(
         }
 
         let distKm = null;
-        if (location?.lat && location?.lng && p.location?.latitude && p.location?.longitude) {
-          distKm = calculateDistanceKm(location.lat, location.lng, p.location.latitude, p.location.longitude);
+        if (originLat && originLng && p.location?.latitude && p.location?.longitude) {
+          distKm = calculateDistanceKm(originLat, originLng, p.location.latitude, p.location.longitude);
           if (distKm > maxDistance) {
             continue;
           }
@@ -621,21 +699,19 @@ export async function searchCompetitorsWithRank(
 
     const rawResults = data.results;
 
+    let userClinicInResults: any = null;
     let userIndex = -1;
-    if (targetPlaceId) {
-      userIndex = rawResults.findIndex((r: any) => r.place_id === targetPlaceId);
-    }
-    if (userIndex === -1 && cleanTargetName.length > 2) {
-      userIndex = rawResults.findIndex((r: any) =>
-        r.name?.toLowerCase().includes(cleanTargetName)
-      );
-    }
-    if (userIndex === -1 && cleanClinicName.length > 2) {
-      userIndex = rawResults.findIndex((r: any) =>
-        r.name?.toLowerCase().includes(cleanClinicName)
-      );
+    for (let i = 0; i < rawResults.length; i++) {
+      const r = rawResults[i];
+      if (isMatchingUserClinic(r, targetPlaceId, targetName, options?.clinicName)) {
+        userClinicInResults = r;
+        userIndex = i;
+        break;
+      }
     }
 
+    const originLat = userClinicInResults?.geometry?.location?.lat || location?.lat;
+    const originLng = userClinicInResults?.geometry?.location?.lng || location?.lng;
     const userRank = userIndex !== -1 ? userIndex + 1 : 21;
 
     const competitors: CompetitorData[] = [];
@@ -644,13 +720,7 @@ export async function searchCompetitorsWithRank(
       classicPos++;
 
       const pName = r.name || "";
-      const pNameLower = pName.toLowerCase();
-
-      const isTargetClinic = Boolean(
-        (targetPlaceId && r.place_id === targetPlaceId) ||
-        (cleanTargetName.length > 2 && pNameLower.includes(cleanTargetName)) ||
-        (cleanClinicName.length > 2 && pNameLower.includes(cleanClinicName))
-      );
+      const isTargetClinic = isMatchingUserClinic(r, targetPlaceId, targetName, options?.clinicName);
 
       if (isTargetClinic) {
         competitors.push({
@@ -679,8 +749,8 @@ export async function searchCompetitorsWithRank(
       }
 
       let distKm = null;
-      if (location?.lat && location?.lng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
-        distKm = calculateDistanceKm(location.lat, location.lng, r.geometry.location.lat, r.geometry.location.lng);
+      if (originLat && originLng && r.geometry?.location?.lat && r.geometry?.location?.lng) {
+        distKm = calculateDistanceKm(originLat, originLng, r.geometry.location.lat, r.geometry.location.lng);
         if (distKm > maxDistance) {
           console.log(`[Competitor Filter Classic] Excluded: "${pName}" — too far away (${distKm}km)`);
           continue;
