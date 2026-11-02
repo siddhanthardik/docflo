@@ -7,7 +7,7 @@ export type BlockSubTab = "primitives" | "gyrex-blocks";
 export interface PrimitiveBlockDefinition {
   id: string;
   name: string;
-  category: "Basic" | "Typography" | "Media" | "Interactive";
+  category: "Layout" | "Basic" | "Typography" | "Media" | "Forms" | "Extra" | "Interactive";
   iconName: string;
   description: string;
   defaultSection: () => Partial<PageSection>;
@@ -27,12 +27,26 @@ export interface GyrexClinicalBlockDefinition {
 export interface DesignBlockDefinition {
   id: string;
   name: string;
-  category: "Hero Banners" | "Clinical Services" | "Checkup Packages" | "Trust & Reviews" | "Conversion CTA" | "FAQ & Contact";
+  category: "Features" | "Hero Banners" | "Clinical Services" | "Checkup Packages" | "Trust & Reviews" | "Conversion CTA" | "FAQ & Contact" | "About Specialist";
   badge?: string;
   targetType: SectionType;
   description: string;
   tags: string[];
-  thumbnailVariant: "split" | "full" | "bento" | "grid" | "cards" | "ribbon" | "faq" | "map";
+  thumbnailVariant:
+    | "split"
+    | "full"
+    | "bento"
+    | "grid"
+    | "cards"
+    | "ribbon"
+    | "faq"
+    | "map"
+    | "features-center"
+    | "features-tree"
+    | "features-side"
+    | "features-cards"
+    | "features-badges"
+    | "features-columns";
   defaultSection: () => Partial<PageSection>;
 }
 

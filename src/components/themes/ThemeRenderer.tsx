@@ -276,9 +276,121 @@ export function ThemeRenderer({
     );
   };
 
+  // Animation, Hover, and Dynamic Style Helpers for Sections
+  const getAnimationProps = (section: PageSection) => {
+    const d = section.design;
+    if (!d || !d.animationType || d.animationType === "none") return {};
+
+    const duration = d.animationDuration || 0.6;
+    const delay = d.animationDelay || 0;
+
+    let initial: any = { opacity: 0 };
+    let animate: any = { opacity: 1 };
+
+    switch (d.animationType) {
+      case "fadeIn":
+        initial = { opacity: 0 };
+        animate = { opacity: 1 };
+        break;
+      case "fadeInUp":
+        initial = { opacity: 0, y: 35 };
+        animate = { opacity: 1, y: 0 };
+        break;
+      case "fadeInDown":
+        initial = { opacity: 0, y: -35 };
+        animate = { opacity: 1, y: 0 };
+        break;
+      case "slideInLeft":
+        initial = { opacity: 0, x: -50 };
+        animate = { opacity: 1, x: 0 };
+        break;
+      case "slideInRight":
+        initial = { opacity: 0, x: 50 };
+        animate = { opacity: 1, x: 0 };
+        break;
+      case "zoomIn":
+        initial = { opacity: 0, scale: 0.92 };
+        animate = { opacity: 1, scale: 1 };
+        break;
+      case "bounce":
+        initial = { opacity: 0, scale: 0.8 };
+        animate = { opacity: 1, scale: [0.8, 1.05, 1] };
+        break;
+    }
+
+    return {
+      initial,
+      animate,
+      transition: { duration, delay, ease: "easeOut" as const },
+    };
+  };
+
+  const getHoverClasses = (hoverEffect?: string) => {
+    switch (hoverEffect) {
+      case "lift":
+        return "hover:-translate-y-1.5 transition-transform duration-300";
+      case "scale":
+        return "hover:scale-[1.02] transition-transform duration-300";
+      case "glow":
+        return "hover:shadow-2xl hover:shadow-blue-500/15 transition-all duration-300";
+      default:
+        return "";
+    }
+  };
+
+  const getSectionInlineStyles = (section: PageSection) => {
+    const d = section.design || {};
+    const styles: React.CSSProperties = {};
+    if (d.paddingTop !== undefined) styles.paddingTop = `${d.paddingTop}px`;
+    if (d.paddingBottom !== undefined) styles.paddingBottom = `${d.paddingBottom}px`;
+    if (d.paddingX !== undefined) {
+      styles.paddingLeft = `${d.paddingX}px`;
+      styles.paddingRight = `${d.paddingX}px`;
+    }
+    const bg = d.bgColor || section.bgColor;
+    if (bg) styles.backgroundColor = bg;
+    if (d.borderRadius && d.borderRadius !== "none") {
+      styles.borderRadius = d.borderRadius === "full" ? "9999px" : d.borderRadius === "2xl" ? "1rem" : d.borderRadius === "xl" ? "0.75rem" : d.borderRadius === "lg" ? "0.5rem" : "0.375rem";
+    }
+    if (d.borderWidth !== undefined && d.borderWidth > 0) {
+      styles.borderWidth = `${d.borderWidth}px`;
+      styles.borderStyle = (d.borderStyle as any) || "solid";
+      if (d.borderColor) styles.borderColor = d.borderColor;
+    }
+    if (d.boxShadow && d.boxShadow !== "none") {
+      if (d.boxShadow === "sm") styles.boxShadow = "0 1px 2px 0 rgb(0 0 0 / 0.05)";
+      else if (d.boxShadow === "md") styles.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1)";
+      else if (d.boxShadow === "lg") styles.boxShadow = "0 10px 15px -3px rgb(0 0 0 / 0.1)";
+      else if (d.boxShadow === "xl") styles.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.1)";
+      else if (d.boxShadow === "glow") styles.boxShadow = "0 0 25px -2px rgba(59, 130, 246, 0.4)";
+    }
+    return styles;
+  };
+
   // Section Container Wrapper with Elementor Non-Continuous (Dashed) Border & Floating Handle
   const renderSectionContainer = (section: PageSection, children: React.ReactNode, index: number) => {
-    if (!composerMode) return <React.Fragment key={section.id}>{children}</React.Fragment>;
+    const animProps = getAnimationProps(section);
+    const hoverClass = getHoverClasses(section.design?.hoverEffect);
+    const inlineStyles = getSectionInlineStyles(section);
+
+    const animatedContent = animProps.initial ? (
+      <motion.div
+        key={`anim_${section.id}`}
+        initial={animProps.initial}
+        animate={animProps.animate}
+        transition={animProps.transition}
+        className={`w-full ${hoverClass}`}
+        style={inlineStyles}
+      >
+        {children}
+      </motion.div>
+    ) : (
+      <div className={`w-full ${hoverClass}`} style={inlineStyles}>
+        {children}
+      </div>
+    );
+
+    if (!composerMode) return <React.Fragment key={section.id}>{animatedContent}</React.Fragment>;
 
     const isSelected = selectedSectionId === section.id;
 
@@ -385,7 +497,7 @@ export function ThemeRenderer({
             )}
           </div>
 
-          {children}
+          {animatedContent}
         </div>
         {renderDropZone(index + 1)}
       </React.Fragment>

@@ -23,6 +23,15 @@ import {
   ExternalLink,
   Layers,
   ArrowRight,
+  Video,
+  Link2,
+  Image as ImageIcon,
+  Quote,
+  CreditCard,
+  Clock,
+  Code,
+  Table,
+  CheckSquare,
 } from "lucide-react";
 import {
   PRIMITIVE_BLOCKS,
@@ -32,12 +41,20 @@ import {
 import {
   WireframeIcon1Col,
   WireframeIcon2Col,
+  WireframeIcon2Col2575,
+  WireframeIcon2Col7525,
   WireframeIcon3Col,
-  WireframeIcon2Col37,
+  WireframeIcon3Col502525,
+  WireframeIconFlexbox,
   WireframeIconSection,
   WireframeIconDivider,
   WireframeIconHeading,
   WireframeIconText,
+  WireframeCardFeaturesCenter,
+  WireframeCardFeaturesSide,
+  WireframeCardFeaturesCards,
+  WireframeCardFeaturesColumns,
+  WireframeCardFeaturesBadges,
 } from "./BlockWireframeIcons";
 import { PageSection, SectionType } from "@/components/themes/theme-types";
 import { SavedBlockItem } from "@/types/builder-blocks";
@@ -72,12 +89,20 @@ export function StudioDrawer({
     switch (id) {
       case "prim_1col":
         return <WireframeIcon1Col className="w-8 h-8 text-slate-700" />;
+      case "prim_2col_5050":
       case "prim_2col":
         return <WireframeIcon2Col className="w-8 h-8 text-slate-700" />;
+      case "prim_2col_2575":
+      case "prim_2col_37":
+        return <WireframeIcon2Col2575 className="w-8 h-8 text-slate-700" />;
+      case "prim_2col_7525":
+        return <WireframeIcon2Col7525 className="w-8 h-8 text-slate-700" />;
       case "prim_3col":
         return <WireframeIcon3Col className="w-8 h-8 text-slate-700" />;
-      case "prim_2col_37":
-        return <WireframeIcon2Col37 className="w-8 h-8 text-slate-700" />;
+      case "prim_3col_502525":
+        return <WireframeIcon3Col502525 className="w-8 h-8 text-slate-700" />;
+      case "prim_flexbox":
+        return <WireframeIconFlexbox className="w-8 h-8 text-purple-600" />;
       case "prim_section":
         return <WireframeIconSection className="w-8 h-8 text-slate-700" />;
       case "prim_divider":
@@ -85,7 +110,34 @@ export function StudioDrawer({
       case "prim_heading":
         return <WireframeIconHeading className="w-8 h-8 text-slate-700" />;
       case "prim_text":
+      case "prim_text_section":
         return <WireframeIconText className="w-8 h-8 text-slate-700" />;
+      case "prim_link":
+        return <Link2 className="w-6 h-6 text-blue-600" />;
+      case "prim_link_box":
+        return <ExternalLink className="w-6 h-6 text-purple-600" />;
+      case "prim_image":
+        return <ImageIcon className="w-6 h-6 text-indigo-600" />;
+      case "prim_image_box":
+        return <Layers className="w-6 h-6 text-emerald-600" />;
+      case "prim_video":
+        return <Video className="w-6 h-6 text-rose-600" />;
+      case "prim_map":
+        return <MapPin className="w-6 h-6 text-amber-600" />;
+      case "prim_quote":
+        return <Quote className="w-6 h-6 text-sky-600" />;
+      case "prim_button":
+        return <CreditCard className="w-6 h-6 text-purple-600" />;
+      case "prim_countdown":
+        return <Clock className="w-6 h-6 text-amber-600" />;
+      case "prim_custom_code":
+        return <Code className="w-6 h-6 text-slate-600" />;
+      case "prim_typed":
+        return <Sparkles className="w-6 h-6 text-indigo-600" />;
+      case "prim_table":
+        return <Table className="w-6 h-6 text-emerald-600" />;
+      case "prim_form":
+        return <CheckSquare className="w-6 h-6 text-purple-600" />;
       default:
         return <Layout className="w-7 h-7 text-slate-600" />;
     }
@@ -347,7 +399,7 @@ export function StudioDrawer({
           <div className="space-y-3">
             {/* Category Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-medium no-scrollbar">
-              {["All", "Hero Banners", "Clinical Services", "Checkup Packages", "Trust & Reviews", "Conversion CTA", "FAQ & Contact"].map((cat) => (
+              {["All", "Features", "Hero Banners", "Clinical Services", "Checkup Packages", "Trust & Reviews", "Conversion CTA", "FAQ & Contact"].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedDesignCategory(cat)}
@@ -376,6 +428,31 @@ export function StudioDrawer({
                 >
                   {/* Miniature Wireframe Visual */}
                   <div className="h-20 bg-slate-50 p-2 border-b border-slate-100 flex items-center justify-center relative group-hover:bg-purple-50/30 transition-colors">
+                    {design.thumbnailVariant === "features-center" && (
+                      <div className="w-full h-full p-0.5">
+                        <WireframeCardFeaturesCenter />
+                      </div>
+                    )}
+                    {design.thumbnailVariant === "features-side" && (
+                      <div className="w-full h-full p-0.5">
+                        <WireframeCardFeaturesSide />
+                      </div>
+                    )}
+                    {design.thumbnailVariant === "features-cards" && (
+                      <div className="w-full h-full p-0.5">
+                        <WireframeCardFeaturesCards />
+                      </div>
+                    )}
+                    {design.thumbnailVariant === "features-columns" && (
+                      <div className="w-full h-full p-0.5">
+                        <WireframeCardFeaturesColumns />
+                      </div>
+                    )}
+                    {design.thumbnailVariant === "features-badges" && (
+                      <div className="w-full h-full p-0.5">
+                        <WireframeCardFeaturesBadges />
+                      </div>
+                    )}
                     {design.thumbnailVariant === "split" && (
                       <div className="w-full h-full flex gap-2 items-center px-2">
                         <div className="w-7/12 space-y-1">

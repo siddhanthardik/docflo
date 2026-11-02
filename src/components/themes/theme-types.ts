@@ -26,11 +26,38 @@ export interface SectionDesignConfig {
   cardBg?: string;
   cardBorder?: string;
   paddingSize?: "compact" | "normal" | "spacious";
+  paddingTop?: number;
+  paddingBottom?: number;
+  paddingX?: number;
+  maxWidth?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   imageOpacity?: number; // 10 to 100
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
   overlayDarkness?: "none" | "subtle" | "medium" | "dark";
   heroHeight?: "compact" | "normal" | "tall" | "fullscreen";
   sliderType?: "fade" | "slide" | "ambient";
+  // Exly Layout & Flexbox Accordion
+  display?: "flex" | "grid" | "block";
+  flexDirection?: "row" | "row-reverse" | "column" | "column-reverse";
+  justifyContent?: "flex-start" | "center" | "flex-end" | "space-between" | "space-around";
+  alignItems?: "flex-start" | "center" | "flex-end" | "stretch";
+  gap?: number;
+  flexWrap?: "nowrap" | "wrap";
+  // Exly Typography Accordion
+  textAlign?: "left" | "center" | "right" | "justify";
+  fontSize?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl";
+  fontWeight?: "normal" | "medium" | "semibold" | "bold" | "extrabold";
+  // Exly Borders & Corners Accordion
+  borderRadius?: "none" | "md" | "lg" | "xl" | "2xl" | "full";
+  borderWidth?: number;
+  borderStyle?: "none" | "solid" | "dashed" | "dotted";
+  borderColor?: string;
+  // Exly Effects & Shadows Accordion
+  boxShadow?: "none" | "sm" | "md" | "lg" | "xl" | "glow";
+  // Exly Animation Tab
+  animationType?: "none" | "fadeIn" | "fadeInUp" | "fadeInDown" | "slideInLeft" | "slideInRight" | "zoomIn" | "bounce" | "pulse";
+  animationDelay?: number; // ms
+  animationDuration?: number; // ms
+  hoverEffect?: "none" | "lift" | "scale" | "glow";
 }
 
 export interface PageSection {
@@ -68,6 +95,15 @@ export interface PageSection {
   isVisible?: boolean;
   design?: SectionDesignConfig;
   data?: any;
+  // Exly Component Properties
+  videoUrl?: string;
+  mapAddress?: string;
+  countdownDate?: string;
+  customCode?: string;
+  typedStrings?: string[];
+  columnsCount?: number;
+  tableData?: Array<{ cols: string[] }>;
+  formFields?: Array<{ name: string; label: string; type: string; required?: boolean }>;
 }
 
 export interface HeroHighlightItem {
