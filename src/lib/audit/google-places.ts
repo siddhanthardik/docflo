@@ -515,14 +515,27 @@ export async function searchCompetitorsWithRank(
       maxResultCount: 20,
     };
 
-    // Use a locationBias to ground the search to the correct city/area
-    if (location?.lat && location?.lng) {
+    // Location Bias:
+    // In "local" scope (Near Clinic, within 5km), bias to the clinic's exact GPS so Google ranks by local proximity.
+    // In "city" scope, do NOT bias to the clinic's doorstep, because that distorts city-wide rankings (e.g. ranking a Rupaspur clinic #3 city-wide instead of #12).
+    // If the city-wide text query does not mention the city name, ground it with a broad metro bias.
+    if (scope === "local" && location?.lat && location?.lng) {
       requestBody.locationBias = {
         circle: {
           center: { latitude: location.lat, longitude: location.lng },
-          radius: scope === "local" ? 5000 : 15000,
+          radius: 5000,
         },
       };
+    } else if (scope === "city" && location?.lat && location?.lng) {
+      const queryHasCity = locationContext && textQuery.toLowerCase().includes(locationContext.toLowerCase());
+      if (!queryHasCity) {
+        requestBody.locationBias = {
+          circle: {
+            center: { latitude: location.lat, longitude: location.lng },
+            radius: 30000,
+          },
+        };
+      }
     }
 
     const res = await fetch(v1Url, {
@@ -556,10 +569,10 @@ export async function searchCompetitorsWithRank(
       const originLat = userClinicInResults?.location?.latitude || location?.lat;
       const originLng = userClinicInResults?.location?.longitude || location?.lng;
 
-      // ── Step 2: If not in top 20, try tighter 3km local search ──
+      // ── Step 2: If in local scope and not in top 20, try tighter 3km local search ──
       let finalUserRank = userIndex !== -1 ? userIndex + 1 : 21;
 
-      if (userIndex === -1 && (targetName || options?.clinicName) && originLat && originLng) {
+      if (scope === "local" && userIndex === -1 && (targetName || options?.clinicName) && originLat && originLng) {
         try {
           const secondaryRes = await fetch(v1Url, {
             method: "POST",
@@ -659,7 +672,7 @@ export async function searchCompetitorsWithRank(
           isYou: false,
         });
 
-        if (competitors.length >= 15) break; // Return top authentic competitors
+        if (competitors.length >= 20) break; // Return top authentic competitors
       }
 
       console.log(`[Competitor Search v1] "${textQuery}" → ${competitors.length} competitors found. User at Google position #${finalUserRank}.`);
@@ -678,9 +691,9 @@ export async function searchCompetitorsWithRank(
   // ── Fallback: Classic Text Search ──
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", textQuery);
-  if (location?.lat && location?.lng) {
+  if (scope === "local" && location?.lat && location?.lng) {
     url.searchParams.set("location", `${location.lat},${location.lng}`);
-    url.searchParams.set("radius", scope === "local" ? "5000" : "15000");
+    url.searchParams.set("radius", "5000");
   }
   url.searchParams.set("key", apiKey);
 
