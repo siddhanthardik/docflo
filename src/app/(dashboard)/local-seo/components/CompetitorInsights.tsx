@@ -514,7 +514,15 @@ export function CompetitorInsights() {
   );
   const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`;
 
-  const displayList = showAll ? allRows : allRows.slice(0, 8);
+  const displayList = useMemo(() => {
+    if (showAll) return allRows;
+    const initial = allRows.slice(0, 8);
+    // If the doctor's clinic is ranked further down (e.g. #12 or #13), always include it so they see their rank immediately
+    if (youRow && !initial.some(r => r.isYou)) {
+      return [...initial, youRow];
+    }
+    return initial;
+  }, [allRows, showAll, youRow]);
 
   return (
     <div className="space-y-6">
@@ -526,7 +534,7 @@ export function CompetitorInsights() {
               Ranking for: <span className="text-indigo-600">&ldquo;{displayQuery}&rdquo;</span>
             </h3>
             <p className="text-xs text-gray-500">
-              Showing direct doctor peers in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : `${city} (Within 5 km)`) : `${city} (City-Wide)`}.
+              Showing direct doctor peers in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : `${city} (Local Area)`) : `${city} (City-Wide)`}.
             </p>
           </div>
 
@@ -589,7 +597,7 @@ export function CompetitorInsights() {
               }`}>
                 <MapPin className="w-3.5 h-3.5" />
               </div>
-              <span className="font-bold">Near Clinic (Within 5 km)</span>
+              <span className="font-bold">Near Clinic (Local Area)</span>
               {scope === "local" && (
                 <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-rose-600 ring-2 ring-rose-50" />
               )}

@@ -240,7 +240,7 @@ export async function GET(request: Request) {
       locationContext,
       {
         scope,
-        maxDistanceKm: scope === "local" ? 5 : 20,
+        maxDistanceKm: scope === "local" ? 8 : 25,
         rawQuery,
         clinicName: doctor?.clinicName || actualName,
       }

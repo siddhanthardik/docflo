@@ -437,22 +437,30 @@ export function isMatchingUserClinic(
   if (cleanTarget.length >= 3 && pName.includes(cleanTarget)) return true;
   if (cleanClinic.length >= 3 && pName.includes(cleanClinic)) return true;
 
-  // Distinctive token matching: check key tokens (e.g. "chandra")
+  // Distinctive token matching: only match unique proper nouns or surnames (e.g. "chandra", "maanvvi")
+  // Medical vocabulary must NEVER be used to identify a doctor practice!
+  const GENERIC_MEDICAL_WORDS = new Set([
+    "doctor", "clinic", "hospital", "centre", "center", "care", "specialist", 
+    "speciality", "specialty", "physician", "surgeon", "consultant", "services",
+    "kidney", "renal", "nephro", "nephrologist", "nephrology", "dialysis",
+    "gynae", "gynaec", "gynec", "gynecologist", "obstet", "obstetrics", "maternity", 
+    "pediatric", "child", "dental", "dentist", "ortho", "bone", "spine",
+    "cardio", "heart", "derma", "skin", "hair", "laser", "eye", "vision",
+    "ent", "neuro", "gastro", "liver", "cancer", "onco", "ayurved", "homeo",
+    "health", "healthcare", "medic", "medical", "medicine", "patna", "delhi",
+    "mumbai", "india", "road", "colony", "nagar", "market", "more"
+  ]);
+
   const extractTokens = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(t => t.length >= 4 && !["doctor", "clinic", "hospital", "center", "centre", "care"].includes(t));
+    s.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(t => t.length >= 3 && !GENERIC_MEDICAL_WORDS.has(t));
 
   const targetTokens = Array.from(new Set([...extractTokens(targetName || ""), ...extractTokens(clinicName || "")]));
   for (const token of targetTokens) {
-    if (pName.includes(token)) {
-      if (
-        pName.includes("kidney") || 
-        pName.includes("clinic") || 
-        pName.includes("care") || 
-        pName.includes("dr") || 
-        pName.includes("doctor")
-      ) {
-        return true;
-      }
+    if (token.length >= 4 && pName.includes(token)) {
+      return true;
     }
   }
 
@@ -824,14 +832,19 @@ export async function extractNeighborhood(address: string, apiKey: string): Prom
           if (!level2) level2 = comp.long_name;
         }
         
-        if (comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")) {
-          if (!geoCity) geoCity = comp.long_name;
+        // Priority for city: administrative_area_level_3 (e.g. "Patna") or locality (if not division)
+        if (comp.types.includes("administrative_area_level_3")) {
+          geoCity = comp.long_name;
+        } else if (comp.types.includes("locality") && !geoCity) {
+          geoCity = comp.long_name;
+        } else if (comp.types.includes("administrative_area_level_2") && !geoCity && !comp.long_name.toLowerCase().includes("division")) {
+          geoCity = comp.long_name;
         }
       }
       
       const geoNeighborhood = level1 || level2;
       
-      if (geoNeighborhood && geoCity) {
+      if (geoNeighborhood && geoCity && geoNeighborhood.toLowerCase() !== geoCity.toLowerCase()) {
         return {
           neighborhood: geoNeighborhood,
           city: geoCity,
@@ -841,9 +854,9 @@ export async function extractNeighborhood(address: string, apiKey: string): Prom
         };
       } else if (geoCity) {
         return {
-          neighborhood: geoCity,
+          neighborhood: geoNeighborhood || geoCity,
           city: geoCity,
-          searchPhrase: geoCity,
+          searchPhrase: geoNeighborhood && geoNeighborhood.toLowerCase() !== geoCity.toLowerCase() ? `${geoNeighborhood}, ${geoCity}` : geoCity,
           lat: loc.lat,
           lng: loc.lng,
         };
