@@ -1876,12 +1876,12 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     "fontHeading": "Plus Jakarta Sans",
     "fontBody": "Inter",
     "buttonRadius": "xl",
-    "badgeText": "100% NABL Accredited & AI-Powered Robotic Automated Testing",
+    "badgeText": "",
     "heroHeading": "Precision Pathology, Advanced Radiology & Same-Day Diagnostic Reports",
     "heroSubheading": "Fully automated clinical pathology, 3T MRI, 128-Slice CT, and painless home blood sample collection with digital smart reports.",
     "tagline": "Precision Diagnostic & Pathology",
     "specialty": "Chief Pathologist & Laboratory Director",
-    "degrees": "MBBS, MD Pathology, DNB, NABL Lead Assessor",
+    "degrees": "MBBS, MD Pathology, DNB",
     "designation": "Medical Director & Head of Pathology",
     "stats": [
       {
@@ -1891,7 +1891,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       },
       {
         "value": "100%",
-        "label": "NABL & ICMR Accredited",
+        "label": "Certified Quality Testing",
         "icon": "shield"
       },
       {

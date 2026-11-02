@@ -601,6 +601,39 @@ export function StudioInspector({
         {/* ═════════════════════════════════════════════════════════════════ */}
         {inspectorTab === "properties" && (
           <div className="space-y-4">
+            {/* Top Pill / Badge Control (Zero Hardcoding - 100% User Editable or Removable) */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>Top Pill / Tagline Badge</span>
+                  {selectedSection.badgeText && selectedSection.badgeText.trim().length > 0 && (
+                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      Active
+                    </span>
+                  )}
+                </label>
+                {selectedSection.badgeText && selectedSection.badgeText.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSection({ badgeText: "" })}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Remove Pill Badge"
+                  >
+                    <Trash2 className="w-3 h-3" /> Remove Pill
+                  </button>
+                )}
+              </div>
+              <Input
+                value={selectedSection.badgeText || ""}
+                onChange={(e) => onUpdateSection({ badgeText: e.target.value })}
+                placeholder="Leave blank for NO pill / badge (e.g. ⭐ Top Rated Practice)"
+                className="h-8 text-xs bg-white rounded-lg"
+              />
+              <p className="text-[10px] text-slate-400">
+                Leave this blank to remove the pill badge completely from the canvas.
+              </p>
+            </div>
+
             {/* Title & AI Copy Trigger */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">

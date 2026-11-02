@@ -373,7 +373,7 @@ export default function ElementorComposerPage() {
             image: data.doctor?.image || data.website.doctorInfo?.image || "",
             phone: data.doctor?.phone,
           },
-          sections: (data.website.sections && data.website.sections.length > 0) ? data.website.sections : [
+          sections: ((data.website.sections && data.website.sections.length > 0) ? data.website.sections : [
             { id: "sec_hero", type: "HERO", badgeText: "" },
             { id: "sec_services", type: "SERVICES" },
             { id: "sec_reviews", type: "REVIEWS" },
@@ -381,7 +381,12 @@ export default function ElementorComposerPage() {
             { id: "sec_cta", type: "CTA_BANNER" },
             { id: "sec_faq", type: "FAQ" },
             { id: "sec_map", type: "MAP_HOURS" },
-          ],
+          ]).map((s: PageSection) => {
+            if (s.badgeText && (s.badgeText.toLowerCase().includes("nabh") || s.badgeText.toLowerCase().includes("nabl accredited"))) {
+              return { ...s, badgeText: "" };
+            }
+            return s;
+          }),
         };
 
         setSiteData(loadedData);

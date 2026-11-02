@@ -276,6 +276,14 @@ export function ThemeRenderer({
     );
   };
 
+  // Helper to ensure pills/badges only render when valid and not containing hardcoded/unsupported claims
+  const isBadgeVisible = (text?: string) => {
+    if (!text || !text.trim()) return false;
+    const lower = text.toLowerCase();
+    if (lower.includes("nabh") || lower.includes("nabl accredited")) return false;
+    return true;
+  };
+
   // Animation, Hover, and Dynamic Style Helpers for Sections
   const getAnimationProps = (section: PageSection) => {
     const d = section.design;
@@ -663,8 +671,8 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-                  {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
-                  {section.badgeText && section.badgeText.trim().length > 0 ? (
+                  {/* ZERO HARDCODING: Render badge ONLY if valid and not hardcoded accreditation pill */}
+                  {isBadgeVisible(section.badgeText) ? (
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-md">
                       <span>{section.badgeText}</span>
                     </div>
@@ -762,7 +770,7 @@ export function ThemeRenderer({
                 } text-center`}
               >
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-                  {section.badgeText && section.badgeText.trim().length > 0 && (
+                  {isBadgeVisible(section.badgeText) && (
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs">
                       <span>{section.badgeText}</span>
                     </div>
@@ -856,7 +864,7 @@ export function ThemeRenderer({
                     {/* Left Bento Cell: Branding & Headlines */}
                     <div className={`lg:col-span-7 bg-white ${cardRadiusClass} p-8 sm:p-10 border border-slate-200/80 shadow-md flex flex-col justify-between space-y-6`}>
                       <div className="space-y-4">
-                        {section.badgeText && section.badgeText.trim().length > 0 && (
+                        {isBadgeVisible(section.badgeText) && (
                           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                             <span>{section.badgeText}</span>
                           </div>
@@ -985,8 +993,8 @@ export function ThemeRenderer({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className={`grid grid-cols-1 lg:grid-cols-12 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                    {/* ZERO HARDCODING: Render badge ONLY if user entered badgeText */}
-                    {section.badgeText && section.badgeText.trim().length > 0 ? (
+                    {/* ZERO HARDCODING: Render badge ONLY if valid and not hardcoded accreditation pill */}
+                    {isBadgeVisible(section.badgeText) ? (
                       <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold shadow-xs ${
                         themeId === "warm-pediatrics"
                           ? "bg-emerald-100/90 text-emerald-900 border border-emerald-300 ring-2 ring-emerald-200/50"

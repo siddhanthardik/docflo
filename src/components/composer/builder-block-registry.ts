@@ -584,7 +584,7 @@ export const DESIGN_BLOCKS: DesignBlockDefinition[] = [
       type: "HERO",
       heroStyle: "FULL_WIDTH",
       title: "Advanced Medical Center of Excellence",
-      subtitle: "Delivering modern hospital care, NABH safety protocols, and digital diagnostics.",
+      subtitle: "Delivering modern hospital care, advanced patient safety protocols, and digital diagnostics.",
     }),
   },
   {
