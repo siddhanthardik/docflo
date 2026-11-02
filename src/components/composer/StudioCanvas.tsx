@@ -27,6 +27,8 @@ interface StudioCanvasProps {
   onDropNewSection: (type: any, targetIndex: number) => void;
   onReorderSection: (dragIndex: number, hoverIndex: number) => void;
   onOpenInsertModal: (idx?: number) => void;
+  onUpdateSection?: (sectionId: string, patch: Partial<PageSection>) => void;
+  onUpdateSiteData?: (patch: Partial<ClinicWebsiteData>) => void;
 }
 
 export function StudioCanvas({
@@ -40,6 +42,8 @@ export function StudioCanvas({
   onDropNewSection,
   onReorderSection,
   onOpenInsertModal,
+  onUpdateSection,
+  onUpdateSiteData,
 }: StudioCanvasProps) {
   // Panning & Zooming State
   const [zoom, setZoom] = useState<number>(1);
@@ -256,6 +260,8 @@ export function StudioCanvas({
             onDropNewSection={onDropNewSection}
             onReorderSection={onReorderSection}
             onOpenInsertModal={onOpenInsertModal}
+            onUpdateSection={onUpdateSection}
+            onUpdateSiteData={onUpdateSiteData}
           />
         </div>
       </div>

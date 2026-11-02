@@ -99,6 +99,79 @@ const RADIUS_CLASSES: Record<string, string> = {
   "none": "rounded-none",
 };
 
+export interface EditableInlineTextProps {
+  value?: string | null;
+  onChange: (val: string) => void;
+  className?: string;
+  tag?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "span" | "div" | "blockquote";
+  placeholder?: string;
+  composerMode?: boolean;
+  multiline?: boolean;
+  style?: React.CSSProperties;
+}
+
+export function EditableInlineText({
+  value,
+  onChange,
+  className = "",
+  tag = "span",
+  placeholder = "Click to type...",
+  composerMode = false,
+  multiline = false,
+  style,
+}: EditableInlineTextProps) {
+  const Tag = tag;
+
+  if (!composerMode) {
+    return <Tag className={className} style={style}>{value || ""}</Tag>;
+  }
+
+  const raw = value && value.trim().length > 0 ? value : placeholder;
+  const isPlaceholder = !value || value.trim().length === 0;
+
+  const safeHtml = (raw || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return (
+    <Tag
+      contentEditable
+      suppressContentEditableWarning
+      tabIndex={0}
+      className={`${className} outline-none transition-all cursor-text rounded-xs px-1 -mx-1 hover:ring-1 hover:ring-blue-400/80 focus:ring-2 focus:ring-blue-600 focus:bg-blue-50/20 ${
+        isPlaceholder ? "italic opacity-60 text-slate-400" : ""
+      }`}
+      style={style}
+      title="Click to edit directly on canvas"
+      onClick={(e: React.MouseEvent) => {
+        e.stopPropagation();
+      }}
+      onFocus={(e: React.FocusEvent<HTMLElement>) => {
+        if (isPlaceholder && e.currentTarget.innerText === placeholder) {
+          e.currentTarget.innerText = "";
+        }
+      }}
+      onBlur={(e: React.FocusEvent<HTMLElement>) => {
+        const text = e.currentTarget.innerText?.trim() ?? "";
+        if (!text && placeholder) {
+          e.currentTarget.innerText = placeholder;
+        }
+        if (text !== (value || "")) {
+          onChange(text);
+        }
+      }}
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
+        if (!multiline && e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
+    />
+  );
+}
+
 export function ThemeRenderer({
   data,
   previewMode = false,
@@ -111,6 +184,8 @@ export function ThemeRenderer({
   onDropNewSection,
   onReorderSection,
   onOpenInsertModal,
+  onUpdateSection,
+  onUpdateSiteData,
 }: {
   data: ClinicWebsiteData;
   previewMode?: boolean;
@@ -123,6 +198,8 @@ export function ThemeRenderer({
   onDropNewSection?: (type: SectionType, targetIndex: number) => void;
   onReorderSection?: (sourceIndex: number, destinationIndex: number) => void;
   onOpenInsertModal?: (targetIndex: number) => void;
+  onUpdateSection?: (sectionId: string, patch: Partial<PageSection>) => void;
+  onUpdateSiteData?: (patch: Partial<ClinicWebsiteData>) => void;
 }) {
   const [openBookingModal, setOpenBookingModal] = useState(false);
   const [patientName, setPatientName] = useState("");
@@ -671,22 +748,43 @@ export function ThemeRenderer({
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-                  {/* ZERO HARDCODING: Render badge ONLY if valid and not hardcoded accreditation pill */}
-                  {isBadgeVisible(section.badgeText) ? (
+                  {(isBadgeVisible(section.badgeText) || composerMode) ? (
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-md">
-                      <span>{section.badgeText}</span>
+                      <EditableInlineText
+                        value={section.badgeText || ""}
+                        onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                        placeholder="Badge text (optional)..."
+                        composerMode={composerMode}
+                      />
                     </div>
                   ) : null}
 
-                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
-                    {heroHeadline}
-                  </h2>
+                  <EditableInlineText
+                    value={heroHeadline || ""}
+                    onChange={(val) => {
+                      onUpdateSection?.(section.id, { title: val });
+                      onUpdateSiteData?.({ heroHeading: val });
+                    }}
+                    tag="h2"
+                    className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
+                    placeholder="Enter Hero Headline..."
+                    composerMode={composerMode}
+                  />
 
-                  {heroSub && heroSub.trim().length > 0 && (
-                    <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                      {heroSub}
-                    </p>
-                  )}
+                  {((heroSub && heroSub.trim().length > 0) || composerMode) ? (
+                    <EditableInlineText
+                      value={heroSub || ""}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { subtitle: val });
+                        onUpdateSiteData?.({ heroSubheading: val });
+                      }}
+                      tag="p"
+                      multiline={true}
+                      className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed"
+                      placeholder="Enter Hero Subheading..."
+                      composerMode={composerMode}
+                    />
+                  ) : null}
 
                   {/* ZERO HARDCODING: Dynamic Feature highlight badges */}
                   {(() => {
@@ -721,7 +819,14 @@ export function ThemeRenderer({
                         style={{ backgroundColor: primaryColor }}
                       >
                         <Calendar className="w-4 h-4" />
-                        <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                        <EditableInlineText
+                          value={section.ctaText || data.ctaButtonText || "Book Appointment"}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { ctaText: val });
+                            onUpdateSiteData?.({ ctaButtonText: val });
+                          }}
+                          composerMode={composerMode}
+                        />
                       </button>
 
                       <button
@@ -729,7 +834,14 @@ export function ThemeRenderer({
                         className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
                       >
                         <MessageSquare className="w-4 h-4" />
-                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                        <EditableInlineText
+                          value={data.secondaryCtaText || "WhatsApp Chat"}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { secondaryCtaText: val });
+                            onUpdateSiteData?.({ secondaryCtaText: val });
+                          }}
+                          composerMode={composerMode}
+                        />
                       </button>
                     </div>
                   )}
@@ -770,20 +882,42 @@ export function ThemeRenderer({
                 } text-center`}
               >
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-                  {isBadgeVisible(section.badgeText) && (
+                  {(isBadgeVisible(section.badgeText) || composerMode) && (
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs">
-                      <span>{section.badgeText}</span>
+                      <EditableInlineText
+                        value={section.badgeText || ""}
+                        onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                        placeholder="Badge text (optional)..."
+                        composerMode={composerMode}
+                      />
                     </div>
                   )}
 
-                  <h1 className={`text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
-                    {heroHeadline}
-                  </h1>
+                  <EditableInlineText
+                    value={heroHeadline || ""}
+                    onChange={(val) => {
+                      onUpdateSection?.(section.id, { title: val });
+                      onUpdateSiteData?.({ heroHeading: val });
+                    }}
+                    tag="h1"
+                    className={`text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}
+                    placeholder="Enter Hero Headline..."
+                    composerMode={composerMode}
+                  />
 
-                  {heroSub && heroSub.trim().length > 0 && (
-                    <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-                      {heroSub}
-                    </p>
+                  {((heroSub && heroSub.trim().length > 0) || composerMode) && (
+                    <EditableInlineText
+                      value={heroSub || ""}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { subtitle: val });
+                        onUpdateSiteData?.({ heroSubheading: val });
+                      }}
+                      tag="p"
+                      multiline={true}
+                      className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed"
+                      placeholder="Enter Hero Subheading..."
+                      composerMode={composerMode}
+                    />
                   )}
 
                   {/* Doctor credential quick strip if available */}
@@ -829,7 +963,14 @@ export function ThemeRenderer({
                         style={{ backgroundColor: primaryColor }}
                       >
                         <Calendar className="w-4 h-4" />
-                        <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                        <EditableInlineText
+                          value={section.ctaText || data.ctaButtonText || "Book Appointment"}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { ctaText: val });
+                            onUpdateSiteData?.({ ctaButtonText: val });
+                          }}
+                          composerMode={composerMode}
+                        />
                       </button>
 
                       <button
@@ -837,7 +978,14 @@ export function ThemeRenderer({
                         className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
                       >
                         <MessageSquare className="w-4 h-4" />
-                        <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                        <EditableInlineText
+                          value={data.secondaryCtaText || "WhatsApp Chat"}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { secondaryCtaText: val });
+                            onUpdateSiteData?.({ secondaryCtaText: val });
+                          }}
+                          composerMode={composerMode}
+                        />
                       </button>
                     </div>
                   )}
@@ -864,18 +1012,40 @@ export function ThemeRenderer({
                     {/* Left Bento Cell: Branding & Headlines */}
                     <div className={`lg:col-span-7 bg-white ${cardRadiusClass} p-8 sm:p-10 border border-slate-200/80 shadow-md flex flex-col justify-between space-y-6`}>
                       <div className="space-y-4">
-                        {isBadgeVisible(section.badgeText) && (
+                        {(isBadgeVisible(section.badgeText) || composerMode) && (
                           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            <span>{section.badgeText}</span>
+                            <EditableInlineText
+                              value={section.badgeText || ""}
+                              onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                              placeholder="Badge text (optional)..."
+                              composerMode={composerMode}
+                            />
                           </div>
                         )}
-                        <h1 className={`text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
-                          {heroHeadline}
-                        </h1>
-                        {heroSub && (
-                          <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-                            {heroSub}
-                          </p>
+                        <EditableInlineText
+                          value={heroHeadline || ""}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { title: val });
+                            onUpdateSiteData?.({ heroHeading: val });
+                          }}
+                          tag="h1"
+                          className={`text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}
+                          placeholder="Enter Hero Headline..."
+                          composerMode={composerMode}
+                        />
+                        {((heroSub && heroSub.trim().length > 0) || composerMode) && (
+                          <EditableInlineText
+                            value={heroSub || ""}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { subtitle: val });
+                              onUpdateSiteData?.({ heroSubheading: val });
+                            }}
+                            tag="p"
+                            multiline={true}
+                            className="text-base sm:text-lg text-slate-600 leading-relaxed"
+                            placeholder="Enter Hero Subheading..."
+                            composerMode={composerMode}
+                          />
                         )}
                       </div>
 
@@ -982,18 +1152,40 @@ export function ThemeRenderer({
                       </div>
                     </div>
                     <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                      {isBadgeVisible(section.badgeText) && (
+                      {(isBadgeVisible(section.badgeText) || composerMode) && (
                         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
-                          <span>{section.badgeText}</span>
+                          <EditableInlineText
+                            value={section.badgeText || ""}
+                            onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                            placeholder="Badge text (optional)..."
+                            composerMode={composerMode}
+                          />
                         </div>
                       )}
-                      <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight font-serif italic">
-                        {heroHeadline}
-                      </h1>
-                      {heroSub && (
-                        <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
-                          {heroSub}
-                        </p>
+                      <EditableInlineText
+                        value={heroHeadline || ""}
+                        onChange={(val) => {
+                          onUpdateSection?.(section.id, { title: val });
+                          onUpdateSiteData?.({ heroHeading: val });
+                        }}
+                        tag="h1"
+                        className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight font-serif italic"
+                        placeholder="Enter Hero Headline..."
+                        composerMode={composerMode}
+                      />
+                      {((heroSub && heroSub.trim().length > 0) || composerMode) && (
+                        <EditableInlineText
+                          value={heroSub || ""}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { subtitle: val });
+                            onUpdateSiteData?.({ heroSubheading: val });
+                          }}
+                          tag="p"
+                          multiline={true}
+                          className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl"
+                          placeholder="Enter Hero Subheading..."
+                          composerMode={composerMode}
+                        />
                       )}
                       <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                         <button
@@ -1002,14 +1194,28 @@ export function ThemeRenderer({
                           style={{ backgroundColor: primaryColor }}
                         >
                           <Calendar className="w-4 h-4" />
-                          <span>{section.ctaText || "Book Priority Consultation"}</span>
+                          <EditableInlineText
+                            value={section.ctaText || "Book Priority Consultation"}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { ctaText: val });
+                              onUpdateSiteData?.({ ctaButtonText: val });
+                            }}
+                            composerMode={composerMode}
+                          />
                         </button>
                         <button
                           onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
                           className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
                         >
                           <MessageSquare className="w-4 h-4" />
-                          <span>{data.secondaryCtaText || "WhatsApp Clinic"}</span>
+                          <EditableInlineText
+                            value={data.secondaryCtaText || "WhatsApp Clinic"}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { secondaryCtaText: val });
+                              onUpdateSiteData?.({ secondaryCtaText: val });
+                            }}
+                            composerMode={composerMode}
+                          />
                         </button>
                       </div>
                     </div>
@@ -1057,26 +1263,48 @@ export function ThemeRenderer({
                 <div className={`grid grid-cols-1 lg:grid-cols-12 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
                   <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
                     {/* ZERO HARDCODING: Render badge ONLY if valid and not hardcoded accreditation pill */}
-                    {isBadgeVisible(section.badgeText) ? (
+                    {(isBadgeVisible(section.badgeText) || composerMode) ? (
                       <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold shadow-xs ${
                         themeId === "warm-pediatrics"
                           ? "bg-emerald-100/90 text-emerald-900 border border-emerald-300 ring-2 ring-emerald-200/50"
                           : "bg-white border border-slate-200 text-slate-800"
                       }`}>
-                        <span>{section.badgeText}</span>
+                        <EditableInlineText
+                          value={section.badgeText || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                          placeholder="Badge text (optional)..."
+                          composerMode={composerMode}
+                        />
                       </div>
                     ) : null}
 
-                    <h2 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight ${
-                      themeId === "executive-private" ? "text-white" : "text-slate-900"
-                    } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
-                      {heroHeadline}
-                    </h2>
+                    <EditableInlineText
+                      value={heroHeadline || ""}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { title: val });
+                        onUpdateSiteData?.({ heroHeading: val });
+                      }}
+                      tag="h2"
+                      className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight ${
+                        themeId === "executive-private" ? "text-white" : "text-slate-900"
+                      } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}
+                      placeholder="Enter Hero Headline..."
+                      composerMode={composerMode}
+                    />
 
-                    {heroSub && heroSub.trim().length > 0 && (
-                      <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                        {heroSub}
-                      </p>
+                    {((heroSub && heroSub.trim().length > 0) || composerMode) && (
+                      <EditableInlineText
+                        value={heroSub || ""}
+                        onChange={(val) => {
+                          onUpdateSection?.(section.id, { subtitle: val });
+                          onUpdateSiteData?.({ heroSubheading: val });
+                        }}
+                        tag="p"
+                        multiline={true}
+                        className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0"
+                        placeholder="Enter Hero Subheading..."
+                        composerMode={composerMode}
+                      />
                     )}
 
                     {/* ZERO HARDCODING: Dynamic Feature highlight badges (fully editable, removable, custom icon & text) */}
@@ -1133,7 +1361,14 @@ export function ThemeRenderer({
                           style={{ backgroundColor: primaryColor }}
                         >
                           <Calendar className="w-4 h-4" />
-                          <span>{section.ctaText || data.ctaButtonText || "Book Appointment"}</span>
+                          <EditableInlineText
+                            value={section.ctaText || data.ctaButtonText || "Book Appointment"}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { ctaText: val });
+                              onUpdateSiteData?.({ ctaButtonText: val });
+                            }}
+                            composerMode={composerMode}
+                          />
                         </button>
 
                         <button
@@ -1141,7 +1376,14 @@ export function ThemeRenderer({
                           className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
                         >
                           <MessageSquare className="w-4 h-4" />
-                          <span>{data.secondaryCtaText || "WhatsApp Chat"}</span>
+                          <EditableInlineText
+                            value={data.secondaryCtaText || "WhatsApp Chat"}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { secondaryCtaText: val });
+                              onUpdateSiteData?.({ secondaryCtaText: val });
+                            }}
+                            composerMode={composerMode}
+                          />
                         </button>
                       </div>
                     )}
@@ -1291,8 +1533,28 @@ export function ThemeRenderer({
                           <StIcon className="w-6 h-6" />
                         </div>
                         <div>
-                          <p className="text-xl sm:text-2xl font-black tracking-tight leading-none">{st.value}</p>
-                          <p className={`text-xs font-semibold mt-1 ${themeId === "apex-clinical" ? "text-slate-300" : "text-slate-500"}`}>{st.label}</p>
+                          <EditableInlineText
+                            value={st.value}
+                            onChange={(val) => {
+                              const nextStats = statsList.map((item, i) => i === sIdx ? { ...item, value: val } : item);
+                              onUpdateSection?.(section.id, { stats: nextStats });
+                            }}
+                            tag="p"
+                            className="text-xl sm:text-2xl font-black tracking-tight leading-none"
+                            placeholder="Value"
+                            composerMode={composerMode}
+                          />
+                          <EditableInlineText
+                            value={st.label}
+                            onChange={(val) => {
+                              const nextStats = statsList.map((item, i) => i === sIdx ? { ...item, label: val } : item);
+                              onUpdateSection?.(section.id, { stats: nextStats });
+                            }}
+                            tag="p"
+                            className={`text-xs font-semibold mt-1 ${themeId === "apex-clinical" ? "text-slate-300" : "text-slate-500"}`}
+                            placeholder="Label"
+                            composerMode={composerMode}
+                          />
                         </div>
                       </div>
                     );
@@ -1478,23 +1740,44 @@ export function ThemeRenderer({
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  {isBadgeVisible(section.badgeText) && (
-                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
-                      {section.badgeText}
+                  {(isBadgeVisible(section.badgeText) || composerMode) && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block">
+                      <EditableInlineText
+                        value={section.badgeText || ""}
+                        onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                        placeholder="Badge text (optional)..."
+                        composerMode={composerMode}
+                      />
                     </span>
                   )}
-                  <h3 className={`text-3xl font-black tracking-tight ${
-                    themeId === "executive-private" ? "text-amber-100" : "text-slate-900"
-                  } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
-                    {section.title || "Clinical Services & Procedures"}
-                  </h3>
-                  {section.subtitle && section.subtitle.trim().length > 0 && (
-                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  <EditableInlineText
+                    value={section.title || "Clinical Services & Procedures"}
+                    onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                    tag="h3"
+                    className={`text-3xl font-black tracking-tight ${
+                      themeId === "executive-private" ? "text-amber-100" : "text-slate-900"
+                    } ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}
+                    placeholder="Enter Services Title..."
+                    composerMode={composerMode}
+                  />
+                  {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                    <EditableInlineText
+                      value={section.subtitle || ""}
+                      onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                      tag="p"
+                      className="text-sm text-slate-500"
+                      placeholder="Optional services section subtitle..."
+                      composerMode={composerMode}
+                    />
                   )}
                 </div>
 
                 {(() => {
                   const svcStyle = section.servicesStyle || d.servicesStyle || "GRID_3COL";
+                  const handleSvcChange = (idx: number, patch: Partial<(typeof services)[number]>) => {
+                    const next = services.map((s, i) => (i === idx ? { ...s, ...patch } : s));
+                    onUpdateSiteData?.({ services: next });
+                  };
 
                   // 1. 4-COLUMN COMPACT GRID
                   if (svcStyle === "GRID_4COL") {
@@ -1518,14 +1801,37 @@ export function ThemeRenderer({
                                   <IconComponent className="w-5 h-5" />
                                 </div>
                                 <div>
-                                  <h4 className="text-sm font-bold text-slate-900 leading-snug">{svc.name}</h4>
+                                  <EditableInlineText
+                                    value={svc.name}
+                                    onChange={(val) => handleSvcChange(idx, { name: val })}
+                                    tag="h4"
+                                    className="text-sm font-bold text-slate-900 leading-snug"
+                                    placeholder="Service Name"
+                                    composerMode={composerMode}
+                                  />
                                   {svc.duration && <p className="text-[10px] text-slate-400 mt-0.5">{svc.duration} mins</p>}
                                 </div>
-                                <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{svc.description}</p>
+                                <EditableInlineText
+                                  value={svc.description}
+                                  onChange={(val) => handleSvcChange(idx, { description: val })}
+                                  tag="p"
+                                  multiline={true}
+                                  className="text-xs text-slate-600 line-clamp-3 leading-relaxed"
+                                  placeholder="Service description..."
+                                  composerMode={composerMode}
+                                />
                               </div>
                               <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 text-xs">
-                                {data.showPrices !== false && svc.price ? (
-                                  <span className="font-bold text-slate-900">₹{svc.price}</span>
+                                {data.showPrices !== false && (svc.price || composerMode) ? (
+                                  <span className="font-bold text-slate-900">
+                                    ₹
+                                    <EditableInlineText
+                                      value={svc.price ? String(svc.price) : ""}
+                                      onChange={(val) => handleSvcChange(idx, { price: val ? Number(val) || (val as any) : undefined })}
+                                      placeholder="0"
+                                      composerMode={composerMode}
+                                    />
+                                  </span>
                                 ) : <span />}
                                 <button
                                   onClick={() => {
@@ -1795,20 +2101,43 @@ export function ThemeRenderer({
                                   </div>
                                 )}
                                 <div>
-                                  <h4 className={`text-base font-bold leading-snug ${themeId === "executive-private" ? "text-amber-100" : "text-slate-900"}`}>{svc.name}</h4>
+                                  <EditableInlineText
+                                    value={svc.name}
+                                    onChange={(val) => handleSvcChange(idx, { name: val })}
+                                    tag="h4"
+                                    className={`text-base font-bold leading-snug ${themeId === "executive-private" ? "text-amber-100" : "text-slate-900"}`}
+                                    placeholder="Service Name"
+                                    composerMode={composerMode}
+                                  />
                                   {svc.duration && (
                                     <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins</p>
                                   )}
                                 </div>
                               </div>
 
-                              <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
+                              <EditableInlineText
+                                value={svc.description}
+                                onChange={(val) => handleSvcChange(idx, { description: val })}
+                                tag="p"
+                                multiline={true}
+                                className="text-xs text-slate-600 leading-relaxed"
+                                placeholder="Service description..."
+                                composerMode={composerMode}
+                              />
                             </div>
 
-                            {(data.showPrices !== false && svc.price) || data.showServiceButtons ? (
+                            {(data.showPrices !== false && (svc.price || composerMode)) || data.showServiceButtons ? (
                               <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 text-xs">
-                                {data.showPrices !== false && svc.price ? (
-                                  <span className="font-bold text-slate-900">₹{svc.price}</span>
+                                {data.showPrices !== false && (svc.price || composerMode) ? (
+                                  <span className="font-bold text-slate-900">
+                                    ₹
+                                    <EditableInlineText
+                                      value={svc.price ? String(svc.price) : ""}
+                                      onChange={(val) => handleSvcChange(idx, { price: val ? Number(val) || (val as any) : undefined })}
+                                      placeholder="0"
+                                      composerMode={composerMode}
+                                    />
+                                  </span>
                                 ) : (
                                   <span />
                                 )}
@@ -1848,13 +2177,25 @@ export function ThemeRenderer({
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 <div className="text-center space-y-2 max-w-2xl mx-auto">
-                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
-                    data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
-                  }`}>
-                    {section.title || "Verified Patient Feedback"}
-                  </h3>
-                  {section.subtitle && section.subtitle.trim().length > 0 && (
-                    <p className="text-sm text-slate-500">{section.subtitle}</p>
+                  <EditableInlineText
+                    value={section.title || "Verified Patient Feedback"}
+                    onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                    tag="h3"
+                    className={`text-3xl font-black text-slate-900 tracking-tight ${
+                      data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
+                    }`}
+                    placeholder="Reviews Section Heading..."
+                    composerMode={composerMode}
+                  />
+                  {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                    <EditableInlineText
+                      value={section.subtitle || ""}
+                      onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                      tag="p"
+                      className="text-sm text-slate-500"
+                      placeholder="Optional reviews subtitle..."
+                      composerMode={composerMode}
+                    />
                   )}
                 </div>
 
@@ -1943,33 +2284,84 @@ export function ThemeRenderer({
                           </div>
                         )}
                         <div className="absolute bottom-0 inset-x-0 p-5 bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-transparent text-white">
-                          <p className="text-lg font-black">{doctorName}</p>
-                          <p className="text-xs text-slate-300 font-medium">{doctorSpecialty}</p>
-                          {doctorDegrees && <p className="text-[11px] text-blue-300 font-semibold mt-0.5">{doctorDegrees}</p>}
+                          <EditableInlineText
+                            value={doctorName}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { doctorName: val });
+                              onUpdateSiteData?.({ doctor: { ...data.doctor, name: val } });
+                            }}
+                            tag="p"
+                            className="text-lg font-black"
+                            placeholder="Doctor Name"
+                            composerMode={composerMode}
+                          />
+                          <EditableInlineText
+                            value={doctorSpecialty}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { doctorSpecialty: val });
+                              onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", specialty: val } });
+                            }}
+                            tag="p"
+                            className="text-xs text-slate-300 font-medium"
+                            placeholder="Specialty"
+                            composerMode={composerMode}
+                          />
+                          {(doctorDegrees || composerMode) && (
+                            <EditableInlineText
+                              value={doctorDegrees}
+                              onChange={(val) => {
+                                onUpdateSection?.(section.id, { doctorDegrees: val });
+                                onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", degrees: val } });
+                              }}
+                              tag="p"
+                              className="text-[11px] text-blue-300 font-semibold mt-0.5"
+                              placeholder="Degrees"
+                              composerMode={composerMode}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Right Column: Narrative Story & Actions */}
                     <div className="lg:col-span-7 space-y-6">
-                      {isBadgeVisible(section.badgeText) && (
+                      {(isBadgeVisible(section.badgeText) || composerMode) && (
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
-                          {section.badgeText}
+                          <EditableInlineText
+                            value={section.badgeText || ""}
+                            onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                            placeholder="Badge text (optional)..."
+                            composerMode={composerMode}
+                          />
                         </span>
                       )}
 
                       <div className="space-y-2">
-                        <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}>
-                          {bioHeadline}
-                        </h2>
+                        <EditableInlineText
+                          value={bioHeadline}
+                          onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                          tag="h2"
+                          className={`text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight ${data.fontHeading === "Playfair Display" ? "font-serif italic" : ""}`}
+                          placeholder="Meet the Doctor"
+                          composerMode={composerMode}
+                        />
                         <p className="text-sm font-bold text-blue-600">
                           {doctorSpecialty} {doctorDegrees ? `• ${doctorDegrees}` : ""}
                         </p>
                       </div>
 
-                      <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
-                        {bioContent}
-                      </p>
+                      <EditableInlineText
+                        value={bioContent}
+                        onChange={(val) => {
+                          onUpdateSection?.(section.id, { content: val });
+                          onUpdateSiteData?.({ customBio: val });
+                        }}
+                        tag="p"
+                        multiline={true}
+                        className="text-base text-slate-600 leading-relaxed whitespace-pre-line"
+                        placeholder="Click to type doctor bio and clinical background..."
+                        composerMode={composerMode}
+                      />
 
                       <div className="pt-2">
                         <button
@@ -1978,7 +2370,11 @@ export function ThemeRenderer({
                           style={{ backgroundColor: primaryColor }}
                         >
                           <Calendar className="w-4 h-4" />
-                          <span>{ctaBtnText}</span>
+                          <EditableInlineText
+                            value={ctaBtnText}
+                            onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                            composerMode={composerMode}
+                          />
                         </button>
                       </div>
                     </div>
@@ -2010,18 +2406,69 @@ export function ThemeRenderer({
                   </div>
 
                   <div className="space-y-2">
-                    {isBadgeVisible(section.badgeText) && (
+                    {(isBadgeVisible(section.badgeText) || composerMode) && (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
-                        {section.badgeText}
+                        <EditableInlineText
+                          value={section.badgeText || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                          placeholder="Badge text (optional)..."
+                          composerMode={composerMode}
+                        />
                       </span>
                     )}
-                    <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{doctorName}</h2>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-500">{doctorSpecialty} {doctorDegrees ? `• ${doctorDegrees}` : ""}</p>
+                    <EditableInlineText
+                      value={doctorName}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { doctorName: val });
+                        onUpdateSiteData?.({ doctor: { ...data.doctor, name: val } });
+                      }}
+                      tag="h2"
+                      className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight"
+                      placeholder="Doctor Name"
+                      composerMode={composerMode}
+                    />
+                    <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-500">
+                      <EditableInlineText
+                        value={doctorSpecialty}
+                        onChange={(val) => {
+                          onUpdateSection?.(section.id, { doctorSpecialty: val });
+                          onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", specialty: val } });
+                        }}
+                        tag="span"
+                        placeholder="Specialty"
+                        composerMode={composerMode}
+                      />
+                      {(doctorDegrees || composerMode) && (
+                        <>
+                          <span>•</span>
+                          <EditableInlineText
+                            value={doctorDegrees}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { doctorDegrees: val });
+                              onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", degrees: val } });
+                            }}
+                            tag="span"
+                            className="text-blue-600 font-bold"
+                            placeholder="Degrees"
+                            composerMode={composerMode}
+                          />
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
-                    {bioContent}
-                  </p>
+                  <EditableInlineText
+                    value={bioContent}
+                    onChange={(val) => {
+                      onUpdateSection?.(section.id, { content: val });
+                      onUpdateSiteData?.({ customBio: val });
+                    }}
+                    tag="p"
+                    multiline={true}
+                    className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed whitespace-pre-line"
+                    placeholder="Click to type doctor bio..."
+                    composerMode={composerMode}
+                  />
 
                   <div className="pt-2">
                     <button
@@ -2030,7 +2477,11 @@ export function ThemeRenderer({
                       style={{ backgroundColor: primaryColor }}
                     >
                       <Calendar className="w-4 h-4" />
-                      <span>{ctaBtnText}</span>
+                      <EditableInlineText
+                        value={ctaBtnText}
+                        onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                        composerMode={composerMode}
+                      />
                     </button>
                   </div>
                 </div>
@@ -2062,9 +2513,41 @@ export function ThemeRenderer({
                         )}
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-slate-900">{doctorName}</h3>
-                        <p className="text-xs text-slate-500 font-semibold">{doctorSpecialty}</p>
-                        {doctorDegrees && <p className="text-[11px] text-blue-600 font-bold mt-0.5">{doctorDegrees}</p>}
+                        <EditableInlineText
+                          value={doctorName}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { doctorName: val });
+                            onUpdateSiteData?.({ doctor: { ...data.doctor, name: val } });
+                          }}
+                          tag="h3"
+                          className="text-xl font-black text-slate-900"
+                          placeholder="Doctor Name"
+                          composerMode={composerMode}
+                        />
+                        <EditableInlineText
+                          value={doctorSpecialty}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { doctorSpecialty: val });
+                            onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", specialty: val } });
+                          }}
+                          tag="p"
+                          className="text-xs text-slate-500 font-semibold"
+                          placeholder="Specialty"
+                          composerMode={composerMode}
+                        />
+                        {(doctorDegrees || composerMode) && (
+                          <EditableInlineText
+                            value={doctorDegrees}
+                            onChange={(val) => {
+                              onUpdateSection?.(section.id, { doctorDegrees: val });
+                              onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", degrees: val } });
+                            }}
+                            tag="p"
+                            className="text-[11px] text-blue-600 font-bold mt-0.5"
+                            placeholder="Degrees"
+                            composerMode={composerMode}
+                          />
+                        )}
                       </div>
                     </div>
 
@@ -2072,16 +2555,37 @@ export function ThemeRenderer({
                     <div className={`lg:col-span-8 bg-white ${cardRadiusClass} p-8 sm:p-10 border border-slate-200/80 shadow-md flex flex-col justify-between space-y-6`}>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{bioHeadline}</h2>
-                          {isBadgeVisible(section.badgeText) && (
+                          <EditableInlineText
+                            value={bioHeadline}
+                            onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                            tag="h2"
+                            className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+                            placeholder="Bio Headline"
+                            composerMode={composerMode}
+                          />
+                          {(isBadgeVisible(section.badgeText) || composerMode) && (
                             <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
-                              {section.badgeText}
+                              <EditableInlineText
+                                value={section.badgeText || ""}
+                                onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                                placeholder="Badge text..."
+                                composerMode={composerMode}
+                              />
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                          {bioContent}
-                        </p>
+                        <EditableInlineText
+                          value={bioContent}
+                          onChange={(val) => {
+                            onUpdateSection?.(section.id, { content: val });
+                            onUpdateSiteData?.({ customBio: val });
+                          }}
+                          tag="p"
+                          multiline={true}
+                          className="text-sm text-slate-600 leading-relaxed whitespace-pre-line"
+                          placeholder="Click to type bio story..."
+                          composerMode={composerMode}
+                        />
                       </div>
 
                       <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -2091,7 +2595,11 @@ export function ThemeRenderer({
                           style={{ backgroundColor: primaryColor }}
                         >
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>{ctaBtnText}</span>
+                          <EditableInlineText
+                            value={ctaBtnText}
+                            onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                            composerMode={composerMode}
+                          />
                         </button>
                       </div>
                     </div>
@@ -2129,27 +2637,76 @@ export function ThemeRenderer({
                         <span className={`text-4xl font-black ${isDarkCard ? "text-slate-300" : "text-slate-700"}`}>{doctorName.charAt(0) || "D"}</span>
                       )}
                     </div>
-                    <h4 className={`text-lg font-bold mt-4 ${isDarkCard ? "text-white" : "text-slate-900"}`}>{doctorName}</h4>
-                    <p className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}>{doctorSpecialty}</p>
-                    {doctorDegrees && (
-                      <p className={`text-[11px] font-medium mt-0.5 ${isDarkCard ? "text-blue-400" : "text-blue-600"}`}>{doctorDegrees}</p>
+                    <EditableInlineText
+                      value={doctorName}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { doctorName: val });
+                        onUpdateSiteData?.({ doctor: { ...data.doctor, name: val } });
+                      }}
+                      tag="h4"
+                      className={`text-lg font-bold mt-4 ${isDarkCard ? "text-white" : "text-slate-900"}`}
+                      placeholder="Doctor Name"
+                      composerMode={composerMode}
+                    />
+                    <EditableInlineText
+                      value={doctorSpecialty}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { doctorSpecialty: val });
+                        onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", specialty: val } });
+                      }}
+                      tag="p"
+                      className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}
+                      placeholder="Specialty"
+                      composerMode={composerMode}
+                    />
+                    {(doctorDegrees || composerMode) && (
+                      <EditableInlineText
+                        value={doctorDegrees}
+                        onChange={(val) => {
+                          onUpdateSection?.(section.id, { doctorDegrees: val });
+                          onUpdateSiteData?.({ doctor: { ...data.doctor, name: data.doctor?.name || doctorName || "Consultant Doctor", degrees: val } });
+                        }}
+                        tag="p"
+                        className={`text-[11px] font-medium mt-0.5 ${isDarkCard ? "text-blue-400" : "text-blue-600"}`}
+                        placeholder="Degrees"
+                        composerMode={composerMode}
+                      />
                     )}
                   </div>
 
                   <div className="md:col-span-8 space-y-4">
-                    {isBadgeVisible(section.badgeText) && (
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${
+                    {(isBadgeVisible(section.badgeText) || composerMode) && (
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border inline-block ${
                         isDarkCard ? "bg-white/10 text-white border-white/20" : "bg-blue-50 text-blue-700 border-blue-200"
                       }`}>
-                        {section.badgeText}
+                        <EditableInlineText
+                          value={section.badgeText || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                          placeholder="Badge text (optional)..."
+                          composerMode={composerMode}
+                        />
                       </span>
                     )}
-                    <h3 className={`text-2xl font-black tracking-tight ${isDarkCard ? "text-white" : "text-slate-900"}`}>
-                      {bioHeadline}
-                    </h3>
-                    <p className={`text-sm leading-relaxed ${isDarkCard ? "text-slate-300" : "text-slate-600"} whitespace-pre-line`}>
-                      {bioContent}
-                    </p>
+                    <EditableInlineText
+                      value={bioHeadline}
+                      onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                      tag="h3"
+                      className={`text-2xl font-black tracking-tight ${isDarkCard ? "text-white" : "text-slate-900"}`}
+                      placeholder="Bio Headline"
+                      composerMode={composerMode}
+                    />
+                    <EditableInlineText
+                      value={bioContent}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { content: val });
+                        onUpdateSiteData?.({ customBio: val });
+                      }}
+                      tag="p"
+                      multiline={true}
+                      className={`text-sm leading-relaxed ${isDarkCard ? "text-slate-300" : "text-slate-600"} whitespace-pre-line`}
+                      placeholder="Click to type doctor bio..."
+                      composerMode={composerMode}
+                    />
                     <div className="flex items-center gap-4 pt-2">
                       <button
                         onClick={() => handleCtaClick(ctaBtnAction, section.ctaAction)}
@@ -2159,7 +2716,11 @@ export function ThemeRenderer({
                             : "bg-slate-900 text-white hover:bg-black"
                         }`}
                       >
-                        {ctaBtnText}
+                        <EditableInlineText
+                          value={ctaBtnText}
+                          onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                          composerMode={composerMode}
+                        />
                       </button>
                     </div>
                   </div>
@@ -2190,8 +2751,25 @@ export function ThemeRenderer({
                       <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100 inline-block">
                         Direct OPD Inquiry Form
                       </span>
-                      <h3 className="text-2xl font-black text-slate-900 tracking-tight">{formTitle}</h3>
-                      {formSub && <p className="text-xs text-slate-500 leading-relaxed">{formSub}</p>}
+                      <EditableInlineText
+                        value={formTitle}
+                        onChange={(val) => onUpdateSection?.(section.id, { formTitle: val, title: val })}
+                        tag="h3"
+                        className="text-2xl font-black text-slate-900 tracking-tight"
+                        placeholder="Enter Form Title..."
+                        composerMode={composerMode}
+                      />
+                      {((formSub && formSub.trim().length > 0) || composerMode) && (
+                        <EditableInlineText
+                          value={formSub || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { formSubtitle: val, subtitle: val })}
+                          tag="p"
+                          multiline={true}
+                          className="text-xs text-slate-500 leading-relaxed"
+                          placeholder="Enter Form Subtitle..."
+                          composerMode={composerMode}
+                        />
+                      )}
                     </div>
 
                     <form onSubmit={handleBookingSubmit} className="space-y-3.5">
@@ -2243,7 +2821,11 @@ export function ThemeRenderer({
                         style={{ backgroundColor: primaryColor }}
                       >
                         <Calendar className="w-4 h-4" />
-                        <span>{btnText}</span>
+                        <EditableInlineText
+                          value={btnText}
+                          onChange={(val) => onUpdateSection?.(section.id, { formButtonText: val, ctaText: val })}
+                          composerMode={composerMode}
+                        />
                       </button>
                     </form>
                   </div>
@@ -2260,13 +2842,24 @@ export function ThemeRenderer({
               className="py-16 text-white text-center relative overflow-hidden"
             >
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-                <h3 className="text-2xl sm:text-4xl font-black tracking-tight">
-                  {section.title || "Ready to Book Your Consultation?"}
-                </h3>
-                {section.subtitle && section.subtitle.trim().length > 0 && (
-                  <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed">
-                    {section.subtitle}
-                  </p>
+                <EditableInlineText
+                  value={section.title || "Ready to Book Your Consultation?"}
+                  onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                  tag="h3"
+                  className="text-2xl sm:text-4xl font-black tracking-tight"
+                  placeholder="Enter Banner Headline..."
+                  composerMode={composerMode}
+                />
+                {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                  <EditableInlineText
+                    value={section.subtitle || ""}
+                    onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                    tag="p"
+                    multiline={true}
+                    className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed"
+                    placeholder="Enter Banner Subtitle..."
+                    composerMode={composerMode}
+                  />
                 )}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
@@ -2274,14 +2867,25 @@ export function ThemeRenderer({
                     className={`w-full sm:w-auto bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-11 px-7 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2`}
                   >
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    <span>{section.ctaText || "Book Appointment Now"}</span>
+                    <EditableInlineText
+                      value={section.ctaText || "Book Appointment Now"}
+                      onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                      composerMode={composerMode}
+                    />
                   </button>
                   <button
                     onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
                     className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-11 px-6 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2`}
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span>{data.secondaryCtaText || "Chat on WhatsApp"}</span>
+                    <EditableInlineText
+                      value={data.secondaryCtaText || "Chat on WhatsApp"}
+                      onChange={(val) => {
+                        onUpdateSection?.(section.id, { secondaryCtaText: val });
+                        onUpdateSiteData?.({ secondaryCtaText: val });
+                      }}
+                      composerMode={composerMode}
+                    />
                   </button>
                 </div>
               </div>
@@ -2340,35 +2944,62 @@ export function ThemeRenderer({
             >
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
                 <div className="text-center space-y-2">
-                  <h3 className={`text-3xl font-black text-slate-900 tracking-tight ${
-                    data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
-                  }`}>
-                    {section.title || "Frequently Asked Questions"}
-                  </h3>
+                  <EditableInlineText
+                    value={section.title || "Frequently Asked Questions"}
+                    onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                    tag="h3"
+                    className={`text-3xl font-black text-slate-900 tracking-tight ${
+                      data.fontHeading === "Playfair Display" ? "font-serif italic" : ""
+                    }`}
+                    placeholder="FAQ Section Title..."
+                    composerMode={composerMode}
+                  />
                 </div>
 
                 <div className="space-y-3">
-                  {faqs.map((faq, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden"
-                    >
-                      <button
-                        onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                        className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-sm text-slate-900 hover:text-blue-600"
+                  {faqs.map((faq, idx) => {
+                    const handleFaqChange = (patch: Partial<typeof faq>) => {
+                      const next = faqs.map((f, i) => (i === idx ? { ...f, ...patch } : f));
+                      onUpdateSiteData?.({ faqs: next });
+                    };
+
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden"
                       >
-                        <span>{faq.question}</span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeFaq === idx ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {activeFaq === idx && (
-                        <div className="p-5 pt-0 text-xs text-slate-600 leading-relaxed border-t border-slate-100">
-                          {faq.answer}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        <button
+                          onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
+                          className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-sm text-slate-900 hover:text-blue-600"
+                        >
+                          <EditableInlineText
+                            value={faq.question}
+                            onChange={(val) => handleFaqChange({ question: val })}
+                            tag="span"
+                            className="flex-1 text-left"
+                            placeholder="Question..."
+                            composerMode={composerMode}
+                          />
+                          <ChevronDown
+                            className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${activeFaq === idx ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {(activeFaq === idx || composerMode) && (
+                          <div className="p-5 pt-0 text-xs text-slate-600 leading-relaxed border-t border-slate-100">
+                            <EditableInlineText
+                              value={faq.answer}
+                              onChange={(val) => handleFaqChange({ answer: val })}
+                              tag="div"
+                              multiline={true}
+                              className="text-xs text-slate-600 leading-relaxed"
+                              placeholder="Answer description..."
+                              composerMode={composerMode}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>,
@@ -2499,18 +3130,34 @@ export function ThemeRenderer({
                     <div className="text-6xl sm:text-7xl font-serif text-blue-500/20 select-none leading-none -mb-6">
                       “
                     </div>
-                    <blockquote className={`text-xl sm:text-2xl font-medium italic leading-relaxed max-w-2xl mx-auto ${
-                      isDarkCard ? "text-slate-100" : "text-slate-800"
-                    } ${data.fontHeading === "Playfair Display" ? "font-serif" : ""}`}>
-                      &ldquo;{quoteText}&rdquo;
-                    </blockquote>
+                    <EditableInlineText
+                      value={quoteText}
+                      onChange={(val) => onUpdateSection?.(section.id, { content: val, title: val })}
+                      tag="blockquote"
+                      multiline={true}
+                      className={`text-xl sm:text-2xl font-medium italic leading-relaxed max-w-2xl mx-auto ${
+                        isDarkCard ? "text-slate-100" : "text-slate-800"
+                      } ${data.fontHeading === "Playfair Display" ? "font-serif" : ""}`}
+                      placeholder="Click to type inspiring patient quote or testimonial..."
+                      composerMode={composerMode}
+                    />
                     <div className="pt-2 flex flex-col items-center justify-center space-y-1">
-                      <p className={`font-bold text-sm tracking-wide ${isDarkCard ? "text-white" : "text-slate-900"}`}>
-                        {author}
-                      </p>
-                      <p className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}>
-                        {role}
-                      </p>
+                      <EditableInlineText
+                        value={author}
+                        onChange={(val) => onUpdateSection?.(section.id, { quoteAuthor: val })}
+                        tag="p"
+                        className={`font-bold text-sm tracking-wide ${isDarkCard ? "text-white" : "text-slate-900"}`}
+                        placeholder="Quote Author"
+                        composerMode={composerMode}
+                      />
+                      <EditableInlineText
+                        value={role}
+                        onChange={(val) => onUpdateSection?.(section.id, { quoteRole: val })}
+                        tag="p"
+                        className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}
+                        placeholder="Author Role / Title"
+                        composerMode={composerMode}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2536,6 +3183,12 @@ export function ThemeRenderer({
               },
             ];
 
+            const handleColumnChange = (colIdx: number, patch: Partial<NonNullable<PageSection["columns"]>[number]>) => {
+              const current = section.columns && section.columns.length >= 2 ? [...section.columns] : [...cols];
+              current[colIdx] = { ...current[colIdx], ...patch };
+              onUpdateSection?.(section.id, { columns: current });
+            };
+
             return renderSectionContainer(
               section,
               <section
@@ -2543,10 +3196,26 @@ export function ThemeRenderer({
                 className={`py-16 border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
               >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-                  {section.title && (
+                  {(section.title || composerMode) && (
                     <div className="text-center space-y-2 max-w-2xl mx-auto">
-                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title}</h3>
-                      {section.subtitle && <p className="text-sm text-slate-500">{section.subtitle}</p>}
+                      <EditableInlineText
+                        value={section.title || ""}
+                        onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                        tag="h3"
+                        className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+                        placeholder="Section Heading (optional)..."
+                        composerMode={composerMode}
+                      />
+                      {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                        <EditableInlineText
+                          value={section.subtitle || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                          tag="p"
+                          className="text-sm text-slate-500"
+                          placeholder="Section Subtitle (optional)..."
+                          composerMode={composerMode}
+                        />
+                      )}
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
@@ -2556,22 +3225,47 @@ export function ThemeRenderer({
                         className={`p-7 sm:p-8 ${cardRadiusClass} bg-slate-50 border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between space-y-4`}
                       >
                         <div className="space-y-3">
-                          {col.badge && (
+                          {(col.badge || composerMode) && (
                             <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 inline-block">
-                              {col.badge}
+                              <EditableInlineText
+                                value={col.badge || ""}
+                                onChange={(val) => handleColumnChange(cIdx, { badge: val })}
+                                placeholder="Badge..."
+                                composerMode={composerMode}
+                              />
                             </span>
                           )}
-                          <h4 className="text-xl font-bold text-slate-900">{col.title}</h4>
-                          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{col.content}</p>
+                          <EditableInlineText
+                            value={col.title}
+                            onChange={(val) => handleColumnChange(cIdx, { title: val })}
+                            tag="h4"
+                            className="text-xl font-bold text-slate-900"
+                            placeholder="Column Heading"
+                            composerMode={composerMode}
+                          />
+                          <EditableInlineText
+                            value={col.content}
+                            onChange={(val) => handleColumnChange(cIdx, { content: val })}
+                            tag="p"
+                            multiline={true}
+                            className="text-sm text-slate-600 leading-relaxed whitespace-pre-line"
+                            placeholder="Click to type column content..."
+                            composerMode={composerMode}
+                          />
                         </div>
-                        {col.ctaText && (
+                        {(col.ctaText || composerMode) && (
                           <div className="pt-2">
                             <button
                               onClick={() => handleCtaClick(col.ctaUrl || "BOOKING_MODAL")}
                               className={`text-xs font-bold px-4 py-2 rounded-lg text-white shadow-xs inline-flex items-center gap-1.5`}
                               style={{ backgroundColor: primaryColor }}
                             >
-                              <span>{col.ctaText}</span> <ArrowRight className="w-3 h-3" />
+                              <EditableInlineText
+                                value={col.ctaText || "Learn More"}
+                                onChange={(val) => handleColumnChange(cIdx, { ctaText: val })}
+                                composerMode={composerMode}
+                              />
+                              <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
                         )}
@@ -2704,20 +3398,61 @@ export function ThemeRenderer({
                 className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50/60" : ""}`}
               >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-                  <div className="text-center space-y-2 max-w-2xl mx-auto">
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title || "Our Clinical Principles"}</h3>
-                    {section.subtitle && <p className="text-sm text-slate-500">{section.subtitle}</p>}
-                  </div>
+                  {(section.title || composerMode) && (
+                    <div className="text-center space-y-2 max-w-2xl mx-auto">
+                      <EditableInlineText
+                        value={section.title || "Our Clinical Principles"}
+                        onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                        tag="h3"
+                        className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+                        placeholder="Section Heading..."
+                        composerMode={composerMode}
+                      />
+                      {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                        <EditableInlineText
+                          value={section.subtitle || ""}
+                          onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                          tag="p"
+                          className="text-sm text-slate-500"
+                          placeholder="Section Subtitle (optional)..."
+                          composerMode={composerMode}
+                        />
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {cols.map((col, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-6 sm:p-7 ${cardRadiusClass} bg-white border border-slate-200/90 shadow-2xs hover:shadow-md transition-all space-y-3`}
-                      >
-                        <h4 className="text-lg font-bold text-slate-900">{col.title}</h4>
-                        <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{col.content}</p>
-                      </div>
-                    ))}
+                    {cols.map((col, idx) => {
+                      const handle3ColChange = (patch: Partial<typeof col>) => {
+                        const current = section.columns && section.columns.length >= 3 ? [...section.columns] : [...cols];
+                        current[idx] = { ...current[idx], ...patch };
+                        onUpdateSection?.(section.id, { columns: current });
+                      };
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-6 sm:p-7 ${cardRadiusClass} bg-white border border-slate-200/90 shadow-2xs hover:shadow-md transition-all space-y-3`}
+                        >
+                          <EditableInlineText
+                            value={col.title}
+                            onChange={(val) => handle3ColChange({ title: val })}
+                            tag="h4"
+                            className="text-lg font-bold text-slate-900"
+                            placeholder="Column Heading"
+                            composerMode={composerMode}
+                          />
+                          <EditableInlineText
+                            value={col.content}
+                            onChange={(val) => handle3ColChange({ content: val })}
+                            tag="p"
+                            multiline={true}
+                            className="text-xs text-slate-600 leading-relaxed whitespace-pre-line"
+                            placeholder="Column content..."
+                            composerMode={composerMode}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </section>,
@@ -2733,17 +3468,44 @@ export function ThemeRenderer({
               className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50/50" : ""}`}
             >
               <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 ${alignClass}`}>
-                {isBadgeVisible(section.badgeText) && (
+                {(isBadgeVisible(section.badgeText) || composerMode) && (
                   <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block">
-                    {section.badgeText}
+                    <EditableInlineText
+                      value={section.badgeText || ""}
+                      onChange={(val) => onUpdateSection?.(section.id, { badgeText: val })}
+                      placeholder="Badge text..."
+                      composerMode={composerMode}
+                    />
                   </span>
                 )}
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title || "Custom Story & Information"}</h3>
-                {section.subtitle && section.subtitle.trim().length > 0 && (
-                  <p className="text-sm sm:text-base text-slate-500 font-medium">{section.subtitle}</p>
+                <EditableInlineText
+                  value={section.title || "Custom Story & Information"}
+                  onChange={(val) => onUpdateSection?.(section.id, { title: val })}
+                  tag="h3"
+                  className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+                  placeholder="Enter Title..."
+                  composerMode={composerMode}
+                />
+                {((section.subtitle && section.subtitle.trim().length > 0) || composerMode) && (
+                  <EditableInlineText
+                    value={section.subtitle || ""}
+                    onChange={(val) => onUpdateSection?.(section.id, { subtitle: val })}
+                    tag="p"
+                    className="text-sm sm:text-base text-slate-500 font-medium"
+                    placeholder="Optional subtitle..."
+                    composerMode={composerMode}
+                  />
                 )}
-                {section.content && section.content.trim().length > 0 && (
-                  <p className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto whitespace-pre-line">{section.content}</p>
+                {((section.content && section.content.trim().length > 0) || composerMode) && (
+                  <EditableInlineText
+                    value={section.content || ""}
+                    onChange={(val) => onUpdateSection?.(section.id, { content: val })}
+                    tag="p"
+                    multiline={true}
+                    className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto whitespace-pre-line"
+                    placeholder="Click to type custom text or story..."
+                    composerMode={composerMode}
+                  />
                 )}
                 {/* Video Player Embed if provided */}
                 {section.videoUrl && (
@@ -2758,14 +3520,19 @@ export function ThemeRenderer({
                     </div>
                   </div>
                 )}
-                {section.ctaText && (
+                {(section.ctaText || composerMode) && (
                   <div className="pt-3">
                     <button
                       onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL")}
                       className={`text-xs font-bold px-6 py-2.5 rounded-lg text-white shadow-md inline-flex items-center gap-1.5`}
                       style={{ backgroundColor: primaryColor }}
                     >
-                      <span>{section.ctaText}</span> <ArrowRight className="w-3.5 h-3.5" />
+                      <EditableInlineText
+                        value={section.ctaText || "Learn More"}
+                        onChange={(val) => onUpdateSection?.(section.id, { ctaText: val })}
+                        composerMode={composerMode}
+                      />
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}

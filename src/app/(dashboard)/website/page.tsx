@@ -1547,6 +1547,29 @@ export default function ElementorComposerPage() {
             setSelectedSectionId(null);
             setSidebarTab("elements");
           }}
+          onUpdateSection={(secId, patch) => {
+            setSiteData((prev) => {
+              const currentSections = prev.sections && prev.sections.length > 0
+                ? prev.sections
+                : [
+                    { id: "sec_hero", type: "HERO" as const },
+                    { id: "sec_stats", type: "STATS_RIBBON" as const },
+                    { id: "sec_services", type: "SERVICES" as const },
+                    { id: "sec_reviews", type: "REVIEWS" as const },
+                    { id: "sec_bio", type: "DOCTOR_BIO" as const },
+                    { id: "sec_cta", type: "CTA_BANNER" as const, title: "Ready to Consult with Our Specialist?", subtitle: "Book your appointment online or chat directly with our clinic on WhatsApp." },
+                    { id: "sec_faq", type: "FAQ" as const },
+                    { id: "sec_map", type: "MAP_HOURS" as const },
+                  ];
+              return {
+                ...prev,
+                sections: currentSections.map((s) => (s.id === secId ? { ...s, ...patch } : s)),
+              };
+            });
+          }}
+          onUpdateSiteData={(patch) => {
+            setSiteData((prev) => ({ ...prev, ...patch }));
+          }}
         />
       </div>
 
