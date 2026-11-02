@@ -781,6 +781,316 @@ export function StudioInspector({
               </div>
             )}
 
+            {/* ── HERO SPECIFIC PROPERTIES & DESIGNS ── */}
+            {selectedSection.type === "HERO" && (
+              <div className="space-y-3 p-3 bg-blue-50/60 rounded-2xl border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-blue-950">Hero Layout Design</label>
+                  <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200 uppercase">
+                    {selectedSection.heroStyle || "SPLIT"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {[
+                    { id: "SPLIT", label: "Split (Photo Right)", desc: "Doctor photo on right" },
+                    { id: "REVERSED_SPLIT", label: "Reversed Split", desc: "Photo on left, copy right" },
+                    { id: "EDITORIAL", label: "Editorial Specialist", desc: "Magazine authority card" },
+                    { id: "MINIMAL", label: "Centered Minimal", desc: "Clean centered focus" },
+                    { id: "BENTO", label: "Bento Hub", desc: "Modern 3-cell grid" },
+                    { id: "FULL_WIDTH", label: "Ambient Slider", desc: "Full-width background" },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => onUpdateSection({ heroStyle: st.id as any })}
+                      className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                        (selectedSection.heroStyle || "SPLIT") === st.id
+                          ? "bg-white border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-500/20"
+                          : "bg-white/80 border-slate-200 text-slate-700 hover:bg-white"
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">{st.label}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{st.desc}</p>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-blue-200/80 mt-2">
+                  <div>
+                    <p className="font-bold text-slate-800 text-[11px]">Direct OPD Booking Card</p>
+                    <p className="text-[9px] text-slate-500">Embeds an instant appointment form in the hero banner</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedSection.showHeroBookingForm}
+                    onChange={(e) => onUpdateSection({ showHeroBookingForm: e.target.checked })}
+                    className="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ── SERVICES SPECIFIC PROPERTIES & DESIGNS ── */}
+            {selectedSection.type === "SERVICES" && (
+              <div className="space-y-3 p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-emerald-950">Services Layout Design</label>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200 uppercase">
+                    {selectedSection.servicesStyle || d.servicesStyle || "GRID_3COL"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {[
+                    { id: "GRID_3COL", label: "3-Column Grid", desc: "Essential clinical cards" },
+                    { id: "GRID_4COL", label: "4-Column Compact", desc: "High-density OPD catalog" },
+                    { id: "BENTO", label: "Bento Showcase", desc: "Spotlight + companion tiles" },
+                    { id: "SPLIT_LIST", label: "Editorial Split", desc: "Sticky spotlight + rows" },
+                    { id: "MINIMAL_LIST", label: "Minimal Row List", desc: "Clean hospital table rows" },
+                    { id: "ICON_CARDS", label: "Glowing Icon Cards", desc: "Centered medical badges" },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => {
+                        onUpdateSection({ servicesStyle: st.id as any });
+                        onUpdateDesign({ servicesStyle: st.id as any });
+                      }}
+                      className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                        (selectedSection.servicesStyle || d.servicesStyle || "GRID_3COL") === st.id
+                          ? "bg-white border-emerald-600 text-emerald-950 shadow-xs ring-2 ring-emerald-500/20"
+                          : "bg-white/80 border-slate-200 text-slate-700 hover:bg-white"
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">{st.label}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{st.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── CUSTOM TEXT / COLUMN LAYOUT PROPERTIES & DESIGNS ── */}
+            {selectedSection.type === "CUSTOM_TEXT" && (
+              <div className="space-y-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/90">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800">Layout Arrangement</label>
+                  <span className="text-[10px] font-bold text-purple-700 bg-white px-2 py-0.5 rounded-full border border-purple-200 uppercase">
+                    {selectedSection.columnLayout || d.columnLayout || (selectedSection.isQuote ? "quote" : "1col")}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {[
+                    { id: "1col", label: "1 Column / Story", desc: "Full-width headline & text" },
+                    { id: "2col_5050", label: "2 Columns 50/50", desc: "Two equal balanced cards" },
+                    { id: "2col_2575", label: "2 Columns 25/75", desc: "25% sidebar, 75% content" },
+                    { id: "2col_7525", label: "2 Columns 75/25", desc: "75% content, 25% sidebar" },
+                    { id: "3col", label: "3 Columns Equal", desc: "Trio principles or highlights" },
+                    { id: "quote", label: "Blockquote Card", desc: "Clinical motto & author" },
+                    { id: "divider", label: "Horizontal Divider", desc: "Visual separator line" },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => {
+                        const isQ = st.id === "quote";
+                        onUpdateSection({
+                          columnLayout: st.id as any,
+                          isQuote: isQ,
+                          ...(isQ ? { quoteAuthor: selectedSection.quoteAuthor || siteData.doctor?.name || "Dr. Vinay Kumar Rai", quoteRole: selectedSection.quoteRole || "Senior Consultant Specialist" } : {}),
+                        });
+                        onUpdateDesign({ columnLayout: st.id as any });
+                      }}
+                      className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                        (selectedSection.columnLayout || d.columnLayout || (selectedSection.isQuote ? "quote" : "1col")) === st.id
+                          ? "bg-white border-purple-600 text-purple-950 shadow-xs ring-2 ring-purple-500/20"
+                          : "bg-white/80 border-slate-200 text-slate-700 hover:bg-white"
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">{st.label}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{st.desc}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Text Alignment */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase">Text Alignment</label>
+                  <div className="grid grid-cols-3 gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                    {[
+                      { id: "left", label: "Left Align" },
+                      { id: "center", label: "Center" },
+                      { id: "right", label: "Right Align" },
+                    ].map((al) => (
+                      <button
+                        key={al.id}
+                        type="button"
+                        onClick={() => onUpdateDesign({ textAlign: al.id as any })}
+                        className={`py-1 text-[10px] font-bold rounded-lg transition-all ${
+                          (d.textAlign || "center") === al.id ? "bg-purple-50 text-purple-700 font-black border border-purple-200" : "text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {al.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quote Specific Fields */}
+                {(selectedSection.columnLayout === "quote" || selectedSection.isQuote) && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                    <p className="text-[11px] font-bold text-purple-900">Quote Citation Details</p>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Author Name</label>
+                      <Input
+                        value={selectedSection.quoteAuthor || ""}
+                        onChange={(e) => onUpdateSection({ quoteAuthor: e.target.value })}
+                        placeholder="e.g. Dr. Vinay Kumar Rai"
+                        className="h-8 text-xs bg-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Author Role / Designation</label>
+                      <Input
+                        value={selectedSection.quoteRole || ""}
+                        onChange={(e) => onUpdateSection({ quoteRole: e.target.value })}
+                        placeholder="e.g. Founder & Chief Pediatrician"
+                        className="h-8 text-xs bg-white rounded-lg"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-Column Editors */}
+                {["2col_5050", "2col_2575", "2col_7525", "3col"].includes(selectedSection.columnLayout || "") && (
+                  <div className="space-y-3 pt-2 border-t border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-800">Column Content Editor</p>
+                    
+                    {/* Column 1 */}
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                        Column 1
+                      </span>
+                      <Input
+                        value={selectedSection.columns?.[0]?.title || ""}
+                        onChange={(e) => {
+                          const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }])];
+                          cols[0] = { ...cols[0], title: e.target.value };
+                          onUpdateSection({ columns: cols });
+                        }}
+                        placeholder="Column 1 Title"
+                        className="h-8 text-xs font-bold"
+                      />
+                      <Textarea
+                        value={selectedSection.columns?.[0]?.content || ""}
+                        onChange={(e) => {
+                          const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }])];
+                          cols[0] = { ...cols[0], content: e.target.value };
+                          onUpdateSection({ columns: cols });
+                        }}
+                        placeholder="Column 1 Content Text..."
+                        rows={3}
+                        className="text-xs"
+                      />
+                    </div>
+
+                    {/* Column 2 */}
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
+                        Column 2
+                      </span>
+                      <Input
+                        value={selectedSection.columns?.[1]?.title || ""}
+                        onChange={(e) => {
+                          const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }])];
+                          cols[1] = { ...cols[1], title: e.target.value };
+                          onUpdateSection({ columns: cols });
+                        }}
+                        placeholder="Column 2 Title"
+                        className="h-8 text-xs font-bold"
+                      />
+                      <Textarea
+                        value={selectedSection.columns?.[1]?.content || ""}
+                        onChange={(e) => {
+                          const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }])];
+                          cols[1] = { ...cols[1], content: e.target.value };
+                          onUpdateSection({ columns: cols });
+                        }}
+                        placeholder="Column 2 Content Text..."
+                        rows={3}
+                        className="text-xs"
+                      />
+                    </div>
+
+                    {/* Column 3 (If 3col) */}
+                    {selectedSection.columnLayout === "3col" && (
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                          Column 3
+                        </span>
+                        <Input
+                          value={selectedSection.columns?.[2]?.title || ""}
+                          onChange={(e) => {
+                            const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }, { title: "", content: "" }])];
+                            cols[2] = { ...cols[2], title: e.target.value };
+                            onUpdateSection({ columns: cols });
+                          }}
+                          placeholder="Column 3 Title"
+                          className="h-8 text-xs font-bold"
+                        />
+                        <Textarea
+                          value={selectedSection.columns?.[2]?.content || ""}
+                          onChange={(e) => {
+                            const cols = [...(selectedSection.columns || [{ title: "", content: "" }, { title: "", content: "" }, { title: "", content: "" }])];
+                            cols[2] = { ...cols[2], content: e.target.value };
+                            onUpdateSection({ columns: cols });
+                          }}
+                          placeholder="Column 3 Content Text..."
+                          rows={3}
+                          className="text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── FORM CONTAINER SPECIFIC PROPERTIES ── */}
+            {(selectedSection.hasForm || selectedSection.formFields) && (
+              <div className="space-y-3 p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-white px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
+                  Form Container Configuration
+                </span>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase">Form Header Title</label>
+                  <Input
+                    value={selectedSection.formTitle || selectedSection.title || ""}
+                    onChange={(e) => onUpdateSection({ formTitle: e.target.value, title: e.target.value })}
+                    placeholder="e.g. Request an Appointment / Consultation"
+                    className="h-8 text-xs bg-white rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase">Form Guidance Subtitle</label>
+                  <Input
+                    value={selectedSection.formSubtitle || selectedSection.subtitle || ""}
+                    onChange={(e) => onUpdateSection({ formSubtitle: e.target.value, subtitle: e.target.value })}
+                    placeholder="e.g. Our patient care team will call you back within 15 minutes."
+                    className="h-8 text-xs bg-white rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase">Submit Button Text</label>
+                  <Input
+                    value={selectedSection.formButtonText || selectedSection.ctaText || ""}
+                    onChange={(e) => onUpdateSection({ formButtonText: e.target.value, ctaText: e.target.value })}
+                    placeholder="e.g. Submit Appointment Request"
+                    className="h-8 text-xs bg-white rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Title & AI Copy Trigger */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -815,19 +1125,17 @@ export function StudioInspector({
               />
             </div>
 
-            {/* Story / Content Body if present */}
-            {selectedSection.content !== undefined && (
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 text-xs">Body Text / Narrative</label>
-                <Textarea
-                  value={selectedSection.content || ""}
-                  onChange={(e) => onUpdateSection({ content: e.target.value })}
-                  rows={5}
-                  placeholder="Full clinical details, accreditation notices, emergency procedures..."
-                  className="text-xs rounded-xl leading-relaxed"
-                />
-              </div>
-            )}
+            {/* Story / Content Body - ALWAYS EDITABLE */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 text-xs">Body Text / Narrative</label>
+              <Textarea
+                value={selectedSection.content || ""}
+                onChange={(e) => onUpdateSection({ content: e.target.value })}
+                rows={5}
+                placeholder="Full clinical details, accreditation notices, column stories, emergency procedures..."
+                className="text-xs rounded-xl leading-relaxed"
+              />
+            </div>
 
             {/* Primary Action Button */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">

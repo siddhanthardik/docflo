@@ -59,6 +59,8 @@ export interface SectionDesignConfig {
   animationDuration?: number; // ms
   hoverEffect?: "none" | "lift" | "scale" | "glow";
   bioStyle?: "CARD" | "SPLIT_EDITORIAL" | "MINIMAL" | "BENTO";
+  servicesStyle?: "GRID_3COL" | "GRID_4COL" | "BENTO" | "SPLIT_LIST" | "MINIMAL_LIST" | "ICON_CARDS";
+  columnLayout?: "1col" | "2col_5050" | "2col_2575" | "2col_7525" | "3col" | "3col_hero" | "quote" | "divider";
 }
 
 export interface PageSection {
@@ -94,6 +96,25 @@ export interface PageSection {
   bgColor?: string;
   cardBg?: string;
   bioStyle?: "CARD" | "SPLIT_EDITORIAL" | "MINIMAL" | "BENTO";
+  servicesStyle?: "GRID_3COL" | "GRID_4COL" | "BENTO" | "SPLIT_LIST" | "MINIMAL_LIST" | "ICON_CARDS";
+  columnLayout?: "1col" | "2col_5050" | "2col_2575" | "2col_7525" | "3col" | "3col_hero" | "quote" | "divider";
+  columns?: Array<{
+    title?: string;
+    subtitle?: string;
+    content?: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    badge?: string;
+    icon?: string;
+  }>;
+  quoteAuthor?: string;
+  quoteRole?: string;
+  isQuote?: boolean;
+  hasForm?: boolean;
+  formTitle?: string;
+  formSubtitle?: string;
+  formButtonText?: string;
+  showHeroBookingForm?: boolean;
   doctorName?: string;
   doctorSpecialty?: string;
   doctorDegrees?: string;

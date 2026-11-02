@@ -957,6 +957,69 @@ export function ThemeRenderer({
             );
           }
 
+          // HERO VARIANT: EDITORIAL (High Authority Doctor Portrait + Magazine Layout)
+          if (heroVariant === "EDITORIAL") {
+            const edHeight = d.heroHeight === "compact" ? "py-12" : d.heroHeight === "tall" ? "py-28" : "py-20";
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`relative overflow-hidden ${edHeight} border-b border-slate-100 ${!customBg ? "bg-[#FAF8F5]" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                    <div className="lg:col-span-5 relative">
+                      <div className="relative mx-auto max-w-sm aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-slate-100">
+                        <img
+                          src={section.image || data.doctor?.image || sliderImages[0] || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent p-5 text-white">
+                          <p className="font-bold text-base">{data.doctor?.name || "Senior Consultant Specialist"}</p>
+                          <p className="text-xs text-slate-300 mt-0.5">{data.doctor?.degrees || "MBBS, MD"}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+                      {isBadgeVisible(section.badgeText) && (
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                          <span>{section.badgeText}</span>
+                        </div>
+                      )}
+                      <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight font-serif italic">
+                        {heroHeadline}
+                      </h1>
+                      {heroSub && (
+                        <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
+                          {heroSub}
+                        </p>
+                      )}
+                      <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
+                        <button
+                          onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL")}
+                          className={`w-full sm:w-auto text-white text-sm font-bold h-12 px-7 ${buttonRadiusClass} shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Calendar className="w-4 h-4" />
+                          <span>{section.ctaText || "Book Priority Consultation"}</span>
+                        </button>
+                        <button
+                          onClick={() => handleCtaClick(data.secondaryCtaAction || "WHATSAPP", data.secondaryCtaLink)}
+                          className={`w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold h-12 px-6 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>{data.secondaryCtaText || "WhatsApp Clinic"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
           // HERO VARIANTS: SPLIT (Half-Image Right) & REVERSED_SPLIT (Half-Image Left)
           const isReversed = heroVariant === "REVERSED_SPLIT";
           const splitHeroHeightClass =
@@ -1085,7 +1148,7 @@ export function ThemeRenderer({
                   </div>
 
                   <div className="lg:col-span-5">
-                    {data.showHeroBookingForm ? (
+                    {(data.showHeroBookingForm || section.showHeroBookingForm) ? (
                       <div className={`bg-white ${cardRadiusClass} p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5`}>
                         <div className="space-y-1">
                           <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
@@ -1430,70 +1493,344 @@ export function ThemeRenderer({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {services.map((svc, idx) => {
-                    const IconComponent = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                {(() => {
+                  const svcStyle = section.servicesStyle || d.servicesStyle || "GRID_3COL";
+
+                  // 1. 4-COLUMN COMPACT GRID
+                  if (svcStyle === "GRID_4COL") {
                     return (
-                      <div
-                        key={idx}
-                        style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
-                        className={`p-6 ${cardRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
-                          themeId === "executive-private"
-                            ? "bg-neutral-900 border-amber-900/40 text-slate-200"
-                            : !d.cardBg
-                            ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300"
-                            : "border-slate-200"
-                        }`}
-                      >
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            {svc.image ? (
-                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                                <img src={svc.image} alt="" className="w-full h-full object-cover" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {services.map((svc, idx) => {
+                          const IconComponent = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                          return (
+                            <div
+                              key={idx}
+                              style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
+                              className={`p-5 ${cardRadiusClass} border hover:shadow-lg transition-all space-y-3 flex flex-col justify-between ${
+                                !d.cardBg ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300" : "border-slate-200"
+                              }`}
+                            >
+                              <div className="space-y-2.5">
+                                <div
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
+                                  style={{ backgroundColor: primaryColor }}
+                                >
+                                  <IconComponent className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-slate-900 leading-snug">{svc.name}</h4>
+                                  {svc.duration && <p className="text-[10px] text-slate-400 mt-0.5">{svc.duration} mins</p>}
+                                </div>
+                                <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{svc.description}</p>
                               </div>
-                            ) : (
-                              <div
-                                className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
-                                style={{ backgroundColor: primaryColor }}
-                              >
-                                <IconComponent className="w-5 h-5" />
+                              <div className="flex items-center justify-between pt-2 border-t border-slate-200/80 text-xs">
+                                {data.showPrices !== false && svc.price ? (
+                                  <span className="font-bold text-slate-900">₹{svc.price}</span>
+                                ) : <span />}
+                                <button
+                                  onClick={() => {
+                                    setSelectedService(svc.name);
+                                    setOpenBookingModal(true);
+                                  }}
+                                  className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                                >
+                                  <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                                </button>
                               </div>
-                            )}
-                            <div>
-                              <h4 className={`text-base font-bold leading-snug ${themeId === "executive-private" ? "text-amber-100" : "text-slate-900"}`}>{svc.name}</h4>
-                              {svc.duration && (
-                                <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  // 2. BENTO SHOWCASE (Featured large spotlight + side cards)
+                  if (svcStyle === "BENTO") {
+                    const heroSvc = services[0];
+                    const companionSvcs = services.slice(1, 4);
+                    const HeroIcon = (heroSvc?.icon && ICON_MAP[heroSvc.icon.toLowerCase()]) || Stethoscope;
+
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                        {heroSvc && (
+                          <div className={`lg:col-span-6 p-8 ${cardRadiusClass} bg-gradient-to-br from-blue-900 to-indigo-950 text-white shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden`}>
+                            <div className="space-y-4 relative z-10">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-white/10 px-3 py-1 rounded-full border border-white/20 inline-block">
+                                Featured Clinical Specialization
+                              </span>
+                              <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
+                                <HeroIcon className="w-7 h-7" />
+                              </div>
+                              <h4 className="text-2xl font-black text-white leading-tight">{heroSvc.name}</h4>
+                              <p className="text-sm text-slate-300 leading-relaxed">{heroSvc.description}</p>
+                            </div>
+                            <div className="pt-4 border-t border-white/15 flex items-center justify-between relative z-10">
+                              {heroSvc.price && (
+                                <div>
+                                  <p className="text-[10px] text-slate-400 uppercase font-bold">Consultation Fee</p>
+                                  <p className="text-2xl font-black text-white">₹{heroSvc.price}</p>
+                                </div>
                               )}
+                              <button
+                                onClick={() => {
+                                  setSelectedService(heroSvc.name);
+                                  setOpenBookingModal(true);
+                                }}
+                                className="bg-white text-slate-900 font-bold text-xs h-10 px-5 rounded-xl shadow-lg hover:bg-slate-100 flex items-center gap-1.5 transition-transform hover:scale-105"
+                              >
+                                <span>Book Dedicated Slot</span> <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
+                        )}
 
-                          <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
+                        <div className="lg:col-span-6 flex flex-col gap-4">
+                          {companionSvcs.map((svc, idx) => {
+                            const CompIcon = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                            return (
+                              <div
+                                key={idx}
+                                className={`p-5 ${cardRadiusClass} bg-white border border-slate-200 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-4`}
+                              >
+                                <div className="flex items-center gap-4 min-w-0">
+                                  <div
+                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shrink-0 shadow-2xs"
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    <CompIcon className="w-5 h-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h5 className="text-sm font-bold text-slate-900 truncate">{svc.name}</h5>
+                                    <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{svc.description}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  {svc.price && <p className="text-sm font-black text-slate-900">₹{svc.price}</p>}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedService(svc.name);
+                                      setOpenBookingModal(true);
+                                    }}
+                                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 mt-1 ml-auto"
+                                  >
+                                    <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
+                      </div>
+                    );
+                  }
 
-                        {(data.showPrices !== false && svc.price) || data.showServiceButtons ? (
-                          <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 text-xs">
-                            {data.showPrices !== false && svc.price ? (
-                              <span className="font-bold text-slate-900">₹{svc.price}</span>
-                            ) : (
-                              <span />
+                  // 3. EDITORIAL SPLIT LIST (Left Spotlight + Right List)
+                  if (svcStyle === "SPLIT_LIST") {
+                    const spotlight = services[0];
+                    const others = services.slice(1);
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        {spotlight && (
+                          <div className={`lg:col-span-5 p-7 ${cardRadiusClass} bg-slate-50 border border-slate-200 shadow-sm space-y-5 sticky top-24`}>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200 inline-block">
+                              Core Treatment Spotlight
+                            </span>
+                            <h4 className="text-2xl font-black text-slate-900 leading-snug">{spotlight.name}</h4>
+                            <p className="text-xs text-slate-600 leading-relaxed">{spotlight.description}</p>
+                            {spotlight.price && (
+                              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                                <span className="text-xs text-slate-500 font-medium">Standard OPD Fee</span>
+                                <span className="text-lg font-black text-slate-900">₹{spotlight.price}</span>
+                              </div>
                             )}
-                            {data.showServiceButtons && (
+                            <button
+                              onClick={() => {
+                                setSelectedService(spotlight.name);
+                                setOpenBookingModal(true);
+                              }}
+                              className={`w-full text-white font-bold text-xs h-11 ${buttonRadiusClass} shadow-md flex items-center justify-center gap-1.5`}
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <Calendar className="w-4 h-4" />
+                              <span>Book Immediate Slot</span>
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="lg:col-span-7 divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                          {others.map((svc, idx) => (
+                            <div key={idx} className="p-5 flex items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
+                              <div className="space-y-1 min-w-0">
+                                <h5 className="text-sm font-bold text-slate-900">{svc.name}</h5>
+                                <p className="text-xs text-slate-500 line-clamp-2">{svc.description}</p>
+                              </div>
+                              <div className="text-right shrink-0 flex items-center gap-3">
+                                {svc.price && <span className="text-sm font-black text-slate-900">₹{svc.price}</span>}
+                                <button
+                                  onClick={() => {
+                                    setSelectedService(svc.name);
+                                    setOpenBookingModal(true);
+                                  }}
+                                  className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  <span>Book</span> <ArrowRight className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // 4. MINIMAL LIST (Clean hospital table-like rows)
+                  if (svcStyle === "MINIMAL_LIST") {
+                    return (
+                      <div className="max-w-4xl mx-auto divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        {services.map((svc, idx) => (
+                          <div key={idx} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-base font-bold text-slate-900">{svc.name}</h4>
+                                {svc.duration && (
+                                  <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-full">
+                                    {svc.duration}m
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 max-w-xl leading-relaxed">{svc.description}</p>
+                            </div>
+                            <div className="flex items-center gap-4 self-end sm:self-center shrink-0">
+                              {data.showPrices !== false && svc.price && (
+                                <span className="text-base font-black text-slate-900">₹{svc.price}</span>
+                              )}
                               <button
                                 onClick={() => {
                                   setSelectedService(svc.name);
                                   setOpenBookingModal(true);
                                 }}
-                                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                                className={`text-xs font-bold px-4 py-2 ${buttonRadiusClass} text-white shadow-xs inline-flex items-center gap-1`}
+                                style={{ backgroundColor: primaryColor }}
                               >
-                                <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                                <span>Book</span> <ArrowRight className="w-3 h-3" />
                               </button>
-                            )}
+                            </div>
                           </div>
-                        ) : null}
+                        ))}
                       </div>
                     );
-                  })}
-                </div>
+                  }
+
+                  // 5. ICON CARDS (Glowing Centered Badge Cards)
+                  if (svcStyle === "ICON_CARDS") {
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {services.map((svc, idx) => {
+                          const IconComponent = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-7 ${cardRadiusClass} bg-white border border-slate-200/90 shadow-2xs hover:shadow-xl transition-all space-y-4 text-center flex flex-col justify-between`}
+                            >
+                              <div className="space-y-3 flex flex-col items-center">
+                                <div
+                                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold shadow-md ring-4 ring-blue-50"
+                                  style={{ backgroundColor: primaryColor }}
+                                >
+                                  <IconComponent className="w-7 h-7" />
+                                </div>
+                                <h4 className="text-base font-bold text-slate-900">{svc.name}</h4>
+                                <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
+                              </div>
+                              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                                {data.showPrices !== false && svc.price ? (
+                                  <span className="font-bold text-slate-900">₹{svc.price}</span>
+                                ) : <span />}
+                                <button
+                                  onClick={() => {
+                                    setSelectedService(svc.name);
+                                    setOpenBookingModal(true);
+                                  }}
+                                  className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                                >
+                                  <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  // 6. DEFAULT 3-COLUMN CLINICAL GRID
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {services.map((svc, idx) => {
+                        const IconComponent = (svc.icon && ICON_MAP[svc.icon.toLowerCase()]) || Stethoscope;
+                        return (
+                          <div
+                            key={idx}
+                            style={d.cardBg ? { backgroundColor: d.cardBg } : undefined}
+                            className={`p-6 ${cardRadiusClass} border hover:shadow-lg transition-all space-y-4 flex flex-col justify-between ${
+                              themeId === "executive-private"
+                                ? "bg-neutral-900 border-amber-900/40 text-slate-200"
+                                : !d.cardBg
+                                ? "bg-slate-50/70 border-slate-200/80 hover:border-blue-300"
+                                : "border-slate-200"
+                            }`}
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                {svc.image ? (
+                                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                                    <img src={svc.image} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    <IconComponent className="w-5 h-5" />
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className={`text-base font-bold leading-snug ${themeId === "executive-private" ? "text-amber-100" : "text-slate-900"}`}>{svc.name}</h4>
+                                  {svc.duration && (
+                                    <p className="text-[11px] text-slate-400 font-medium">{svc.duration} mins</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p className="text-xs text-slate-600 leading-relaxed">{svc.description}</p>
+                            </div>
+
+                            {(data.showPrices !== false && svc.price) || data.showServiceButtons ? (
+                              <div className="flex items-center justify-between pt-3 border-t border-slate-200/80 text-xs">
+                                {data.showPrices !== false && svc.price ? (
+                                  <span className="font-bold text-slate-900">₹{svc.price}</span>
+                                ) : (
+                                  <span />
+                                )}
+                                {data.showServiceButtons && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedService(svc.name);
+                                      setOpenBookingModal(true);
+                                    }}
+                                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
+                                  >
+                                    <span>Consult</span> <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </section>,
             index
@@ -1833,8 +2170,89 @@ export function ThemeRenderer({
           );
         }
 
-        // 5. CTA CONVERSION BANNER
+        // 5. CTA CONVERSION BANNER & FORM CONTAINER
         if (section.type === "CTA_BANNER") {
+          // If this is a Form Container block
+          if (section.hasForm || section.formFields || section.formTitle) {
+            const formTitle = section.formTitle || section.title || "Request an Appointment / Consultation";
+            const formSub = section.formSubtitle || section.subtitle || "Leave your contact details and our patient care coordinator will call you back within 15 minutes.";
+            const btnText = section.formButtonText || section.ctaText || "Submit Appointment Request";
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : { backgroundColor: primaryColor }}
+                className="py-16 text-slate-900 relative overflow-hidden"
+              >
+                <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className={`p-8 sm:p-10 ${cardRadiusClass} bg-white border border-slate-200 shadow-2xl space-y-6 text-left`}>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100 inline-block">
+                        Direct OPD Inquiry Form
+                      </span>
+                      <h3 className="text-2xl font-black text-slate-900 tracking-tight">{formTitle}</h3>
+                      {formSub && <p className="text-xs text-slate-500 leading-relaxed">{formSub}</p>}
+                    </div>
+
+                    <form onSubmit={handleBookingSubmit} className="space-y-3.5">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 uppercase">Patient Full Name *</label>
+                        <Input
+                          value={patientName}
+                          onChange={(e) => setPatientName(e.target.value)}
+                          placeholder="e.g. Ramesh Kumar"
+                          required
+                          className={`h-11 ${buttonRadiusClass} text-xs mt-1 bg-slate-50`}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 uppercase">Phone / WhatsApp Number *</label>
+                          <Input
+                            value={patientPhone}
+                            onChange={(e) => setPatientPhone(e.target.value)}
+                            placeholder="e.g. 9876543210"
+                            required
+                            className={`h-11 ${buttonRadiusClass} text-xs mt-1 bg-slate-50`}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 uppercase">Select Department</label>
+                          <select
+                            value={selectedService}
+                            onChange={(e) => setSelectedService(e.target.value)}
+                            className={`w-full h-11 px-3 ${buttonRadiusClass} border border-slate-200 text-xs font-medium bg-slate-50 mt-1`}
+                          >
+                            <option value="">General Consultation</option>
+                            {services.map((s, idx) => (
+                              <option key={idx} value={s.name}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 uppercase">Preferred Timing / Clinical Query</label>
+                        <Input
+                          placeholder="e.g. Evening slot, second opinion, fever"
+                          className={`h-11 ${buttonRadiusClass} text-xs mt-1 bg-slate-50`}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className={`w-full text-white font-bold text-xs h-11 ${buttonRadiusClass} shadow-lg flex items-center justify-center gap-1.5 transition-transform hover:scale-[1.01] cursor-pointer`}
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>{btnText}</span>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
           return renderSectionContainer(
             section,
             <section
@@ -2030,18 +2448,326 @@ export function ThemeRenderer({
           );
         }
 
-        // 9. CUSTOM TEXT BLOCK
+        // 9. CUSTOM TEXT & MULTI-COLUMN LAYOUT BLOCK
         if (section.type === "CUSTOM_TEXT") {
+          const colLayout = section.columnLayout || d.columnLayout || (section.columnsCount === 2 ? "2col_5050" : section.columnsCount === 3 ? "3col" : section.isQuote ? "quote" : "1col");
+          const textAlign = d.textAlign || "center";
+          const alignClass = textAlign === "left" ? "text-left" : textAlign === "right" ? "text-right" : "text-center";
+
+          // A. DIVIDER BLOCK
+          if (colLayout === "divider" || section.content === "---") {
+            const bStyle = d.borderStyle || "solid";
+            const bWidth = d.borderWidth || 1;
+            const bColor = d.borderColor || "#E2E8F0";
+            return renderSectionContainer(
+              section,
+              <div
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+              >
+                <hr
+                  style={{
+                    borderStyle: bStyle,
+                    borderWidth: `${bWidth}px 0 0 0`,
+                    borderColor: bColor,
+                  }}
+                  className="w-full"
+                />
+              </div>,
+              index
+            );
+          }
+
+          // B. QUOTE BLOCK
+          if (colLayout === "quote" || section.isQuote) {
+            const quoteText = section.content || section.title || "The greatest medical care is delivered when clinical expertise meets compassionate listening.";
+            const author = section.quoteAuthor || section.doctorName || data.doctor?.name || "Dr. Vinay Kumar Rai";
+            const role = section.quoteRole || section.doctorSpecialty || data.doctor?.specialty || "Senior Consultant Specialist";
+            const isDarkCard = customBg && (customBg === "#0F172A" || customBg === "#09090B" || customBg.startsWith("#0") || customBg.startsWith("#1"));
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50/70" : ""}`}
+              >
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className={`p-8 sm:p-12 ${cardRadiusClass} border relative overflow-hidden text-center space-y-6 ${
+                    isDarkCard ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200/90 shadow-sm text-slate-900"
+                  }`}>
+                    {/* Decorative Quotation Mark */}
+                    <div className="text-6xl sm:text-7xl font-serif text-blue-500/20 select-none leading-none -mb-6">
+                      “
+                    </div>
+                    <blockquote className={`text-xl sm:text-2xl font-medium italic leading-relaxed max-w-2xl mx-auto ${
+                      isDarkCard ? "text-slate-100" : "text-slate-800"
+                    } ${data.fontHeading === "Playfair Display" ? "font-serif" : ""}`}>
+                      &ldquo;{quoteText}&rdquo;
+                    </blockquote>
+                    <div className="pt-2 flex flex-col items-center justify-center space-y-1">
+                      <p className={`font-bold text-sm tracking-wide ${isDarkCard ? "text-white" : "text-slate-900"}`}>
+                        {author}
+                      </p>
+                      <p className={`text-xs ${isDarkCard ? "text-slate-400" : "text-slate-500"}`}>
+                        {role}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // C. 2 COLUMNS 50/50
+          if (colLayout === "2col_5050") {
+            const cols = section.columns && section.columns.length >= 2 ? section.columns : [
+              {
+                title: section.title || "Specialized Diagnostic Care",
+                content: section.content || "Left column specialized treatments paired with detailed clinical guidance and evidence-based protocols.",
+                ctaText: section.ctaText,
+                ctaUrl: section.ctaAction,
+              },
+              {
+                title: section.subtitle || "Patient-Centered Outcomes",
+                content: "Personalized follow-ups, transparent pricing, and continuous health monitoring for you and your family.",
+                ctaText: "Learn More",
+                ctaUrl: "#services",
+              },
+            ];
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`py-16 border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+                  {section.title && (
+                    <div className="text-center space-y-2 max-w-2xl mx-auto">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title}</h3>
+                      {section.subtitle && <p className="text-sm text-slate-500">{section.subtitle}</p>}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                    {cols.map((col, cIdx) => (
+                      <div
+                        key={cIdx}
+                        className={`p-7 sm:p-8 ${cardRadiusClass} bg-slate-50 border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between space-y-4`}
+                      >
+                        <div className="space-y-3">
+                          {col.badge && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 inline-block">
+                              {col.badge}
+                            </span>
+                          )}
+                          <h4 className="text-xl font-bold text-slate-900">{col.title}</h4>
+                          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{col.content}</p>
+                        </div>
+                        {col.ctaText && (
+                          <div className="pt-2">
+                            <button
+                              onClick={() => handleCtaClick(col.ctaUrl || "BOOKING_MODAL")}
+                              className={`text-xs font-bold px-4 py-2 rounded-lg text-white shadow-xs inline-flex items-center gap-1.5`}
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <span>{col.ctaText}</span> <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // D. 2 COLUMNS 25/75 (Sidebar + Main Content)
+          if (colLayout === "2col_2575") {
+            const col1 = (section.columns && section.columns[0]) || {
+              title: "Quick Highlights",
+              content: "Verified clinical accreditations, digital reports, and direct WhatsApp consultations.",
+            };
+            const col2 = (section.columns && section.columns[1]) || {
+              title: section.title || "Comprehensive Clinical Approach",
+              content: section.content || "Our clinical staff is dedicated to precise diagnoses, patient comfort, and holistic health plans designed to restore your long-term wellness.",
+            };
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`py-16 border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <div className={`lg:col-span-4 p-6 ${cardRadiusClass} bg-slate-50 border border-slate-200/90 shadow-2xs space-y-3`}>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                        Sidebar Info
+                      </span>
+                      <h4 className="text-lg font-bold text-slate-900">{col1.title}</h4>
+                      <p className="text-xs text-slate-600 leading-relaxed">{col1.content}</p>
+                    </div>
+                    <div className="lg:col-span-8 space-y-4">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{col2.title}</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{col2.content}</p>
+                      {section.ctaText && (
+                        <div className="pt-2">
+                          <button
+                            onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL")}
+                            className={`text-xs font-bold px-5 py-2.5 rounded-lg text-white shadow-md inline-flex items-center gap-1.5`}
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            <span>{section.ctaText}</span> <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // E. 2 COLUMNS 75/25 (Main Content + Sidebar Card)
+          if (colLayout === "2col_7525") {
+            const col1 = (section.columns && section.columns[0]) || {
+              title: section.title || "Patient Care Standards",
+              content: section.content || "Experience advanced clinical consultations supported by cutting-edge medical technology and empathetic bedside care.",
+            };
+            const col2 = (section.columns && section.columns[1]) || {
+              title: "Consultation Notice",
+              content: "Appointments are scheduled to ensure zero waiting time. Emergency inquiries accepted 24/7.",
+            };
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`py-16 border-b border-slate-100 ${!customBg ? "bg-white" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <div className="lg:col-span-8 space-y-4">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{col1.title}</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{col1.content}</p>
+                      {section.ctaText && (
+                        <div className="pt-2">
+                          <button
+                            onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL")}
+                            className={`text-xs font-bold px-5 py-2.5 rounded-lg text-white shadow-md inline-flex items-center gap-1.5`}
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            <span>{section.ctaText}</span> <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className={`lg:col-span-4 p-6 ${cardRadiusClass} bg-slate-50 border border-slate-200/90 shadow-2xs space-y-3`}>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                        Notice
+                      </span>
+                      <h4 className="text-lg font-bold text-slate-900">{col2.title}</h4>
+                      <p className="text-xs text-slate-600 leading-relaxed">{col2.content}</p>
+                    </div>
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // F. 3 COLUMNS EQUAL
+          if (colLayout === "3col" || colLayout === "3col_hero") {
+            const cols = section.columns && section.columns.length >= 3 ? section.columns : [
+              {
+                title: "1. Diagnostic Precision",
+                content: "Thorough physical examination backed by advanced point-of-care laboratory screening.",
+              },
+              {
+                title: "2. Evidence-Based Plan",
+                content: "Personalized clinical treatment recommendations explained in clear, transparent language.",
+              },
+              {
+                title: "3. Continuous Recovery",
+                content: "Dedicated follow-ups, remote WhatsApp advice, and preventive wellness checks.",
+              },
+            ];
+
+            return renderSectionContainer(
+              section,
+              <section
+                style={customBg ? { backgroundColor: customBg } : undefined}
+                className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50/60" : ""}`}
+              >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+                  <div className="text-center space-y-2 max-w-2xl mx-auto">
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title || "Our Clinical Principles"}</h3>
+                    {section.subtitle && <p className="text-sm text-slate-500">{section.subtitle}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {cols.map((col, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-6 sm:p-7 ${cardRadiusClass} bg-white border border-slate-200/90 shadow-2xs hover:shadow-md transition-all space-y-3`}
+                      >
+                        <h4 className="text-lg font-bold text-slate-900">{col.title}</h4>
+                        <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{col.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>,
+              index
+            );
+          }
+
+          // G. DEFAULT 1 COLUMN / STORY TEXT
           return renderSectionContainer(
             section,
             <section
               style={customBg ? { backgroundColor: customBg } : undefined}
-              className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50" : ""}`}
+              className={`py-16 border-b border-slate-100 ${!customBg ? "bg-slate-50/50" : ""}`}
             >
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-center">
-                <h3 className="text-2xl font-bold text-slate-900">{section.title || "Custom Story & Information"}</h3>
+              <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 ${alignClass}`}>
+                {isBadgeVisible(section.badgeText) && (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block">
+                    {section.badgeText}
+                  </span>
+                )}
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{section.title || "Custom Story & Information"}</h3>
+                {section.subtitle && section.subtitle.trim().length > 0 && (
+                  <p className="text-sm sm:text-base text-slate-500 font-medium">{section.subtitle}</p>
+                )}
                 {section.content && section.content.trim().length > 0 && (
-                  <p className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">{section.content}</p>
+                  <p className="text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto whitespace-pre-line">{section.content}</p>
+                )}
+                {/* Video Player Embed if provided */}
+                {section.videoUrl && (
+                  <div className="pt-4 max-w-2xl mx-auto">
+                    <div className="aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-black">
+                      <iframe
+                        src={section.videoUrl.replace("watch?v=", "embed/")}
+                        title="Video Player"
+                        className="w-full h-full border-0"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                )}
+                {section.ctaText && (
+                  <div className="pt-3">
+                    <button
+                      onClick={() => handleCtaClick(section.ctaAction || "BOOKING_MODAL")}
+                      className={`text-xs font-bold px-6 py-2.5 rounded-lg text-white shadow-md inline-flex items-center gap-1.5`}
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <span>{section.ctaText}</span> <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
             </section>,
