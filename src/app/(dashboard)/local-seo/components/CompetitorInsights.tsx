@@ -437,7 +437,7 @@ export function CompetitorInsights() {
     neighborhood,
   } = useLocalSeoModule<any[]>('competitors', competitorParams);
 
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
 

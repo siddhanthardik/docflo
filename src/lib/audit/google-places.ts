@@ -424,50 +424,80 @@ export function isMatchingUserClinic(
   clinicName?: string,
   doctorName?: string
 ): boolean {
+  // 1. Exact Place ID Match (Ground Truth)
   const pId = place.id || (place as any).place_id || "";
   if (targetPlaceId && pId && targetPlaceId === pId) {
     return true;
   }
 
-  const pName = (place.displayName?.text || place.name || "").toLowerCase();
-  if (!pName) return false;
+  const pRawName = place.displayName?.text || place.name || "";
+  if (!pRawName) return false;
 
-  const cleanTarget = cleanDoctorOrPracticeName(targetName || "");
-  const cleanClinic = cleanDoctorOrPracticeName(clinicName || "");
-  const cleanDoctor = cleanDoctorOrPracticeName(doctorName || "");
+  const normalize = (str: string) =>
+    str
+      .toLowerCase()
+      .replace(/[.,\-/()|:–—_]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-  if (cleanTarget.length >= 3 && pName.includes(cleanTarget)) return true;
-  if (cleanClinic.length >= 3 && pName.includes(cleanClinic)) return true;
-  if (cleanDoctor.length >= 3 && pName.includes(cleanDoctor)) return true;
+  const stripDoctorPrefix = (str: string) =>
+    str.replace(/^(?:dr|doctor|prof|professor)\s+/i, "").trim();
 
-  // Distinctive token matching: only match unique proper nouns or surnames (e.g. "chandra", "maanvvi", "singh")
-  // Medical vocabulary must NEVER be used to identify a doctor practice!
-  const GENERIC_MEDICAL_WORDS = new Set([
-    "doctor", "clinic", "hospital", "centre", "center", "care", "specialist", 
-    "speciality", "specialty", "physician", "surgeon", "consultant", "services",
-    "kidney", "renal", "nephro", "nephrologist", "nephrology", "dialysis",
-    "gynae", "gynaec", "gynec", "gynecologist", "obstet", "obstetrics", "maternity", 
-    "pediatric", "child", "dental", "dentist", "ortho", "bone", "spine",
-    "cardio", "heart", "derma", "skin", "hair", "laser", "eye", "vision",
-    "ent", "neuro", "gastro", "liver", "cancer", "onco", "ayurved", "homeo",
-    "health", "healthcare", "medic", "medical", "medicine", "patna", "delhi",
-    "mumbai", "india", "road", "colony", "nagar", "market", "more"
-  ]);
+  const pNorm = normalize(pRawName);
+  const pClean = stripDoctorPrefix(pNorm);
+  const pTight = pNorm.replace(/\s+/g, "");
 
-  const extractTokens = (s: string) =>
-    s.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter(t => t.length >= 3 && !GENERIC_MEDICAL_WORDS.has(t));
+  // Candidate identities to test against this Google place
+  const candidates = [targetName, doctorName, clinicName].filter(Boolean) as string[];
 
-  const targetTokens = Array.from(new Set([
-    ...extractTokens(targetName || ""), 
-    ...extractTokens(clinicName || ""),
-    ...extractTokens(doctorName || "")
-  ]));
-  for (const token of targetTokens) {
-    if (token.length >= 4 && pName.includes(token)) {
+  for (const cand of candidates) {
+    const candNorm = normalize(cand);
+    const candClean = stripDoctorPrefix(candNorm);
+    const candTight = candNorm.replace(/\s+/g, "");
+
+    if (candClean.length < 3) continue;
+
+    // 2. Exact match
+    if (pNorm === candNorm || pClean === candClean || pTight === candTight) {
       return true;
+    }
+
+    // 3. Starts with doctor/clinic name
+    // e.g. "DR R K SINGH (MS FMAS...)" starts with "r k singh" or "dr r k singh"
+    if (candClean.length >= 4 && (pClean.startsWith(candClean) || pNorm.startsWith(candNorm) || pTight.startsWith(candTight))) {
+      return true;
+    }
+
+    // 4. Multi-word phrase containment (e.g. "r k singh", "chandra kidney clinic", "sarthi medical")
+    const words = candClean.split(" ").filter(w => w.length > 1);
+    if (words.length >= 2) {
+      if (pClean.includes(candClean) || pTight.includes(candTight)) {
+        return true;
+      }
+      // Also check space-separated initials (e.g. "r k singh" vs "rk singh")
+      const joinedNoSpace = words.join("");
+      if (pTight.includes(joinedNoSpace)) {
+        return true;
+      }
+    } else if (words.length === 1 && candClean.length >= 6) {
+      // Very specific single proper noun (e.g. "maanvvi")
+      const GENERIC_MEDICAL_WORDS = new Set([
+        "doctor", "clinic", "hospital", "centre", "center", "care", "specialist", 
+        "speciality", "specialty", "physician", "surgeon", "consultant", "services",
+        "kidney", "renal", "nephro", "nephrologist", "nephrology", "dialysis",
+        "gynae", "gynaec", "gynec", "gynecologist", "obstet", "obstetrics", "maternity", 
+        "bariatric", "laparoscopic", "vascular", "metabolic", "robotic", "robotics",
+        "laser", "stone", "gallbladder", "piles", "fistula", "hernia", "surgery",
+        "pediatric", "child", "dental", "dentist", "ortho", "bone", "spine",
+        "cardio", "heart", "derma", "skin", "hair", "eye", "vision",
+        "ent", "neuro", "gastro", "liver", "cancer", "onco", "ayurved", "homeo",
+        "health", "healthcare", "medic", "medical", "medicine", "patna", "delhi",
+        "mumbai", "india", "road", "colony", "nagar", "market", "more", "best", "near"
+      ]);
+      const w = words[0];
+      if (!GENERIC_MEDICAL_WORDS.has(w) && pClean.split(" ").includes(w)) {
+        return true;
+      }
     }
   }
 
