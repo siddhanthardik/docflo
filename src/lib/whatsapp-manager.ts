@@ -1694,12 +1694,32 @@ class WhatsAppManager {
               }
 
               // ── Shield 5: Self-Message / Note-to-Self Prevention ─────────────
-              const isOwnClinicPhone = isOwnerMatch || (sock.user?.id && this.isPhoneMatch(sock.user.id.split(':')[0], patientPhone));
-              if (isOwnClinicPhone) {
+              // True self-message occurs when the connected WhatsApp device sends a message to itself ("Message yourself").
+              const isDeviceItself = Boolean(sock.user?.id && this.isPhoneMatch(sock.user.id.split(':')[0], patientPhone));
+              if (isDeviceItself) {
                 const lowerCmd = textMessage.toLowerCase();
-                const isDoctorCommand = /(?:running\s+)?\d+\s*(?:mins?|minutes?|hr|hour)\s+late|cancel\s+(?:all\s+)?(?:today'?s?|evening|morning)?\s*(?:opd|appointments?)|(?:pause|stop|block)\s+(?:new\s+)?(?:booking|patient|opd)|resume\s+(?:normal\s+)?opd/i.test(lowerCmd);
-                if (!isDoctorCommand) {
-                  console.log(`[WhatsAppManager] 👤 Self-message from clinic owner phone (${patientPhone}) without doctor command. Bypassing AI auto-responder.`);
+                const isDoctorCommandOrQuery =
+                  // OPD & Schedule modification commands
+                  /(?:running\s+)?\d+\s*(?:mins?|minutes?|hr|hour|hours?)\s+late/i.test(lowerCmd) ||
+                  /late\s+by\s+\d+/i.test(lowerCmd) ||
+                  /cancel\s+(?:all\s+)?(?:today'?s?|evening|morning)?\s*(?:opd|appointments?)/i.test(lowerCmd) ||
+                  /emergency.*cancel/i.test(lowerCmd) ||
+                  /(?:pause|stop|block)\s+(?:new\s+)?(?:booking|patient|opd|appointment)/i.test(lowerCmd) ||
+                  /resume\s+(?:normal\s+)?opd/i.test(lowerCmd) ||
+                  /opd\s+active/i.test(lowerCmd) ||
+                  // Appointment & schedule inquiries (English & Hindi/Hinglish)
+                  /\b(?:appointment|appointments|schedule|slot|slots|booking|bookings|patient|patients|opd|timing|timings|status|update)\b/i.test(lowerCmd) ||
+                  /\b(?:kitne|kitna|kitni|aaj|kal|today|tomorrow|batao|dikhao|bataiye|dikhaye|tell\s+me|show|check|list|summary)\b/i.test(lowerCmd) ||
+                  /\b(?:mere|mera|meri|my|hamare|our)\b.*\b(?:appointment|patient|booking|schedule|slot)/i.test(lowerCmd) ||
+                  /\b(?:how\s+many|who\s+is\s+next|next\s+patient|kaun\s+hai|kiska\s+hai)\b/i.test(lowerCmd) ||
+                  // Delegated tasks & actions
+                  /\b(?:message|msg|tell|inform|remind|call|bhejo|bolo|bol\s+do|reschedule|shift|badlo|book|add)\b/i.test(lowerCmd) ||
+                  // Assistant addressing / greetings
+                  /\b(?:riya|assistant|receptionist|help|madad|suno|sunna)\b/i.test(lowerCmd) ||
+                  /^(?:hi|hello|hey|namaste)\b/i.test(lowerCmd.trim());
+
+                if (!isDoctorCommandOrQuery) {
+                  console.log(`[WhatsAppManager] 👤 Note-to-self on connected WhatsApp device (${patientPhone}) without clinic command or inquiry. Bypassing AI auto-responder.`);
                   return;
                 }
               }
@@ -2232,7 +2252,8 @@ class WhatsAppManager {
                   { 
                     doctorName: staffName,
                     clinicName: doctorInfo?.clinicName || undefined,
-                    assistantName: effectiveConfig?.assistantName || "Riya"
+                    assistantName: effectiveConfig?.assistantName || "Riya",
+                    timezone: staffClinicTz
                   }
                 );
               } else {
