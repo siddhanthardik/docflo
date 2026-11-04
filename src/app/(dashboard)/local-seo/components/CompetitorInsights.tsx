@@ -253,7 +253,8 @@ function CompetitorKeywords({
           lower.includes("kidney") ||
           (baseCategory && lower.includes(baseCategory.toLowerCase()))
         ) {
-          competitorTitleKeywords.push(part);
+          const cleanPart = part.replace(/\s+(?:in|near)\s+(?:delhi\s+ncr|delhi|new\s+delhi|ncr|india|[a-z\s]+)$/i, '').trim();
+          competitorTitleKeywords.push(cleanPart || part);
         }
       }
     });
@@ -669,7 +670,7 @@ export function CompetitorInsights() {
               <strong className="text-gray-900 font-bold">
                 {selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}
               </strong>{" "}
-              in {scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : "your immediate neighborhood (within 5 km)") : safeCity} (click to inspect)
+              {!selectedKeyword || !/\b(?:in|near)\b/i.test(selectedKeyword) ? `in ${scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : "your immediate neighborhood (within 5 km)") : safeCity} ` : ""}(click to inspect)
             </p>
             {isFetching && (
               <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/70 animate-pulse">

@@ -67,6 +67,26 @@ async function fetchNearbyPlaces(lat: number, lng: number, category: string, api
   return res.json();
 }
 
+function extractBaseSearchIntent(keyword: string, city?: string, neighborhood?: string): string {
+  let base = keyword.trim();
+  // Strip "near me"
+  base = base.replace(/\s+near\s+me\b/gi, "").trim();
+  // Strip duplicate or existing city/neighborhood tokens
+  if (city) {
+    const cityRe = new RegExp(`\\s+(?:in|near|at)\\s+${city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    base = base.replace(cityRe, "").trim();
+  }
+  if (neighborhood) {
+    const neighRe = new RegExp(`\\s+(?:in|near|at)\\s+${neighborhood.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    base = base.replace(neighRe, "").trim();
+  }
+  // Strip common city and metro suffix tokens (delhi ncr, south delhi, new delhi, patna, mumbai, etc.)
+  base = base.replace(/\s+(?:in|near|at)\s+(?:delhi\s+ncr|new\s+delhi|south\s+delhi|south\s+east\s+delhi|north\s+delhi|west\s+delhi|delhi|patna|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune|gurgaon|gurugram|noida|ghaziabad|faridabad|ncr)\b/gi, "").trim();
+  // Strip any trailing dangling preposition
+  base = base.replace(/\s+(?:in|near|at)$/gi, "").trim();
+  return base || keyword.trim();
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getSessionData();
@@ -229,21 +249,18 @@ export async function GET(request: Request) {
     if (customKeyword) {
       const city = extracted?.city;
       const neighborhood = extracted?.neighborhood;
+      const baseIntent = extractBaseSearchIntent(customKeyword, city, neighborhood);
 
-      if (scope === "local" && neighborhood) {
-        // In local scope, localize to immediate clinic neighborhood (e.g. "Best Gynecologist near Greater Kailash")
-        let baseKw = customKeyword;
-        if (city) {
-          const cityRegex = new RegExp(`\\s+(?:in|near)?\\s*${city}\\b`, 'gi');
-          baseKw = baseKw.replace(cityRegex, '').trim();
-        }
-        rawQuery = `${baseKw} near ${neighborhood}`;
+      if (scope === "local") {
+        rawQuery = neighborhood 
+          ? `${baseIntent} near ${neighborhood}` 
+          : (city ? `${baseIntent} near ${city}` : `${baseIntent} near me`);
       } else {
-        const alreadyHasLocation = city && customKeyword.toLowerCase().includes(city.toLowerCase());
-        rawQuery = alreadyHasLocation 
-          ? customKeyword 
-          : (city ? `${customKeyword} in ${city}` : customKeyword);
+        rawQuery = city 
+          ? `${baseIntent} in ${city}` 
+          : (baseIntent.toLowerCase().startsWith("best") ? baseIntent : `Best ${baseIntent}`);
       }
+      console.log(`[Competitors] Cleaned query: "${customKeyword}" -> baseIntent: "${baseIntent}" -> rawQuery: "${rawQuery}" (${scope})`);
     }
 
     // ── Live Google Places API call ───────────────────────────────────────────

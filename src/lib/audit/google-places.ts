@@ -562,9 +562,9 @@ export async function searchCompetitorsWithRank(
     };
 
     // Location Bias:
-    // In "local" scope (Near Clinic, within 5km), bias to the clinic's exact GPS so Google ranks by local proximity.
-    // In "city" scope, do NOT bias to the clinic's doorstep, because that distorts city-wide rankings (e.g. ranking a Rupaspur clinic #3 city-wide instead of #12).
-    // If the city-wide text query does not mention the city name, ground it with a broad metro bias.
+    // In "local" scope (Near Clinic), bias tightly (5km) to the clinic's GPS coordinates.
+    // In "city" scope, ALWAYS ground the search with a 30km metropolitan bias centered on the clinic GPS.
+    // This mirrors Google Maps web's viewport anchoring and prevents unanchored results spanning unrelated states.
     if (scope === "local" && location?.lat && location?.lng) {
       requestBody.locationBias = {
         circle: {
@@ -573,15 +573,12 @@ export async function searchCompetitorsWithRank(
         },
       };
     } else if (scope === "city" && location?.lat && location?.lng) {
-      const queryHasCity = locationContext && textQuery.toLowerCase().includes(locationContext.toLowerCase());
-      if (!queryHasCity) {
-        requestBody.locationBias = {
-          circle: {
-            center: { latitude: location.lat, longitude: location.lng },
-            radius: 30000,
-          },
-        };
-      }
+      requestBody.locationBias = {
+        circle: {
+          center: { latitude: location.lat, longitude: location.lng },
+          radius: 30000,
+        },
+      };
     }
 
     const res = await fetch(v1Url, {
@@ -737,9 +734,9 @@ export async function searchCompetitorsWithRank(
   // ── Fallback: Classic Text Search ──
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", textQuery);
-  if (scope === "local" && location?.lat && location?.lng) {
+  if (location?.lat && location?.lng) {
     url.searchParams.set("location", `${location.lat},${location.lng}`);
-    url.searchParams.set("radius", "5000");
+    url.searchParams.set("radius", scope === "local" ? "5000" : "30000");
   }
   url.searchParams.set("key", apiKey);
 
