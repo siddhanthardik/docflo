@@ -110,7 +110,13 @@ export async function GET(request: Request) {
     const insights = (account.insightsData as any) || {};
     const doctor = await prisma.doctor.findUnique({ where: { id: session.doctorId }, select: { specialty: true, clinicName: true, name: true } });
 
-    const bName = doctor?.clinicName || insights.name || profileData?.name || doctor?.name || account.locationName || "";
+    // Official Google Business Profile title has primary priority for Google Places matching & ranking
+    const gbpTitle = insights.name || profileData?.name || account.locationName || "";
+    const doctorName = doctor?.name || "";
+    const clinicFacilityName = doctor?.clinicName || "";
+
+    // Candidate base name: never let clinic facility building name replace the official doctor or GBP identity
+    const bName = gbpTitle || doctorName || clinicFacilityName || "Specialist Clinic";
     const rawCategories = insights.categories || profileData?.categories || [];
     const categoryNames: string[] = Array.isArray(rawCategories) 
       ? rawCategories.map((c: any) => typeof c === 'string' ? c : (c?.displayName || c?.name || ''))
@@ -125,7 +131,7 @@ export async function GET(request: Request) {
       placeData = await fetchPlaceDetails(verifiedPlaceId);
     }
     
-    const actualName = placeData?.name || bName;
+    const actualName = placeData?.name || gbpTitle || doctorName || bName;
     const actualCategories = placeData?.types || categoryNames;
     const locationStr = placeData?.formattedAddress || bAddr;
     const gbpPrimarySlug = placeData?.primaryType || null;
@@ -173,9 +179,18 @@ export async function GET(request: Request) {
 
     // Resolve doctor's actual Google Maps Place ID and verified ground-truth GPS
     if (apiKey && (!verifiedPlaceId || !lat || !lng)) {
-      const candidateName = doctor?.clinicName || actualName || bName || doctor?.name || "";
       const candidateAddress = fullAddress || bAddr || "";
-      const resolved = await resolveDoctorPlace(candidateName, candidateAddress);
+      // 1. Try official GBP title
+      let resolved = gbpTitle ? await resolveDoctorPlace(gbpTitle, candidateAddress) : null;
+      // 2. Try Doctor's personal name
+      if (!resolved && doctorName && doctorName !== gbpTitle) {
+        resolved = await resolveDoctorPlace(doctorName, candidateAddress);
+      }
+      // 3. Fallback to clinic facility name
+      if (!resolved && clinicFacilityName && clinicFacilityName !== gbpTitle && clinicFacilityName !== doctorName) {
+        resolved = await resolveDoctorPlace(clinicFacilityName, candidateAddress);
+      }
+
       if (resolved) {
         verifiedPlaceId = resolved.placeId;
         if (typeof resolved.lat === "number" && typeof resolved.lng === "number") {
@@ -234,15 +249,16 @@ export async function GET(request: Request) {
     // ── Live Google Places API call ───────────────────────────────────────────
     const searchRes = await searchCompetitorsWithRank(
       primaryCategory,
-      verifiedPlaceId || account.locationId || "",
-      actualName,
+      verifiedPlaceId || (account.locationId && !account.locationId.includes("/") ? account.locationId : ""),
+      gbpTitle || actualName,
       { lat, lng },
       locationContext,
       {
         scope,
         maxDistanceKm: scope === "local" ? 8 : 25,
         rawQuery,
-        clinicName: doctor?.clinicName || actualName,
+        clinicName: clinicFacilityName || undefined,
+        doctorName: doctorName || undefined,
       }
     );
 
@@ -271,7 +287,7 @@ export async function GET(request: Request) {
     if (!hasUserInCompetitors) {
       updatedNormalized.push({
         id: "you",
-        name: actualName || bName,
+        name: gbpTitle || actualName || doctorName || bName,
         rating: userRating,
         reviewCount: userReviews,
         rank: searchRes.userRank > 0 ? searchRes.userRank : 21,

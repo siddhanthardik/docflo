@@ -421,7 +421,8 @@ export function isMatchingUserClinic(
   place: { id?: string; displayName?: { text?: string }; name?: string },
   targetPlaceId?: string,
   targetName?: string,
-  clinicName?: string
+  clinicName?: string,
+  doctorName?: string
 ): boolean {
   const pId = place.id || (place as any).place_id || "";
   if (targetPlaceId && pId && targetPlaceId === pId) {
@@ -433,11 +434,13 @@ export function isMatchingUserClinic(
 
   const cleanTarget = cleanDoctorOrPracticeName(targetName || "");
   const cleanClinic = cleanDoctorOrPracticeName(clinicName || "");
+  const cleanDoctor = cleanDoctorOrPracticeName(doctorName || "");
 
   if (cleanTarget.length >= 3 && pName.includes(cleanTarget)) return true;
   if (cleanClinic.length >= 3 && pName.includes(cleanClinic)) return true;
+  if (cleanDoctor.length >= 3 && pName.includes(cleanDoctor)) return true;
 
-  // Distinctive token matching: only match unique proper nouns or surnames (e.g. "chandra", "maanvvi")
+  // Distinctive token matching: only match unique proper nouns or surnames (e.g. "chandra", "maanvvi", "singh")
   // Medical vocabulary must NEVER be used to identify a doctor practice!
   const GENERIC_MEDICAL_WORDS = new Set([
     "doctor", "clinic", "hospital", "centre", "center", "care", "specialist", 
@@ -457,7 +460,11 @@ export function isMatchingUserClinic(
       .split(/\s+/)
       .filter(t => t.length >= 3 && !GENERIC_MEDICAL_WORDS.has(t));
 
-  const targetTokens = Array.from(new Set([...extractTokens(targetName || ""), ...extractTokens(clinicName || "")]));
+  const targetTokens = Array.from(new Set([
+    ...extractTokens(targetName || ""), 
+    ...extractTokens(clinicName || ""),
+    ...extractTokens(doctorName || "")
+  ]));
   for (const token of targetTokens) {
     if (token.length >= 4 && pName.includes(token)) {
       return true;
@@ -478,6 +485,7 @@ export async function searchCompetitorsWithRank(
     maxDistanceKm?: number;
     rawQuery?: string;
     clinicName?: string;
+    doctorName?: string;
   }
 ): Promise<CompetitorSearchResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
@@ -566,7 +574,7 @@ export async function searchCompetitorsWithRank(
 
       for (let i = 0; i < rawPlaces.length; i++) {
         const p = rawPlaces[i];
-        if (isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName)) {
+        if (isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName, options?.doctorName)) {
           userClinicInResults = p;
           userIndex = i;
           break;
@@ -580,7 +588,7 @@ export async function searchCompetitorsWithRank(
       // ── Step 2: If in local scope and not in top 20, try tighter 3km local search ──
       let finalUserRank = userIndex !== -1 ? userIndex + 1 : 21;
 
-      if (scope === "local" && userIndex === -1 && (targetName || options?.clinicName) && originLat && originLng) {
+      if (scope === "local" && userIndex === -1 && (targetName || options?.clinicName || options?.doctorName) && originLat && originLng) {
         try {
           const secondaryRes = await fetch(v1Url, {
             method: "POST",
@@ -605,7 +613,7 @@ export async function searchCompetitorsWithRank(
             const secData = await secondaryRes.json();
             const secPlaces: any[] = secData.places || [];
             const secIdx = secPlaces.findIndex((p: any) =>
-              isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName)
+              isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName, options?.doctorName)
             );
             if (secIdx !== -1) {
               finalUserRank = secIdx + 1;
@@ -627,7 +635,7 @@ export async function searchCompetitorsWithRank(
         const pName = p.displayName?.text || "";
 
         // Check if this place is the doctor's own clinic
-        const isTargetClinic = isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName);
+        const isTargetClinic = isMatchingUserClinic(p, targetPlaceId, targetName, options?.clinicName, options?.doctorName);
 
         if (isTargetClinic) {
           competitors.push({
