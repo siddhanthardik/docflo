@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,10 +34,11 @@ interface Competitor {
   rank?: number;
 }
 
-function RankBadge({ rank = 1 }: { rank?: number }) {
-  const isOutsideTop20 = rank > 20;
-  const isGood = rank <= 3;
-  const isOk = rank <= 7;
+function RankBadge({ rank = 1 }: { rank?: number | null }) {
+  const safeRank = rank != null && !isNaN(Number(rank)) ? Number(rank) : 1;
+  const isOutsideTop20 = safeRank > 20;
+  const isGood = safeRank <= 3;
+  const isOk = safeRank <= 7;
   const color = isOutsideTop20
     ? "bg-gray-100 text-gray-600 border-gray-200"
     : isGood
@@ -48,20 +49,22 @@ function RankBadge({ rank = 1 }: { rank?: number }) {
 
   return (
     <span className={`inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold ${color}`}>
-      {isOutsideTop20 ? ">20" : `#${rank}`}
+      {isOutsideTop20 ? ">20" : `#${safeRank}`}
     </span>
   );
 }
 
-function ReviewCount({ count }: { count: number }) {
-  const color = count >= 200 ? "text-emerald-600" : count >= 50 ? "text-amber-600" : "text-red-500";
-  return <span className={`font-bold text-sm ${color}`}>{count ? count.toLocaleString() : 0}</span>;
+function ReviewCount({ count }: { count?: number | null }) {
+  const safeCount = Number(count) || 0;
+  const color = safeCount >= 200 ? "text-emerald-600" : safeCount >= 50 ? "text-amber-600" : "text-red-500";
+  return <span className={`font-bold text-sm ${color}`}>{safeCount.toLocaleString()}</span>;
 }
 
-function formatDistance(meters: number | null) {
-  if (meters == null || meters === 0) return "—";
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
+function formatDistance(meters: number | null | undefined) {
+  if (meters == null || isNaN(Number(meters)) || Number(meters) === 0) return "—";
+  const m = Number(meters);
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toFixed(1)} km`;
 }
 
 interface CompetitorAnalysis {
@@ -82,8 +85,9 @@ function getCompetitorIntelligence(
   doctorRating: number,
   primaryCategory: string
 ): CompetitorAnalysis {
-  const name = comp.name || "";
-  const cat = comp.category || primaryCategory || "Specialist Clinic";
+  const name = String(comp?.name || "Clinic");
+  const cat = String(comp?.category || primaryCategory || "Specialist Clinic");
+  const baseCategory = String(primaryCategory || "Specialist Clinic");
 
   // 1. Extract medical practice keywords from competitor's name dynamically (No hardcoded specialties)
   const detectedKeywords: string[] = [];
@@ -112,20 +116,21 @@ function getCompetitorIntelligence(
   }
 
   // Determine Primary Counter Keyword
-  let primaryCounterKeyword = detectedKeywords[0] || `${primaryCategory} near me`;
+  let primaryCounterKeyword = detectedKeywords[0] || `${baseCategory} near me`;
   if (primaryCounterKeyword.length > 30) {
     const subParts = primaryCounterKeyword.split(/[,|\-]/);
-    primaryCounterKeyword = subParts[0].trim();
+    primaryCounterKeyword = (subParts[0] || baseCategory).trim();
   }
 
-  const compReviewCount = Number(comp?.reviewCount) || 0;
-  const compRating = Number(comp?.rating) || 0;
-  const reviewGap = Math.max(0, compReviewCount - doctorReviewCount);
+  const compReviewCount = Math.max(0, Number(comp?.reviewCount) || 0);
+  const compRating = Math.max(0, Number(comp?.rating) || 0);
+  const reviewGap = Math.max(0, compReviewCount - (Number(doctorReviewCount) || 0));
   const hasKeywordInTitle = detectedKeywords.length > 0;
   const isHighVolumeLeader = compReviewCount >= 450;
   const isHighRatingLeader = compRating >= 4.9 && compReviewCount >= 100;
+  const catLower = baseCategory.toLowerCase();
 
-  if (hasKeywordInTitle && name.toLowerCase().includes((primaryCategory || "").toLowerCase())) {
+  if (hasKeywordInTitle && (catLower ? name.toLowerCase().includes(catLower) : false)) {
     return {
       signalBadge: {
         label: "Title Keyword & Speciality Match",
@@ -146,8 +151,8 @@ function getCompetitorIntelligence(
         color: "bg-amber-50 text-amber-700 border-amber-200",
       },
       explanation: `Ranks high due to an accumulated base of ${compReviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
-      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${cat}`, `${primaryCategory} Care`],
-      primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${cat}`, `${baseCategory} Care`],
+      primaryCounterKeyword: detectedKeywords[0] || baseCategory,
       counterActionNote: `Close their review lead by sending automated WhatsApp review requests to your recent patients. Consistent weekly reviews beat older static volumes.`,
       reviewGap
     };
@@ -160,8 +165,8 @@ function getCompetitorIntelligence(
         color: "bg-emerald-50 text-emerald-700 border-emerald-200",
       },
       explanation: `Maintains a strong ${compRating > 0 ? compRating.toFixed(1) : "5.0"}★ rating across ${compReviewCount} reviews, earning high algorithmic trust for positive patient outcomes.`,
-      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${primaryCategory}`, "5 Star Care"],
-      primaryCounterKeyword: detectedKeywords[0] || `Top ${primaryCategory}`,
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${baseCategory}`, "5 Star Care"],
+      primaryCounterKeyword: detectedKeywords[0] || `Top ${baseCategory}`,
       counterActionNote: `Showcase your patient success stories in Google Updates and keep collecting 5-star feedback to rival their sentiment score.`,
       reviewGap
     };
@@ -173,8 +178,8 @@ function getCompetitorIntelligence(
       color: "bg-blue-50 text-blue-700 border-blue-200",
     },
     explanation: `Verified provider of ${cat} within your local search radius (${formatDistance(comp?.distanceMeters ?? null)} away).`,
-    detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [primaryCategory, `${primaryCategory} near me`],
-    primaryCounterKeyword: detectedKeywords[0] || primaryCategory,
+    detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [baseCategory, `${baseCategory} near me`],
+    primaryCounterKeyword: detectedKeywords[0] || baseCategory,
     counterActionNote: `Target nearby patient searches by publishing weekly updates highlighting your clinic's services and location.`,
     reviewGap
   };
@@ -201,8 +206,8 @@ function CompetitorKeywords({
 
   // 1. Extract genuine medical search phrases from competitor titles (EXCLUDE hospital and doctor brand names)
   const competitorTitleKeywords: string[] = [];
-  const baseCategory = primaryCategory || "Specialist Clinic";
-  const cityStr = city || "your city";
+  const baseCategory = String(primaryCategory || "Specialist Clinic");
+  const cityStr = String(city || "Patna");
 
   (Array.isArray(competitors) ? competitors : [])
     .filter(c => c && !c.isYou)
@@ -246,7 +251,7 @@ function CompetitorKeywords({
           lower.includes("obstet") ||
           lower.includes("nephro") ||
           lower.includes("kidney") ||
-          lower.includes(baseCategory.toLowerCase())
+          (baseCategory && lower.includes(baseCategory.toLowerCase()))
         ) {
           competitorTitleKeywords.push(part);
         }
@@ -277,7 +282,7 @@ function CompetitorKeywords({
     ...actualSearchTerms,
   ];
 
-  dynamicKeywords = Array.from(new Set(dynamicKeywords.map(k => k.trim()))).filter(Boolean).slice(0, 8);
+  dynamicKeywords = Array.from(new Set(dynamicKeywords.map(k => String(k || "").trim()))).filter(Boolean).slice(0, 8);
 
   // Action Handlers
   const handleAddToGmbServices = async (kw: string) => {
@@ -436,6 +441,10 @@ export function CompetitorInsights() {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setExpandedPlaceId(null);
+  }, [scope, selectedKeyword]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -521,10 +530,13 @@ export function CompetitorInsights() {
     ? Math.max(0, (competitorAhead.reviewCount || 0) - (youRow.reviewCount || 0))
     : 0;
 
+  const safeCity = city || "Patna";
+  const safeNeighborhood = neighborhood || null;
+
   const displayQuery = queryUsed || (
     scope === "local" 
-      ? `${primaryCategory} near ${neighborhood || city || "your location"}`
-      : `Best ${primaryCategory} in ${city || "your city"}`
+      ? `${primaryCategory} near ${safeNeighborhood || safeCity || "your location"}`
+      : `Best ${primaryCategory} in ${safeCity}`
   );
   const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`;
 
@@ -548,7 +560,7 @@ export function CompetitorInsights() {
               Ranking for: <span className="text-indigo-600">&ldquo;{displayQuery}&rdquo;</span>
             </h3>
             <p className="text-xs text-gray-500">
-              Showing direct doctor peers in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : `${city} (Local Area)`) : `${city} (City-Wide)`}.
+              Showing direct doctor peers in {scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : `${safeCity} (Local Area)`) : `${safeCity} (City-Wide)`}.
             </p>
           </div>
 
@@ -657,7 +669,7 @@ export function CompetitorInsights() {
               <strong className="text-gray-900 font-bold">
                 {selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}
               </strong>{" "}
-              in {scope === "local" ? (neighborhood ? `${neighborhood}, ${city}` : "your immediate neighborhood (within 5 km)") : (city || "your city")} (click to inspect)
+              in {scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : "your immediate neighborhood (within 5 km)") : safeCity} (click to inspect)
             </p>
             {isFetching && (
               <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/70 animate-pulse">
@@ -705,7 +717,15 @@ export function CompetitorInsights() {
                         </p>
                       ) : competitorAhead && reviewsNeededToOvertake > 0 ? (
                         <p className="text-[11px] text-indigo-700 font-medium truncate mt-0.5 flex items-center gap-1">
-                          <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank ?? 1} ({competitorAhead.name})</span>
+                          <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank ?? 1} ({String(competitorAhead.name || "the clinic ahead")})</span>
+                        </p>
+                      ) : (comp.rank ?? 1) === 1 ? (
+                        <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                          <span>🏆 <strong>#1 Ranked Practice</strong> in your search area on Google Maps</span>
+                        </p>
+                      ) : competitorAhead ? (
+                        <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                          <span>📍 <strong>#{comp.rank ?? 1} in Map Pack</strong> with higher review volume ({comp.reviewCount || 0} reviews vs {competitorAhead.reviewCount || 0})</span>
                         </p>
                       ) : (
                         <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5">

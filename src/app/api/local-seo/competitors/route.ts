@@ -300,6 +300,10 @@ export async function GET(request: Request) {
       if (item.isYou) {
         if (seenYou) continue;
         seenYou = true;
+        if (placeIdKey) seenPlaceIds.add(placeIdKey);
+        if (cleanKey) seenNames.add(cleanKey);
+        deduplicatedNormalized.push(item);
+        continue;
       }
 
       if (placeIdKey && seenPlaceIds.has(placeIdKey)) continue;
@@ -310,15 +314,19 @@ export async function GET(request: Request) {
       deduplicatedNormalized.push(item);
     }
 
-    // Cache result in database
-    await prisma.competitorSnapshot.create({
-      data: {
-        gbpAccountId: account.id,
-        locationId: account.locationId || "",
-        date: new Date(),
-        json: JSON.parse(JSON.stringify(deduplicatedNormalized))
-      }
-    });
+    // Cache result in database (non-blocking for live API response)
+    try {
+      await prisma.competitorSnapshot.create({
+        data: {
+          gbpAccountId: account.id,
+          locationId: account.locationId || "",
+          date: new Date(),
+          json: JSON.parse(JSON.stringify(deduplicatedNormalized))
+        }
+      });
+    } catch (cacheErr) {
+      console.warn("[Competitors] Snapshot cache write failed (non-critical):", cacheErr);
+    }
 
     const finalQueryUsed = searchRes.textQueryUsed || (
       scope === "local"
