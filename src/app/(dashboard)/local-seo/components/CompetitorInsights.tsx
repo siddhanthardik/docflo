@@ -454,27 +454,6 @@ export function CompetitorInsights() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
-      </div>
-    );
-  }
-
-  if (!competitors || competitors.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <AlertCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-        <h3 className="text-base font-semibold text-gray-700 mb-1">No Competitor Data</h3>
-        <p className="text-sm text-gray-400 mb-4">Sync your profile to fetch nearby competitors from Google Places.</p>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh
-        </Button>
-      </div>
-    );
-  }
-
   const rawCompetitorList: any[] = Array.isArray(competitors) ? competitors : [];
   const youMatch = rawCompetitorList.find(c => c && c.isYou);
   const doctorName = overviewData?.name || overviewData?.businessName || youMatch?.name || "Your Clinic";
@@ -549,6 +528,27 @@ export function CompetitorInsights() {
     }
     return initial;
   }, [allRows, showAll, youRow]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+      </div>
+    );
+  }
+
+  if (!competitors || competitors.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+        <h3 className="text-base font-semibold text-gray-700 mb-1">No Competitor Data</h3>
+        <p className="text-sm text-gray-400 mb-4">Sync your profile to fetch nearby competitors from Google Places.</p>
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
