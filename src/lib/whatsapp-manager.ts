@@ -381,14 +381,29 @@ class WhatsAppManager {
     }
   }
 
+  // Runtime session file reader that prevents Next.js Turbopack / Webpack from statically indexing filesystem files
+  private readRuntimeSessionFile(dir: string, file: string): string | null {
+    try {
+      const fullPath = path.resolve(dir, file);
+      const readFn = (fs as any)['readFileSync'];
+      if (fs.existsSync(fullPath)) {
+        return readFn(fullPath, 'utf8');
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
   // Resolves a LID to a phone number using Baileys reverse mapping files
   async resolveLidToPhone(doctorId: string, lid: string): Promise<string> {
     try {
       const sessionDir = getDoctorSessionDir(doctorId);
-      const reverseMappingPath = path.join(sessionDir, `lid-mapping-${lid}_reverse.json`);
-      if (fs.existsSync(reverseMappingPath)) {
-        const rawPhone = JSON.parse(fs.readFileSync(reverseMappingPath, 'utf8'));
-        return rawPhone.replace('@s.whatsapp.net', '');
+      const fileName = `lid-mapping-${lid}_reverse.json`;
+      const raw = this.readRuntimeSessionFile(sessionDir, fileName);
+      if (raw) {
+        const rawPhone = JSON.parse(raw);
+        return String(rawPhone || '').replace('@s.whatsapp.net', '');
       }
     } catch (e) {
       console.error(`[WhatsAppManager] Failed to parse lid mapping for ${lid}:`, e);
