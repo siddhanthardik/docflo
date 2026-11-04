@@ -230,14 +230,18 @@ export function OverviewTab({
     : Array.isArray(keywordData)
     ? keywordData
     : [];
-  const defaultKeywords = [
-    { searchKeyword: "Pediatrician Near Me", isDiscovery: true },
-    { searchKeyword: "Dr Vinay Kumar Rai", isDiscovery: false },
-    { searchKeyword: "Pediatrician", isDiscovery: true },
-    { searchKeyword: "Vinay Kumar", isDiscovery: true },
-    { searchKeyword: "Child Specialist Near Me", isDiscovery: true },
+  const doctorCategory = overviewData?.primaryCategory || pData?.primaryCategory || "Specialist";
+  const doctorTitle = overviewData?.businessName || pData?.name || "";
+  const cleanDoctorName = doctorTitle.split(/[,|(–-]/)[0].replace(/^(?:dr|doctor)\.?\s+/i, "").trim();
+
+  const dynamicFallbackKeywords = [
+    { searchKeyword: `${doctorCategory} Near Me`, isDiscovery: true },
+    ...(cleanDoctorName ? [{ searchKeyword: `Dr. ${cleanDoctorName}`, isDiscovery: false }] : []),
+    { searchKeyword: `Best ${doctorCategory}`, isDiscovery: true },
+    { searchKeyword: `${doctorCategory} Clinic`, isDiscovery: true },
+    { searchKeyword: `Top ${doctorCategory} Specialist`, isDiscovery: true },
   ];
-  const keywordsList = rawKeywords.length > 0 ? rawKeywords : defaultKeywords;
+  const keywordsList = rawKeywords.length > 0 ? rawKeywords : dynamicFallbackKeywords;
 
   const handleTargetInPost = (kw: string) => {
     router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
@@ -250,7 +254,7 @@ export function OverviewTab({
   // ── 7. Profile Snapshot Attributes ─────────────────────────────────────────
   const servicesList = servicesData?.services || overviewData?.services || [];
   const activeServicesCount = servicesList.length || 10;
-  const primaryCategoryName = overviewData?.primaryCategory || pData?.primaryCategory || "Pediatrician";
+  const primaryCategoryName = overviewData?.primaryCategory || pData?.primaryCategory || "Specialist Clinic";
 
   let attributesCount = 0;
   if (pData.attributes) {
@@ -688,13 +692,31 @@ export function OverviewTab({
             </div>
 
             {/* Bottom Alert Banner */}
-            <div className="mt-3 p-3 bg-amber-50/70 rounded-xl border border-amber-200/60 text-xs flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-amber-900 block font-bold">No posts published this month.</strong>
-                <span className="text-amber-800 text-[11px]">Regular posts help keep your profile active and attract more patients.</span>
+            {thisMonth === 0 ? (
+              <div className="mt-3 p-3 bg-amber-50/70 rounded-xl border border-amber-200/60 text-xs flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-amber-900 block font-bold">No posts published this month.</strong>
+                  <span className="text-amber-800 text-[11px]">Regular posts help keep your profile active and attract more patients.</span>
+                </div>
               </div>
-            </div>
+            ) : thisMonth >= 4 ? (
+              <div className="mt-3 p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/60 text-xs flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-emerald-900 block font-bold">Monthly Target Reached ({thisMonth} of 4 posts)</strong>
+                  <span className="text-emerald-800 text-[11px]">Great job keeping your Google profile active with consistent updates!</span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 p-3 bg-indigo-50/70 rounded-xl border border-indigo-200/60 text-xs flex items-start gap-2.5">
+                <TrendingUp className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-indigo-900 block font-bold">{thisMonth} of 4 posts published this month</strong>
+                  <span className="text-indigo-800 text-[11px]">Publish {4 - thisMonth} more post{4 - thisMonth === 1 ? "" : "s"} to reach your recommended monthly target of 4 posts.</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

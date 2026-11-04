@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
@@ -47,6 +47,14 @@ export function LocalSeoDashboard() {
 
   const queryClient = useQueryClient();
   const loading = contextLoading || overviewLoading;
+
+  useEffect(() => {
+    const handleSynced = () => {
+      queryClient.invalidateQueries({ queryKey: ["local-seo"] });
+    };
+    window.addEventListener("gyrex:gbp-synced", handleSynced);
+    return () => window.removeEventListener("gyrex:gbp-synced", handleSynced);
+  }, [queryClient]);
 
   const runAnalysis = async () => {
     if (!activeLocationId) return;

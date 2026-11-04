@@ -43,6 +43,23 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           } else if (data.accounts.length > 0 && !activeLocationId) {
             setActiveLocationId(data.accounts[0].id);
           }
+
+          // Automatically sync Google Profile and Local SEO in the background on login/session start
+          // Rate-limited to once per 15 minutes per browser session
+          if (typeof window !== "undefined") {
+            const lastAutoSync = sessionStorage.getItem("gyrex_last_auto_sync");
+            const shouldAutoSync = !lastAutoSync || (Date.now() - Number(lastAutoSync)) > 15 * 60 * 1000;
+            if (shouldAutoSync) {
+              sessionStorage.setItem("gyrex_last_auto_sync", Date.now().toString());
+              fetch("/api/local-seo/sync", { method: "POST" })
+                .then(async (syncRes) => {
+                  if (syncRes.ok) {
+                    window.dispatchEvent(new CustomEvent("gyrex:gbp-synced"));
+                  }
+                })
+                .catch((err) => console.warn("[AutoSync] Background sync failed:", err));
+            }
+          }
         }
       } else {
         setConnected(false);

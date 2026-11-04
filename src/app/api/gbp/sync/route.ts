@@ -3,6 +3,7 @@ import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { GBPService } from "@/services/gbp.service";
 import { entitlementGuard } from "@/lib/withEntitlements";
+import { GoogleSyncEngine } from "@/services/sync-engine/GoogleSyncEngine";
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +18,13 @@ export async function POST(req: Request) {
         { error: "GBP account not connected" },
         { status: 404 }
       );
+    }
+
+    // Sync all Google snapshots (Profile, Performance, Keywords, Reviews, Posts, Q&A)
+    try {
+      await GoogleSyncEngine.syncAll(doctorId);
+    } catch (engineErr) {
+      console.warn("[gbp/sync] GoogleSyncEngine failed, continuing with direct sync:", engineErr);
     }
 
     const insights = tokenData.account.insightsData as any;
