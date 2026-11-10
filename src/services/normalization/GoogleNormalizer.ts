@@ -81,18 +81,25 @@ export class GoogleNormalizer {
   }
 
   /**
-   * Normalizes the Places API Nearby Search response with a strict 5,000m (5 km) filter,
-   * sorted by physical distance from the clinic's verified coordinates.
+   * Normalizes the Places API Nearby or Text Search response.
+   * - Nearby mode (default): enforces 5,000m filter and sorts by distance.
+   * - Keyword Ranking mode: preserves Google Places search order (observed position) and calculates distance from origin.
    */
   static normalizeCompetitors(
     rawPlaces: any, 
     originLat: number, 
     originLng: number, 
     targetName?: string,
-    targetPlaceId?: string
+    targetPlaceId?: string,
+    options?: {
+      maxDistanceMeters?: number;
+      sortByDistance?: boolean;
+    }
   ): NormalizedCompetitor[] {
     if (!rawPlaces || !rawPlaces.places || !Array.isArray(rawPlaces.places)) return [];
 
+    const maxDistance = options?.maxDistanceMeters !== undefined ? options.maxDistanceMeters : 5000;
+    const sortByDist = options?.sortByDistance !== undefined ? options.sortByDistance : true;
     const targetNormalized = GoogleNormalizer.normalizeName(targetName);
 
     const items: NormalizedCompetitor[] = [];
@@ -110,8 +117,8 @@ export class GoogleNormalizer {
         distanceMeters = 6371000 * c;
       }
 
-      // Hard filter: strictly discard competitors > 5,000 meters (5 km) away
-      if (distanceMeters > 5000) continue;
+      // Hard filter: discard competitors beyond maxDistance (if maxDistance > 0)
+      if (maxDistance > 0 && distanceMeters > maxDistance) continue;
 
       const isMatchPlaceId = Boolean(
         targetPlaceId && place.id && targetPlaceId === place.id
@@ -153,13 +160,15 @@ export class GoogleNormalizer {
       });
     }
 
-    // Factual default ordering: closest physical distance first
-    items.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    if (sortByDist) {
+      // Factual default ordering: closest physical distance first
+      items.sort((a, b) => a.distanceMeters - b.distanceMeters);
 
-    // Update rank indices to reflect distance ordering for downstream consumers
-    items.forEach((item, index) => {
-      item.rank = index + 1;
-    });
+      // Update rank indices to reflect distance ordering for downstream consumers
+      items.forEach((item, index) => {
+        item.rank = index + 1;
+      });
+    }
 
     return items;
   }

@@ -357,4 +357,89 @@ describe("Nearby Competitors (5 KM Radius) Architecture & Normalization", () => 
     const elapsedB = now - attempt65sAgo.getTime();
     expect(elapsedB < REFRESH_COOLDOWN_MS).toBe(false);
   });
+
+  it("12. in keyword ranking mode, retains competitors across metropolitan area (e.g. 15km) and preserves observed Google search order", () => {
+    const mockPlaces = {
+      places: [
+        {
+          id: "comp_far_metro_1",
+          displayName: { text: "Apex Super Specialty Hospital" },
+          location: { latitude: 28.6500, longitude: 77.2200 }, // ~14 km away from Saket
+          rating: 4.8,
+          userRatingCount: 500,
+        },
+        {
+          id: "comp_close_2",
+          displayName: { text: "Local Care Clinic" },
+          location: { latitude: 28.5250, longitude: 77.1860 }, // ~100m away
+          rating: 4.5,
+          userRatingCount: 80,
+        },
+      ],
+    };
+
+    const normalized = GoogleNormalizer.normalizeCompetitors(
+      mockPlaces,
+      clinicLat,
+      clinicLng,
+      clinicName,
+      clinicPlaceId,
+      { maxDistanceMeters: 0, sortByDistance: false } // Ranking mode options
+    );
+
+    expect(normalized.length).toBe(2);
+    // Preserves observed search order: comp_far_metro_1 was #1, comp_close_2 was #2
+    expect(normalized[0].placeId).toBe("comp_far_metro_1");
+    expect(normalized[0].rank).toBe(1);
+    expect(normalized[1].placeId).toBe("comp_close_2");
+    expect(normalized[1].rank).toBe(2);
+    // Distances are accurately calculated via Haversine
+    expect(normalized[0].distanceMeters).toBeGreaterThan(10000);
+    expect(normalized[1].distanceMeters).toBeLessThan(1000);
+  });
+
+  it("13. in keyword ranking mode, detects unranked clinic when not in top 20", () => {
+    const mockPlaces = {
+      places: [
+        {
+          id: "comp_1",
+          displayName: { text: "Competitor Practice A" },
+          location: { latitude: 28.5250, longitude: 77.1860 },
+          rating: 4.7,
+          userRatingCount: 110,
+        },
+        {
+          id: "comp_2",
+          displayName: { text: "Competitor Practice B" },
+          location: { latitude: 28.5260, longitude: 77.1870 },
+          rating: 4.3,
+          userRatingCount: 90,
+        },
+      ],
+    };
+
+    const normalized = GoogleNormalizer.normalizeCompetitors(
+      mockPlaces,
+      clinicLat,
+      clinicLng,
+      clinicName,
+      clinicPlaceId,
+      { maxDistanceMeters: 0, sortByDistance: false }
+    );
+
+    const clinicIndex = normalized.findIndex(c => c.isYou);
+    expect(clinicIndex).toBe(-1); // Not in top results
+    const inTop20 = clinicIndex !== -1;
+    const userRank = inTop20 ? clinicIndex + 1 : null;
+    expect(userRank).toBeNull();
+  });
+
+  it("14. computes factual review volume benchmark gap without speculative ranking claims", () => {
+    const doctorReviews = 75;
+    const competitorAheadReviews = 110;
+    const reviewGap = Math.max(0, competitorAheadReviews - doctorReviews);
+
+    expect(reviewGap).toBe(35);
+    // Verified: benchmark is purely numerical arithmetic (+35 reviews ahead)
+  });
 });

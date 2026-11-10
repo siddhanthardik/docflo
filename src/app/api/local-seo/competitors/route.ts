@@ -34,6 +34,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const forceRefresh = searchParams.get("refresh") === "true" || searchParams.get("forceRefresh") === "true";
+    const mode = searchParams.get("mode") || (searchParams.get("scope") === "nearby" ? "nearby" : "ranking");
+    const customKeyword = searchParams.get("keyword")?.trim() || "";
+    const scope = (searchParams.get("scope") || "city").toLowerCase() as "city" | "local" | "nearby";
 
     const authResult = await getValidGbpAccessToken(session.doctorId);
     if (!authResult) {
@@ -49,16 +52,17 @@ export async function GET(request: Request) {
       orderBy: { date: "desc" },
     });
 
-    const isCacheFresh = latestSnapshot && !forceRefresh && (
+    const isCacheFresh = latestSnapshot && !forceRefresh && !customKeyword && (
       (Date.now() - new Date(latestSnapshot.date).getTime()) < 24 * 60 * 60 * 1000 // 24 hours
     );
 
-    // If cache is fresh and not forcing refresh, return cached data directly (saves Google API calls)
+    // If cache is fresh and not forcing refresh or requesting custom keyword, return cached data directly
     if (isCacheFresh && Array.isArray(latestSnapshot.json) && latestSnapshot.json.length > 0) {
       return NextResponse.json({
         data: latestSnapshot.json,
         source: "Cached Local SEO Data",
-        radiusMeters: 5000,
+        mode,
+        radiusMeters: mode === "nearby" ? 5000 : undefined,
         lastUpdated: latestSnapshot.date.toISOString(),
       });
     }
@@ -206,7 +210,7 @@ export async function GET(request: Request) {
       "medical_clinic"
     );
 
-    // 4. Fetch Nearby Competitors (Strict 5,000m / 5 km Radius)
+    // 4. Fetch Competitors (Ranking mode or Nearby Directory mode)
     let refreshAuditRecordId: string | null = null;
     if (forceRefresh) {
       try {
@@ -218,6 +222,7 @@ export async function GET(request: Request) {
             details: {
               doctorId: session.doctorId,
               locationId: account.locationId || "",
+              mode,
             },
           },
         });
@@ -228,17 +233,39 @@ export async function GET(request: Request) {
     }
 
     let rawPlaces: any = null;
+    const isNearbyMode = mode === "nearby";
+    let queryToSearch = "";
+
     try {
-      rawPlaces = await GooglePlacesProvider.searchNearbyCompetitors(
-        lat,
-        lng,
-        primaryCategory,
-        apiKey,
-        5000, // Exactly 5 km
-        20    // Top authentic nearby places
-      );
+      if (isNearbyMode) {
+        rawPlaces = await GooglePlacesProvider.searchNearbyCompetitors(
+          lat,
+          lng,
+          primaryCategory,
+          apiKey,
+          5000, // Exactly 5 km
+          20
+        );
+      } else {
+        // Keyword Ranking Mode: preserve exact clinical query
+        queryToSearch = customKeyword || (
+          scope === "local"
+            ? `${primaryCategory} near me`
+            : `Best ${primaryCategory}`
+        );
+        const biasRadius = scope === "local" ? 5000 : 30000;
+
+        rawPlaces = await GooglePlacesProvider.searchTextCompetitors(
+          queryToSearch,
+          lat,
+          lng,
+          apiKey,
+          biasRadius,
+          20
+        );
+      }
     } catch (apiErr: any) {
-      console.warn("[Competitors] Google Places Nearby Search call failed:", apiErr.message);
+      console.warn("[Competitors] Google Places API call failed:", apiErr.message);
 
       // Release cooldown record if the Google Places API call failed so subsequent requests do not get trapped
       if (refreshAuditRecordId) {
@@ -254,7 +281,8 @@ export async function GET(request: Request) {
         return NextResponse.json({
           data: latestSnapshot.json,
           source: "Cached Local SEO Data (Live refresh unavailable)",
-          radiusMeters: 5000,
+          mode,
+          radiusMeters: isNearbyMode ? 5000 : undefined,
           clinicCoordinates: { lat, lng },
           lastUpdated: latestSnapshot.date.toISOString(),
           warning: "Could not fetch fresh live data from Google Places. Displaying previously saved snapshot.",
@@ -263,26 +291,34 @@ export async function GET(request: Request) {
 
       return NextResponse.json({
         error: "FETCH_FAILED",
-        message: "Unable to retrieve nearby competitors from Google Places API at this time.",
+        message: "Unable to retrieve competitors from Google Places API at this time.",
         data: [],
       }, { status: 502 });
     }
 
-    // 5. Normalize with strict 5km distance enforcement and distance ordering
+    // 5. Normalize results
     const normalizedCompetitors = GoogleNormalizer.normalizeCompetitors(
       rawPlaces,
       lat,
       lng,
       clinicName,
-      verifiedPlaceId || undefined
+      verifiedPlaceId || undefined,
+      {
+        maxDistanceMeters: isNearbyMode ? 5000 : 0, // In ranking mode, do not discard distant competitors
+        sortByDistance: isNearbyMode,              // In ranking mode, preserve observed Google Places search order
+      }
     );
 
     const userRating = Number(insights.rating) || (typeof profileData?.rating === "number" ? profileData.rating : 0);
     const userReviews = Number(insights.user_ratings_total) || (typeof profileData?.reviewCount === "number" ? profileData.reviewCount : 0);
 
+    // Determine clinic's observed rank in Google Places results
+    const clinicIndexInResults = normalizedCompetitors.findIndex((c) => c.isYou);
+    const inTop20 = clinicIndexInResults !== -1;
+    const userRank = inTop20 ? clinicIndexInResults + 1 : null;
+
     // 6. Ensure Clinic's own record (isYou: true) is preserved in the stored array for Opportunity Engine compatibility
-    const hasClinicInResults = normalizedCompetitors.some((c) => c.isYou);
-    if (!hasClinicInResults) {
+    if (!inTop20) {
       normalizedCompetitors.push({
         id: "you",
         placeId: verifiedPlaceId || account.locationId || "you",
@@ -300,7 +336,7 @@ export async function GET(request: Request) {
         hasPhotos: true,
         isOpenNow: true,
         distanceMeters: 0,
-        rank: 1,
+        rank: 21, // Maintained for backward-compatibility with Opportunity Engine
         isYou: true,
         lat,
         lng,
@@ -350,8 +386,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       data: deduplicatedNormalized,
-      source: "Google Places API (Nearby Search)",
-      radiusMeters: 5000,
+      source: isNearbyMode
+        ? "Google Places API (Nearby Search)"
+        : "Google Places API (Observed Search Position)",
+      mode,
+      queryUsed: isNearbyMode ? undefined : queryToSearch,
+      userRank: isNearbyMode ? undefined : userRank,
+      inTop20: isNearbyMode ? undefined : inTop20,
+      scope,
+      radiusMeters: isNearbyMode ? 5000 : undefined,
       clinicCoordinates: { lat, lng },
       lastUpdated: new Date().toISOString(),
     });

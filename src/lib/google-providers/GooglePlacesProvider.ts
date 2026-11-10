@@ -78,4 +78,69 @@ export class GooglePlacesProvider {
 
     return res.json();
   }
+
+  /**
+   * Searches competitors using natural language query via Google Places Text Search (New).
+   * Endpoint: POST https://places.googleapis.com/v1/places:searchText
+   * Uses locationBias (circular preference, NOT strict restriction) around the clinic coordinates.
+   */
+  static async searchTextCompetitors(
+    textQuery: string,
+    latitude: number,
+    longitude: number,
+    apiKey: string,
+    biasRadiusMeters: number = 30000,
+    maxResultCount: number = 20
+  ) {
+    const url = 'https://places.googleapis.com/v1/places:searchText';
+
+    const fieldMask = [
+      'places.id',
+      'places.displayName',
+      'places.rating',
+      'places.userRatingCount',
+      'places.primaryType',
+      'places.primaryTypeDisplayName',
+      'places.types',
+      'places.nationalPhoneNumber',
+      'places.internationalPhoneNumber',
+      'places.websiteUri',
+      'places.googleMapsUri',
+      'places.formattedAddress',
+      'places.regularOpeningHours',
+      'places.photos',
+      'places.location'
+    ].join(',');
+
+    const payload: any = {
+      textQuery,
+      maxResultCount,
+      locationBias: {
+        circle: {
+          center: {
+            latitude,
+            longitude,
+          },
+          radius: biasRadiusMeters,
+        },
+      },
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': fieldMask,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to search competitors with query "${textQuery}": ${res.status} ${errorText}`);
+    }
+
+    return res.json();
+  }
 }
