@@ -1,5 +1,18 @@
 export class GooglePlacesProvider {
   /**
+   * Maps human-readable or specialty categories to valid Google Places API (New) Table A types.
+   */
+  static mapCategoryToValidTypes(category: string): string[] {
+    const lower = (category || "").toLowerCase();
+    if (lower.includes("dent")) return ["dentist", "medical_clinic", "doctor"];
+    if (lower.includes("physio")) return ["physiotherapist", "medical_clinic", "doctor"];
+    if (lower.includes("pharm")) return ["pharmacy"];
+    if (lower.includes("hospital")) return ["hospital", "medical_clinic", "doctor"];
+    // Default valid Google Places Table A primary healthcare types
+    return ["doctor", "medical_clinic", "hospital"];
+  }
+
+  /**
    * Fetches nearby competitors for a given location using the New Places API.
    * Endpoint: POST https://places.googleapis.com/v1/places:searchNearby
    */
@@ -13,23 +26,29 @@ export class GooglePlacesProvider {
   ) {
     const url = 'https://places.googleapis.com/v1/places:searchNearby';
     
-    // We request the fields needed to build the Gap Analysis and Comparison UI
+    // Request fields needed for nearby competitor discovery, comparison, contact & directions
     const fieldMask = [
       'places.id',
       'places.displayName',
       'places.rating',
       'places.userRatingCount',
       'places.primaryType',
+      'places.primaryTypeDisplayName',
       'places.types',
       'places.nationalPhoneNumber',
+      'places.internationalPhoneNumber',
       'places.websiteUri',
+      'places.googleMapsUri',
+      'places.formattedAddress',
       'places.regularOpeningHours',
       'places.photos',
       'places.location'
     ].join(',');
 
+    const includedTypes = this.mapCategoryToValidTypes(primaryCategory);
+
     const payload = {
-      includedPrimaryTypes: [primaryCategory],
+      includedPrimaryTypes: includedTypes,
       maxResultCount,
       locationRestriction: {
         circle: {

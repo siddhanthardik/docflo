@@ -128,7 +128,13 @@ export class GoogleSyncEngine {
              apiKey
            );
            
-           const normalizedCompetitors = GoogleNormalizer.normalizeCompetitors(rawCompetitors, rawProfile.latlng.latitude, rawProfile.latlng.longitude);
+           const normalizedCompetitors = GoogleNormalizer.normalizeCompetitors(
+             rawCompetitors, 
+             rawProfile.latlng.latitude, 
+             rawProfile.latlng.longitude,
+             normalizedProfile.name,
+             account.locationId && !account.locationId.includes('/') ? account.locationId : undefined
+           );
            
            await prisma.competitorSnapshot.create({
              data: {

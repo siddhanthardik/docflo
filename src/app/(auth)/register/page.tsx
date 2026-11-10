@@ -72,7 +72,7 @@ function InputWrapper({
 }
 
 // ── Register page ─────────────────────────────────────────────────────────────
-export function RegisterPage() {
+function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();

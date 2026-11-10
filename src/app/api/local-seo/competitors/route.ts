@@ -5,86 +5,26 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
-import { detectSpeciality } from "@/lib/audit/healthcare-intelligence";
-import { searchCompetitorsWithRank, buildLocalSearchQuery, extractNeighborhood, fetchPlaceDetails, resolveDoctorPlace } from "@/lib/audit/google-places";
+import { GooglePlacesProvider } from "@/lib/google-providers/GooglePlacesProvider";
+import { GoogleNormalizer, NormalizedCompetitor } from "@/services/normalization/GoogleNormalizer";
+import { fetchPlaceDetails, resolveDoctorPlace } from "@/lib/audit/google-places";
 
 async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+  if (!address.trim()) return null;
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
-      const loc = data.results[0].geometry.location;
-      return { lat: loc.lat, lng: loc.lng };
+      const loc = data.results[0].geometry?.location;
+      if (typeof loc?.lat === "number" && typeof loc?.lng === "number") {
+        return { lat: loc.lat, lng: loc.lng };
+      }
     }
   } catch (e) {
     console.warn("[Competitors] Geocoding failed:", e);
   }
   return null;
-}
-
-async function fetchNearbyPlaces(lat: number, lng: number, category: string, apiKey: string) {
-  const url = 'https://places.googleapis.com/v1/places:searchText';
-
-  const fieldMask = [
-    'places.id',
-    'places.displayName',
-    'places.rating',
-    'places.userRatingCount',
-    'places.primaryType',
-    'places.nationalPhoneNumber',
-    'places.websiteUri',
-    'places.regularOpeningHours',
-    'places.photos',
-    'places.location'
-  ].join(',');
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': fieldMask,
-    },
-    body: JSON.stringify({
-      textQuery: category,
-      maxResultCount: 20,
-      locationBias: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: 5000,
-        }
-      }
-    })
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("[Competitors] Places API error:", res.status, errText);
-    return null;
-  }
-
-  return res.json();
-}
-
-function extractBaseSearchIntent(keyword: string, city?: string, neighborhood?: string): string {
-  let base = keyword.trim();
-  // Strip "near me"
-  base = base.replace(/\s+near\s+me\b/gi, "").trim();
-  // Strip duplicate or existing city/neighborhood tokens
-  if (city) {
-    const cityRe = new RegExp(`\\s+(?:in|near|at)\\s+${city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-    base = base.replace(cityRe, "").trim();
-  }
-  if (neighborhood) {
-    const neighRe = new RegExp(`\\s+(?:in|near|at)\\s+${neighborhood.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-    base = base.replace(neighRe, "").trim();
-  }
-  // Strip common city and metro suffix tokens (delhi ncr, south delhi, new delhi, patna, mumbai, etc.)
-  base = base.replace(/\s+(?:in|near|at)\s+(?:delhi\s+ncr|new\s+delhi|south\s+delhi|south\s+east\s+delhi|north\s+delhi|west\s+delhi|delhi|patna|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune|gurgaon|gurugram|noida|ghaziabad|faridabad|ncr)\b/gi, "").trim();
-  // Strip any trailing dangling preposition
-  base = base.replace(/\s+(?:in|near|at)$/gi, "").trim();
-  return base || keyword.trim();
 }
 
 export async function GET(request: Request) {
@@ -93,8 +33,7 @@ export async function GET(request: Request) {
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const scope = (searchParams.get("scope") || "city").toLowerCase() as "city" | "local";
-    const customKeyword = searchParams.get("keyword")?.trim() || undefined;
+    const forceRefresh = searchParams.get("refresh") === "true" || searchParams.get("forceRefresh") === "true";
 
     const authResult = await getValidGbpAccessToken(session.doctorId);
     if (!authResult) {
@@ -104,110 +43,119 @@ export async function GET(request: Request) {
     const { account } = authResult;
     const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-    if (!apiKey) {
-      // Fallback: return cached DB data if no API key
-      const snapshot = await prisma.competitorSnapshot.findFirst({
-        where: { gbpAccountId: account.id },
-        orderBy: { date: 'desc' }
-      });
+    // 1. Fetch latest cached snapshot if available
+    const latestSnapshot = await prisma.competitorSnapshot.findFirst({
+      where: { gbpAccountId: account.id },
+      orderBy: { date: "desc" },
+    });
+
+    const isCacheFresh = latestSnapshot && !forceRefresh && (
+      (Date.now() - new Date(latestSnapshot.date).getTime()) < 24 * 60 * 60 * 1000 // 24 hours
+    );
+
+    // If cache is fresh and not forcing refresh, return cached data directly (saves Google API calls)
+    if (isCacheFresh && Array.isArray(latestSnapshot.json) && latestSnapshot.json.length > 0) {
       return NextResponse.json({
-        data: (snapshot?.json as any[]) || [],
+        data: latestSnapshot.json,
         source: "Cached Local SEO Data",
-        lastUpdated: snapshot?.date || null
+        radiusMeters: 5000,
+        lastUpdated: latestSnapshot.date.toISOString(),
       });
     }
 
-    // Try to get lat/lng from latest profile snapshot
+    // Fallback to cache if no Google API key is configured
+    if (!apiKey) {
+      return NextResponse.json({
+        data: Array.isArray(latestSnapshot?.json) ? latestSnapshot.json : [],
+        source: "Cached Local SEO Data (No API Key)",
+        radiusMeters: 5000,
+        lastUpdated: latestSnapshot?.date?.toISOString() || null,
+      });
+    }
+
+    const REFRESH_COOLDOWN_MS = 60 * 1000; // 60-second cooldown for forced refresh requests
+
+    // 2. Server-side 60s refresh cooldown protection (cross-process, PM2-safe via prisma.auditLog)
+    if (forceRefresh) {
+      const lastRefreshAttempt = await prisma.auditLog.findFirst({
+        where: {
+          userId: account.id,
+          action: "LOCAL_SEO_COMPETITORS_REFRESH",
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (lastRefreshAttempt) {
+        const elapsed = Date.now() - new Date(lastRefreshAttempt.createdAt).getTime();
+        if (elapsed < REFRESH_COOLDOWN_MS) {
+          const remainingSeconds = Math.max(1, Math.ceil((REFRESH_COOLDOWN_MS - elapsed) / 1000));
+          return NextResponse.json(
+            {
+              error: "COOLDOWN_ACTIVE",
+              message: `Refresh is on cooldown. Please wait ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"} before requesting fresh data.`,
+              remainingSeconds,
+              data: Array.isArray(latestSnapshot?.json) ? latestSnapshot.json : [],
+              source: "Cached Local SEO Data (Cooldown Active)",
+              radiusMeters: 5000,
+              lastUpdated: latestSnapshot?.date?.toISOString() || null,
+            },
+            { status: 429 }
+          );
+        }
+      }
+    }
+
+    // 3. Resolve Clinic Profile & Verified Coordinates
     const profileSnap = await prisma.profileSnapshot.findFirst({
       where: { gbpAccountId: account.id },
-      orderBy: { date: 'desc' }
+      orderBy: { date: "desc" },
     });
 
-    const profileData = profileSnap?.json as any;
-    let lat: number | null = null;
-    let lng: number | null = null;
-
+    const profileData = (profileSnap?.json as any) || {};
     const insights = (account.insightsData as any) || {};
-    const doctor = await prisma.doctor.findUnique({ where: { id: session.doctorId }, select: { specialty: true, clinicName: true, name: true } });
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: session.doctorId },
+      select: { specialty: true, clinicName: true, name: true, phone: true },
+    });
 
-    // Official Google Business Profile title has primary priority for Google Places matching & ranking
     const gbpTitle = insights.name || profileData?.name || account.locationName || "";
     const doctorName = doctor?.name || "";
     const clinicFacilityName = doctor?.clinicName || "";
+    const clinicName = gbpTitle || doctorName || clinicFacilityName || "Specialist Clinic";
 
-    // Candidate base name: never let clinic facility building name replace the official doctor or GBP identity
-    const bName = gbpTitle || doctorName || clinicFacilityName || "Specialist Clinic";
-    const rawCategories = insights.categories || profileData?.categories || [];
-    const categoryNames: string[] = Array.isArray(rawCategories) 
-      ? rawCategories.map((c: any) => typeof c === 'string' ? c : (c?.displayName || c?.name || ''))
-      : [insights.primaryCategory, doctor?.specialty].filter(Boolean) as string[];
-
-    const bAddr = insights.formattedAddress || profileData?.address || "";
-    
-    // Fetch live Google Places data for exact category matching, same as Audit Report
-    let placeData = null;
     let verifiedPlaceId = (account.locationId && !account.locationId.includes("/")) ? account.locationId : "";
+    let placeData = null;
     if (verifiedPlaceId) {
       placeData = await fetchPlaceDetails(verifiedPlaceId);
     }
-    
-    const actualName = placeData?.name || gbpTitle || doctorName || bName;
-    const actualCategories = placeData?.types || categoryNames;
-    const locationStr = placeData?.formattedAddress || bAddr;
-    const gbpPrimarySlug = placeData?.primaryType || null;
-    const gbpDisplayName = placeData?.primaryTypeDisplayName || insights.primaryCategory || profileData?.primaryCategory || null;
 
-    const detected = detectSpeciality(
-      actualName, 
-      actualCategories, 
-      locationStr, 
-      gbpPrimarySlug, 
-      gbpDisplayName, 
-      placeData?.reviewsText || []
-    );
-    
-    let primaryCategory = !detected.isUnknown 
-      ? detected.speciality 
-      : (gbpDisplayName || insights.primaryCategory || doctor?.specialty || profileData?.primaryCategory || "Medical Clinic");
+    const fullAddress = placeData?.formattedAddress || insights.formattedAddress || profileData?.address || "";
+    let lat: number | null = null;
+    let lng: number | null = null;
 
-    if (gbpDisplayName && gbpDisplayName.toLowerCase() !== "doctor") {
-      primaryCategory = gbpDisplayName;
-    }
-
-    // Extract GPS coordinates — priority: live placeData GPS → insightsData location → profileSnapshot
-    const fullAddress = locationStr || insights.formattedAddress || profileData?.address || "";
+    // Prioritize ground-truth GPS coordinates from Google
     if (typeof placeData?.lat === "number" && typeof placeData?.lng === "number") {
       lat = placeData.lat;
       lng = placeData.lng;
-      console.log(`[Competitors] Using GPS from placeData: ${lat},${lng}`);
-    } else {
-      const insightLocation = (insights.location as any);
-      if (typeof insightLocation?.latitude === "number" && typeof insightLocation?.longitude === "number") {
-        lat = insightLocation.latitude;
-        lng = insightLocation.longitude;
-        console.log(`[Competitors] Using GPS from insightsData.location: ${lat},${lng}`);
-      } else if (typeof profileData?.lat === "number" && typeof profileData?.lng === "number") {
-        lat = profileData.lat;
-        lng = profileData.lng;
-        console.log(`[Competitors] Using GPS from profileSnapshot: ${lat},${lng}`);
-      } else if (typeof profileData?.location?.latitude === "number") {
-        lat = profileData.location.latitude;
-        lng = profileData.location.longitude;
-        console.log(`[Competitors] Using GPS from profileSnapshot.location: ${lat},${lng}`);
-      }
+    } else if (typeof insights.location?.latitude === "number" && typeof insights.location?.longitude === "number") {
+      lat = insights.location.latitude;
+      lng = insights.location.longitude;
+    } else if (typeof profileData?.lat === "number" && typeof profileData?.lng === "number") {
+      lat = profileData.lat;
+      lng = profileData.lng;
+    } else if (typeof profileData?.location?.latitude === "number" && typeof profileData?.location?.longitude === "number") {
+      lat = profileData.location.latitude;
+      lng = profileData.location.longitude;
     }
 
-    // Resolve doctor's actual Google Maps Place ID and verified ground-truth GPS
-    if (apiKey && (!verifiedPlaceId || !lat || !lng)) {
-      const candidateAddress = fullAddress || bAddr || "";
-      // 1. Try official GBP title
+    // Try resolving doctor place ID and GPS if still missing
+    if (!verifiedPlaceId || !lat || !lng) {
+      const candidateAddress = fullAddress || "";
       let resolved = gbpTitle ? await resolveDoctorPlace(gbpTitle, candidateAddress) : null;
-      // 2. Try Doctor's personal name
       if (!resolved && doctorName && doctorName !== gbpTitle) {
         resolved = await resolveDoctorPlace(doctorName, candidateAddress);
       }
-      // 3. Fallback to clinic facility name
-      if (!resolved && clinicFacilityName && clinicFacilityName !== gbpTitle && clinicFacilityName !== doctorName) {
+      if (!resolved && clinicFacilityName && clinicFacilityName !== gbpTitle) {
         resolved = await resolveDoctorPlace(clinicFacilityName, candidateAddress);
       }
 
@@ -216,117 +164,156 @@ export async function GET(request: Request) {
         if (typeof resolved.lat === "number" && typeof resolved.lng === "number") {
           lat = resolved.lat;
           lng = resolved.lng;
-          console.log(`[Competitors] Ground-truth GPS resolved from doctor place: ${lat},${lng} (${resolved.name})`);
         }
       }
     }
 
-    if (!lat || !lng) {
+    // Geocode physical address if coordinates remain missing
+    if ((!lat || !lng) && fullAddress) {
       const geocoded = await geocodeAddress(fullAddress, apiKey);
       if (geocoded) {
         lat = geocoded.lat;
         lng = geocoded.lng;
-        console.log(`[Competitors] GPS geocoded from address: ${lat},${lng}`);
-      } else {
-        lat = 28.5631;
-        lng = 77.1997;
-        console.warn(`[Competitors] WARNING: Using hardcoded fallback GPS. Address was: "${fullAddress}"`);
       }
     }
 
-    const extracted = await extractNeighborhood(fullAddress, apiKey);
-    let locationContext = undefined;
+    // STRICT REQUIREMENT: If verified clinic coordinates are unavailable, NEVER use browser, IP, or hardcoded coordinates.
+    // Return a clear, informative message asking the user to complete or verify their GBP location.
+    if (!lat || !lng) {
+      if (Array.isArray(latestSnapshot?.json) && latestSnapshot.json.length > 0) {
+        return NextResponse.json({
+          data: latestSnapshot.json,
+          source: "Cached Local SEO Data (Location Verification Required)",
+          radiusMeters: 5000,
+          lastUpdated: latestSnapshot.date.toISOString(),
+          warning: "Verified coordinates are missing from your Google Business Profile. Showing previously saved snapshot.",
+        });
+      }
 
-    if (extracted) {
-      locationContext = scope === "local"
-        ? (extracted.neighborhood || extracted.city || extracted.searchPhrase)
-        : (extracted.city || extracted.searchPhrase);
-      console.log(`[Competitors] Using ${scope} context for organic search: ${locationContext}`);
+      return NextResponse.json({
+        error: "NO_COORDINATES",
+        message: "Verified Google Business Profile coordinates are not available for your clinic. Please complete or verify your clinic address and location in Google Business Profile.",
+        data: [],
+      }, { status: 422 });
     }
 
-    // Optional raw query construction if custom keyword is chosen
-    let rawQuery: string | undefined = undefined;
-    if (customKeyword) {
-      const city = extracted?.city;
-      const neighborhood = extracted?.neighborhood;
-      const baseIntent = extractBaseSearchIntent(customKeyword, city, neighborhood);
-
-      if (scope === "local") {
-        rawQuery = neighborhood 
-          ? `${baseIntent} near ${neighborhood}` 
-          : (city ? `${baseIntent} near ${city}` : `${baseIntent} near me`);
-      } else {
-        rawQuery = city 
-          ? `${baseIntent} in ${city}` 
-          : (baseIntent.toLowerCase().startsWith("best") ? baseIntent : `Best ${baseIntent}`);
-      }
-      console.log(`[Competitors] Cleaned query: "${customKeyword}" -> baseIntent: "${baseIntent}" -> rawQuery: "${rawQuery}" (${scope})`);
-    }
-
-    // ── Live Google Places API call ───────────────────────────────────────────
-    const searchRes = await searchCompetitorsWithRank(
-      primaryCategory,
-      verifiedPlaceId || (account.locationId && !account.locationId.includes("/") ? account.locationId : ""),
-      gbpTitle || actualName,
-      { lat, lng },
-      locationContext,
-      {
-        scope,
-        maxDistanceKm: scope === "local" ? 8 : 25,
-        rawQuery,
-        clinicName: clinicFacilityName || undefined,
-        doctorName: doctorName || undefined,
-      }
+    // 3. Resolve Healthcare Primary Category
+    const primaryCategory = (
+      placeData?.primaryType ||
+      insights.primaryCategory ||
+      profileData?.primaryCategory ||
+      doctor?.specialty ||
+      "medical_clinic"
     );
 
-    const userRating = Number(insights.rating) || 4.9;
-    const userReviews = Number(insights.user_ratings_total) || 78;
+    // 4. Fetch Nearby Competitors (Strict 5,000m / 5 km Radius)
+    let refreshAuditRecordId: string | null = null;
+    if (forceRefresh) {
+      try {
+        const record = await prisma.auditLog.create({
+          data: {
+            userId: account.id,
+            userType: "CLINIC",
+            action: "LOCAL_SEO_COMPETITORS_REFRESH",
+            details: {
+              doctorId: session.doctorId,
+              locationId: account.locationId || "",
+            },
+          },
+        });
+        refreshAuditRecordId = record.id;
+      } catch (logErr) {
+        console.warn("[Competitors] Failed to record refresh audit log:", logErr);
+      }
+    }
 
-    const validCompetitors = searchRes.competitors || [];
-    const hasUserInCompetitors = validCompetitors.some((c: any) => c.isYou);
+    let rawPlaces: any = null;
+    try {
+      rawPlaces = await GooglePlacesProvider.searchNearbyCompetitors(
+        lat,
+        lng,
+        primaryCategory,
+        apiKey,
+        5000, // Exactly 5 km
+        20    // Top authentic nearby places
+      );
+    } catch (apiErr: any) {
+      console.warn("[Competitors] Google Places Nearby Search call failed:", apiErr.message);
 
-    // Structure normalized items for dashboard rendering without duplicate "YOU" entries
-    const updatedNormalized: any[] = validCompetitors.map((comp: any, idx: number) => ({
-      id: comp.placeId || `comp-${idx}`,
-      name: comp.name,
-      rating: comp.rating,
-      reviewCount: comp.reviewCount,
-      rank: comp.googlePosition ?? (idx + 1),
-      isYou: Boolean(comp.isYou),
-      placeId: comp.placeId || "",
-      distanceMeters: comp.isYou ? 0 : (comp.distanceMeters ?? null),
-      category: comp.category || comp.primaryType || primaryCategory,
-      formattedAddress: comp.formattedAddress || "",
-      primaryType: comp.primaryType || null,
-    }));
+      // Release cooldown record if the Google Places API call failed so subsequent requests do not get trapped
+      if (refreshAuditRecordId) {
+        try {
+          await prisma.auditLog.delete({ where: { id: refreshAuditRecordId } });
+        } catch (delErr) {
+          console.warn("[Competitors] Failed to delete failed refresh audit log:", delErr);
+        }
+      }
 
-    // If Google didn't return the clinic in the top results, append it once at userRank
-    if (!hasUserInCompetitors) {
-      updatedNormalized.push({
+      // Graceful fallback: return previously saved valid snapshot if refresh fails
+      if (Array.isArray(latestSnapshot?.json) && latestSnapshot.json.length > 0) {
+        return NextResponse.json({
+          data: latestSnapshot.json,
+          source: "Cached Local SEO Data (Live refresh unavailable)",
+          radiusMeters: 5000,
+          clinicCoordinates: { lat, lng },
+          lastUpdated: latestSnapshot.date.toISOString(),
+          warning: "Could not fetch fresh live data from Google Places. Displaying previously saved snapshot.",
+        });
+      }
+
+      return NextResponse.json({
+        error: "FETCH_FAILED",
+        message: "Unable to retrieve nearby competitors from Google Places API at this time.",
+        data: [],
+      }, { status: 502 });
+    }
+
+    // 5. Normalize with strict 5km distance enforcement and distance ordering
+    const normalizedCompetitors = GoogleNormalizer.normalizeCompetitors(
+      rawPlaces,
+      lat,
+      lng,
+      clinicName,
+      verifiedPlaceId || undefined
+    );
+
+    const userRating = Number(insights.rating) || (typeof profileData?.rating === "number" ? profileData.rating : 0);
+    const userReviews = Number(insights.user_ratings_total) || (typeof profileData?.reviewCount === "number" ? profileData.reviewCount : 0);
+
+    // 6. Ensure Clinic's own record (isYou: true) is preserved in the stored array for Opportunity Engine compatibility
+    const hasClinicInResults = normalizedCompetitors.some((c) => c.isYou);
+    if (!hasClinicInResults) {
+      normalizedCompetitors.push({
         id: "you",
-        name: gbpTitle || actualName || doctorName || bName,
+        placeId: verifiedPlaceId || account.locationId || "you",
+        name: clinicName,
         rating: userRating,
         reviewCount: userReviews,
-        rank: searchRes.userRank > 0 ? searchRes.userRank : 21,
-        isYou: true,
-        placeId: verifiedPlaceId || account.locationId || "",
-        distanceMeters: 0,
+        primaryCategory,
         category: primaryCategory,
+        phone: insights.phoneNumbers?.primaryPhone || profileData?.phone || doctor?.phone || "",
+        website: insights.websiteUri || profileData?.website || "",
+        googleMapsUri: verifiedPlaceId
+          ? `https://www.google.com/maps/place/?q=place_id:${verifiedPlaceId}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinicName)}`,
         formattedAddress: fullAddress || "",
-        primaryType: "doctor",
+        hasPhotos: true,
+        isOpenNow: true,
+        distanceMeters: 0,
+        rank: 1,
+        isYou: true,
+        lat,
+        lng,
       });
     }
 
-    // Sort by rank first
-    updatedNormalized.sort((a, b) => a.rank - b.rank);
-
-    // Strict deduplication: ensure only 1 row per unique name or placeId, and strictly 1 isYou row
+    // 7. Strict Deduplication by Google Place ID and normalized clinic name
     const seenPlaceIds = new Set<string>();
     const seenNames = new Set<string>();
     let seenYou = false;
 
-    const deduplicatedNormalized: any[] = [];
-    for (const item of updatedNormalized) {
+    const deduplicatedNormalized: NormalizedCompetitor[] = [];
+    for (const item of normalizedCompetitors) {
       const cleanKey = (item.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const placeIdKey = item.placeId && item.placeId !== "you" ? item.placeId : "";
 
@@ -347,36 +334,27 @@ export async function GET(request: Request) {
       deduplicatedNormalized.push(item);
     }
 
-    // Cache result in database (non-blocking for live API response)
+    // 8. Cache result in database as a direct JSON array (preserves Local SEO Opportunity Engine & Recommendations compatibility)
     try {
       await prisma.competitorSnapshot.create({
         data: {
           gbpAccountId: account.id,
           locationId: account.locationId || "",
           date: new Date(),
-          json: JSON.parse(JSON.stringify(deduplicatedNormalized))
-        }
+          json: JSON.parse(JSON.stringify(deduplicatedNormalized)),
+        },
       });
     } catch (cacheErr) {
       console.warn("[Competitors] Snapshot cache write failed (non-critical):", cacheErr);
     }
 
-    const finalQueryUsed = searchRes.textQueryUsed || (
-      scope === "local"
-        ? `${primaryCategory} near ${locationContext || "your location"}`
-        : `Best ${primaryCategory} in ${locationContext || "your city"}`
-    );
-
     return NextResponse.json({
       data: deduplicatedNormalized,
-      source: "Google Places API (Live Parity)",
-      queryUsed: finalQueryUsed,
-      scope: searchRes.scope || scope,
-      city: extracted?.city || "Patna",
-      neighborhood: extracted?.neighborhood || null,
-      lastUpdated: new Date().toISOString()
+      source: "Google Places API (Nearby Search)",
+      radiusMeters: 5000,
+      clinicCoordinates: { lat, lng },
+      lastUpdated: new Date().toISOString(),
     });
-
   } catch (error: any) {
     console.error("Competitors API Error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
