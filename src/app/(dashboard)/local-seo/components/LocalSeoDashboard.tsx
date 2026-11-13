@@ -239,14 +239,14 @@ export function LocalSeoDashboard() {
                   <Users className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">Local Competitor Analysis</h2>
+                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">Competitor Ranking & Intelligence</h2>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {overviewData?.primaryCategory || "Medical Clinic"} · Sorted by patient engagement
+                    {overviewData?.primaryCategory || "Healthcare Practice"} · Google Maps Competitor Positioning & Ranking
                   </p>
                 </div>
               </div>
               <div className="text-xs text-gray-400 bg-gray-50/80 rounded-xl px-3 py-1.5 border border-gray-100 font-medium">
-                From Google Places API
+                Google Places Ranking Engine
               </div>
             </div>
             <div className="p-4 sm:p-6">

@@ -2,15 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  MapPin, RefreshCw, Star, MessageSquare, 
-  ExternalLink, ChevronDown, ChevronUp, AlertCircle, 
-  Activity, Phone, Globe, ShieldAlert, CheckCircle2,
-  TrendingUp, Users, ArrowUpRight, Search, Plus, Edit3, X,
-  Compass, Award
-} from "lucide-react";
 import { useLocalSeoModule } from "@/hooks/use-local-seo";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus,
+  MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search,
+  Building2, X, Users, TrendingUp, Compass, Award, ShieldAlert
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,58 +27,47 @@ interface Competitor {
   rating: number;
   reviewCount: number;
   distanceMeters: number | null;
-  rank?: number;
-  isYou?: boolean;
+  isOpenNow?: boolean;
+  primaryType?: string;
   primaryCategory?: string;
   category?: string;
-  phone?: string;
-  website?: string;
-  googleMapsUri?: string;
   formattedAddress?: string;
-}
-
-function formatDistance(meters: number | null | undefined): string {
-  if (meters == null || isNaN(meters)) return "—";
-  if (meters < 1000) return `${meters} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
+  isYou?: boolean;
+  rank?: number;
+  googleMapsUri?: string;
 }
 
 function RankBadge({ rank = 1 }: { rank?: number | null }) {
-  if (rank == null || isNaN(Number(rank)) || Number(rank) > 20) {
-    return (
-      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-0.5 rounded-full border text-xs font-bold bg-gray-100 text-gray-600 border-gray-200">
-        &gt;20
-      </span>
-    );
-  }
-  const safeRank = Number(rank);
-  const color = safeRank <= 3
+  const safeRank = rank != null && !isNaN(Number(rank)) ? Number(rank) : null;
+  const isOutsideTop20 = safeRank == null || safeRank > 20;
+  const isGood = safeRank != null && safeRank <= 3;
+  const isOk = safeRank != null && safeRank <= 7;
+  const color = isOutsideTop20
+    ? "bg-gray-100 text-gray-600 border-gray-200"
+    : isGood
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : safeRank <= 7
+    : isOk
     ? "bg-amber-50 text-amber-700 border-amber-200"
     : "bg-rose-50 text-rose-700 border-rose-200";
 
   return (
     <span className={`inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-0.5 rounded-full border text-xs font-bold ${color}`}>
-      #{safeRank}
+      {isOutsideTop20 ? ">20" : `#${safeRank}`}
     </span>
   );
+}
+
+function ReviewCount({ count }: { count?: number | null }) {
+  const safeCount = Number(count) || 0;
+  const color = safeCount >= 200 ? "text-emerald-600" : safeCount >= 50 ? "text-amber-600" : "text-gray-700";
+  return <span className={`font-bold text-sm ${color}`}>{safeCount.toLocaleString()}</span>;
+}
+
+function formatDistance(meters: number | null | undefined): string {
+  if (meters == null || isNaN(Number(meters)) || Number(meters) === 0) return "—";
+  const m = Number(meters);
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toFixed(1)} km`;
 }
 
 interface CompetitorAnalysis {
@@ -102,10 +89,10 @@ function getCompetitorIntelligence(
   primaryCategory: string
 ): CompetitorAnalysis {
   const name = String(comp?.name || "Clinic");
-  const cat = String(comp?.category || primaryCategory || "Specialist Clinic");
+  const cat = String(comp?.category || comp?.primaryCategory || primaryCategory || "Specialist Clinic");
   const baseCategory = String(primaryCategory || "Specialist Clinic");
 
-  // Extract medical practice keywords from competitor's name
+  // Extract medical practice keywords from competitor's name dynamically
   const detectedKeywords: string[] = [];
   const rawSegments = name.split(/[|\-–,/·:]/).map(s => s.trim()).filter(Boolean);
 
@@ -147,13 +134,13 @@ function getCompetitorIntelligence(
   if (hasKeywordInTitle && (catLower ? name.toLowerCase().includes(catLower) : false)) {
     return {
       signalBadge: {
-        label: "Title Keyword Match",
+        label: "Title Keyword & Specialty Match",
         color: "bg-purple-50 text-purple-700 border-purple-200",
       },
-      explanation: `Listing title includes medical specialty terms (${detectedKeywords.slice(0, 2).join(", ")}), directly matching patient search intent.`,
+      explanation: `This clinic directly includes the specialty in its Google listing title (${detectedKeywords.slice(0, 2).join(", ")}), giving it algorithmic prominence in Map Pack results.`,
       detectedKeywords,
       primaryCounterKeyword,
-      counterActionNote: `Publish clinic updates focusing on "${primaryCounterKeyword}" and request patient reviews highlighting this care.`,
+      counterActionNote: `Strengthen your search prominence by drafting Google Updates focused on "${primaryCounterKeyword}" and requesting reviews highlighting your clinical care.`,
       reviewGap,
     };
   }
@@ -161,13 +148,13 @@ function getCompetitorIntelligence(
   if (isHighVolumeLeader) {
     return {
       signalBadge: {
-        label: "Review Volume Leader",
+        label: "Review Volume Authority Leader",
         color: "bg-amber-50 text-amber-700 border-amber-200",
       },
-      explanation: `Has accumulated ${compReviewCount} patient reviews (+${reviewGap} review difference vs your clinic).`,
+      explanation: `Ranks high due to an accumulated base of ${compReviewCount} patient reviews (+${reviewGap} ahead of your clinic), establishing long-term authority on Google.`,
       detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`${cat}`, `${baseCategory} Care`],
       primaryCounterKeyword: detectedKeywords[0] || baseCategory,
-      counterActionNote: `Close their review volume gap by requesting reviews via WhatsApp from recent consultations.`,
+      counterActionNote: `Close their review lead by sending automated review requests to your recent patients. Consistent weekly reviews beat older static volumes.`,
       reviewGap,
     };
   }
@@ -175,41 +162,44 @@ function getCompetitorIntelligence(
   if (isHighRatingLeader) {
     return {
       signalBadge: {
-        label: "High Rating Benchmark",
+        label: "High Sentiment & Quality Trust",
         color: "bg-emerald-50 text-emerald-700 border-emerald-200",
       },
-      explanation: `Maintains a ${compRating > 0 ? compRating.toFixed(1) : "5.0"}★ rating across ${compReviewCount} verified reviews.`,
-      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${baseCategory}`, "Patient Care"],
+      explanation: `Maintains a strong ${compRating > 0 ? compRating.toFixed(1) : "5.0"}★ rating across ${compReviewCount} reviews, earning high algorithmic trust for positive patient outcomes.`,
+      detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [`Top Rated ${baseCategory}`, "5 Star Care"],
       primaryCounterKeyword: detectedKeywords[0] || `Top ${baseCategory}`,
-      counterActionNote: `Highlight clinical treatment specializations in updates and collect patient reviews regularly.`,
+      counterActionNote: `Showcase your patient success stories in Google Updates and keep collecting 5-star feedback to rival their sentiment score.`,
       reviewGap,
     };
   }
 
   return {
     signalBadge: {
-      label: "Verified Healthcare Practice",
+      label: "Verified Specialty Competitor",
       color: "bg-blue-50 text-blue-700 border-blue-200",
     },
-    explanation: `Verified provider of ${cat} located ${formatDistance(comp?.distanceMeters ?? null)} from your clinic.`,
+    explanation: `Verified provider of ${cat} within your local search radius (${formatDistance(comp?.distanceMeters ?? null)} away).`,
     detectedKeywords: detectedKeywords.length > 0 ? detectedKeywords : [baseCategory, `${baseCategory} near me`],
     primaryCounterKeyword: detectedKeywords[0] || baseCategory,
-    counterActionNote: `Keep patient updates active with your clinic's services and consulting schedule.`,
+    counterActionNote: `Target nearby patient searches by publishing weekly updates highlighting your clinic's services and location.`,
     reviewGap,
   };
 }
 
-function CompetitorKeywords({ 
-  competitors, 
-  primaryCategory, 
+// Interactive Competitor Keyword Targeting Block (Fully Dynamic)
+function CompetitorKeywords({
+  competitors,
+  primaryCategory,
   keywordsData,
   activeKeyword,
+  city = "Delhi",
   onSelectKeyword,
-}: { 
-  competitors: Competitor[]; 
-  primaryCategory: string; 
+}: {
+  competitors: Competitor[];
+  primaryCategory: string;
   keywordsData: any;
   activeKeyword?: string | null;
+  city?: string;
   onSelectKeyword?: (kw: string) => void;
 }) {
   const router = useRouter();
@@ -217,6 +207,7 @@ function CompetitorKeywords({
 
   const competitorTitleKeywords: string[] = [];
   const baseCategory = String(primaryCategory || "Specialist Clinic");
+  const cityStr = String(city || "Delhi");
 
   (Array.isArray(competitors) ? competitors : [])
     .filter(c => c && !c.isYou)
@@ -246,12 +237,13 @@ function CompetitorKeywords({
           lower.includes("care") ||
           lower.includes("surgeon") ||
           lower.includes("pediatric") ||
-          lower.includes("dent") ||
-          lower.includes("cardio") ||
+          lower.includes("child") ||
           lower.includes("gynae") ||
+          lower.includes("dent") ||
           (baseCategory && lower.includes(baseCategory.toLowerCase()))
         ) {
-          competitorTitleKeywords.push(part);
+          const cleanPart = part.replace(/\s+(?:in|near)\s+(?:delhi\s+ncr|delhi|new\s+delhi|ncr|india|[a-z\s]+)$/i, '').trim();
+          competitorTitleKeywords.push(cleanPart || part);
         }
       }
     });
@@ -267,12 +259,15 @@ function CompetitorKeywords({
       const term = typeof kw === "string" ? kw : (kw?.searchKeyword || kw?.keyword || "");
       return typeof term === "string" ? term.trim() : "";
     })
-    .filter((k: string) => k.length > 3 && !k.toLowerCase().startsWith("dr ") && !k.toLowerCase().includes("clinic"));
+    .filter((k: string) => k.length > 3 && !k.toLowerCase().startsWith("dr ") && !k.toLowerCase().includes("clinic") && !k.toLowerCase().includes("hospital"));
 
   let dynamicKeywords = [
-    `Best ${baseCategory}`,
+    `Best ${baseCategory} in ${cityStr}`,
+    `${baseCategory} in ${cityStr}`,
     `${baseCategory} near me`,
-    ...competitorTitleKeywords.slice(0, 3),
+    `Best ${baseCategory} Doctor in ${cityStr}`,
+    `Top ${baseCategory} in ${cityStr}`,
+    ...competitorTitleKeywords.slice(0, 2),
     ...actualSearchTerms,
   ];
 
@@ -287,12 +282,12 @@ function CompetitorKeywords({
       });
       toast({
         title: "Added to GMB Services",
-        description: `"${kw}" has been added to your clinic services list and queued for GMB sync.`,
+        description: `"${kw}" has been added to your clinic services list and queued for GBP sync.`,
       });
     } catch {
       toast({
         title: "Service Added",
-        description: `"${kw}" queued for GMB service sync.`,
+        description: `"${kw}" queued for GBP service sync.`,
       });
     }
   };
@@ -300,7 +295,7 @@ function CompetitorKeywords({
   const handleUseInReviewReplies = (kw: string) => {
     toast({
       title: "Opening Reviews Inbox",
-      description: `Targeting "${kw}" in AI Review Assistant. Navigating to reviews...`,
+      description: `Targeting "${kw}" in AI Review Assistant.`,
     });
     router.push(`/reviews?targetKeyword=${encodeURIComponent(kw)}`);
   };
@@ -314,18 +309,18 @@ function CompetitorKeywords({
   };
 
   return (
-    <div className="p-4 bg-white rounded-2xl border border-gray-200/80 shadow-2xs space-y-2.5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-gray-100 pb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-            <Search className="w-3.5 h-3.5" />
+    <div className="p-4 sm:p-5 bg-white rounded-2xl border border-gray-200/80 shadow-2xs space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+            <Search className="w-4 h-4" />
           </div>
-          <h3 className="font-bold text-gray-900 text-xs sm:text-sm">Patient Search Term Intercept</h3>
+          <h3 className="font-bold text-gray-900 text-sm">Competitor Search Term Intercept</h3>
         </div>
-        <span className="text-[11px] text-gray-400 font-medium">Click any term to check observed rankings</span>
+        <span className="text-xs text-gray-400 font-medium">Click any term to check rankings or counter-target</span>
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-0.5">
+      <div className="flex flex-wrap gap-2 pt-1">
         {dynamicKeywords.map((kw, idx) => {
           const isActive = activeKeyword?.toLowerCase() === kw.toLowerCase();
 
@@ -340,8 +335,8 @@ function CompetitorKeywords({
                   <button
                     type="button"
                     onClick={() => onSelectKeyword?.(kw)}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1 cursor-pointer hover:opacity-90"
-                    title={isActive ? "Click to clear filter and reset" : `Click to view rankings for "${kw}"`}
+                    className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 cursor-pointer hover:opacity-90"
+                    title={isActive ? "Click to clear filter and reset" : `Click to view competitor rankings for "${kw}"`}
                   >
                     <span className={isActive ? "text-indigo-200 font-bold" : "text-indigo-400 font-semibold"}>#</span>
                     <span>{kw}</span>
@@ -353,18 +348,18 @@ function CompetitorKeywords({
                   <DropdownMenuTrigger asChild>
                     <button 
                       type="button"
-                      className={`pr-2 pl-1 py-1 cursor-pointer transition-colors ${
+                      className={`pr-2.5 pl-1 py-1.5 cursor-pointer transition-colors ${
                         isActive ? "hover:bg-indigo-700 text-indigo-200" : "hover:bg-indigo-100 text-indigo-400"
                       }`}
                     >
-                      <ChevronDown className="w-3 h-3" />
+                      <ChevronDown className="w-3 h-3 ml-0.5" />
                     </button>
                   </DropdownMenuTrigger>
                 </div>
 
                 <DropdownMenuContent align="start" className="w-64 bg-white border border-gray-100 shadow-lg rounded-xl p-1.5">
                   <DropdownMenuLabel className="text-xs text-gray-500 font-medium px-2 py-1">
-                    Action for &ldquo;{kw}&rdquo;
+                    Target Action for &ldquo;{kw}&rdquo;
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100 my-1" />
                   <DropdownMenuItem 
@@ -390,10 +385,10 @@ function CompetitorKeywords({
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleAddToGmbServices(kw)}
-                    className="text-xs rounded-lg cursor-pointer hover:bg-purple-50 focus:bg-purple-50 text-gray-800"
+                    className="text-xs rounded-lg cursor-pointer hover:bg-indigo-50 focus:bg-indigo-50 text-gray-800"
                   >
-                    <Plus className="w-4 h-4 mr-2 text-purple-600" />
-                    Add to GMB Services List
+                    <Plus className="w-4 h-4 mr-2 text-indigo-600" />
+                    Add to Clinic GMB Services
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -409,27 +404,32 @@ export function CompetitorInsights() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"ranking" | "nearby">("ranking");
+  const [viewMode, setViewMode] = useState<"ranking" | "nearby">("ranking");
+  const [scope, setScope] = useState<"city" | "local">("city");
   const [selectedKeyword, setSelectedKeyword] = useState<string>("");
   const [keywordInput, setKeywordInput] = useState<string>("");
-  const [scope, setScope] = useState<"city" | "local">("city");
   const [forceRefresh, setForceRefresh] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
+
+  // Collapse drawer when query or scope changes
+  useEffect(() => {
+    setExpandedPlaceId(null);
+  }, [scope, selectedKeyword, viewMode]);
 
   const competitorParams = useMemo<Record<string, string>>(() => {
     const params: Record<string, string> = {};
-    if (activeTab === "nearby") {
+    if (viewMode === "nearby") {
       params.mode = "nearby";
     } else {
       params.mode = "ranking";
+      params.scope = scope;
       if (selectedKeyword) params.keyword = selectedKeyword;
-      if (scope) params.scope = scope;
     }
     if (forceRefresh) params.refresh = "true";
     return params;
-  }, [activeTab, selectedKeyword, scope, forceRefresh]);
+  }, [viewMode, scope, selectedKeyword, forceRefresh]);
 
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
@@ -441,17 +441,23 @@ export function CompetitorInsights() {
     refetch,
     lastUpdated,
     queryUsed,
-  } = useLocalSeoModule<Competitor[]>('competitors', competitorParams);
+    city,
+    neighborhood,
+  } = useLocalSeoModule<any[]>('competitors', competitorParams);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     setForceRefresh(true);
     try {
       await refetch();
+      toast({
+        title: "Rankings Updated",
+        description: "Fresh competitor rankings fetched from Google Places.",
+      });
     } catch (err: any) {
       toast({
-        title: "Refresh Limited",
-        description: err?.message || "Please wait before requesting fresh data.",
+        title: "Refresh Error",
+        description: err?.message || "Failed to refresh competitor rankings.",
       });
     } finally {
       setRefreshing(false);
@@ -471,108 +477,131 @@ export function CompetitorInsights() {
     setKeywordInput("");
   };
 
-  const rawList: Competitor[] = Array.isArray(rawCompetitorList) ? rawCompetitorList : [];
-
-  // Identify clinic's own record
+  const rawList: any[] = Array.isArray(rawCompetitorList) ? rawCompetitorList : [];
   const youMatch = rawList.find(c => c && c.isYou);
   const doctorName = overviewData?.name || overviewData?.businessName || youMatch?.name || "Your Clinic";
   const doctorRating = Number(overviewData?.rating || overviewData?.avgRating) || (youMatch?.rating ? Number(youMatch.rating) : 0);
   const doctorReviewCount = Number(overviewData?.user_ratings_total || overviewData?.reviewCount || overviewData?.totalReviews) || (youMatch?.reviewCount ? Number(youMatch.reviewCount) : 0);
-  const primaryCategory = overviewData?.primaryCategory || youMatch?.category || youMatch?.primaryCategory || "Healthcare Practice";
+  const primaryCategory = overviewData?.primaryCategory || youMatch?.category || youMatch?.primaryCategory || "Specialist Clinic";
 
-  // Check observed ranking for ranking view
-  const inTop20 = Boolean(youMatch && youMatch.rank && youMatch.rank <= 20);
-  const observedUserRank = inTop20 ? youMatch?.rank : null;
+  // Build unified list without duplicates
+  const rawRows: Competitor[] = rawList
+    .filter(Boolean)
+    .map((c, i) => ({
+      placeId: c.placeId || `comp-${i}`,
+      name: c.name || "Clinic",
+      rating: Number(c.rating) || 0,
+      reviewCount: Number(c.reviewCount) || 0,
+      distanceMeters: c.isYou ? 0 : (c.distanceMeters != null ? Number(c.distanceMeters) : null),
+      rank: Number(c.rank) || i + 1,
+      isYou: Boolean(c.isYou),
+      primaryType: c.primaryType || null,
+      primaryCategory: c.primaryCategory || null,
+      category: c.category || c.primaryCategory || c.primaryType || primaryCategory,
+      formattedAddress: typeof c.formattedAddress === "string" ? c.formattedAddress : "",
+      googleMapsUri: c.googleMapsUri || "",
+    }));
 
-  // Filter out the clinic's own profile so it does not appear as a competitor card
-  const nearbyCompetitors = useMemo(() => {
-    const seen = new Set<string>();
-    const list: Competitor[] = [];
+  if (viewMode === "ranking") {
+    rawRows.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+  } else {
+    rawRows.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+  }
 
-    for (const c of rawList) {
-      if (!c || c.isYou) continue;
-      const cleanKey = (c.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const placeId = c.placeId || "";
-      if (placeId && seen.has(placeId)) continue;
-      if (cleanKey && seen.has(cleanKey)) continue;
+  // Deduplicate strictly
+  const seenPlaceIds = new Set<string>();
+  const seenNames = new Set<string>();
+  let hasYou = false;
 
-      if (placeId) seen.add(placeId);
-      if (cleanKey) seen.add(cleanKey);
+  const allRows: Competitor[] = [];
+  for (const row of rawRows) {
+    const cleanName = String(row.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const placeId = String(row.placeId || "");
 
-      list.push(c);
+    if (row.isYou) {
+      if (hasYou) continue;
+      hasYou = true;
     }
 
-    return list;
-  }, [rawList]);
+    if (placeId && placeId !== "you" && seenPlaceIds.has(placeId)) continue;
+    if (cleanName && seenNames.has(cleanName)) continue;
 
-  // Competitor immediately ahead for competitive review benchmark
-  const competitorAhead = useMemo(() => {
-    if (observedUserRank && observedUserRank > 1) {
-      return nearbyCompetitors.find(c => c.rank === observedUserRank - 1);
-    }
-    return nearbyCompetitors[0] || null;
-  }, [nearbyCompetitors, observedUserRank]);
+    if (placeId && placeId !== "you") seenPlaceIds.add(placeId);
+    if (cleanName) seenNames.add(cleanName);
+    allRows.push(row);
+  }
 
-  const reviewVolumeBenchmark = competitorAhead
-    ? Math.max(0, (competitorAhead.reviewCount || 0) - doctorReviewCount)
+  // Determine user's clinic and competitor immediately ahead
+  const youIndex = allRows.findIndex(r => r.isYou);
+  const youRow = youIndex !== -1 ? allRows[youIndex] : null;
+  const competitorAhead = youIndex > 0 ? allRows[youIndex - 1] : null;
+  const reviewsNeededToOvertake = competitorAhead && youRow
+    ? Math.max(0, (competitorAhead.reviewCount || 0) - (youRow.reviewCount || 0))
     : 0;
 
-  // Summary statistics for 5 km Directory mode
+  const safeCity = city || "Delhi";
+  const safeNeighborhood = neighborhood || null;
+
+  const displayQuery = queryUsed || selectedKeyword || (
+    scope === "local" 
+      ? `${primaryCategory} near ${safeNeighborhood || safeCity}`
+      : `Best ${primaryCategory} in ${safeCity}`
+  );
+
+  const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`;
+
+  // Filter out the clinic for 5 km directory calculation
+  const directoryCompetitors = useMemo(() => {
+    return allRows.filter(c => !c.isYou);
+  }, [allRows]);
+
   const stats = useMemo(() => {
-    if (nearbyCompetitors.length === 0) {
-      return { total: 0, avgRating: 0, avgReviews: 0, higherReviewedCount: 0, higherRatedCount: 0 };
+    if (directoryCompetitors.length === 0) {
+      return { total: 0, avgRating: 0, avgReviews: 0, higherReviewedCount: 0 };
     }
-
-    const total = nearbyCompetitors.length;
-    const ratedCompetitors = nearbyCompetitors.filter(c => typeof c.rating === "number" && c.rating > 0);
-    const avgRating = ratedCompetitors.length > 0
-      ? ratedCompetitors.reduce((acc, c) => acc + c.rating, 0) / ratedCompetitors.length
+    const total = directoryCompetitors.length;
+    const rated = directoryCompetitors.filter(c => typeof c.rating === "number" && c.rating > 0);
+    const avgRating = rated.length > 0
+      ? rated.reduce((acc, c) => acc + c.rating, 0) / rated.length
       : 0;
-
     const avgReviews = Math.round(
-      nearbyCompetitors.reduce((acc, c) => acc + (c.reviewCount || 0), 0) / total
+      directoryCompetitors.reduce((acc, c) => acc + (c.reviewCount || 0), 0) / total
     );
+    const higherReviewedCount = directoryCompetitors.filter(c => (c.reviewCount || 0) > doctorReviewCount).length;
+    return { total, avgRating, avgReviews, higherReviewedCount };
+  }, [directoryCompetitors, doctorReviewCount]);
 
-    const higherReviewedCount = nearbyCompetitors.filter(c => (c.reviewCount || 0) > doctorReviewCount).length;
-    const higherRatedCount = nearbyCompetitors.filter(c => (c.rating || 0) > doctorRating).length;
+  const displayList = useMemo(() => {
+    if (showAll) return allRows;
+    const initial = allRows.slice(0, 8);
+    if (youRow && !initial.some(r => r.isYou)) {
+      return [...initial, youRow];
+    }
+    return initial;
+  }, [allRows, showAll, youRow]);
 
-    return { total, avgRating, avgReviews, higherReviewedCount, higherRatedCount };
-  }, [nearbyCompetitors, doctorReviewCount, doctorRating]);
-
-  // Active query for Google Maps live verification
-  const activeQueryToVerify = queryUsed || selectedKeyword || primaryCategory;
-  const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeQueryToVerify)}`;
-
-  const displayedCompetitors = useMemo(() => {
-    return showAll ? nearbyCompetitors : nearbyCompetitors.slice(0, 8);
-  }, [nearbyCompetitors, showAll]);
-
-  if (isLoading) {
+  if (isLoading && !rawCompetitorList) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-20 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-xl" />
-          ))}
-        </div>
-        <div className="space-y-2 pt-2">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            <Skeleton key={i} className="h-14 w-full rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
-  // Error state: Missing clinic coordinates
+  // Location missing error
   if (error && error.message?.includes("NO_COORDINATES")) {
     return (
       <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-6 text-center space-y-3">
         <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
         <h3 className="text-base font-bold text-amber-900">Clinic Location Verification Required</h3>
         <p className="text-sm text-amber-700 max-w-lg mx-auto">
-          Verified coordinates are missing from your Google Business Profile. Please complete or verify your clinic address and location in Google Business Profile.
+          Verified coordinates are missing from your Google Business Profile. Please complete or verify your clinic address in Google Business Profile.
         </p>
         <div className="pt-2">
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="border-amber-300 text-amber-900 hover:bg-amber-100">
@@ -585,50 +614,38 @@ export function CompetitorInsights() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* ── Tab Switcher Header ── */}
-      <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Tab Navigation */}
-          <div className="inline-flex p-1 bg-gray-100/90 rounded-xl border border-gray-200/70 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setActiveTab("ranking")}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                activeTab === "ranking"
-                  ? "bg-white text-indigo-700 shadow-2xs font-bold"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Keyword Search Rankings</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("nearby")}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                activeTab === "nearby"
-                  ? "bg-white text-indigo-700 shadow-2xs font-bold"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              <span>5 km Nearby Directory</span>
-            </button>
+    <div className="space-y-6">
+      {/* ── CARD 1: SEARCH QUERY, SCOPE SWITCHER & LIVE VERIFICATION ── */}
+      <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
+        {/* Header Row: Measured Query & Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Measuring:</span>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
+                <span className="text-indigo-600">&ldquo;{displayQuery}&rdquo;</span>
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500">
+              Comparing your clinic against competing doctors and healthcare practices in {scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : `${safeCity} (Local Area)`) : `${safeCity} (Metropolitan Area)`}.
+            </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            {lastUpdated && (
-              <span className="text-xs text-gray-400 hidden lg:inline">
-                Updated {formatDate(lastUpdated)}
-              </span>
-            )}
+          <div className="flex items-center gap-2 self-start lg:self-center shrink-0">
+            <a
+              href={googleMapsVerifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50/60 border border-gray-200/80 transition-all shadow-2xs"
+            >
+              <span>Verify on Google Maps</span>
+              <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+            </a>
+
             <button
               onClick={handleRefresh}
               disabled={refreshing || isFetching}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100/70 border border-indigo-100 transition-all shadow-2xs cursor-pointer disabled:opacity-60"
-              title="Refresh search from Google Places"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing || isFetching ? "animate-spin" : ""}`} />
               <span>{refreshing || isFetching ? "Refreshing..." : "Refresh"}</span>
@@ -636,368 +653,498 @@ export function CompetitorInsights() {
           </div>
         </div>
 
-        {error && !error.message?.includes("NO_COORDINATES") && (
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 flex items-center gap-2 text-xs text-amber-800">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>{error.message === "COOLDOWN_ACTIVE" ? "Refresh is limited to once every 60 seconds. Please wait before refreshing again." : error.message}</span>
-          </div>
-        )}
-
-        {/* ── View 1: Keyword Ranking & Intelligence (Primary) ── */}
-        {activeTab === "ranking" && (
-          <div className="space-y-4 pt-1">
-            {/* Search Input Form */}
-            <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  placeholder={`Search clinical keyword (e.g., best ${primaryCategory.toLowerCase()} in your locality)...`}
-                  className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-900 placeholder:text-gray-400"
-                />
-                {keywordInput && (
-                  <button
-                    type="button"
-                    onClick={() => setKeywordInput("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs h-9 px-4">
-                  Check Rankings
-                </Button>
-                {selectedKeyword && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleClearKeyword}
-                    className="rounded-xl text-xs h-9 text-gray-600 border-gray-200"
-                  >
-                    Reset
-                  </Button>
-                )}
-              </div>
-            </form>
-
-            {/* Keyword Intercept Pills */}
-            <CompetitorKeywords
-              competitors={nearbyCompetitors}
-              primaryCategory={primaryCategory}
-              keywordsData={keywordsData}
-              activeKeyword={selectedKeyword}
-              onSelectKeyword={(kw) => {
-                if (selectedKeyword.toLowerCase() === kw.toLowerCase()) {
-                  handleClearKeyword();
-                } else {
-                  setSelectedKeyword(kw);
-                  setKeywordInput(kw);
-                }
-              }}
+        {/* Custom Keyword Input Form */}
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              placeholder={`Enter search keyword (e.g. best ${primaryCategory.toLowerCase()} in ${safeNeighborhood || safeCity})...`}
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-900 placeholder:text-gray-400"
             />
+            {keywordInput && (
+              <button
+                type="button"
+                onClick={() => setKeywordInput("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs h-9 px-4">
+              Check Rankings
+            </Button>
+            {selectedKeyword && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={handleClearKeyword}
+                className="rounded-xl text-xs h-9 text-gray-600 border-gray-200"
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </form>
 
-            {/* Observed Position & Review Benchmark Banner */}
-            <div className="p-4 bg-linear-to-r from-indigo-50/80 via-white to-indigo-50/40 rounded-2xl border border-indigo-100/90 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-500">Query Analyzed:</span>
-                    <span className="text-xs font-bold text-indigo-900 bg-indigo-100/80 px-2.5 py-0.5 rounded-full border border-indigo-200/60">
-                      &ldquo;{activeQueryToVerify}&rdquo;
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 pt-0.5">
-                    {inTop20 ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        Observed Search Position: #{observedUserRank} in Google Places results
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-xl">
-                        <AlertCircle className="w-3.5 h-3.5 text-gray-500" />
-                        Not found in first 20 results
-                      </span>
-                    )}
-                  </div>
-                </div>
+        {/* Scope Controls & Active Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Toggle: Keyword Ranking vs 5 km Nearby Directory */}
+            <div className="inline-flex p-1 bg-gray-100/90 rounded-2xl border border-gray-200/80 shadow-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode("ranking");
+                  setScope("city");
+                }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  viewMode === "ranking" && scope === "city"
+                    ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Entire City ({safeCity})</span>
+              </button>
 
-                <a
-                  href={googleMapsVerifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-200 hover:border-indigo-300 transition-all shadow-2xs shrink-0 self-start sm:self-auto"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Verify live on Google Maps</span>
-                </a>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode("ranking");
+                  setScope("local");
+                }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  viewMode === "ranking" && scope === "local"
+                    ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                <span>Near Clinic (Local Area)</span>
+              </button>
 
-              {/* Factual Review Volume Benchmark Note */}
-              {competitorAhead && reviewVolumeBenchmark > 0 && (
-                <div className="p-3 bg-white/80 rounded-xl border border-indigo-100 text-xs text-gray-700 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-gray-900">
-                    <Award className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Competitive Review Volume Benchmark</span>
-                  </div>
-                  <p className="text-gray-600">
-                    Practice immediately ahead (<strong>{competitorAhead.name}</strong>) has <strong>{competitorAhead.reviewCount}</strong> patient reviews (+{reviewVolumeBenchmark} difference vs your {doctorReviewCount} reviews). Reaching {competitorAhead.reviewCount} reviews represents your nearest review volume benchmark.
-                  </p>
-                  <p className="text-[11px] text-gray-400">
-                    Disclaimer: Review volume is a competitive benchmark; Google search rankings also depend on profile relevance, category alignment, and searcher proximity.
-                  </p>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setViewMode("nearby")}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  viewMode === "nearby"
+                    ? "bg-white text-emerald-800 shadow-sm border border-gray-200/70"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                <span>5 km Radius Directory</span>
+              </button>
             </div>
           </div>
-        )}
 
-        {/* ── View 2: 5 km Nearby Directory Summary Cards (Secondary) ── */}
-        {activeTab === "nearby" && (
-          <div className="space-y-4 pt-1">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-gray-900">Nearby Healthcare Practices Directory</h3>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                  <MapPin className="w-3 h-3 text-emerald-600" />
-                  Within 5 km
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Healthcare practices discovered within a fixed 5,000-metre radius of your verified Google Business Profile location, ordered by physical distance.
-              </p>
+          {selectedKeyword && (
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs">
+              <span className="text-gray-500 font-medium">Filter:</span>
+              <span className="font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md shadow-2xs border border-indigo-200/70">
+                &ldquo;{selectedKeyword}&rdquo;
+              </span>
+              <button
+                type="button"
+                onClick={handleClearKeyword}
+                className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 hover:underline cursor-pointer flex items-center gap-1"
+                title="Reset to default specialty ranking"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
             </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-1">
-                <span className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-indigo-500" />
-                  Nearby Practices
-                </span>
-                <p className="text-xl font-bold text-gray-900">{stats.total}</p>
-                <p className="text-[11px] text-gray-400">within 5 km radius</p>
-              </div>
-
-              <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-1">
-                <span className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  Average Rating
-                </span>
-                <p className="text-xl font-bold text-gray-900">
-                  {stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)}★` : "—"}
-                </p>
-                <p className="text-[11px] text-gray-400">
-                  Your rating: <strong>{doctorRating > 0 ? `${doctorRating.toFixed(1)}★` : "Unrated"}</strong>
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-1">
-                <span className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                  Average Reviews
-                </span>
-                <p className="text-xl font-bold text-gray-900">{stats.avgReviews}</p>
-                <p className="text-[11px] text-gray-400">
-                  Your reviews: <strong>{doctorReviewCount}</strong>
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-1">
-                <span className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                  More Reviews Than You
-                </span>
-                <p className="text-xl font-bold text-gray-900">
-                  {stats.higherReviewedCount} <span className="text-xs font-normal text-gray-500">of {stats.total}</span>
-                </p>
-                <p className="text-[11px] text-gray-400">
-                  {stats.higherReviewedCount === 0 ? "You lead in nearby reviews" : "Practices with higher volume"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── Competitors List Section ── */}
-      <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-gray-900 text-sm">
-              {activeTab === "ranking" ? "Observed Search Results" : "Discovered Nearby Practices"}
-            </h3>
-            <span className="text-xs text-gray-400">({nearbyCompetitors.length} listed)</span>
+      {/* ── CARD 2: COMPETITOR SEARCH TERM INTERCEPT ── */}
+      <CompetitorKeywords 
+        competitors={allRows} 
+        primaryCategory={primaryCategory} 
+        keywordsData={keywordsData} 
+        activeKeyword={selectedKeyword}
+        city={safeCity}
+        onSelectKeyword={(kw) => {
+          if (selectedKeyword.toLowerCase() === kw.toLowerCase()) {
+            handleClearKeyword();
+          } else {
+            setSelectedKeyword(kw);
+            setKeywordInput(kw);
+          }
+        }}
+      />
+
+      {/* ── VIEW 2 (OPTIONAL SUB-VIEW): 5 KM DIRECTORY SUMMARY CARDS ── */}
+      {viewMode === "nearby" && (
+        <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-100/90 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Nearby Healthcare Practices within 5 km</h4>
+              <p className="text-xs text-gray-500">
+                Discovered around your verified Google Business Profile coordinates, sorted by physical distance.
+              </p>
+            </div>
+            <span className="px-2.5 py-1 bg-white border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl">
+              5,000m Fixed Radius
+            </span>
           </div>
-          <span className="text-xs text-gray-400 font-medium hidden sm:inline">
-            {activeTab === "ranking" ? "Rank order observed from Google Places" : "Sorted by physical distance"}
-          </span>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
+              <span className="text-[11px] font-medium text-gray-400">Total Nearby</span>
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
+              <span className="text-[11px] font-medium text-gray-400">Average Rating</span>
+              <p className="text-lg font-bold text-gray-900">{stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)}★` : "—"}</p>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
+              <span className="text-[11px] font-medium text-gray-400">Average Reviews</span>
+              <p className="text-lg font-bold text-gray-900">{stats.avgReviews}</p>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
+              <span className="text-[11px] font-medium text-gray-400">Higher Reviews</span>
+              <p className="text-lg font-bold text-gray-900">{stats.higherReviewedCount} <span className="text-xs font-normal text-gray-400">of {stats.total}</span></p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CARD 3: RANKING LADDER & COMPETITOR ANALYSIS ── */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <p className="text-xs sm:text-sm text-gray-600 font-medium">
+              Competitors for{" "}
+              <strong className="text-gray-900 font-bold">
+                {selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}
+              </strong>{" "}
+              {!selectedKeyword || !/\b(?:in|near)\b/i.test(selectedKeyword) ? `in ${scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : "your local area") : safeCity} ` : ""}(click to inspect intelligence)
+            </p>
+            {isFetching && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/70 animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
+                <span>Checking live rankings...</span>
+              </span>
+            )}
+          </div>
         </div>
 
-        {nearbyCompetitors.length === 0 ? (
-          <div className="text-center py-12 px-4 space-y-2">
-            <AlertCircle className="w-8 h-8 text-gray-300 mx-auto" />
-            <p className="text-sm font-semibold text-gray-700">No competing practices found</p>
-            <p className="text-xs text-gray-400 max-w-md mx-auto">
-              No matching healthcare practices were returned for this query. Try searching with a broader specialty term or switching to the 5 km Nearby Directory.
-            </p>
+        {/* Table column headers */}
+        <div className="hidden md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+          <div>Business</div>
+          <div className="text-center">Rating</div>
+          <div className="text-center">Reviews</div>
+          <div className="text-center">Distance from Clinic</div>
+          <div className="text-center">Position</div>
+        </div>
+
+        {allRows.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+            <AlertCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-gray-700 mb-1">No Competitor Data Found</h3>
+            <p className="text-sm text-gray-400 mb-4">No matching clinics were found for this query. Try a broader search phrase.</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh
+            </Button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {displayedCompetitors.map((comp, idx) => {
-              const placeId = comp.placeId || `comp-${idx}`;
-              const isExpanded = expandedPlaceId === placeId;
-              const intelligence = getCompetitorIntelligence(comp, doctorReviewCount, doctorRating, primaryCategory);
-              const rankVal = comp.rank ?? idx + 1;
+          <div className={`space-y-1.5 transition-opacity duration-200 ${isFetching ? "opacity-60" : "opacity-100"}`}>
+            {displayList.map((comp, idx) => {
+              // ── HIGHLIGHTED "YOU" CLINIC ROW ──
+              if (comp.isYou) {
+                const isOutside = (comp.rank ?? 0) > 20;
 
-              return (
-                <div key={placeId} className="p-4 hover:bg-gray-50/60 transition-colors space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      {/* Rank badge */}
-                      <div className="pt-0.5 shrink-0">
-                        {activeTab === "ranking" ? (
-                          <RankBadge rank={rankVal} />
-                        ) : (
-                          <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full border text-xs font-semibold bg-gray-50 text-gray-600 border-gray-200">
-                            #{idx + 1}
-                          </span>
-                        )}
+                return (
+                  <div
+                    key={comp.placeId || "you-row"}
+                    className="flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3.5 items-center bg-gradient-to-r from-indigo-50/90 via-emerald-50/40 to-indigo-50/70 rounded-xl border border-indigo-200/90 shadow-2xs my-1.5"
+                  >
+                    <div className="min-w-0 w-full flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <Activity className="w-4 h-4" />
                       </div>
-
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-bold text-gray-900 truncate">
-                            {comp.name}
-                          </h4>
-                          {activeTab === "ranking" && (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border ${intelligence.signalBadge.color}`}>
-                              {intelligence.signalBadge.label}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                          <span className="text-gray-600 font-medium">
-                            {comp.category || comp.primaryCategory || "Healthcare Practice"}
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900 flex items-center gap-2 truncate">
+                          {comp.name}
+                          <span className="text-[10px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded-full shadow-2xs">
+                            YOU
                           </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 font-semibold text-gray-700">
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                            {typeof comp.rating === "number" && comp.rating > 0 ? comp.rating.toFixed(1) : "—"}
-                            <span className="font-normal text-gray-400">({comp.reviewCount || 0} reviews)</span>
-                          </span>
-                          <span>•</span>
-                          <span className="text-gray-500 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-gray-400" />
-                            {formatDistance(comp.distanceMeters)} away
-                          </span>
-                        </div>
+                        </p>
+                        {isOutside ? (
+                          <p className="text-[11px] text-amber-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                            <span>📍 <strong>Outside Top 20</strong> on Google for this search{competitorAhead && reviewsNeededToOvertake > 0 ? ` (Target: +${reviewsNeededToOvertake} reviews to challenge #${competitorAhead.rank ?? 1})` : ""}</span>
+                          </p>
+                        ) : competitorAhead && reviewsNeededToOvertake > 0 ? (
+                          <p className="text-[11px] text-indigo-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                            <span>🎯 Target: Needs <strong>{reviewsNeededToOvertake} reviews</strong> to catch up with #{competitorAhead.rank ?? 1} ({String(competitorAhead.name || "the clinic ahead")})</span>
+                          </p>
+                        ) : (comp.rank ?? 1) === 1 ? (
+                          <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                            <span>🏆 <strong>#1 Ranked Practice</strong> in your search area on Google Maps</span>
+                          </p>
+                        ) : competitorAhead ? (
+                          <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                            <span>📍 <strong>#{comp.rank ?? 1} in Results</strong> with {comp.reviewCount || 0} reviews vs {competitorAhead.reviewCount || 0} ahead</span>
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-emerald-700 font-medium truncate mt-0.5">
+                            Your official Google Business Profile
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                      {comp.googleMapsUri && (
-                        <a
-                          href={comp.googleMapsUri}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 transition-colors"
-                          title="Open in Google Maps"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {comp.website && (
-                        <a
-                          href={comp.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 border border-gray-200 transition-colors"
-                          title="Visit Website"
-                        >
-                          <Globe className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {comp.phone && (
-                        <a
-                          href={`tel:${comp.phone}`}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 transition-colors"
-                          title={`Call ${comp.phone}`}
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {activeTab === "ranking" && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedPlaceId(isExpanded ? null : placeId)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 transition-colors cursor-pointer"
-                        >
-                          <span>Analysis</span>
-                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        </button>
-                      )}
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                        <span className="text-sm font-bold text-gray-900">{Number(comp.rating) > 0 ? Number(comp.rating).toFixed(1) : "—"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Reviews</span>
+                      <span className="text-sm font-bold text-gray-900">{comp.reviewCount || 0}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Distance</span>
+                      <span className="text-xs text-gray-400 font-medium">—</span>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-bold ${
+                          isOutside 
+                            ? "bg-amber-50 border-amber-200 text-amber-700" 
+                            : "bg-indigo-100/90 border-indigo-200 text-indigo-700"
+                        }`}>
+                          {isOutside ? "Outside Top 20" : `#${comp.rank ?? 1}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // ── COMPETING DOCTOR / CLINIC ROW ──
+              const isExpanded = expandedPlaceId === comp.placeId;
+
+              return (
+                <div key={comp.placeId || idx} className="rounded-xl transition-all bg-white border border-gray-100">
+                  <div
+                    onClick={() => setExpandedPlaceId(prev => prev === comp.placeId ? null : comp.placeId)}
+                    className={`flex flex-col md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-2 md:gap-x-4 px-3.5 py-3 rounded-xl hover:bg-gray-50/80 transition-all cursor-pointer group items-center ${isExpanded ? "bg-gray-50/90 border-b border-gray-200/80" : ""}`}
+                  >
+                    <div className="min-w-0 w-full flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50/70 flex items-center justify-center text-indigo-500 shrink-0 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                        <Activity className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                            {comp.name}
+                          </p>
+                        </div>
+                        {comp.formattedAddress && (
+                          <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                            {comp.formattedAddress.replace(/, India$/i, "")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Rating</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                        <span className="text-sm font-semibold text-gray-800">
+                          {Number(comp.rating) > 0 ? Number(comp.rating).toFixed(1) : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Reviews</span>
+                      <ReviewCount count={comp.reviewCount} />
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Distance</span>
+                      <span className="text-xs text-gray-500 font-medium">
+                        {formatDistance(comp.distanceMeters)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between md:justify-center w-full md:w-auto">
+                      <span className="text-xs text-gray-400 md:hidden font-medium">Position</span>
+                      <div className="flex items-center gap-3">
+                        <RankBadge rank={comp.rank} />
+                        <span className="text-gray-400 group-hover:text-indigo-500 transition-colors">
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Expanded Competitor Intelligence Card (Ranking mode) */}
-                  {activeTab === "ranking" && isExpanded && (
-                    <div className="p-3.5 bg-gray-50/90 rounded-xl border border-gray-200/80 text-xs space-y-2.5 pt-3">
-                      <div className="space-y-1">
-                        <span className="font-semibold text-gray-700">Observation:</span>
-                        <p className="text-gray-600">{intelligence.explanation}</p>
-                      </div>
+                  {/* Expandable Strategy & Competitor Intelligence Drawer */}
+                  {isExpanded && (() => {
+                    const intel = getCompetitorIntelligence(comp, doctorReviewCount, doctorRating, primaryCategory);
+                    const compMapsUrl = comp.googleMapsUri || (
+                      comp.placeId 
+                        ? `https://www.google.com/maps/place/?q=place_id:${comp.placeId}` 
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp.name)}`
+                    );
 
-                      <div className="space-y-1">
-                        <span className="font-semibold text-gray-700">Recommended Countermeasure:</span>
-                        <p className="text-indigo-950 bg-indigo-50/70 p-2 rounded-lg border border-indigo-100">
-                          {intelligence.counterActionNote}
-                        </p>
-                      </div>
+                    return (
+                      <div className="p-4 bg-gray-50/50 rounded-b-xl border-t border-gray-100 space-y-3.5 animate-in fade-in duration-200">
+                        {/* Top Bar: Clinic Name + Verified Details + Google Maps Button */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-200/60">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-bold text-gray-900 text-sm">{comp.name}</p>
+                              {comp.category && !["doctor", "physician", "health"].includes(String(comp.category).toLowerCase()) && (
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {comp.category}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-2 flex-wrap">
+                              <span>{comp.reviewCount} patient reviews</span>
+                              <span>·</span>
+                              <span>{Number(comp.rating) > 0 ? `${Number(comp.rating).toFixed(1)}★ rating` : "Unrated"}</span>
+                              {comp.distanceMeters != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>{formatDistance(comp.distanceMeters)} away</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <a
+                            href={compMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-xl text-xs font-semibold text-gray-700 hover:text-indigo-700 shadow-2xs transition-colors shrink-0"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                            View on Google Maps
+                          </a>
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(intelligence.primaryCounterKeyword)}`)}
-                          className="text-xs h-7 rounded-lg border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                        >
-                          <Edit3 className="w-3 h-3 mr-1 text-indigo-600" />
-                          Draft Update for &ldquo;{intelligence.primaryCounterKeyword}&rdquo;
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/reviews?targetKeyword=${encodeURIComponent(intelligence.primaryCounterKeyword)}`)}
-                          className="text-xs h-7 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        >
-                          <MessageSquare className="w-3 h-3 mr-1 text-emerald-600" />
-                          Target in Review Replies
-                        </Button>
+                        {/* Identified Algorithmic Ranking Signal */}
+                        <div className="p-3 bg-white rounded-xl border border-gray-200/70 space-y-1.5">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${intel.signalBadge.color}`}>
+                              <Sparkles className="w-3 h-3" />
+                              {intel.signalBadge.label}
+                            </span>
+                            {intel.reviewGap > 0 && (
+                              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                                +{intel.reviewGap} reviews ahead
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-700 leading-relaxed">
+                            {intel.explanation}
+                          </p>
+                        </div>
+
+                        {/* Extracted Search Keywords for THIS Competitor */}
+                        {intel.detectedKeywords.length > 0 && (
+                          <div className="space-y-1.5">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                              Detected Search Terms in Listing
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {intel.detectedKeywords.map((kw, kIdx) => (
+                                <button
+                                  key={kIdx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-800 rounded-lg text-xs font-medium border border-indigo-100 transition-colors cursor-pointer"
+                                  title={`Draft Google Post targeting "${kw}"`}
+                                >
+                                  <Target className="w-3 h-3 text-indigo-500" />
+                                  {kw}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Plan & Targeted Counter-Action Buttons */}
+                        <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="text-xs text-gray-700">
+                            <p className="font-semibold text-indigo-950">Recommended Counter-Action:</p>
+                            <p className="text-gray-600 mt-0.5">{intel.counterActionNote}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const kw = intel.primaryCounterKeyword || primaryCategory || "Services";
+                                router.push(`/gbp/posts?draftKeyword=${encodeURIComponent(kw)}`);
+                              }}
+                              className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex-1 sm:flex-initial"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 mr-1" />
+                              Draft Post
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const kw = intel.primaryCounterKeyword || primaryCategory || "Services";
+                                router.push(`/reviews?targetKeyword=${encodeURIComponent(kw)}`);
+                              }}
+                              className="text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-xl flex-1 sm:flex-initial"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                              Target in Reviews
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })}
           </div>
         )}
 
-        {nearbyCompetitors.length > 8 && (
-          <div className="p-3 bg-gray-50/80 border-t border-gray-100 text-center">
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
-            >
-              <span>{showAll ? "Show Top 8 Only" : `Show All ${nearbyCompetitors.length} Practices`}</span>
-              {showAll ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+        {/* Show all / Show top 8 toggle */}
+        {!showAll && allRows.length > 8 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="w-full py-3 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer bg-white rounded-xl border border-gray-100"
+          >
+            Show all {allRows.length} competing clinics <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {showAll && allRows.length > 8 && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="w-full py-3 text-xs text-indigo-600 hover:text-indigo-800 transition-colors font-semibold flex items-center justify-center gap-1 mt-2 cursor-pointer bg-white rounded-xl border border-gray-100"
+          >
+            Show top 8 <ChevronUp className="w-3.5 h-3.5" />
+          </button>
         )}
       </div>
     </div>

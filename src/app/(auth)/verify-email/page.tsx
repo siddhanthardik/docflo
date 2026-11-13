@@ -2,10 +2,11 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSession, SessionProvider } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { GyrexLogo } from "@/components/ui/GyrexLogo";
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
+import { isPlatformRole } from "@/lib/permissions";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -40,7 +41,8 @@ function VerifyEmailContent() {
 
           setTimeout(() => {
             if (session?.user?.id) {
-              window.location.assign("/dashboard");
+              const target = session?.user?.role && isPlatformRole(session.user.role) ? "/admin" : "/dashboard";
+              window.location.assign(target);
             } else {
               window.location.assign(`/login?verified=1&email=${encodeURIComponent(email || "")}`);
             }
@@ -87,7 +89,7 @@ function VerifyEmailContent() {
               </p>
               <div className="pt-4">
                 <Link
-                  href={session?.user?.id ? "/dashboard" : `/login?verified=1&email=${encodeURIComponent(email || "")}`}
+                  href={session?.user?.id ? (session?.user?.role && isPlatformRole(session.user.role) ? "/admin" : "/dashboard") : `/login?verified=1&email=${encodeURIComponent(email || "")}`}
                   className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 inline-flex items-center justify-center gap-2 transition-all"
                 >
                   {session?.user?.id ? "Go to Dashboard" : "Sign In Now"} <ArrowRight className="w-4 h-4" />
@@ -127,14 +129,12 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <SessionProvider>
-      <Suspense fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-        </div>
-      }>
-        <VerifyEmailContent />
-      </Suspense>
-    </SessionProvider>
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

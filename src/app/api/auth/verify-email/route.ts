@@ -22,6 +22,24 @@ export async function POST(req: Request) {
 
     const cleanEmail = email.trim().toLowerCase();
 
+    // 1. Check if user is already verified in the database
+    const [alreadyVerifiedDoc, alreadyVerifiedStaff, alreadyVerifiedPlatform] = await Promise.all([
+      prisma.doctor.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, select: { emailVerified: true } }),
+      prisma.staffMember.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, select: { emailVerified: true } }),
+      prisma.platformUser.findFirst({ where: { email: { equals: cleanEmail, mode: "insensitive" } }, select: { emailVerified: true } })
+    ]);
+
+    if (
+      alreadyVerifiedDoc?.emailVerified ||
+      alreadyVerifiedStaff?.emailVerified ||
+      alreadyVerifiedPlatform?.emailVerified
+    ) {
+      return NextResponse.json(
+        { message: "Email is already verified.", alreadyVerified: true },
+        { status: 200 }
+      );
+    }
+
     if (!verificationRecord || verificationRecord.email.trim().toLowerCase() !== cleanEmail || verificationRecord.expiresAt < new Date()) {
       return NextResponse.json(
         { error: "Invalid or expired verification token" },
