@@ -273,42 +273,7 @@ export function SearchGrid() {
 
         {/* Map Header Info & Map Container */}
         {grid.length > 0 && (
-          <div className="space-y-4 pt-2">
-            {/* Share of Local Voice & Node Coverage Cards */}
-            {gridData?.solvData && (
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pb-1">
-                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-0.5">
-                  <span className="text-[11px] font-semibold text-indigo-700">Share of Local Voice (SoLV)</span>
-                  <p className="text-xl font-extrabold text-indigo-950">{gridData.solvData.solv}%</p>
-                  <p className="text-[10px] text-indigo-600/80">Click-weighted local prominence</p>
-                </div>
-                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 space-y-0.5">
-                  <span className="text-[11px] font-semibold text-emerald-700">Top 3 Pack Visibility</span>
-                  <p className="text-xl font-extrabold text-emerald-950">{gridData.solvData.top3Coverage}%</p>
-                  <p className="text-[10px] text-emerald-600/80">Positions 1–3 on map nodes</p>
-                </div>
-                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 space-y-0.5">
-                  <span className="text-[11px] font-semibold text-blue-700">Top 10 Visibility</span>
-                  <p className="text-xl font-extrabold text-blue-950">{gridData.solvData.top10Coverage}%</p>
-                  <p className="text-[10px] text-blue-600/80">Positions 1–10 on map nodes</p>
-                </div>
-                <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-0.5">
-                  <span className="text-[11px] font-semibold text-purple-700">Avg Observed Position</span>
-                  <p className="text-xl font-extrabold text-purple-950">
-                    {gridData.solvData.avgRankFound ? `#${gridData.solvData.avgRankFound}` : "—"}
-                  </p>
-                  <p className="text-[10px] text-purple-600/80">Where found in top 20</p>
-                </div>
-                <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100 space-y-0.5 col-span-2 lg:col-span-1">
-                  <span className="text-[11px] font-semibold text-rose-700">Outside Top 20</span>
-                  <p className="text-xl font-extrabold text-rose-950">
-                    {gridData.solvData.unrankedCount} <span className="text-xs font-normal text-rose-600">/ {gridData.solvData.totalNodes} nodes</span>
-                  </p>
-                  <p className="text-[10px] text-rose-600/80">Not appearing in first 20</p>
-                </div>
-              </div>
-            )}
-
+          <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs px-1">
               <div className="flex items-center gap-1.5 font-semibold text-gray-800">
                 <MapPin className="w-3.5 h-3.5 text-[#4F46E5] shrink-0" />
