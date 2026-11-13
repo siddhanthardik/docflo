@@ -33,6 +33,10 @@ export interface NormalizedCompetitor {
   googleMapsUri?: string;
   lat?: number | null;
   lng?: number | null;
+  isHospital?: boolean;
+  isPractitioner?: boolean;
+  profileType?: "doctor" | "hospital" | "clinic";
+  specialtyMismatch?: boolean;
 }
 
 export class GoogleNormalizer {
@@ -138,6 +142,54 @@ export class GoogleNormalizer {
       const name = place.displayName?.text || "";
       const googleMapsUri = place.googleMapsUri || (place.id ? `https://www.google.com/maps/place/?q=place_id:${place.id}` : (name ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}` : ""));
 
+      const nameLower = name.toLowerCase();
+      const typeLower = (place.primaryType || "").toLowerCase();
+      const displayNameLower = (place.primaryTypeDisplayName?.text || "").toLowerCase();
+
+      const isHospital = (
+        nameLower.includes("hospital") ||
+        nameLower.includes("institute") ||
+        nameLower.includes("nursing home") ||
+        nameLower.includes("medical centre") ||
+        nameLower.includes("medical center") ||
+        typeLower.includes("hospital") ||
+        displayNameLower.includes("hospital")
+      );
+
+      const isPractitioner = (
+        /\b(?:dr\.?|doctor|prof\.?)\b/i.test(name) ||
+        typeLower.includes("pediatrician") ||
+        typeLower.includes("physician") ||
+        displayNameLower.includes("doctor") ||
+        displayNameLower.includes("pediatrician")
+      ) && !isHospital;
+
+      const profileType: "doctor" | "hospital" | "clinic" = isPractitioner
+        ? "doctor"
+        : isHospital
+        ? "hospital"
+        : "clinic";
+
+      const isUnrelatedCategory = (
+        typeLower.includes("dentist") ||
+        typeLower.includes("dental") ||
+        typeLower.includes("pharmacy") ||
+        typeLower.includes("drugstore") ||
+        typeLower.includes("diagnostic") ||
+        typeLower.includes("laboratory") ||
+        typeLower.includes("pathology") ||
+        typeLower.includes("optometrist") ||
+        typeLower.includes("veterinary") ||
+        nameLower.includes("dental") ||
+        nameLower.includes("dentist") ||
+        nameLower.includes("pharmacy") ||
+        nameLower.includes("chemist") ||
+        nameLower.includes("diagnostic") ||
+        nameLower.includes("pathology lab") ||
+        nameLower.includes("mri scan") ||
+        nameLower.includes("ultrasound")
+      );
+
       items.push({
         id: placeId,
         placeId,
@@ -157,6 +209,10 @@ export class GoogleNormalizer {
         isYou,
         lat: place.location?.latitude ?? null,
         lng: place.location?.longitude ?? null,
+        isHospital,
+        isPractitioner,
+        profileType,
+        specialtyMismatch: isUnrelatedCategory,
       });
     }
 

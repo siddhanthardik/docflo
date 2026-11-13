@@ -26,8 +26,8 @@ function getBadgeColors(rank: number, found: boolean, isCenter: boolean) {
   if (isCenter) {
     return { bg: "#4F46E5", border: "#3730A3", text: "#FFFFFF", label: "★" };
   }
-  if (!found || rank === 0) {
-    return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: "-" };
+  if (!found || rank === 0 || rank > 20) {
+    return { bg: "#F43F5E", border: "#E11D48", text: "#FFFFFF", label: ">20" };
   }
   if (rank <= 3) {
     return { bg: "#10B981", border: "#059669", text: "#FFFFFF", label: String(rank) };
@@ -35,7 +35,7 @@ function getBadgeColors(rank: number, found: boolean, isCenter: boolean) {
   if (rank <= 8) {
     return { bg: "#F59E0B", border: "#D97706", text: "#FFFFFF", label: String(rank) };
   }
-  return { bg: "#EF4444", border: "#DC2626", text: "#FFFFFF", label: rank > 15 ? ">15" : String(rank) };
+  return { bg: "#6366F1", border: "#4F46E5", text: "#FFFFFF", label: String(rank) };
 }
 
 function getDirectionLabel(dRow: number, dCol: number): string {
@@ -276,22 +276,23 @@ export function RankTrackerMap({
         const dCol = cell.col - centerCol;
         const dir = getDirectionLabel(dRow, dCol);
         const approxDist = Math.round(Math.sqrt(dRow * dRow + dCol * dCol) * spacingMeters);
-        const rankText = !cell.found || cell.rank === 0 ? "Not Found in Top 20" : cell.rank > 15 ? "> 15" : `#${cell.rank}`;
+        const isOutsideTop20 = !cell.found || cell.rank === 0 || cell.rank > 20;
+        const rankText = isOutsideTop20 ? "Outside Top 20" : `#${cell.rank}`;
 
         const popupContent = `
-          <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px 2px; min-width: 190px;">
+          <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px 2px; min-width: 195px;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
               <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${colors.bg};"></span>
               <strong style="font-size: 13px; color: #111827;">
-                ${isCenter ? businessName : `Search Rank ${rankText}`}
+                ${isCenter ? businessName : `Observed Position: ${rankText}`}
               </strong>
             </div>
             <div style="font-size: 12px; color: #4B5563; margin-bottom: 4px;">
               ${isCenter ? '<span style="color: #4F46E5; font-weight: 600;">Clinic Location (Center)</span>' : `<strong>${dir}</strong> (${approxDist}m from clinic)`}
             </div>
-            ${keyword ? `<div style="font-size: 11px; color: #6B7280; background: #F3F4F6; padding: 2px 6px; border-radius: 4px; display: inline-block;">Target: "${keyword}"</div>` : ''}
+            ${keyword ? `<div style="font-size: 11px; color: #4338CA; background: #EEF2FF; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: 500;">Query: "${keyword}"</div>` : ''}
             <div style="font-size: 10px; color: #9CA3AF; margin-top: 6px; border-top: 1px solid #E5E7EB; padding-top: 4px;">
-              GPS: ${cell.lat.toFixed(4)}, ${cell.lng.toFixed(4)}
+              GPS: ${cell.lat.toFixed(4)}, ${cell.lng.toFixed(4)} · Source: Places API
             </div>
           </div>
         `;

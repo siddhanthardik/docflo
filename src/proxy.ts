@@ -168,8 +168,9 @@ export default auth((req) => {
 
   // Email Verification Grace Period (7 days)
   if (isProtectedRoute && isLoggedIn && !pathname.startsWith("/verify-email/pending")) {
+    const isVerifiedCookie = req.cookies.get("gyrex_email_verified")?.value === "1";
     const user = req.auth?.user as any;
-    if (user && !user.emailVerified && user.createdAt) {
+    if (!isVerifiedCookie && user && !user.emailVerified && user.createdAt) {
       const createdDate = new Date(user.createdAt);
       const gracePeriodMs = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - createdDate.getTime() > gracePeriodMs) {

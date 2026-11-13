@@ -15,25 +15,43 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check all user types for verification status
-    let user = await prisma.doctor.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+    let user = await prisma.doctor.findFirst({
+      where: { email: { equals: cleanEmail, mode: "insensitive" } },
+      select: { name: true, emailVerified: true },
+    });
     if (!user) {
-      user = await prisma.staffMember.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+      user = await prisma.staffMember.findFirst({
+        where: { email: { equals: cleanEmail, mode: "insensitive" } },
+        select: { name: true, emailVerified: true },
+      });
     }
     if (!user) {
-      user = await prisma.platformUser.findUnique({ where: { email }, select: { name: true, emailVerified: true } });
+      user = await prisma.platformUser.findFirst({
+        where: { email: { equals: cleanEmail, mode: "insensitive" } },
+        select: { name: true, emailVerified: true },
+      });
     }
 
     if (user?.emailVerified) {
-      return NextResponse.json(
-        { message: "Your email address is already verified." },
+      const res = NextResponse.json(
+        { message: "Your email address is already verified.", alreadyVerified: true },
         { status: 200 }
       );
+      res.cookies.set("gyrex_email_verified", "1", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60,
+      });
+      return res;
     }
 
     // Delete any old pending tokens for this email
     await prisma.emailVerificationToken.deleteMany({
-      where: { email },
+      where: { email: cleanEmail },
     });
 
     // Generate secure token
@@ -43,21 +61,21 @@ export async function POST(req: Request) {
 
     await prisma.emailVerificationToken.create({
       data: {
-        email,
+        email: cleanEmail,
         token: hashedToken,
         expiresAt,
       },
     });
 
     await logActivity({
-      userId: email,
+      userId: cleanEmail,
       userType: "UNKNOWN",
       action: "EMAIL_VERIFICATION_SENT",
-      details: { email }
+      details: { email: cleanEmail }
     });
 
     // Send email using Resend Service
-    await sendVerificationEmail(email, rawToken, user?.name);
+    await sendVerificationEmail(cleanEmail, rawToken, user?.name);
 
     return NextResponse.json(
       { message: "Verification email sent successfully." },

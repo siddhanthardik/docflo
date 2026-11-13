@@ -60,9 +60,11 @@ export async function GET(request: Request) {
     if (isCacheFresh && Array.isArray(latestSnapshot.json) && latestSnapshot.json.length > 0) {
       return NextResponse.json({
         data: latestSnapshot.json,
-        source: "Cached Local SEO Data",
+        source: "Observed Google Places API Position (Cached)",
+        sourceDetails: "Positions reflect previously observed Google Places API coordinate results for this clinic location.",
         mode,
         radiusMeters: mode === "nearby" ? 5000 : undefined,
+        scanTimestamp: latestSnapshot.date.toISOString(),
         lastUpdated: latestSnapshot.date.toISOString(),
       });
     }
@@ -71,8 +73,10 @@ export async function GET(request: Request) {
     if (!apiKey) {
       return NextResponse.json({
         data: Array.isArray(latestSnapshot?.json) ? latestSnapshot.json : [],
-        source: "Cached Local SEO Data (No API Key)",
+        source: "Observed Google Places API Position (No API Key)",
+        sourceDetails: "Positions reflect cached Google Places observations.",
         radiusMeters: 5000,
+        scanTimestamp: latestSnapshot?.date?.toISOString() || null,
         lastUpdated: latestSnapshot?.date?.toISOString() || null,
       });
     }
@@ -315,12 +319,20 @@ export async function GET(request: Request) {
         isYou: true,
         lat,
         lng,
+        isHospital: Boolean(clinicFacilityName && !doctorName),
+        isPractitioner: Boolean(doctorName),
+        profileType: doctorName ? "doctor" : "clinic",
       });
     }
 
+    // In ranking mode, filter out unrelated healthcare entities (dentists, pharmacies, diagnostic labs) unless isYou
+    const filteredCompetitors = !isNearbyMode
+      ? normalizedCompetitors.filter((c) => c.isYou || !c.specialtyMismatch)
+      : normalizedCompetitors;
+
     // In ranking mode, sort by rank; in nearby mode, sorted by distance
     if (!isNearbyMode) {
-      normalizedCompetitors.sort((a, b) => a.rank - b.rank);
+      filteredCompetitors.sort((a, b) => a.rank - b.rank);
     }
 
     // 7. Strict Deduplication by Google Place ID and normalized clinic name
@@ -329,7 +341,7 @@ export async function GET(request: Request) {
     let seenYou = false;
 
     const deduplicatedNormalized: NormalizedCompetitor[] = [];
-    for (const item of normalizedCompetitors) {
+    for (const item of filteredCompetitors) {
       const cleanKey = (item.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const placeIdKey = item.placeId && item.placeId !== "you" ? item.placeId : "";
 
@@ -350,6 +362,15 @@ export async function GET(request: Request) {
       deduplicatedNormalized.push(item);
     }
 
+    // Re-index ranks for display if filtered in ranking mode
+    if (!isNearbyMode) {
+      deduplicatedNormalized.forEach((c, idx) => {
+        if (!c.isYou || inTop20) {
+          c.rank = idx + 1;
+        }
+      });
+    }
+
     // 8. Cache result in database as a direct JSON array (preserves Local SEO Opportunity Engine compatibility)
     try {
       await prisma.competitorSnapshot.create({
@@ -367,10 +388,12 @@ export async function GET(request: Request) {
     return NextResponse.json({
       data: deduplicatedNormalized,
       source: isNearbyMode
-        ? "Google Places API (5 km Radius)"
-        : "Google Places API (Observed Position)",
+        ? "Observed Google Places API (5 km Radius)"
+        : "Observed Google Places API Position",
+      sourceDetails: "Rankings represent observed Google Places API positions around this coordinate. Consumer Google Maps and Google Search local-pack rankings may vary based on user location, personalization, and search intent.",
       mode,
       queryUsed: isNearbyMode ? undefined : queryToSearch,
+      exactKeyword: isNearbyMode ? undefined : queryToSearch,
       userRank: isNearbyMode ? undefined : userRank,
       inTop20: isNearbyMode ? undefined : inTop20,
       scope,
@@ -378,6 +401,7 @@ export async function GET(request: Request) {
       neighborhood: safeNeighborhood,
       radiusMeters: isNearbyMode ? 5000 : undefined,
       clinicCoordinates: { lat, lng },
+      scanTimestamp: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {

@@ -36,7 +36,7 @@ function VerifyEmailContent() {
         if (res.ok) {
           setStatus("success");
           try {
-            await update();
+            await update({ verified: true, emailVerified: new Date().toISOString() });
           } catch (_) {}
 
           setTimeout(() => {

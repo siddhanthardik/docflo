@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionData } from "@/lib/session";
 import { getValidGbpAccessToken } from "@/lib/gbp-auth";
 import { prisma } from "@/lib/prisma";
-import { extractNeighborhood, unifiedGeoGrid, calculateCompositeRank } from "@/lib/audit/google-places";
+import { extractNeighborhood, unifiedGeoGrid, calculateCompositeRank, calculateSoLV } from "@/lib/audit/google-places";
 
 const GRID_SIZE = 5;
 const SPACING_METERS = 500;
@@ -49,6 +49,10 @@ export async function GET(request: Request) {
 
     if (cached) {
       const ageHours = (Date.now() - new Date(cached.date).getTime()) / 1000 / 3600;
+      const gridArray = Array.isArray(cached.json) ? (cached.json as any[]) : [];
+      const solvData = calculateSoLV(gridArray);
+      const compositeData = calculateCompositeRank(gridArray, 21, 21);
+
       if (ageHours < CACHE_HOURS) {
         return NextResponse.json({
           data: {
@@ -59,18 +63,48 @@ export async function GET(request: Request) {
             spacingMeters: cached.spacingMeters,
             businessName: cached.businessName,
             keyword: cached.keyword,
+            exactKeyword: cached.keyword,
+            compositeData,
+            solvData,
             cached: true,
             cacheAge: Math.round(ageHours),
+            scanTimestamp: cached.date.toISOString(),
           },
-          source: "Cached Search Grid (24h)",
+          source: "Observed Google Places API Position",
+          sourceDetails: {
+            provider: "Google Places API (Coordinate Proximity)",
+            isTrueMapsSerp: false,
+            description: "Calculated from Google Places API coordinate observations around the clinic."
+          },
           lastUpdated: cached.date,
         });
       }
     }
 
+    const gridArray = cached && Array.isArray(cached.json) ? (cached.json as any[]) : [];
+    const solvData = calculateSoLV(gridArray);
+
     return NextResponse.json({
-      data: cached ? { grid: cached.json, gridSize: cached.gridSize, centerLat: cached.centerLat, centerLng: cached.centerLng, spacingMeters: cached.spacingMeters, businessName: cached.businessName, keyword: cached.keyword, cached: true, cacheAge: 99 } : null,
-      source: "Search Grid",
+      data: cached ? {
+        grid: cached.json,
+        gridSize: cached.gridSize,
+        centerLat: cached.centerLat,
+        centerLng: cached.centerLng,
+        spacingMeters: cached.spacingMeters,
+        businessName: cached.businessName,
+        keyword: cached.keyword,
+        exactKeyword: cached.keyword,
+        solvData,
+        cached: true,
+        cacheAge: 99,
+        scanTimestamp: cached.date.toISOString(),
+      } : null,
+      source: "Observed Google Places API Position",
+      sourceDetails: {
+        provider: "Google Places API (Coordinate Proximity)",
+        isTrueMapsSerp: false,
+        description: "Calculated from Google Places API coordinate observations around the clinic."
+      },
       lastUpdated: cached?.date || null,
       requiresRefresh: true,
     });
@@ -145,6 +179,10 @@ export async function POST(request: Request) {
     const requestSpacing = body.radiusStep ? parseInt(body.radiusStep, 10) : SPACING_METERS;
     const finalSpacing = isNaN(requestSpacing) ? SPACING_METERS : requestSpacing;
 
+    // Extract verified place ID from profile or insights
+    const insights = (account.insightsData as any) || {};
+    const verifiedPlaceId = profileData?.placeId || insights?.placeId || null;
+
     // Run unified 25-point GeoGrid around the exact clinic GPS
     const gridData = await unifiedGeoGrid(
       searchKeyword,
@@ -154,10 +192,12 @@ export async function POST(request: Request) {
       businessName,
       apiKey,
       GRID_SIZE,
-      finalSpacing
+      finalSpacing,
+      verifiedPlaceId || undefined
     );
 
     const compositeData = calculateCompositeRank(gridData.ranks, gridData.centroidRank, gridData.organicRank);
+    const solvData = calculateSoLV(gridData.ranks);
 
     // Save to DB
     await prisma.searchGridSnapshot.create({
@@ -175,21 +215,32 @@ export async function POST(request: Request) {
       },
     });
 
+    const nowIso = new Date().toISOString();
+
     return NextResponse.json({
       data: {
         grid: gridData.ranks,
         compositeData,
+        solvData,
         searchContext: searchPhrase,
         gridSize: GRID_SIZE,
         centerLat,
         centerLng,
         spacingMeters: finalSpacing,
         businessName,
+        keyword: searchKeyword,
+        exactKeyword: searchKeyword,
+        scanTimestamp: nowIso,
         cached: false,
         cacheAge: 0,
       },
-      source: "Google Places API (Live)",
-      lastUpdated: new Date().toISOString(),
+      source: "Observed Google Places API Position",
+      sourceDetails: {
+        provider: "Google Places API (Coordinate Proximity)",
+        isTrueMapsSerp: false,
+        description: "Calculated from Google Places API coordinate observations around the clinic."
+      },
+      lastUpdated: nowIso,
     });
   } catch (error: any) {
     console.error("Search Grid POST Error:", error);

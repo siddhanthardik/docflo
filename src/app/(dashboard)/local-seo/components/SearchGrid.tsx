@@ -127,11 +127,11 @@ export function SearchGrid() {
                 Local Rank Tracker
               </h2>
               <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-100/70">
-                5×5 Google Maps Grid
+                5×5 Observed Places Grid
               </span>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Real-time neighborhood visibility and Google 3-Pack rank around your clinic
+              Observed Google Places API positions across 25 coordinate points around your clinic
             </p>
             {cached && cacheAge < 99 && (
               <div className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-400">
@@ -273,7 +273,42 @@ export function SearchGrid() {
 
         {/* Map Header Info & Map Container */}
         {grid.length > 0 && (
-          <div className="space-y-3 pt-2">
+          <div className="space-y-4 pt-2">
+            {/* Share of Local Voice & Node Coverage Cards */}
+            {gridData?.solvData && (
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pb-1">
+                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-0.5">
+                  <span className="text-[11px] font-semibold text-indigo-700">Share of Local Voice (SoLV)</span>
+                  <p className="text-xl font-extrabold text-indigo-950">{gridData.solvData.solv}%</p>
+                  <p className="text-[10px] text-indigo-600/80">Click-weighted local prominence</p>
+                </div>
+                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 space-y-0.5">
+                  <span className="text-[11px] font-semibold text-emerald-700">Top 3 Pack Visibility</span>
+                  <p className="text-xl font-extrabold text-emerald-950">{gridData.solvData.top3Coverage}%</p>
+                  <p className="text-[10px] text-emerald-600/80">Positions 1–3 on map nodes</p>
+                </div>
+                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 space-y-0.5">
+                  <span className="text-[11px] font-semibold text-blue-700">Top 10 Visibility</span>
+                  <p className="text-xl font-extrabold text-blue-950">{gridData.solvData.top10Coverage}%</p>
+                  <p className="text-[10px] text-blue-600/80">Positions 1–10 on map nodes</p>
+                </div>
+                <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-0.5">
+                  <span className="text-[11px] font-semibold text-purple-700">Avg Observed Position</span>
+                  <p className="text-xl font-extrabold text-purple-950">
+                    {gridData.solvData.avgRankFound ? `#${gridData.solvData.avgRankFound}` : "—"}
+                  </p>
+                  <p className="text-[10px] text-purple-600/80">Where found in top 20</p>
+                </div>
+                <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100 space-y-0.5 col-span-2 lg:col-span-1">
+                  <span className="text-[11px] font-semibold text-rose-700">Outside Top 20</span>
+                  <p className="text-xl font-extrabold text-rose-950">
+                    {gridData.solvData.unrankedCount} <span className="text-xs font-normal text-rose-600">/ {gridData.solvData.totalNodes} nodes</span>
+                  </p>
+                  <p className="text-[10px] text-rose-600/80">Not appearing in first 20</p>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs px-1">
               <div className="flex items-center gap-1.5 font-semibold text-gray-800">
                 <MapPin className="w-3.5 h-3.5 text-[#4F46E5] shrink-0" />
@@ -298,15 +333,19 @@ export function SearchGrid() {
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-1 px-1">
               <div className="flex items-center gap-1.5 font-medium">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
-                <span>Rank 1–3 (Top 3 Pack)</span>
+                <span>Observed 1–3 (Top 3 Pack)</span>
               </div>
               <div className="flex items-center gap-1.5 font-medium">
                 <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />
-                <span>Rank 4–8 (Page 1)</span>
+                <span>Observed 4–8 (Page 1)</span>
               </div>
               <div className="flex items-center gap-1.5 font-medium">
-                <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                <span>Rank 9+ / Unranked</span>
+                <span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" />
+                <span>Observed 9–20</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-medium">
+                <span className="w-3 h-3 rounded-full bg-rose-500 inline-block" />
+                <span>&gt;20 (Outside Top 20)</span>
               </div>
               <div className="flex items-center gap-1.5 font-medium">
                 <span className="w-3 h-3 rounded-full bg-[#4F46E5] inline-block" />
@@ -316,6 +355,20 @@ export function SearchGrid() {
                 <Info className="w-3.5 h-3.5" />
                 <span>Click any marker to inspect rank and distance</span>
               </div>
+            </div>
+
+            {/* Transparent Methodology & Scan Timestamp Notice */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-200/70 text-xs text-gray-500 mt-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>
+                  <strong>Observed Google Places API Position</strong> · Exact Query: &ldquo;<strong className="text-gray-900">{gridData?.exactKeyword || activeDisplayQuery}</strong>&rdquo;
+                  {gridData?.scanTimestamp && ` · Scanned on ${new Date(gridData.scanTimestamp).toLocaleDateString()} at ${new Date(gridData.scanTimestamp).toLocaleTimeString()}`}
+                </span>
+              </div>
+              <span className="text-[11px] text-gray-400">
+                Grid positions reflect Places API observations around each coordinate
+              </span>
             </div>
           </div>
         )}

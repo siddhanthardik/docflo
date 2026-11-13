@@ -34,10 +34,17 @@ export async function POST(req: Request) {
       alreadyVerifiedStaff?.emailVerified ||
       alreadyVerifiedPlatform?.emailVerified
     ) {
-      return NextResponse.json(
+      const res = NextResponse.json(
         { message: "Email is already verified.", alreadyVerified: true },
         { status: 200 }
       );
+      res.cookies.set("gyrex_email_verified", "1", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60,
+      });
+      return res;
     }
 
     if (!verificationRecord || verificationRecord.email.trim().toLowerCase() !== cleanEmail || verificationRecord.expiresAt < new Date()) {
@@ -66,10 +73,17 @@ export async function POST(req: Request) {
       details: { email }
     });
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       { message: "Email verified successfully." },
       { status: 200 }
     );
+    res.cookies.set("gyrex_email_verified", "1", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+    return res;
   } catch (error) {
     console.error("VERIFY EMAIL ERROR:", error);
     return NextResponse.json(

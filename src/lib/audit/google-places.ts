@@ -937,7 +937,8 @@ export async function unifiedGeoGrid(
   businessName: string,
   apiKey: string,
   gridSize = 5,
-  spacingMeters = 500
+  spacingMeters = 500,
+  verifiedPlaceId?: string
 ): Promise<{ ranks: {lat: number, lng: number, row: number, col: number, rank: number, found: boolean}[], centroidRank: number, organicRank: number }> {
   
   // 1. Generate 5x5 grid points
@@ -952,22 +953,26 @@ export async function unifiedGeoGrid(
     }
   }
 
+  // Preserve the exact search keyword without silent stripping
+  const rawKeyword = (specialtyLabel || "").trim();
+  const hasLocationWords = /\b(?:in|at|near|around)\b/i.test(rawKeyword);
+
   // Function to search from a specific point
   const searchFromPoint = async (lat: number, lng: number, useLocationBias: boolean) => {
     let urlStr = "";
+    const searchRadius = Math.max(1000, spacingMeters * 1.5);
+
     if (useLocationBias) {
-      // Clean "near me" from the keyword because Nearby Search expects a raw category/keyword
-      const cleanKeyword = specialtyLabel.replace(/near me/gi, "").trim();
-      
-      // Scale radius dynamically based on grid spacing to ensure we capture competitors at the edges.
-      // If spacing is 500m, radius is 1000m. If spacing is 2000m, radius is 3000m.
-      const searchRadius = Math.max(1000, spacingMeters * 1.5);
-      
-      // Nearby Search strictly enforces the lat/lng center point and ranks by prominence/distance.
-      // This is exactly how tools like GrexaAI perform a GeoGrid.
-      urlStr = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${searchRadius}&keyword=${encodeURIComponent(cleanKeyword)}&key=${apiKey}`;
+      if (hasLocationWords) {
+        // Natural language query with location intent (e.g., "pediatrician in safdarjung enclave")
+        // Use textsearch with location bias so the user's exact keyword is preserved verbatim
+        urlStr = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(rawKeyword)}&location=${lat},${lng}&radius=${searchRadius}&key=${apiKey}`;
+      } else {
+        // Specialty keyword without prepositions (e.g., "pediatrician")
+        urlStr = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${searchRadius}&keyword=${encodeURIComponent(rawKeyword)}&key=${apiKey}`;
+      }
     } else {
-      const textQuery = `${specialtyLabel} in ${searchPhraseContext}`;
+      const textQuery = hasLocationWords ? rawKeyword : `${rawKeyword} in ${searchPhraseContext}`;
       urlStr = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(textQuery)}&key=${apiKey}`;
     }
 
@@ -977,8 +982,14 @@ export async function unifiedGeoGrid(
       const data = await res.json();
       if (data.status !== "OK" || !data.results) return 21;
 
+      // 1. Primary Identification: Match verified Google Place ID
+      if (verifiedPlaceId) {
+        const placeIdIdx = data.results.findIndex((r: any) => r.place_id === verifiedPlaceId);
+        if (placeIdIdx >= 0) return placeIdIdx + 1;
+      }
+
+      // 2. Secondary Identification: Conservative name matching
       const cleanTargetName = businessName.toLowerCase().replace(/[^a-z0-9\s]/g, "");
-      
       const idx = data.results.findIndex((r: any) => {
         const rName = (r.name || "").toLowerCase().replace(/[^a-z0-9\s]/g, "");
         return rName.includes(cleanTargetName.split(" ").slice(0, 3).join(" ")) ||
@@ -1017,8 +1028,66 @@ export async function unifiedGeoGrid(
   return { ranks, centroidRank, organicRank };
 }
 
-export function calculateCompositeRank(gridRanks: {rank: number}[], centroidRank: number, organicRank: number) {
-  const avgGridRank = gridRanks.reduce((sum, r) => sum + r.rank, 0) / gridRanks.length;
+export function calculateSoLV(gridRanks: { rank: number; found: boolean }[]) {
+  if (!gridRanks || gridRanks.length === 0) {
+    return {
+      solv: 0,
+      top3Coverage: 0,
+      top10Coverage: 0,
+      avgRankFound: null,
+      unrankedCount: 0,
+      foundCount: 0,
+      totalNodes: 0,
+    };
+  }
+
+  let totalScore = 0;
+  let top3Count = 0;
+  let top10Count = 0;
+  let foundCount = 0;
+  let rankSumFound = 0;
+
+  for (const cell of gridRanks) {
+    if (cell.found && cell.rank > 0 && cell.rank <= 20) {
+      foundCount++;
+      rankSumFound += cell.rank;
+      if (cell.rank === 1) totalScore += 100;
+      else if (cell.rank === 2) totalScore += 85;
+      else if (cell.rank === 3) totalScore += 70;
+      else if (cell.rank <= 5) totalScore += 50;
+      else if (cell.rank <= 10) totalScore += 25;
+      else totalScore += 10;
+
+      if (cell.rank <= 3) top3Count++;
+      if (cell.rank <= 10) top10Count++;
+    }
+  }
+
+  const maxPossibleScore = gridRanks.length * 100;
+  const solv = Math.round((totalScore / maxPossibleScore) * 100);
+  const top3Coverage = Math.round((top3Count / gridRanks.length) * 100);
+  const top10Coverage = Math.round((top10Count / gridRanks.length) * 100);
+  const avgRankFound = foundCount > 0 ? Number((rankSumFound / foundCount).toFixed(1)) : null;
+  const unrankedCount = gridRanks.length - foundCount;
+
+  return {
+    solv,
+    top3Coverage,
+    top10Coverage,
+    avgRankFound,
+    unrankedCount,
+    foundCount,
+    totalNodes: gridRanks.length,
+  };
+}
+
+export function calculateCompositeRank(gridRanks: {rank: number; found?: boolean}[], centroidRank: number, organicRank: number) {
+  // Only average over nodes where clinic was actually found (rank <= 20)
+  const foundRanks = gridRanks.filter(r => r.rank <= 20).map(r => r.rank);
+  const avgGridRank = foundRanks.length > 0
+    ? Number((foundRanks.reduce((sum, r) => sum + r, 0) / foundRanks.length).toFixed(1))
+    : 21;
+
   const compositeRank = Math.round(0.45 * avgGridRank + 0.35 * centroidRank + 0.20 * organicRank);
   
   // Calculate variance (std dev)

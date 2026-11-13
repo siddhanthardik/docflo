@@ -37,10 +37,21 @@ export async function GET() {
 
     const isVerified = Boolean(user?.emailVerified);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       verified: isVerified,
       emailVerified: user?.emailVerified ? user.emailVerified.toISOString() : null,
     });
+
+    if (isVerified) {
+      res.cookies.set("gyrex_email_verified", "1", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      });
+    }
+
+    return res;
   } catch (err: any) {
     console.error("VERIFY EMAIL STATUS ERROR:", err);
     return NextResponse.json({ error: "Failed to check verification status" }, { status: 500 });

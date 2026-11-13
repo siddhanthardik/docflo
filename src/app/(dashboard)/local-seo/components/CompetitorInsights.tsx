@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus,
   MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search,
-  Building2, X, Users, TrendingUp, Compass, Award, ShieldAlert
+  Building2, X, Users, TrendingUp, Compass, Award, ShieldAlert, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +35,9 @@ interface Competitor {
   isYou?: boolean;
   rank?: number;
   googleMapsUri?: string;
+  isHospital?: boolean;
+  isPractitioner?: boolean;
+  profileType?: "doctor" | "hospital" | "clinic";
 }
 
 function RankBadge({ rank = 1 }: { rank?: number | null }) {
@@ -412,6 +415,7 @@ export function CompetitorInsights() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
+  const [profileFilter, setProfileFilter] = useState<"all" | "doctors" | "hospitals">("all");
 
   // Collapse drawer when query or scope changes
   useEffect(() => {
@@ -500,6 +504,9 @@ export function CompetitorInsights() {
       category: c.category || c.primaryCategory || c.primaryType || primaryCategory,
       formattedAddress: typeof c.formattedAddress === "string" ? c.formattedAddress : "",
       googleMapsUri: c.googleMapsUri || "",
+      isHospital: Boolean(c.isHospital),
+      isPractitioner: Boolean(c.isPractitioner),
+      profileType: c.profileType || (c.isPractitioner ? "doctor" : c.isHospital ? "hospital" : "clinic"),
     }));
 
   if (viewMode === "ranking") {
@@ -531,10 +538,21 @@ export function CompetitorInsights() {
     allRows.push(row);
   }
 
+  // Filter rows by profile type (All, Doctors Only, Hospitals Only)
+  const filteredRows = useMemo(() => {
+    if (profileFilter === "doctors") {
+      return allRows.filter((r) => r.isYou || r.isPractitioner || (!r.isHospital && /\b(?:dr\.?|doctor|pediatrician|clinic)\b/i.test(r.name)));
+    }
+    if (profileFilter === "hospitals") {
+      return allRows.filter((r) => r.isYou || r.isHospital || /\b(?:hospital|institute|centre|center|nursing home)\b/i.test(r.name));
+    }
+    return allRows;
+  }, [allRows, profileFilter]);
+
   // Determine user's clinic and competitor immediately ahead
-  const youIndex = allRows.findIndex(r => r.isYou);
-  const youRow = youIndex !== -1 ? allRows[youIndex] : null;
-  const competitorAhead = youIndex > 0 ? allRows[youIndex - 1] : null;
+  const youIndex = filteredRows.findIndex(r => r.isYou);
+  const youRow = youIndex !== -1 ? filteredRows[youIndex] : null;
+  const competitorAhead = youIndex > 0 ? filteredRows[youIndex - 1] : null;
   const reviewsNeededToOvertake = competitorAhead && youRow
     ? Math.max(0, (competitorAhead.reviewCount || 0) - (youRow.reviewCount || 0))
     : 0;
@@ -572,13 +590,13 @@ export function CompetitorInsights() {
   }, [directoryCompetitors, doctorReviewCount]);
 
   const displayList = useMemo(() => {
-    if (showAll) return allRows;
-    const initial = allRows.slice(0, 8);
+    if (showAll) return filteredRows;
+    const initial = filteredRows.slice(0, 8);
     if (youRow && !initial.some(r => r.isYou)) {
       return [...initial, youRow];
     }
     return initial;
-  }, [allRows, showAll, youRow]);
+  }, [filteredRows, showAll, youRow]);
 
   if (isLoading && !rawCompetitorList) {
     return (
@@ -819,7 +837,7 @@ export function CompetitorInsights() {
 
       {/* ── CARD 3: RANKING LADDER & COMPETITOR ANALYSIS ── */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5 flex-wrap">
             <p className="text-xs sm:text-sm text-gray-600 font-medium">
               Competitors for{" "}
@@ -835,15 +853,48 @@ export function CompetitorInsights() {
               </span>
             )}
           </div>
+
+          {/* Profile Filter Pills (Doctors vs Hospitals vs All) */}
+          <div className="flex items-center gap-1.5 bg-gray-100/90 p-1 rounded-xl border border-gray-200/80 text-xs">
+            <button
+              type="button"
+              onClick={() => setProfileFilter("all")}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                profileFilter === "all" ? "bg-white text-indigo-700 shadow-2xs border border-gray-200/60" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              All Profiles ({allRows.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileFilter("doctors")}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                profileFilter === "doctors" ? "bg-white text-emerald-700 shadow-2xs border border-gray-200/60" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Doctors Only
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileFilter("hospitals")}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                profileFilter === "hospitals" ? "bg-white text-blue-700 shadow-2xs border border-gray-200/60" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Hospitals & Clinics
+            </button>
+          </div>
         </div>
 
         {/* Table column headers */}
         <div className="hidden md:grid md:grid-cols-[1fr_75px_75px_175px_135px] gap-x-4 px-3.5 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-          <div>Business</div>
+          <div>Profile / Practitioner</div>
           <div className="text-center">Rating</div>
           <div className="text-center">Reviews</div>
-          <div className="text-center">Distance from Clinic</div>
-          <div className="text-center">Position</div>
+          <div className="text-center">Distance</div>
+          <div className="text-center" title="Observed ranking position in Google Places API coordinate results">
+            Observed Position
+          </div>
         </div>
 
         {allRows.length === 0 ? (
@@ -954,6 +1005,19 @@ export function CompetitorInsights() {
                           <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
                             {comp.name}
                           </p>
+                          {comp.isPractitioner ? (
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                              Doctor
+                            </span>
+                          ) : comp.isHospital ? (
+                            <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
+                              Hospital
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 shrink-0">
+                              Clinic
+                            </span>
+                          )}
                         </div>
                         {comp.formattedAddress && (
                           <p className="text-[11px] text-gray-400 truncate mt-0.5">
@@ -1146,6 +1210,20 @@ export function CompetitorInsights() {
             Show top 8 <ChevronUp className="w-3.5 h-3.5" />
           </button>
         )}
+
+        {/* Transparent Methodology & Scan Timestamp Footer */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-200/70 text-xs text-gray-500 mt-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span>
+              <strong>Observed Google Places API Position</strong> · Exact Query: &ldquo;<strong className="text-gray-900">{displayQuery}</strong>&rdquo;
+              {lastUpdated && ` · Scanned on ${new Date(lastUpdated).toLocaleDateString()} at ${new Date(lastUpdated).toLocaleTimeString()}`}
+            </span>
+          </div>
+          <span className="text-[11px] text-gray-400">
+            Consumer Google Maps SERP rankings may vary based on exact mobile GPS location
+          </span>
+        </div>
       </div>
     </div>
   );

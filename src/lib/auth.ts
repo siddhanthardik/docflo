@@ -295,17 +295,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      if ((trigger === "update" || !token.emailVerified) && token.sub) {
+      if (session?.emailVerified) {
+        token.emailVerified = session.emailVerified;
+      }
+      if ((trigger === "update" || !token.emailVerified) && (token.sub || token.email)) {
         // Re-fetch emailVerified from DB — secure source of truth, handles cross-device verification
         try {
-          const dbDoc = await prisma.doctor.findUnique({ where: { id: token.sub }, select: { emailVerified: true } });
-          const dbStaff = !dbDoc ? await prisma.staffMember.findUnique({ where: { id: token.sub }, select: { emailVerified: true } }) : null;
-          const dbPlatform = !dbDoc && !dbStaff ? await prisma.platformUser.findUnique({ where: { id: token.sub }, select: { emailVerified: true } }) : null;
+          const emailClean = typeof token.email === "string" ? token.email.trim().toLowerCase() : undefined;
+          const searchConditions = [
+            ...(token.sub ? [{ id: token.sub }] : []),
+            ...(emailClean ? [{ email: { equals: emailClean, mode: "insensitive" as const } }] : []),
+          ];
+
+          const dbDoc = await prisma.doctor.findFirst({
+            where: { OR: searchConditions },
+            select: { emailVerified: true },
+          });
+          const dbStaff = !dbDoc
+            ? await prisma.staffMember.findFirst({
+                where: { OR: searchConditions },
+                select: { emailVerified: true },
+              })
+            : null;
+          const dbPlatform = !dbDoc && !dbStaff
+            ? await prisma.platformUser.findFirst({
+                where: { OR: searchConditions },
+                select: { emailVerified: true },
+              })
+            : null;
+
           const verified = dbDoc?.emailVerified || dbStaff?.emailVerified || dbPlatform?.emailVerified;
-          if (verified) token.emailVerified = verified.toISOString();
+          if (verified) {
+            token.emailVerified = verified.toISOString();
+          } else if (session?.emailVerified) {
+            token.emailVerified = session.emailVerified;
+          }
         } catch { /* non-critical — token stays as-is if DB unreachable */ }
       }
       if (user) {
+        if (user.email) token.email = user.email;
         token.role = user.role;
         token.doctorId = user.doctorId;
         token.clinicName = user.clinicName;

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { isPlatformRole } from "@/lib/permissions";
-import Link from "next/link";
 
 export default function VerifyEmailPendingPage() {
   const { data: session, update } = useSession();
@@ -24,7 +23,7 @@ export default function VerifyEmailPendingPage() {
           const data = await res.json();
           if (data.verified && isMounted) {
             setIsVerified(true);
-            await update();
+            await update({ verified: true, emailVerified: data.emailVerified || new Date().toISOString() });
             const targetUrl = session?.user?.role && isPlatformRole(session.user.role) ? "/admin" : "/dashboard";
             window.location.href = targetUrl;
           }
@@ -35,7 +34,7 @@ export default function VerifyEmailPendingPage() {
     return () => {
       isMounted = false;
     };
-  }, [update]);
+  }, [update, session?.user?.role]);
 
   const handleResend = async () => {
     if (!session?.user?.email) return;
@@ -70,7 +69,7 @@ export default function VerifyEmailPendingPage() {
         setIsVerified(true);
         toast({ title: "Email Verified!", description: "Your email is confirmed. Redirecting to your dashboard..." });
         // 2. Refresh JWT session cookie so middleware reads fresh verified state
-        await update();
+        await update({ verified: true, emailVerified: data.emailVerified || new Date().toISOString() });
         setTimeout(() => {
           const targetUrl = session?.user?.role && isPlatformRole(session.user.role) ? "/admin" : "/dashboard";
           window.location.href = targetUrl;
@@ -131,12 +130,13 @@ export default function VerifyEmailPendingPage() {
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             <span>{loading ? "Sending..." : "Resend Verification Email"}</span>
           </button>
-          <Link
-            href="/api/auth/signout"
-            className="w-full block bg-white text-slate-700 border border-slate-300 rounded-xl py-3 font-semibold hover:bg-slate-50 transition"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full block bg-white text-slate-700 border border-slate-300 rounded-xl py-3 font-semibold hover:bg-slate-50 transition cursor-pointer"
           >
             Sign out
-          </Link>
+          </button>
         </div>
       </div>
     </div>
