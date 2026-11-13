@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertCircle, Star, RefreshCw, ChevronDown, ChevronUp, Sparkles, Plus,
   MessageSquare, Edit3, MapPin, Target, ExternalLink, Activity, Search,
-  Building2, X, Users, TrendingUp, Compass, Award, ShieldAlert, Info
+  X, Users, TrendingUp, Award, ShieldAlert, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -407,8 +407,6 @@ export function CompetitorInsights() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [viewMode, setViewMode] = useState<"ranking" | "nearby">("ranking");
-  const [scope, setScope] = useState<"city" | "local">("city");
   const [selectedKeyword, setSelectedKeyword] = useState<string>("");
   const [keywordInput, setKeywordInput] = useState<string>("");
   const [forceRefresh, setForceRefresh] = useState(false);
@@ -417,23 +415,20 @@ export function CompetitorInsights() {
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [profileFilter, setProfileFilter] = useState<"all" | "doctors" | "hospitals">("all");
 
-  // Collapse drawer when query or scope changes
+  // Collapse drawer when query changes
   useEffect(() => {
     setExpandedPlaceId(null);
-  }, [scope, selectedKeyword, viewMode]);
+  }, [selectedKeyword]);
 
   const competitorParams = useMemo<Record<string, string>>(() => {
-    const params: Record<string, string> = {};
-    if (viewMode === "nearby") {
-      params.mode = "nearby";
-    } else {
-      params.mode = "ranking";
-      params.scope = scope;
-      if (selectedKeyword) params.keyword = selectedKeyword;
-    }
+    const params: Record<string, string> = {
+      mode: "ranking",
+      scope: "local",
+    };
+    if (selectedKeyword) params.keyword = selectedKeyword;
     if (forceRefresh) params.refresh = "true";
     return params;
-  }, [viewMode, scope, selectedKeyword, forceRefresh]);
+  }, [selectedKeyword, forceRefresh]);
 
   const { data: overviewData } = useLocalSeoModule<any>('overview');
   const { data: keywordsData } = useLocalSeoModule<any>('keywords');
@@ -509,11 +504,7 @@ export function CompetitorInsights() {
       profileType: c.profileType || (c.isPractitioner ? "doctor" : c.isHospital ? "hospital" : "clinic"),
     }));
 
-  if (viewMode === "ranking") {
-    rawRows.sort((a, b) => (a.rank || 0) - (b.rank || 0));
-  } else {
-    rawRows.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
-  }
+  rawRows.sort((a, b) => (a.rank || 0) - (b.rank || 0));
 
   // Deduplicate strictly
   const seenPlaceIds = new Set<string>();
@@ -561,33 +552,12 @@ export function CompetitorInsights() {
   const safeNeighborhood = neighborhood || null;
 
   const displayQuery = queryUsed || selectedKeyword || (
-    scope === "local" 
-      ? `${primaryCategory} near ${safeNeighborhood || safeCity}`
-      : `Best ${primaryCategory} in ${safeCity}`
+    safeNeighborhood 
+      ? `${primaryCategory} in ${safeNeighborhood}`
+      : `${primaryCategory} near me`
   );
 
   const googleMapsVerifyUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`;
-
-  // Filter out the clinic for 5 km directory calculation
-  const directoryCompetitors = useMemo(() => {
-    return allRows.filter(c => !c.isYou);
-  }, [allRows]);
-
-  const stats = useMemo(() => {
-    if (directoryCompetitors.length === 0) {
-      return { total: 0, avgRating: 0, avgReviews: 0, higherReviewedCount: 0 };
-    }
-    const total = directoryCompetitors.length;
-    const rated = directoryCompetitors.filter(c => typeof c.rating === "number" && c.rating > 0);
-    const avgRating = rated.length > 0
-      ? rated.reduce((acc, c) => acc + c.rating, 0) / rated.length
-      : 0;
-    const avgReviews = Math.round(
-      directoryCompetitors.reduce((acc, c) => acc + (c.reviewCount || 0), 0) / total
-    );
-    const higherReviewedCount = directoryCompetitors.filter(c => (c.reviewCount || 0) > doctorReviewCount).length;
-    return { total, avgRating, avgReviews, higherReviewedCount };
-  }, [directoryCompetitors, doctorReviewCount]);
 
   const displayList = useMemo(() => {
     if (showAll) return filteredRows;
@@ -633,7 +603,7 @@ export function CompetitorInsights() {
 
   return (
     <div className="space-y-6">
-      {/* ── CARD 1: SEARCH QUERY, SCOPE SWITCHER & LIVE VERIFICATION ── */}
+      {/* ── CARD 1: SEARCH QUERY & LIVE VERIFICATION ── */}
       <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
         {/* Header Row: Measured Query & Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -645,7 +615,7 @@ export function CompetitorInsights() {
               </h3>
             </div>
             <p className="text-xs text-gray-500">
-              Comparing your clinic against competing doctors and healthcare practices in {scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : `${safeCity} (Local Area)`) : `${safeCity} (Metropolitan Area)`}.
+              Comparing your clinic against competing doctors and healthcare practices in {safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : safeCity}.
             </p>
           </div>
 
@@ -710,56 +680,13 @@ export function CompetitorInsights() {
           </div>
         </form>
 
-        {/* Scope Controls & Active Filter */}
+        {/* Local Market & Active Filter */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* View Mode Toggle: Keyword Ranking vs 5 km Nearby Directory */}
-            <div className="inline-flex p-1 bg-gray-100/90 rounded-2xl border border-gray-200/80 shadow-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("ranking");
-                  setScope("city");
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                  viewMode === "ranking" && scope === "city"
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Entire City ({safeCity})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("ranking");
-                  setScope("local");
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                  viewMode === "ranking" && scope === "local"
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-200/70"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5 text-rose-600" />
-                <span>Near Clinic (Local Area)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setViewMode("nearby")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                  viewMode === "nearby"
-                    ? "bg-white text-emerald-800 shadow-sm border border-gray-200/70"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                <span>5 km Radius Directory</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200/80 rounded-xl font-medium text-gray-700">
+              <MapPin className="w-3.5 h-3.5 text-rose-600" />
+              <span>Local Market: <strong className="text-gray-900">{safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : safeCity}</strong></span>
+            </span>
           </div>
 
           {selectedKeyword && (
@@ -799,42 +726,6 @@ export function CompetitorInsights() {
         }}
       />
 
-      {/* ── VIEW 2 (OPTIONAL SUB-VIEW): 5 KM DIRECTORY SUMMARY CARDS ── */}
-      {viewMode === "nearby" && (
-        <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-100/90 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-gray-900">Nearby Healthcare Practices within 5 km</h4>
-              <p className="text-xs text-gray-500">
-                Discovered around your verified Google Business Profile coordinates, sorted by physical distance.
-              </p>
-            </div>
-            <span className="px-2.5 py-1 bg-white border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl">
-              5,000m Fixed Radius
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
-              <span className="text-[11px] font-medium text-gray-400">Total Nearby</span>
-              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
-              <span className="text-[11px] font-medium text-gray-400">Average Rating</span>
-              <p className="text-lg font-bold text-gray-900">{stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)}★` : "—"}</p>
-            </div>
-            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
-              <span className="text-[11px] font-medium text-gray-400">Average Reviews</span>
-              <p className="text-lg font-bold text-gray-900">{stats.avgReviews}</p>
-            </div>
-            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-0.5">
-              <span className="text-[11px] font-medium text-gray-400">Higher Reviews</span>
-              <p className="text-lg font-bold text-gray-900">{stats.higherReviewedCount} <span className="text-xs font-normal text-gray-400">of {stats.total}</span></p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── CARD 3: RANKING LADDER & COMPETITOR ANALYSIS ── */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
@@ -844,7 +735,7 @@ export function CompetitorInsights() {
               <strong className="text-gray-900 font-bold">
                 {selectedKeyword ? `"${selectedKeyword}"` : primaryCategory}
               </strong>{" "}
-              {!selectedKeyword || !/\b(?:in|near)\b/i.test(selectedKeyword) ? `in ${scope === "local" ? (safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : "your local area") : safeCity} ` : ""}(click to inspect intelligence)
+              {!selectedKeyword || !/\b(?:in|near)\b/i.test(selectedKeyword) ? `in ${safeNeighborhood ? `${safeNeighborhood}, ${safeCity}` : safeCity} ` : ""}(click to inspect intelligence)
             </p>
             {isFetching && (
               <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/70 animate-pulse">

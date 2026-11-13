@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const forceRefresh = searchParams.get("refresh") === "true" || searchParams.get("forceRefresh") === "true";
     const mode = searchParams.get("mode") || (searchParams.get("scope") === "nearby" ? "nearby" : "ranking");
     const customKeyword = searchParams.get("keyword")?.trim() || "";
-    const scope = (searchParams.get("scope") || "city").toLowerCase() as "city" | "local" | "nearby";
+    const scope = (searchParams.get("scope") || "local").toLowerCase() as "city" | "local" | "nearby";
 
     const authResult = await getValidGbpAccessToken(session.doctorId);
     if (!authResult) {
@@ -210,7 +210,7 @@ export async function GET(request: Request) {
           // Construct high-intent clinical search phrase based on scope
           if (scope === "local") {
             queryToSearch = safeNeighborhood
-              ? `${primaryCategory} near ${safeNeighborhood}`
+              ? `${primaryCategory} in ${safeNeighborhood}`
               : `${primaryCategory} near me`;
           } else {
             queryToSearch = safeCity
