@@ -26,22 +26,23 @@ export async function GET(request: Request) {
 
     const { account } = authResult;
 
-    // Get default category if no keyword provided
-    let targetKeyword = searchKeyword;
+    // Get default high-intent keyword if no keyword provided
+    let targetKeyword = (searchKeyword || "").trim();
     if (!targetKeyword) {
       const profileSnap = await prisma.profileSnapshot.findFirst({
         where: { gbpAccountId: account.id },
         orderBy: { date: "desc" },
       });
       const profileData = profileSnap?.json as any;
-      targetKeyword = profileData?.primaryCategory || "doctor";
+      const category = (profileData?.primaryCategory || "doctor").trim();
+      targetKeyword = `${category} near me`;
     }
 
     // Return cached data if within 24h
     const cached = await prisma.searchGridSnapshot.findFirst({
       where: { 
         gbpAccountId: account.id,
-        keyword: targetKeyword,
+        keyword: { equals: targetKeyword, mode: "insensitive" },
         ...spacingFilter,
       },
       orderBy: { date: "desc" },
@@ -140,8 +141,9 @@ export async function POST(request: Request) {
     });
     const profileData = profileSnap?.json as any;
     const businessName = profileData?.name || account.locationName || "Clinic";
-    const primaryCategory = profileData?.primaryCategory || "doctor";
-    const searchKeyword = body.keyword || primaryCategory;
+    const primaryCategory = (profileData?.primaryCategory || "doctor").trim();
+    const defaultKeyword = `${primaryCategory} near me`;
+    const searchKeyword = (body.keyword && typeof body.keyword === "string" && body.keyword.trim()) ? body.keyword.trim() : defaultKeyword;
     const address = profileData?.address || "";
 
     // Geocode address to get center lat/lng using unified extractNeighborhood

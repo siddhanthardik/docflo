@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MapPin, RefreshCw, Clock, Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,19 +20,32 @@ export function SearchGrid() {
   const [keywordInput, setKeywordInput] = useState<string>("");
   const [activeKeyword, setActiveKeyword] = useState<string>("");
   const [gridRadiusStep, setGridRadiusStep] = useState<number>(1000); // 200m, 500m, 1km, 2km
-  
-  const { data: overviewData } = useLocalSeoModule<any>('overview');
-  const { data: keywordsData } = useLocalSeoModule<any>('keywords');
-  const { data: gridData, isLoading, refetch } = useLocalSeoModule<any>(
-    'search-grid', 
-    activeKeyword ? { keyword: activeKeyword, radiusStep: String(gridRadiusStep) } : { radiusStep: String(gridRadiusStep) }
-  );
-  
+  const [scannedGridData, setScannedGridData] = useState<any | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: overviewData } = useLocalSeoModule<any>('overview');
+  const { data: keywordsData } = useLocalSeoModule<any>('keywords');
+
+  const defaultCategory = (overviewData?.primaryCategory || "Pediatrician").trim();
+  const defaultKeyword = `${defaultCategory} near me`;
+  const effectiveKeyword = activeKeyword || defaultKeyword;
+
+  const { data: serverGridData, isLoading, refetch } = useLocalSeoModule<any>(
+    'search-grid', 
+    { keyword: effectiveKeyword, radiusStep: String(gridRadiusStep) }
+  );
+
+  // Use freshly scanned grid data if it matches effective keyword, otherwise fallback to server query
+  const gridData = useMemo(() => {
+    if (scannedGridData && (scannedGridData.keyword || scannedGridData.exactKeyword)?.toLowerCase() === effectiveKeyword.toLowerCase()) {
+      return scannedGridData;
+    }
+    return serverGridData;
+  }, [scannedGridData, serverGridData, effectiveKeyword]);
+
   // Dynamic Keyword Pill Generator with Strict Case-Insensitive Deduplication
-  const dynamicSuggestedKeywords = (() => {
+  const dynamicSuggestedKeywords = useMemo(() => {
     const list: string[] = [];
     const seen = new Set<string>();
 
@@ -46,19 +59,28 @@ export function SearchGrid() {
       }
     };
 
-    addWord(overviewData?.primaryCategory);
+    // 1. High-intent local query by default (e.g. "Pediatrician near me")
+    addWord(defaultKeyword);
 
+    // 2. City-based variation (e.g. "best pediatrician in south delhi" or "best pediatrician in delhi")
+    const safeCity = overviewData?.city || "Delhi";
+    addWord(`best ${defaultCategory.toLowerCase()} in ${safeCity.toLowerCase()}`);
+
+    // 3. Historical search terms observed from GBP
     if (keywordsData?.searchKeywordsCounts && Array.isArray(keywordsData.searchKeywordsCounts)) {
       keywordsData.searchKeywordsCounts.forEach((kw: any) => {
         const word = typeof kw === "string" ? kw : kw.searchKeyword;
         addWord(word);
       });
     }
-    return list.slice(0, 8);
-  })();
 
-  const handleRefresh = async (customKw?: string) => {
-    const kwToScan = customKw !== undefined ? customKw : activeKeyword;
+    // 4. Primary category alone
+    addWord(defaultCategory);
+
+    return list.slice(0, 8);
+  }, [defaultKeyword, defaultCategory, overviewData?.city, keywordsData?.searchKeywordsCounts]);
+
+  const handleScanKeyword = async (targetKw: string) => {
     setRefreshing(true);
     setError(null);
     try {
@@ -67,12 +89,13 @@ export function SearchGrid() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ keyword: kwToScan, radiusStep: gridRadiusStep })
+        body: JSON.stringify({ keyword: targetKw, radiusStep: gridRadiusStep })
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error || "Failed to generate grid");
-      } else {
+      } else if (json.data) {
+        setScannedGridData(json.data);
         await refetch();
       }
     } catch (e: any) {
@@ -82,19 +105,43 @@ export function SearchGrid() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (keywordInput.trim()) {
-      const term = keywordInput.trim();
-      setActiveKeyword(term);
-      handleRefresh(term);
+  const handleSelectPill = async (kw: string) => {
+    const term = kw.trim();
+    if (!term) return;
+    setKeywordInput(term);
+    setActiveKeyword(term);
+    setError(null);
+
+    // Check if we already have this in cache via GET first
+    setRefreshing(true);
+    try {
+      const checkRes = await fetch(`/api/local-seo/search-grid?keyword=${encodeURIComponent(term)}&radiusStep=${gridRadiusStep}`, { 
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      const checkJson = await checkRes.json();
+      if (checkRes.ok && checkJson.data?.grid && Array.isArray(checkJson.data.grid) && checkJson.data.grid.length > 0 && !checkJson.requiresRefresh) {
+        // Cache hit: immediately display grid
+        setScannedGridData(checkJson.data);
+        setRefreshing(false);
+        return;
+      }
+      // Cache miss: run live scan
+      await handleScanKeyword(term);
+    } catch {
+      await handleScanKeyword(term);
     }
   };
 
-  const handleSelectPill = (kw: string) => {
-    setKeywordInput(kw);
-    setActiveKeyword(kw);
-    handleRefresh(kw);
+  const handleRefresh = async () => {
+    await handleScanKeyword(effectiveKeyword);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keywordInput.trim()) {
+      handleSelectPill(keywordInput.trim());
+    }
   };
 
   if (isLoading && !gridData) {
@@ -107,13 +154,12 @@ export function SearchGrid() {
   }
 
   const grid: GridCell[] = gridData?.grid || [];
-  const gridSize: number = gridData?.gridSize || 5;
   const businessName = gridData?.businessName || overviewData?.businessName || "Your Clinic";
   const cached = gridData?.cached;
   const cacheAge = gridData?.cacheAge || 0;
   const requiresRefresh = !gridData || gridData.requiresRefresh;
 
-  const activeDisplayQuery = gridData?.keyword || activeKeyword || overviewData?.primaryCategory || "Pediatrician";
+  const activeDisplayQuery = activeKeyword || gridData?.exactKeyword || gridData?.keyword || defaultKeyword;
 
   return (
     <div className="space-y-6">
@@ -194,7 +240,7 @@ export function SearchGrid() {
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-gray-900">Track Keyword Grid</h3>
           <span className="text-xs text-gray-400">
-            Active Query: <strong className="text-indigo-600 font-semibold">{activeDisplayQuery}</strong>
+            Active Query: <strong className="text-indigo-600 font-semibold">&ldquo;{activeDisplayQuery}&rdquo;</strong>
           </span>
         </div>
 
@@ -205,7 +251,7 @@ export function SearchGrid() {
             <input
               type="text"
               aria-label="Track Keyword Input"
-              placeholder={overviewData?.primaryCategory ? `Q .g. ${overviewData.primaryCategory}, Best ${overviewData.primaryCategory} near me...` : "Q .g. Pediatrician, Best Pediatrician near me..."}
+              placeholder={`e.g. ${defaultCategory} near me, Best ${defaultCategory} in ${overviewData?.city || "Delhi"}...`}
               className="w-full h-10 pl-10 pr-4 rounded-xl border border-gray-200 bg-gray-50/50 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
@@ -226,7 +272,7 @@ export function SearchGrid() {
             <span className="text-xs font-normal text-gray-400">Target Keywords:</span>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Suggested target keywords">
               {dynamicSuggestedKeywords.map((kw, i) => {
-                const isSelected = (activeKeyword || gridData?.keyword || "").toLowerCase() === kw.toLowerCase();
+                const isSelected = activeDisplayQuery.toLowerCase() === kw.toLowerCase();
                 return (
                   <button
                     key={i}
@@ -263,7 +309,7 @@ export function SearchGrid() {
             </div>
             <h4 className="text-base font-semibold text-gray-800 mb-1">No Grid Data Yet</h4>
             <p className="text-xs text-gray-400 mb-5 max-w-sm mx-auto">
-              Click "Refresh Grid" to scan 25 points around your clinic and see where you rank on Google Maps across each neighborhood.
+              Click "Generate Search Grid" to scan 25 points around your clinic for &ldquo;{activeDisplayQuery}&rdquo; and observe where you rank on Google Maps.
             </p>
             <Button onClick={() => handleRefresh()} disabled={refreshing} className="bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl font-semibold text-xs h-9 px-4">
               {refreshing ? <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />Scanning...</> : "Generate Search Grid"}
@@ -272,7 +318,7 @@ export function SearchGrid() {
         )}
 
         {/* Map Header Info & Map Container */}
-        {grid.length > 0 && (
+        {(grid.length > 0 || refreshing) && (
           <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs px-1">
               <div className="flex items-center gap-1.5 font-semibold text-gray-800">
@@ -284,15 +330,29 @@ export function SearchGrid() {
               </div>
             </div>
 
-            {/* Interactive Leaflet Google Maps */}
-            <RankTrackerMap
-              grid={grid}
-              centerLat={gridData?.centerLat}
-              centerLng={gridData?.centerLng}
-              businessName={businessName}
-              spacingMeters={gridRadiusStep}
-              keyword={gridData?.keyword || activeKeyword}
-            />
+            {/* Interactive Leaflet Google Maps with Non-Destructive Loading Overlay */}
+            <div className="relative rounded-2xl overflow-hidden border border-gray-200/80">
+              <RankTrackerMap
+                grid={grid}
+                centerLat={gridData?.centerLat || overviewData?.lat}
+                centerLng={gridData?.centerLng || overviewData?.lng}
+                businessName={businessName}
+                spacingMeters={gridRadiusStep}
+                keyword={activeDisplayQuery}
+              />
+
+              {refreshing && (
+                <div className="absolute inset-0 z-[1000] bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 transition-all">
+                  <div className="p-3.5 bg-white shadow-lg rounded-2xl border border-gray-100 flex items-center gap-3">
+                    <RefreshCw className="w-5 h-5 animate-spin text-indigo-600 shrink-0" />
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-gray-900">Scanning 25 Grid Points</p>
+                      <p className="text-[11px] text-gray-500">Observing Google Places rankings for &ldquo;{activeDisplayQuery}&rdquo;...</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Clean Accessible Map Legend */}
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-1 px-1">
